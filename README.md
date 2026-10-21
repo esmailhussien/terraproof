@@ -6,8 +6,8 @@
 
 Terraproof is a focused collection of mapping and remote-sensing skills for AI coding agents, plus a deterministic router that selects the smallest useful set of them for a task. The direction is to make geospatial agents prove their work: inspect real datasets, apply section-level expert guidance, run executable checks, and attach an evidence grade to each result. Read the full plan in [`Terraproof_v1_PLAN.md`](Terraproof_v1_PLAN.md).
 
-**Today:** 20 skills, a router with 55 test scenarios, and an experimental Python core for dataset inspection, checks, and evidence grades (see [Python core](#python-core-phase-1-experimental)).
-**Planned, not implemented yet:** MCP server, sectioned skills, and a Python router.
+**Today:** 20 skills, a TypeScript router with 55 test scenarios, and a Python package with dataset inspection, checks, evidence grades, a skill router, a read-only MCP server, and agent installers (see [Python core](#python-core-phase-1-experimental), [Skill router (Python)](#skill-router-python), [MCP server](#mcp-server), and [Install into your agent](#install-into-your-agent)).
+**Planned, not implemented yet:** verification of the installers in real agent hosts (only Claude Code has been exercised end to end) and a fresh, independently written held-out routing set.
 
 ---
 
@@ -134,7 +134,7 @@ For scoring weights, layers, and heuristics, see [`routing/ROUTER_DESIGN.md`](ro
 
 ## Python core (Phase 1, experimental)
 
-The Python package `terraproof` inspects geospatial datasets, runs deterministic checks, and writes an evidence report as JSON or Markdown (English or Arabic). It reads local files only and makes no network calls. It is not yet a port of the router and it has no MCP server. The `terraproof` npm command above is still the TypeScript router; the Python core runs as `python -m terraproof`.
+The Python package `terraproof` inspects geospatial datasets, runs deterministic checks, and writes an evidence report as JSON or Markdown (English or Arabic). It reads local files only and makes no network calls. `inspect` and `check` are not a port of the TypeScript router; the same package also provides the separate Python skill router, the MCP server, and the agent installers described in the next three sections. The `terraproof` npm command above is still the TypeScript router; the Python core runs as `python -m terraproof`.
 
 Setup, from the repository root (Python 3.10 or newer):
 
@@ -177,6 +177,120 @@ Exit codes: `0` Decision-grade, `2` Review required, `3` Advisory only, `1` usag
 The grade describes the data path and the checks that ran. It is not a certification of survey, engineering, legal, or safety fitness.
 
 Arabic Markdown reports translate the labels, headings, status words, and the limitation sentence. Check messages, file paths, check ids, and numbers stay as produced (messages are in English).
+
+---
+
+## Skill router (Python)
+
+`python -m terraproof route` is the Python skill router (Phase 3). Given a task description, it returns the few skill sections worth reading, each with the reasons for its score. It is offline, deterministic, and lexical; there is no model call. Setup is the same as [Python core](#python-core-phase-1-experimental); text-only routing is dependency-light, because the inspectors load only when you pass `--data`.
+
+How it ranks:
+
+- **BM25 over skill sections.** Every section of `SKILL.md` and the reference files is indexed. A skill's score is its best-matching section plus a quarter of its second best, so a skill ranks on the passage that matches, not on its length.
+- **Exact triggers.** The technology and capability phrases in each `skill.json` add a fixed boost when they occur as whole phrases (`scl band` +4, `ndvi` +2). A bare `map` is deliberately weak (+0.5).
+- **Explained data-aware rules.** With `--data`, each local dataset is inspected first: CRS, bands, dtype, scale/offset, geometry types, feature counts, STAC collection. The profile then adds or subtracts score, and the reason is printed. A geographic CRS under metric wording (area, buffer, distance, metres) promotes `crs-and-units`; an integer band with a non-identity scale/offset promotes `satellite-preprocessing`; several rasters promote `raster-processing`; a raster-only input penalises vector skills, and a vector-only input penalises raster skills; a print-figure request penalises the web-map skill; a STAC item already in hand for processing penalises the catalog-search skill.
+- **Arabic and Egyptian dialect.** Text is normalized before matching: diacritics and tatweel are dropped, NFKC is applied, and `أ/إ/آ/ٱ → ا`, `ى → ي`, `ة → ه`. Attached conjunctions, prepositions, and articles are tried (`ال`, `وال`, `بال`, `لل`, `ف`, `ب`, `ل`, `و`), and a curated lexicon maps Arabic phrases, including Egyptian forms such as `نزل` (download) and `دور على` (look for), to English retrieval terms. Latin technical tokens (`Sentinel-2`, `SCL`, `NDVI`) are matched as written, which is how these prompts are usually typed.
+- **Process skills are separate.** `brainstorming`, `writing-plans`, `systematic-debugging`, and `verification` are never mixed into the ranked domain skills. The `process` field lists the ones whose wording appears in the task, followed by `verification`.
+
+CLI usage:
+
+```bash
+python -m terraproof route "TASK" [--data PATH ...] [--top-k N] [--format json|md]
+```
+
+`--data` takes one or more local datasets and can be repeated; `--top-k` defaults to 5 and `--format` to `json`. `--format md` prints a readable digest of the same result, and JSON stays the stable machine-readable form. The command exits `0` and writes nothing.
+
+English example:
+
+```bash
+python -m terraproof route "Mask clouds in Sentinel-2 L2A with the SCL band, then compute NDVI" --format json
+```
+
+In this checkout it ranks `satellite-preprocessing` (28.36) first, because its "Mask Sentinel-2 SCL cloud and shadow classes" section matches the masking terms, then `geomaster` (24.39), `spectral-indices` (15.41), `geospatial-data-discovery` (10.02), and `raster-processing` (9.71). `process` is `["verification"]`. Each reason names the BM25 terms of the matched section with their contributions, the section id, and the exact triggers that fired (`scl band`, `sentinel`, `ndvi`).
+
+Arabic example:
+
+```bash
+python -m terraproof route "اضبط scale و offset لصور Sentinel-2 L2A قبل حساب NDVI" --format md
+```
+
+It reports `Language: ar` and the expansion `Arabic lexicon: صور -> images photos scenes`, then ranks `satellite-preprocessing` (21.604), `geomaster` (20.022), `spectral-indices` (15.954), and `geospatial-data-discovery` (5.932); `process` is `verification`. Only your task line and the matched Arabic terms are Arabic: the reasons and section excerpts are the English skill text, and the JSON keeps your prompt verbatim.
+
+Evaluate a routing set with the bundled evaluator:
+
+```bash
+python -m terraproof.router.evaluate evals/routing/dev.jsonl
+python -m terraproof.router.evaluate evals/routing/heldout.jsonl
+```
+
+It prints JSON with `items`, `top_k`, `mean_recall_at_k`, `per_language_recall`, `must_not_violations`, and every failing item, and exits `1` when mean recall is below `--min-recall` (default 0.9) or a forbidden skill was ranked. The sets and the metric are defined in [`evals/routing/README.md`](evals/routing/README.md).
+
+Measured results, as they stand in this checkout:
+
+| Set | Items | Mean recall@5 | English | Arabic | `must_not` violations |
+|---|---|---|---|---|---|
+| `dev.jsonl` (tuning set) | 115 | 1.000 | 1.000 | 1.000 | 0 |
+| `heldout.jsonl` (independent) | 80 | 0.950 | 0.975 | 0.925 | 6 |
+
+The held-out set was written by someone other than the router author, and its prompts were never shown to the router author. It was used once to derive category-level feedback (for example "unit words such as km are not recognised"), so it is now slightly optimistic; a fresh held-out set is planned for the next honest estimate. 11 of 80 items are not perfect. Six items rank one prohibited skill in the top five, and five more miss an expected skill without a violation. The evaluator exits `1` on that set by design. The dev set is a regression check, not evidence of generalization.
+
+Limits: this is lexical retrieval with hand-written rules, not semantic understanding. It can over-select: a top five often contains plausible neighbouring skills (`geomaster` is a broad remote-sensing skill and tends to appear next to more specific ones). Dataset rules fire once per request and only from the keys the inspectors report, so a misleading or missing profile leads to a misleading boost. Do not tune on `heldout.jsonl`; the policy is in [`evals/routing/README.md`](evals/routing/README.md).
+
+---
+
+## MCP server
+
+The MCP server exposes the same inspectors, checks, skill sections, and router to any Model Context Protocol client, so an agent gets identical results whether it calls the CLI or a tool. It is read-only: it never writes files and never uses the network.
+
+```bash
+python -m pip install -e ".[mcp]"    # Windows: .venv\Scripts\python -m pip install -e ".[mcp]"
+python -m terraproof.mcp             # serve over stdio
+```
+
+The `mcp` extra installs the official MCP Python SDK 2.x (`mcp>=2.3,<3`); the base install stays dependency-light, and `inspect`, `check`, and `route` keep working without it. Register the server in your client with a stdio entry whose command is the interpreter that has the package installed and whose arguments are `-m terraproof.mcp`, or let [`python -m terraproof.install --with-mcp`](#install-into-your-agent) write that entry for you.
+
+Five tools:
+
+- `inspect_dataset(path)` — profile one local vector, raster, or STAC Item file: CRS and units, schema or bands, dtype, nodata, extent, resolution, and feature or pixel counts.
+- `run_checks(paths, operation?, compare_to?, resampling?, categorical?, expect?, lang?)` — run the deterministic checks and return the grade, the matching exit code, the JSON report, and the Markdown report in `en` or `ar`.
+- `list_skills()` — list the registered skills with their layer, one-sentence explanation, section ids and titles, and the check ids they bear on.
+- `load_section(skill, section_id)` — return one section's Markdown text, without reading the whole `SKILL.md`.
+- `find_guidance(task, data_paths?, top_k?)` — rank the skill sections for a task and inspect the given datasets; this is the retrieval `python -m terraproof route` performs.
+
+---
+
+## Install into your agent
+
+The installer writes Terraproof into one project in that agent's own format, instead of a shared `.agents/` folder:
+
+```bash
+python -m terraproof.install --agent {claude,cursor,codex,gemini,copilot,opencode} --skills a,b --target DIR [--with-mcp] [--dry-run]
+python -m terraproof.install --agent cursor --task "NDVI change for 2020-2024" --target DIR
+```
+
+Give either `--skills` (comma-separated names from `routing/registry.json`) or `--task` (routed by the Python router), never both. `--target` must already exist. `--with-mcp` also registers the Terraproof MCP server, and `--dry-run` prints the planned writes and changes nothing. The command exits `0` on success and `1` for a usage error such as an unknown skill name or a missing target.
+
+What each agent gets (`<skill>` stands for one selected skill):
+
+| `--agent` | Skill files | MCP config with `--with-mcp` |
+|---|---|---|
+| `claude` | `.claude/skills/<skill>/` — the full skill folder | `.mcp.json` (`mcpServers`) |
+| `cursor` | `.cursor/rules/terraproof-<skill>.mdc` — one rule per skill | `.cursor/mcp.json` (`mcpServers`) |
+| `codex` | `.agents/skills/<skill>/` plus a block in `AGENTS.md` | `.codex/config.toml` (`[mcp_servers.terraproof]`) |
+| `gemini` | a block in `GEMINI.md` with the skill text inline | `.gemini/settings.json` (`mcpServers`) |
+| `copilot` | `.github/instructions/terraproof-<skill>.instructions.md` | `.vscode/mcp.json` (`servers`) |
+| `opencode` | a block in `AGENTS.md` with the skill text inline | `opencode.json` (`mcp`) |
+
+Every format above was checked against that agent's own documentation; the source URL is cited next to the writer in `src/terraproof/install/agents.py`.
+
+Merge and idempotency: nothing is written outside `--target`. An existing JSON or TOML config is parsed and merged, so other servers, keys, and tables survive, and only the `terraproof` server entry is replaced. Markdown goes between `<!-- terraproof:begin -->` and `<!-- terraproof:end -->`; a rerun replaces exactly that block and leaves the rest of the file alone. A rerun with the same inputs produces identical bytes, unchanged files are reported as `unchanged` and not rewritten, and the recorded MCP command is the interpreter that ran the installer. Skill copies skip `UPSTREAM.md` and `skill.json`.
+
+Known limits:
+
+- Only **Claude Code** was exercised end to end in a real host. The other five formats are unit-tested against the documented file layout (`tests/python/test_install.py`); they have not been loaded by those agents here.
+- `codex` and `opencode` both write an `AGENTS.md` marker block, so installing both into one project makes the later run replace the earlier block. Codex keeps its copies under `.agents/skills/`; opencode inlines the skills, so a Codex block that was replaced leaves its skill folders unused.
+- Codex reads a project `.codex/config.toml` only for trusted projects; otherwise the MCP entry is present but ignored.
+- Writing the files does not prove the host loaded them or that the agent followed the guidance. Verify an installed setup in the agent itself, as you would verify any agent-generated work.
 
 ---
 
@@ -227,11 +341,11 @@ Arabic Markdown reports translate the labels, headings, status words, and the li
 
 - **`skills/`** — Task-specific instructions, scripts, and references (20 skills, each with a `skill.json` routing manifest).
 - **`routing/`** — Skill registry generated from `skills/*/skill.json`, check catalog, scoring rules, and preset collections.
-- **`router/`** — Deterministic routing engine with CLI and programmatic API.
-- **`evals/`** — Benchmark task specifications for the five newest skills (15 tasks). These are specifications only; the harness is planned, not implemented yet.
-- **`src/terraproof/`** — Experimental Python core: dataset inspectors, checks, and evidence reports (`pyproject.toml`).
+- **`router/`** — Deterministic TypeScript routing engine with CLI and programmatic API.
+- **`evals/`** — Benchmark task specifications for the five newest skills (15 tasks; specifications only, the harness is planned) and the skill-router evaluation sets: `evals/routing/dev.jsonl` (115 items, for tuning and regression) and the independent `evals/routing/heldout.jsonl` (80 items, 40 English and 40 Arabic), scored by `python -m terraproof.router.evaluate`.
+- **`src/terraproof/`** — Python package: dataset inspectors, checks, evidence reports, the skill router and its evaluator, the read-only MCP server, and the native agent installers (`pyproject.toml`).
 - **`instructions/`** — Universal engineering rules (engineering discipline, simplicity, security).
-- **`tests/`** — Router test suites (55 scenarios, 100% pass rate) and upstream fixtures.
+- **`tests/`** — Router test suites (55 scenarios, 100% pass rate), Python tests for the checks, router, MCP server, and installers (`tests/python/`), and upstream fixtures.
 - **`third_party/`** — Upstream licenses and notices for vendored material.
 - **`sources/`** — Attribution log mapping each skill to its upstream source, commit SHA, and license.
 

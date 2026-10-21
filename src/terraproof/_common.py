@@ -5,6 +5,8 @@ from __future__ import annotations
 import hashlib
 import math
 import os
+import sys
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -24,6 +26,21 @@ GEOMETRY_TYPE_NAMES = {
 
 class InputError(ValueError):
     """An input file is missing, unreadable, or not a supported dataset."""
+
+
+def assets_root() -> Path:
+    """The directory that holds `skills/` and `routing/`, in a checkout or an install.
+
+    The current working directory is never used: the assets belong to the installed
+    package, not to whichever project happens to be open.
+    """
+    package = Path(__file__).resolve().parents[1]
+    candidates = [package, package / "data", package / "_data", package / "resources",
+                  Path(sys.prefix) / "share" / "terraproof", *package.parents]
+    for candidate in candidates:
+        if (candidate / "routing" / "registry.json").is_file() and (candidate / "skills").is_dir():
+            return candidate
+    raise InputError("Terraproof skills/routing assets not found beside the package or in share/terraproof")
 
 
 def sha256_and_size(path: str | os.PathLike) -> tuple[str, int]:

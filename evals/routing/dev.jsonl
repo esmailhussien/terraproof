@@ -1,0 +1,115 @@
+{"id":"en-01","prompt":"Choose an equal-area projection and check the coordinate reference system before measuring parcel areas.","lang":"en","expected":["crs-and-units"]}
+{"id":"en-02","prompt":"Design a PostGIS spatial database schema with geometry columns and GiST indexes.","lang":"en","expected":["design-postgis-tables"]}
+{"id":"en-03","prompt":"Use gdal_translate to convert a GeoTIFF to a cloud-optimized GeoTIFF with internal overviews.","lang":"en","expected":["gdal"]}
+{"id":"en-04","prompt":"Plan a remote sensing image classification workflow for satellite imagery and terrain analysis.","lang":"en","expected":["geomaster"]}
+{"id":"en-05","prompt":"Use GeoPandas for a spatial join of points to polygons, preserving all GeoDataFrame rows.","lang":"en","expected":["geopandas"]}
+{"id":"en-06","prompt":"Validate GeoParquet metadata and prepare cloud native vector distribution partitions.","lang":"en","expected":["geoparquet-validation"]}
+{"id":"en-07","prompt":"Search a STAC catalog for open satellite data and record acquisition provenance.","lang":"en","expected":["geospatial-data-discovery"]}
+{"id":"en-08","prompt":"Build an interactive web map with MapLibre layers, a legend and a map dashboard.","lang":"en","expected":["geospatial-frontend"]}
+{"id":"en-09","prompt":"Write an xarray climate grid to GeoZarr with dimension metadata and pixel centers.","lang":"en","expected":["geozarr"]}
+{"id":"en-10","prompt":"Calculate NetworkX betweenness centrality and community detection for nodes and edges.","lang":"en","expected":["networkx"]}
+{"id":"en-11","prompt":"Use rasterio to align raster grids and choose categorical resampling while preserving nodata.","lang":"en","expected":["raster-processing"]}
+{"id":"en-12","prompt":"Decode Landsat Collection 2 surface reflectance scale and offset, then mask QA_PIXEL clouds.","lang":"en","expected":["satellite-preprocessing"]}
+{"id":"en-13","prompt":"Produce a publication figure with Matplotlib, multi-panel plots and colorblind palettes.","lang":"en","expected":["scientific-visualization"]}
+{"id":"en-14","prompt":"Compute NDVI vegetation index and MNDWI water index from calibrated reflectance bands.","lang":"en","expected":["spectral-indices"]}
+{"id":"en-15","prompt":"Select an ANOVA hypothesis test, report effect size and statistical power.","lang":"en","expected":["statistical-analysis"]}
+{"id":"en-16","prompt":"Repair self-intersecting invalid geometries with make_valid and audit coverage gaps.","lang":"en","expected":["vector-quality"]}
+{"id":"en-17","prompt":"Mask Sentinel-2 L2A clouds using the SCL band and calculate NDVI.","lang":"en","expected":["satellite-preprocessing","spectral-indices"],"must_not":["geospatial-frontend"]}
+{"id":"en-18","prompt":"Transform NAD83 to WGS 84 using an explicit datum transformation and axis order.","lang":"en","expected":["crs-and-units"]}
+{"id":"en-19","prompt":"Find OpenStreetMap data and Overture maps building footprints for a city.","lang":"en","expected":["geospatial-data-discovery"]}
+{"id":"en-20","prompt":"Find the shortest path graph route with NetworkX and plot a chart of path costs.","lang":"en","expected":["networkx","scientific-visualization"]}
+{"id":"en-21","prompt":"Estimate regression coefficients and correlation, then make a Matplotlib publication figure.","lang":"en","expected":["statistical-analysis","scientific-visualization"]}
+{"id":"en-22","prompt":"Tell me a bedtime story about a sleepy dragon.","lang":"en","expected":[],"must_not":["geopandas","gdal","geospatial-frontend","geomaster","statistical-analysis","networkx","scientific-visualization","crs-and-units","vector-quality","raster-processing","satellite-preprocessing","spectral-indices","geozarr","geoparquet-validation","design-postgis-tables","geospatial-data-discovery"]}
+{"id":"en-23","prompt":"Prepare this layer.","lang":"en","datasets":[{"kind":"vector","crs":null,"geometry_types":["Polygon"],"feature_count":45}],"expected":["crs-and-units","geopandas","vector-quality"]}
+{"id":"en-24","prompt":"Calculate area in square metres.","lang":"en","datasets":[{"kind":"vector","crs":{"is_geographic":true,"epsg":4326},"geometry_types":["Polygon"],"feature_count":12}],"expected":["crs-and-units"]}
+{"id":"en-25","prompt":"Prepare this input.","lang":"en","datasets":[{"kind":"raster","crs":{"is_projected":true,"epsg":32636},"band_count":3,"bands":[{"dtype":"uint16","scale":0.0000275,"offset":-0.2,"nodata":0}]}],"expected":["raster-processing","satellite-preprocessing"],"must_not":["geopandas","vector-quality"]}
+{"id":"en-26","prompt":"Combine these inputs.","lang":"en","datasets":[{"kind":"raster","crs":{"is_projected":true},"band_count":1},{"kind":"raster","crs":{"is_projected":true},"band_count":1}],"expected":["raster-processing"]}
+{"id":"en-27","prompt":"Prepare this input.","lang":"en","datasets":[{"kind":"stac","collection":"sentinel-2-l2a"}],"expected":["satellite-preprocessing","geospatial-data-discovery"]}
+{"id":"en-28","prompt":"Review this input.","lang":"en","datasets":[{"kind":"stac","collection":"local-dem"}],"expected":["geospatial-data-discovery","satellite-preprocessing"]}
+{"id":"en-29","prompt":"Process this input.","lang":"en","datasets":[{"kind":"raster","crs":{"is_projected":true},"band_count":1,"bands":[{"dtype":"float32","scale":1,"offset":0}]}],"expected":["raster-processing"],"must_not":["geopandas","vector-quality"]}
+{"id":"en-30","prompt":"Review these inputs.","lang":"en","datasets":[{"kind":"vector","crs":{"is_projected":true},"geometry_types":["Point"],"feature_count":500}],"expected":["geopandas","vector-quality"]}
+{"id":"ar-01","prompt":"عايز اختار إسقاط مناسب ونظام إحداثيات عشان احسب مساحة بالمتر المربع","lang":"ar","expected":["crs-and-units"]}
+{"id":"ar-02","prompt":"صمم قاعدة بيانات مكانية PostGIS مع فهرس مكاني وعمود هندسي","lang":"ar","expected":["design-postgis-tables"]}
+{"id":"ar-03","prompt":"محتاج أحول GeoTIFF إلى COG باستخدام gdal_translate وأضيف overviews","lang":"ar","expected":["gdal"]}
+{"id":"ar-04","prompt":"ازاي أعمل تصنيف الصور في الاستشعار عن بعد من صور الأقمار الصناعية","lang":"ar","expected":["geomaster"]}
+{"id":"ar-05","prompt":"عايز ربط مكاني بين نقاط ومضلعات باستخدام GeoPandas مع الحفاظ على السجلات","lang":"ar","expected":["geopandas"]}
+{"id":"ar-06","prompt":"محتاج أراجع باركيه جغرافي GeoParquet وأتأكد من metadata قبل النشر","lang":"ar","expected":["geoparquet-validation"]}
+{"id":"ar-07","prompt":"عايز بيانات مفتوحة من كتالوج STAC وصور فضائية لمنطقة الدراسة","lang":"ar","expected":["geospatial-data-discovery"]}
+{"id":"ar-08","prompt":"ابني خريطة تفاعلية على الويب باستخدام MapLibre ولوحة خرائط","lang":"ar","expected":["geospatial-frontend"]}
+{"id":"ar-09","prompt":"ازاي أخزن مكعب بيانات متعدد الأبعاد في GeoZarr من xarray","lang":"ar","expected":["geozarr"]}
+{"id":"ar-10","prompt":"احسب مركزية وكشف المجتمعات في شبكة علاقات عقد وحواف باستخدام NetworkX","lang":"ar","expected":["networkx"]}
+{"id":"ar-11","prompt":"عايز محاذاة شبكة راستر وإعادة أخذ العينات مع الحفاظ على قيم مفقودة nodata","lang":"ar","expected":["raster-processing"]}
+{"id":"ar-12","prompt":"محتاج إزالة السحب من لاندسات وفك معامل القياس والإزاحة للانعكاس السطحي","lang":"ar","expected":["satellite-preprocessing"]}
+{"id":"ar-13","prompt":"عايز رسم بياني وشكل للنشر في مجلة باستخدام Matplotlib ولوحة ألوان مناسبة","lang":"ar","expected":["scientific-visualization"]}
+{"id":"ar-14","prompt":"ازاي احسب مؤشر الغطاء النباتي ومؤشر المياه من مرئية سنتينل 2","lang":"ar","expected":["spectral-indices"]}
+{"id":"ar-15","prompt":"عايز اختبار فرضية وتحليل التباين وحجم الأثر ودلالة إحصائية","lang":"ar","expected":["statistical-analysis"]}
+{"id":"ar-16","prompt":"اصلح مضلع غير صالح فيه تقاطع ذاتي وراجع فجوات وأشكال مكررة","lang":"ar","expected":["vector-quality"]}
+{"id":"ar-17","prompt":"عايز قناع السحب باستخدام SCL band من سنتينل 2 وبعدين مؤشر الغطاء النباتي","lang":"ar","expected":["satellite-preprocessing","spectral-indices"],"must_not":["geospatial-frontend"]}
+{"id":"ar-18","prompt":"محتاج تحويل الإحداثيات من NAD83 إلى WGS 84 ومراجعة ترتيب المحاور","lang":"ar","expected":["crs-and-units"]}
+{"id":"ar-19","prompt":"ازاي ألاقي بيانات مفتوحة ومصادر البيانات من أوبن ستريت ماب","lang":"ar","expected":["geospatial-data-discovery"]}
+{"id":"ar-20","prompt":"عايز أقصر مسار في شبكة طرق ورسم بياني لتكلفة الرحلة","lang":"ar","expected":["networkx","scientific-visualization"]}
+{"id":"ar-21","prompt":"احسب انحدار وارتباط وبعدين شكل للنشر في مجلة","lang":"ar","expected":["statistical-analysis","scientific-visualization"]}
+{"id":"ar-22","prompt":"احكي لي حكاية عن قطة نايمة جنب الشباك","lang":"ar","expected":[],"must_not":["geopandas","gdal","geospatial-frontend","geomaster","statistical-analysis","networkx","scientific-visualization","crs-and-units","vector-quality","raster-processing","satellite-preprocessing","spectral-indices","geozarr","geoparquet-validation","design-postgis-tables","geospatial-data-discovery"]}
+{"id":"ar-23","prompt":"محتاج أجهز الطبقة دي","lang":"ar","datasets":[{"kind":"vector","crs":null,"geometry_types":["LineString"],"feature_count":80}],"expected":["crs-and-units","geopandas","vector-quality"]}
+{"id":"ar-24","prompt":"عايز احسب مسافة وطول بالمتر","lang":"ar","datasets":[{"kind":"vector","crs":{"is_geographic":false,"horizontal_kind":"geographic","epsg":4326},"geometry_types":["LineString"],"feature_count":80}],"expected":["crs-and-units"]}
+{"id":"ar-25","prompt":"جهز الداتا دي","lang":"ar","datasets":[{"kind":"raster","crs":{"is_projected":true,"epsg":32636},"band_count":4,"bands":[{"dtype":"int16","scale":0.0001,"offset":0,"nodata":-9999}]}],"expected":["satellite-preprocessing","raster-processing"],"must_not":["geopandas","vector-quality"]}
+{"id":"ar-26","prompt":"عايز أجمع الداتا دي","lang":"ar","datasets":[{"kind":"raster","crs":{"is_projected":true},"band_count":1},{"kind":"raster","crs":{"is_projected":true},"band_count":1}],"expected":["raster-processing"]}
+{"id":"ar-27","prompt":"محتاج أبدأ بالملف ده","lang":"ar","datasets":[{"kind":"stac","collection":"landsat-c2-l2"}],"expected":["satellite-preprocessing","geospatial-data-discovery"]}
+{"id":"ar-28","prompt":"راجع الداتا دي","lang":"ar","datasets":[{"kind":"stac","collection":"local-ortho"}],"expected":["geospatial-data-discovery","satellite-preprocessing"]}
+{"id":"ar-29","prompt":"جهز الملف ده","lang":"ar","datasets":[{"kind":"raster","crs":{"is_projected":true},"band_count":1,"bands":[{"dtype":"uint8","scale":1,"offset":0}]}],"expected":["raster-processing"],"must_not":["geopandas","vector-quality"]}
+{"id":"ar-30","prompt":"محتاج أجهز الداتا دي","lang":"ar","datasets":[{"kind":"vector","crs":{"is_projected":true},"geometry_types":["Polygon"],"feature_count":120}],"expected":["geopandas","vector-quality"]}
+{"id":"en-31","prompt":"Draw a line chart.","lang":"en","expected":["scientific-visualization"],"must_not":["geopandas","networkx","geospatial-frontend"]}
+{"id":"en-32","prompt":"Fix error in rasterio.","lang":"en","expected":["raster-processing"],"must_not":["geoparquet-validation","vector-quality"]}
+{"id":"ar-31","prompt":"عايز رسم بياني لتغير الحرارة","lang":"ar","expected":["scientific-visualization"],"must_not":["geopandas","geospatial-frontend"]}
+{"id":"ar-32","prompt":"اصلح مشكلة في rasterio","lang":"ar","expected":["raster-processing"],"must_not":["geoparquet-validation","vector-quality"]}
+{"id":"en-33","prompt":"List the schools within 5 km of the river.","lang":"en","datasets":[{"kind":"vector","crs":{"is_geographic":true,"epsg":4326},"geometry_types":["Polygon"],"feature_count":40}],"expected":["crs-and-units","geopandas","vector-quality"]}
+{"id":"en-34","prompt":"Count the buildings 200 m of the coastline.","lang":"en","datasets":[{"kind":"vector","crs":{"is_geographic":true,"epsg":4326},"geometry_types":["Polygon"],"feature_count":40}],"expected":["crs-and-units","geopandas","vector-quality"]}
+{"id":"en-35","prompt":"Sum the parcel areas in hectares.","lang":"en","datasets":[{"kind":"vector","crs":{"is_geographic":true,"epsg":4326},"geometry_types":["Polygon"],"feature_count":40}],"expected":["crs-and-units","geopandas","vector-quality"]}
+{"id":"en-36","prompt":"Total farm area in acres and miles of fencing.","lang":"en","datasets":[{"kind":"vector","crs":{"is_geographic":true,"epsg":4326},"geometry_types":["Polygon"],"feature_count":40}],"expected":["crs-and-units","geopandas","vector-quality"]}
+{"id":"en-37","prompt":"Mean patch size in square kilometres for the park.","lang":"en","datasets":[{"kind":"vector","crs":{"is_geographic":true,"epsg":4326},"geometry_types":["Polygon"],"feature_count":40}],"expected":["crs-and-units","geopandas"]}
+{"id":"en-38","prompt":"Buffer the wells within 2 km of the river bend.","lang":"en","datasets":[{"kind":"vector","crs":{"is_geographic":true,"epsg":4326},"geometry_types":["Point"],"feature_count":150}],"expected":["crs-and-units","geopandas","vector-quality"]}
+{"id":"en-39","prompt":"The map pixel size is 30 m; check the units.","lang":"en","datasets":[{"kind":"raster","crs":{"is_geographic":true,"epsg":4326},"band_count":1,"bands":[{"dtype":"float32","scale":1,"offset":0,"nodata":-9999}]}],"expected":["crs-and-units","raster-processing"]}
+{"id":"en-40","prompt":"I have this Sentinel-2 STAC item; mask the clouds and decode the reflectance.","lang":"en","datasets":[{"kind":"stac","collection":"sentinel-2-l2a"}],"expected":["satellite-preprocessing"],"must_not":["geospatial-data-discovery"]}
+{"id":"en-41","prompt":"Download this Sentinel-2 STAC item, then mask the SCL clouds.","lang":"en","datasets":[{"kind":"stac","collection":"sentinel-2-l2a"}],"expected":["geospatial-data-discovery","satellite-preprocessing"]}
+{"id":"en-42","prompt":"Compute NDVI from this Landsat STAC item.","lang":"en","datasets":[{"kind":"stac","collection":"landsat-c2-l2"}],"expected":["satellite-preprocessing","spectral-indices"],"must_not":["geospatial-data-discovery"]}
+{"id":"en-43","prompt":"Find scenes in the STAC catalog over the delta for July.","lang":"en","datasets":[{"kind":"stac","collection":"sentinel-2-l2a"}],"expected":["geospatial-data-discovery","satellite-preprocessing"]}
+{"id":"en-44","prompt":"Query the STAC catalog for Landsat scenes over the city.","lang":"en","datasets":[{"kind":"stac","collection":"landsat-c2-l2"}],"expected":["geospatial-data-discovery","satellite-preprocessing"]}
+{"id":"en-45","prompt":"Classify the satellite imagery into land cover classes.","lang":"en","expected":["geomaster"],"must_not":["satellite-preprocessing","spectral-indices"]}
+{"id":"en-46","prompt":"Compute summary statistics of the satellite imagery bands.","lang":"en","expected":["statistical-analysis","geomaster"],"must_not":["satellite-preprocessing","spectral-indices"]}
+{"id":"en-47","prompt":"Reproject this raster with gdalwarp.","lang":"en","expected":["gdal"],"must_not":["satellite-preprocessing","spectral-indices"]}
+{"id":"en-48","prompt":"Export the land cover map as a multi-panel PNG figure for the journal.","lang":"en","expected":["scientific-visualization"],"must_not":["geospatial-frontend"]}
+{"id":"en-49","prompt":"Save the map as a PDF figure for the print edition.","lang":"en","expected":["scientific-visualization"],"must_not":["geospatial-frontend"]}
+{"id":"en-50","prompt":"Analyze the city road network centrality and shortest paths.","lang":"en","expected":["networkx"],"must_not":["geospatial-data-discovery"]}
+{"id":"en-51","prompt":"Compute betweenness centrality for the road network nodes and edges.","lang":"en","expected":["networkx"],"must_not":["geospatial-data-discovery"]}
+{"id":"en-52","prompt":"Build an interactive web map dashboard with MapLibre.","lang":"en","expected":["geospatial-frontend"]}
+{"id":"en-53","prompt":"Download OpenStreetMap road network data for the city.","lang":"en","expected":["geospatial-data-discovery"]}
+{"id":"en-54","prompt":"Source OSM road network data, then compute the shortest paths.","lang":"en","expected":["geospatial-data-discovery","networkx"]}
+{"id":"en-55","prompt":"Find scenes in the catalog for the delta and download them.","lang":"en","expected":["geospatial-data-discovery"]}
+{"id":"en-56","prompt":"Mask the clouds in this Sentinel-2 STAC item and harmonize the sensors.","lang":"en","datasets":[{"kind":"stac","collection":"sentinel-2-l2a"}],"expected":["satellite-preprocessing"],"must_not":["geospatial-data-discovery"]}
+{"id":"ar-33","prompt":"احسب المساحة بالهكتار لكل قطعة","lang":"ar","datasets":[{"kind":"vector","crs":{"is_geographic":true,"epsg":4326},"geometry_types":["Polygon"],"feature_count":40}],"expected":["crs-and-units","geopandas","vector-quality"]}
+{"id":"ar-34","prompt":"مساحة كل مزرعة بالفدان","lang":"ar","datasets":[{"kind":"vector","crs":{"is_geographic":true,"epsg":4326},"geometry_types":["Polygon"],"feature_count":40}],"expected":["crs-and-units","geopandas","vector-quality"]}
+{"id":"ar-35","prompt":"المدارس على بعد 3 كم من النهر","lang":"ar","datasets":[{"kind":"vector","crs":{"is_geographic":true,"epsg":4326},"geometry_types":["Polygon"],"feature_count":40}],"expected":["crs-and-units","geopandas","vector-quality"]}
+{"id":"ar-36","prompt":"العيادات في نطاق 2 كم من المستشفى","lang":"ar","datasets":[{"kind":"vector","crs":{"is_geographic":true,"epsg":4326},"geometry_types":["Polygon"],"feature_count":40}],"expected":["crs-and-units","geopandas","vector-quality"]}
+{"id":"ar-37","prompt":"البيوت اللي حوالين خط المترو بمسافة 500 م","lang":"ar","datasets":[{"kind":"vector","crs":{"is_geographic":true,"epsg":4326},"geometry_types":["Polygon"],"feature_count":40}],"expected":["crs-and-units","geopandas","vector-quality"]}
+{"id":"ar-38","prompt":"طول الشوارع بالكيلومتر","lang":"ar","datasets":[{"kind":"vector","crs":{"is_geographic":true,"epsg":4326},"geometry_types":["LineString"],"feature_count":80}],"expected":["crs-and-units","geopandas","vector-quality"]}
+{"id":"ar-39","prompt":"عايز شكل من مرئية سنتينل 2 للنشر في ورقة بحثية","lang":"ar","expected":["scientific-visualization"],"must_not":["geospatial-frontend"]}
+{"id":"ar-40","prompt":"مجلة العلماء عايزة رسم بياني بلوحات متعددة وألوان لعمى الألوان","lang":"ar","expected":["scientific-visualization"],"must_not":["geospatial-frontend"]}
+{"id":"ar-41","prompt":"اعمل شكل للمخطط بألوان مناسبة للنشر في مجلة","lang":"ar","expected":["scientific-visualization"],"must_not":["geospatial-frontend"]}
+{"id":"ar-42","prompt":"احسب أقصر مسار بين العقد في شبكة طرق القاهرة","lang":"ar","expected":["networkx"]}
+{"id":"ar-43","prompt":"مركزية العقد والحواف في شبكة الطرق دي","lang":"ar","expected":["networkx"]}
+{"id":"ar-44","prompt":"دلني على مسار الحافلة في شبكة الطرق","lang":"ar","expected":["networkx"]}
+{"id":"ar-45","prompt":"ابحث عن مشاهد Sentinel-2 لمنطقة الدلتا","lang":"ar","expected":["geospatial-data-discovery"]}
+{"id":"ar-46","prompt":"دور على صور فضائية لمنطقة سيناء ونزلها من كتالوج STAC","lang":"ar","expected":["geospatial-data-discovery"],"must_not":["satellite-preprocessing","spectral-indices"]}
+{"id":"ar-47","prompt":"لاقي بيانات مفتوحة لمنطقة الأقصر","lang":"ar","expected":["geospatial-data-discovery"]}
+{"id":"ar-48","prompt":"ازاي أنزل مشاهد لاندسات من كتالوج STAC لمنطقة الوادي","lang":"ar","expected":["geospatial-data-discovery"]}
+{"id":"ar-49","prompt":"احسب المؤشر من الداتا دي","lang":"ar","datasets":[{"kind":"raster","crs":{"is_projected":true,"epsg":32636},"band_count":4,"bands":[{"dtype":"uint16","scale":0.0001,"offset":-0.1,"nodata":0}]}],"expected":["satellite-preprocessing","spectral-indices","raster-processing"],"must_not":["geopandas","vector-quality"]}
+{"id":"ar-50","prompt":"حساب مؤشرات من المرئية دي","lang":"ar","datasets":[{"kind":"stac","collection":"sentinel-2-l2a"}],"expected":["satellite-preprocessing","spectral-indices"],"must_not":["geospatial-data-discovery"]}
+{"id":"ar-51","prompt":"معاي المرئية دي من سنتينل 2؛ اعمل قناع السحب وفك الانعكاس","lang":"ar","datasets":[{"kind":"stac","collection":"sentinel-2-l2a"}],"expected":["satellite-preprocessing"],"must_not":["geospatial-data-discovery"]}
+{"id":"ar-52","prompt":"دور على مشاهد في كتالوج STAC لمنطقة البحيرات","lang":"ar","datasets":[{"kind":"stac","collection":"sentinel-2-l2a"}],"expected":["geospatial-data-discovery","satellite-preprocessing"]}
+{"id":"ar-53","prompt":"احسب مؤشر المياه من المشهد ده","lang":"ar","datasets":[{"kind":"stac","collection":"landsat-c2-l2"}],"expected":["satellite-preprocessing","spectral-indices"],"must_not":["geospatial-data-discovery"]}
+{"id":"ar-54","prompt":"اعمل تصنيف للمرئية ده للغطاء الأرضي","lang":"ar","expected":["geomaster"],"must_not":["satellite-preprocessing","spectral-indices"]}
+{"id":"ar-55","prompt":"احسب الإحصاءات الوصفية للمرئية","lang":"ar","expected":["statistical-analysis"],"must_not":["satellite-preprocessing","spectral-indices"]}
+{"id":"ar-56","prompt":"اطبع خريطة الغطاء الأرضي كشكل للنشر في مجلة","lang":"ar","expected":["scientific-visualization"],"must_not":["geospatial-frontend"]}
+{"id":"ar-57","prompt":"حلل شبكة الطرق ومركزية العقد","lang":"ar","expected":["networkx"],"must_not":["geospatial-data-discovery"]}
+{"id":"ar-58","prompt":"ابني خريطة تفاعلية للنيل بـ MapLibre","lang":"ar","expected":["geospatial-frontend"]}
+{"id":"ar-59","prompt":"نزّل داتا شبكة الطرق من OpenStreetMap","lang":"ar","expected":["geospatial-data-discovery"]}

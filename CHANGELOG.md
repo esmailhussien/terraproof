@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] — Unreleased
+
+### Added
+
+- Python skill router (`src/terraproof/router/`, `python -m terraproof route "TASK" [--data PATH ...] [--top-k N] [--format json|md]`): deterministic, offline retrieval of skill sections by BM25 over the `SKILL.md` and reference sections (best section plus a quarter of the second), exact `skill.json` triggers, and explained data-aware boosts and penalties computed from inspected local datasets. Arabic and Egyptian-dialect normalization (diacritics and tatweel removal, NFKC, alef/ya/ta-marbuta folding, attached articles, conjunctions and prepositions) with a curated Arabic-to-English lexicon. Process and verification skills are returned separately in `process`, and every score carries its reasons.
+- Router evaluator (`python -m terraproof.router.evaluate FILE [--top-k N] [--min-recall R]`): prints mean recall@k, per-language recall, `must_not` violations, and the failing items as JSON; exits 1 when recall is below the threshold or a prohibited skill is ranked.
+- Routing evaluation sets (`evals/routing/`): `dev.jsonl` (115 items, for tuning and regression), the independent `heldout.jsonl` (80 items: 40 English, 40 Arabic), and a README with the schema, the metric, and the held-out policy. Measured on this tree: dev mean recall@5 1.000; held-out mean recall@5 0.950 (English 0.975, Arabic 0.925) with 6 `must_not` violations.
+- MCP server (`src/terraproof/mcp/`, `python -m terraproof.mcp`): a stdio server with five read-only tools (`inspect_dataset`, `run_checks`, `list_skills`, `load_section`, `find_guidance`) that return the same results as the command line. It writes no files and makes no network calls.
+- Optional `mcp` extra (`pip install -e ".[mcp]"`, MCP Python SDK 2.x, `mcp>=2.3,<3`); the base install stays dependency-light.
+- Native agent installers (`src/terraproof/install/`, `python -m terraproof.install --agent {claude,cursor,codex,gemini,copilot,opencode} --skills a,b | --task "..." --target DIR [--with-mcp] [--dry-run]`): writes the selected skills in each agent's own project format, merges existing JSON and TOML configs instead of replacing them, replaces only the marker-delimited Markdown block, and produces identical bytes on a rerun.
+- CI `python` job installs `.[dev,mcp]`, so the router, MCP server, and installer tests run on Ubuntu and Windows with Python 3.11 and 3.13.
+
+### Known limits
+
+- The router is lexical retrieval (BM25 plus hand-written rules), not semantic understanding, and it can over-select related skills. `heldout.jsonl` must not be used to tune it.
+- Held-out results are not perfect: mean recall@5 0.950, with 6 `must_not` violations. The held-out set has been used once for category-level feedback, so a fresh held-out set is needed for the next unbiased estimate.
+- Only Claude Code was exercised end to end; the other five agent formats are unit-tested against their documented layout.
+- `codex` and `opencode` share one `AGENTS.md` marker block, so installing both replaces the first.
+- Codex reads a project `.codex/config.toml` only for trusted projects.
+
+---
+
 ## [0.2.0] — Unreleased
 
 ### Changed

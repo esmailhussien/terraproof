@@ -1,4 +1,4 @@
-"""Command-line interface: `python -m terraproof inspect PATH` and `python -m terraproof check PATH ...`."""
+"""Command-line interface for dataset inspection, evidence checks, and skill routing."""
 
 from __future__ import annotations
 
@@ -48,6 +48,12 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument("--format", choices=["json", "md"], default="json", help="report format")
     check_parser.add_argument("--lang", choices=["en", "ar"], default="en", help="language of the Markdown report")
     check_parser.add_argument("--out", metavar="FILE", help="write the report to FILE instead of stdout")
+
+    route_parser = subparsers.add_parser("route", help="retrieve skill sections using task and dataset metadata")
+    route_parser.add_argument("task", metavar="TASK", help="English or Arabic task description")
+    route_parser.add_argument("--data", nargs="+", action="extend", default=[], metavar="PATH", help="local datasets to inspect")
+    route_parser.add_argument("--top-k", type=int, default=5, metavar="N", help="maximum ranked skills")
+    route_parser.add_argument("--format", choices=["json", "md"], default="json", help="guidance format")
     return parser
 
 
@@ -90,11 +96,23 @@ def _cmd_check(args: argparse.Namespace) -> int:
     return EXIT_CODES[report["grade"]]
 
 
+def _cmd_route(args: argparse.Namespace) -> int:
+    from terraproof.router import find_guidance, render_markdown as render_guidance
+
+    result = find_guidance(args.task, data_paths=args.data, top_k=args.top_k)
+    text = (json.dumps(result, sort_keys=True, indent=2, ensure_ascii=False) + "\n"
+            if args.format == "json" else render_guidance(result))
+    sys.stdout.write(text)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         if args.command == "inspect":
             return _cmd_inspect(args)
+        if args.command == "route":
+            return _cmd_route(args)
         return _cmd_check(args)
     except Exception as exc:  # CLI boundary: unreadable or unsupported input is a usage-level failure
         print(f"terraproof: error: {exc}", file=sys.stderr)
