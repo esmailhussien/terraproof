@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible problem with AgentLayer.
+description: Report a reproducible problem with Terraproof.
 title: "[Bug]: "
 body:
   - type: markdown
@@ -15,6 +15,8 @@ body:
         - Task routing or skill selection
         - Apply or bundle export
         - Skill content or instructions
+        - Python checks / evidence report
+        - Dataset inspection
         - Setup or CLI
         - Documentation
         - Other or unsure
@@ -23,8 +25,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: AgentLayer version or commit
-      description: Include the commit SHA for a source checkout and how you installed or ran AgentLayer.
+      label: Terraproof version or commit
+      description: Include the commit SHA for a source checkout and how you installed or ran Terraproof.
       placeholder: "Commit SHA, source checkout / package installation"
     validations:
       required: true
@@ -32,9 +34,15 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: OS, Node.js and npm versions; Python version if relevant. For agent integration, include the agent/tool and version.
+      description: OS, Node.js and npm versions. For agent integration, include the agent/tool and version.
     validations:
       required: true
+  - type: input
+    id: python_version
+    attributes:
+      label: Python version (if relevant)
+      description: Needed for the python -m terraproof command, Python checks, or dataset inspection.
+      placeholder: "for example 3.11.9"
   - type: textarea
     id: reproduction
     attributes:
@@ -46,6 +54,11 @@ body:
         3. Observe...
     validations:
       required: true
+  - type: textarea
+    id: python_report
+    attributes:
+      label: python -m terraproof command and report (if relevant)
+      description: Paste the exact command and the report or error output. Remove private paths, datasets and secrets; a minimal sample file is more useful than a private one.
   - type: textarea
     id: expected
     attributes:

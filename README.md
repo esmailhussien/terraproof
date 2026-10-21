@@ -11,6 +11,88 @@ Terraproof is a focused collection of mapping and remote-sensing skills for AI c
 
 ---
 
+## Quick Start: Route a Real Task
+
+Use a source checkout for this walkthrough; it does not depend on an npm release being available.
+
+**Requirements:** Git and Node.js. Source checkout commands (`node router/index.ts ...`) need **Node.js 22.18+ or 24+** for native TypeScript support (see [Node.js TypeScript support](https://nodejs.org/api/typescript.html)). The built package (`npm run build`, `node bin/terraproof.js ...`) needs Node.js 20+. No model API key is needed for routing. A coding agent is needed separately to implement the task.
+
+```bash
+git clone https://github.com/esmailhussien/terraproof.git
+cd terraproof
+node router/index.ts --version
+node router/index.ts validate
+node router/index.ts route "Download Sentinel-2 imagery from a STAC catalog, compute NDVI, and map the change with MapLibre" --dry-run
+```
+
+**Expected result:** `--version` prints `terraproof v0.2.0`, and `validate` ends with `✓ Registry validation passed: 15 skills, 3 collections.` The route prints the task, a confidence score (75% for this prompt), the selected skill count (4), and the skills grouped by layer with a score and rationale: `geomaster`, `geospatial-data-discovery`, `geospatial-frontend`, and `verification`. Dry-run output also lists dropped candidates. It does not create files or call a model.
+
+The walkthrough is illustrative, not a recorded execution. Exact selections and scores depend on the prompt, overrides, and registry revision. The commands that run offline were checked against this checkout. The download, NDVI, and MapLibre steps need network access and data, so they are illustrative only.
+
+### Practical example: Sentinel-2 NDVI change map
+
+The task needs satellite imagery, a spectral index, and a web map. First inspect the route above. If the recommendation misses a requirement, revise the prompt or use overrides.
+
+Bundle the selected skills into one reviewable context file. The `--include` flags force the four registered skills:
+
+```bash
+node router/index.ts bundle "Download Sentinel-2 imagery from a STAC catalog, compute NDVI, and map the change with MapLibre" --include geospatial-data-discovery --include geomaster --include geospatial-frontend --include verification --out ndvi-context.md
+```
+
+**Expected artifact:** `ndvi-context.md` in the current directory. The CLI prints `✓ Composed bundle written to: ndvi-context.md (4 skills, <N> bytes)`; the size in this checkout was 27113 bytes. The file starts with a header listing the task, the four skills, and their layers, then the universal engineering instructions and the skill text grouped by layer. Review it, then give it to your coding agent together with your project requirements. The file is instructions, not generated application code.
+
+For agents that support project skill directories, export to a separate demo folder first. The `--dry-run` form prints the same recommendation with `Mode: DRY RUN (No changes made)` and writes nothing:
+
+```bash
+node router/index.ts apply "Download Sentinel-2 imagery from a STAC catalog, compute NDVI, and map the change with MapLibre" --include geospatial-data-discovery --include geomaster --include geospatial-frontend --include verification --target ../terraproof-demo/.agents/skills --dry-run
+
+# After reviewing the recommendation, remove --dry-run to write files:
+node router/index.ts apply "Download Sentinel-2 imagery from a STAC catalog, compute NDVI, and map the change with MapLibre" --include geospatial-data-discovery --include geomaster --include geospatial-frontend --include verification --target ../terraproof-demo/.agents/skills
+```
+
+**Expected files after a successful export** (the target is resolved from the directory you run the command in, so this folder appears next to the clone):
+
+```text
+terraproof-demo/
+└── .agents/
+    ├── AGENTS.md          # Generated manifest with installed skills and rationales
+    ├── instructions/      # engineering.md, security.md, simplicity.md; copied only if this folder does not exist yet
+    └── skills/            # One folder per selected skill; UPSTREAM.md is excluded
+        ├── geomaster/
+        ├── geospatial-data-discovery/
+        ├── geospatial-frontend/
+        └── verification/
+```
+
+Check the CLI output for copy errors and inspect the files. The CLI reminds you that nothing loads these skills automatically, so reference `.agents/skills` from your agent's instruction file (for example, a root `AGENTS.md`). Then ask the agent to read the manifest and the relevant skills before it implements anything. Verify the resulting work yourself, including the map rendering and the error states in the app.
+
+### Check the result with the Python core
+
+After the work produces a raster, run the Python checks on it. Setup (Python 3.10 or newer) and the full list of checks are in [Python core](#python-core-phase-1-experimental).
+
+```bash
+python -m terraproof check ndvi.tif --expect index --format md --lang ar --out ndvi_report_ar.md
+```
+
+`--expect index` checks that the sampled values fall within [-1, 1]. `--lang` only applies to the Markdown format, so `--format md --lang ar` writes an Arabic report. The exit code is `0` Decision-grade, `2` Review required, `3` Advisory only, or `1` for a usage error.
+
+**Expected result (illustrative for `ndvi.tif`):** the grade and messages depend on your file. This command was run on a synthetic 64×64 NDVI GeoTIFF (EPSG:32636, striped, no overviews), not on a Sentinel-2 product. It produced the grade **يحتاج مراجعة** (Review required) and exit code `2`: `raster.cog_layout` warned that the file is not a tiled COG, while `crs.defined`, `raster.nodata_declared`, and `rs.index_range` passed.
+
+### Experimental limits and safe use
+
+- Routing is deterministic keyword/scoring logic, not semantic understanding. Confidence is a routing signal, not a probability that the implementation will succeed.
+- Inspect recommendations before use. Prompt wording, conflicts, collection presets, and manual overrides can change the selected skills.
+- The CLI is strict. Unknown options, options missing a value, `--include` or `--exclude` names that are not registered skills, unknown `--collection` names, and `--format` values other than `json` or `table` exit with status `1` and a message. `--help` lists the options.
+- `apply` writes without an interactive confirmation; there is no `--yes` flag. It overwrites files that have the same names in the target and the manifest next to it (`<target>/../AGENTS.md`). Start in a disposable folder, or commit or back up existing files first.
+- The generated manifest tells you to reference the skills from your agent's instruction file, because nothing loads `.agents/skills/` automatically.
+- Use `route --dry-run` or `apply --dry-run` to inspect without exporting. `bundle --out` writes its file even when `--dry-run` is supplied, and it overwrites an existing output file.
+- Routing uses local files. Cloning, dependency installation, and any tools that individual skills describe may need network access or their own dependencies.
+- Exporting skills does not install GDAL, Python packages, browser tooling, or other domain dependencies, and it does not prove that an agent loaded or followed the instructions.
+
+For development checks, see [Verify your change](CONTRIBUTING.md#verify-your-change) in `CONTRIBUTING.md`.
+
+---
+
 ## Install & Usage
 
 The npm package name `terraproof` is not published yet, so `npx terraproof` does not work from the registry. From a clone:

@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Search existing issues and read CONTRIBUTING.md before proposing a change.
-        AgentLayer is experimental. Describe a concrete need and a small, reviewable improvement. This issue is public; do not include secrets, personal data, confidential prompts or private datasets.
+        Terraproof is experimental. Describe a concrete need and a small, reviewable improvement. This issue is public; do not include secrets, personal data, confidential prompts or private datasets.
   - type: dropdown
     id: area
     attributes:
@@ -15,6 +15,8 @@ body:
         - Task routing or skill selection
         - Apply or bundle export
         - New or improved skill
+        - Python checks / evidence report
+        - Dataset inspection
         - Engineering instructions
         - Setup or CLI
         - Documentation or examples
