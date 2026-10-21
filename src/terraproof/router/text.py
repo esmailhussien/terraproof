@@ -72,6 +72,17 @@ def _arabic_variants(word: str) -> set[str]:
     for form in tuple(forms):
         if form[0] in "بل" and len(form) > 3:
             forms.add(form[1:])
+    # Possessive pronouns attach to nouns after their article/preposition prefixes.
+    # Keep whole-word variants and let the curated lexicon validate each candidate;
+    # do not strip arbitrary Arabic plurals or match interior substrings.
+    for form in tuple(forms):
+        for suffix in ("هما", "هم", "هن", "ها", "نا", "كم", "كن", "ه", "ك", "ي"):
+            if form.endswith(suffix) and len(form) > len(suffix) + 2:
+                base = form[:-len(suffix)]
+                forms.add(base)
+                # ة becomes ت before an attached pronoun: مساحتها -> مساحة.
+                if base.endswith("ت"):
+                    forms.add(base[:-1] + "ه")
     return forms
 
 

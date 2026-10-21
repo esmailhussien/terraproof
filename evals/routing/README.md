@@ -108,3 +108,36 @@ Structural checks (item and language counts, unique ids, allowed skill names,
 no process skills, per-skill coverage, `datasets` and `must_not` counts, and no
 overlap between `expected` and `must_not`) are run with the bundled Python
 before any change to the file is merged.
+
+## heldout_v2
+
+[`heldout_v2.jsonl`](heldout_v2.jsonl) is a second, fresh held-out set. It
+exists because `heldout.jsonl` has been used for per-category feedback and so
+no longer gives an unbiased estimate. v2 gives a new, independent one.
+
+- Same schema and metric as above (ids are `h2-<lang>-<nnn>`; means are over its
+  100 items).
+- 100 items: 50 English, 50 Arabic (MSA and Egyptian dialect, with embedded
+  English technical tokens and informal spelling). Each of the 16 skills appears
+  in `expected` at least five times; `expected` has 1 skill in 92 items and 2
+  in 8.
+- 29 items carry `datasets` that decide the answer: geographic, Web Mercator or
+  missing CRS under area, distance and buffer tasks (with projected-CRS
+  counterparts that expect only `geopandas`), categorical `uint8` rasters,
+  rasters on different grids, scaled or undeclared-scale `uint16` reflectance,
+  undeclared nodata, mixed geometry types before GeoJSON export, and
+  `sentinel-2-l2a`/`landsat-c2-l2` STAC items that are already held versus a
+  request to search for more.
+- 98 items carry `must_not`. About 20 are deliberately hard: indirect symptoms
+  with no skill keywords, near-misses between neighbouring skills, and
+  off-domain distractor words (for example `h2-en-003`, `h2-en-024`,
+  `h2-en-027`, `h2-en-028`, `h2-en-037`, `h2-en-042`, `h2-ar-003`, `h2-ar-010`,
+  `h2-ar-044`, `h2-ar-050`).
+- It was written by a worker who read only the registry, the skill frontmatter
+  descriptions, the inspector source and this README. That worker did not read
+  the router code, `dev.jsonl`, `heldout.jsonl` or the router test scenarios.
+
+**Policy:** `heldout_v2.jsonl` is never used for tuning, debugging or feedback of
+any kind (not even per-category or per-item results) until a release decision.
+Run it once, for the release decision, and report only the aggregate numbers
+defined under Metric. The held-out policy above applies to it in full.

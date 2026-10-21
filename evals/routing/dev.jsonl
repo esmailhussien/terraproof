@@ -113,3 +113,57 @@
 {"id":"ar-57","prompt":"حلل شبكة الطرق ومركزية العقد","lang":"ar","expected":["networkx"],"must_not":["geospatial-data-discovery"]}
 {"id":"ar-58","prompt":"ابني خريطة تفاعلية للنيل بـ MapLibre","lang":"ar","expected":["geospatial-frontend"]}
 {"id":"ar-59","prompt":"نزّل داتا شبكة الطرق من OpenStreetMap","lang":"ar","expected":["geospatial-data-discovery"]}
+{"id":"en-precision-01","prompt":"Estimate correlation between the elevation raster and rainfall observations.","lang":"en","expected":["statistical-analysis"],"must_not":["spectral-indices","satellite-preprocessing","geospatial-frontend"]}
+{"id":"en-precision-02","prompt":"Plot the histogram of this calibrated reflectance raster as a figure.","lang":"en","expected":["scientific-visualization"],"must_not":["spectral-indices","satellite-preprocessing","geospatial-frontend"]}
+{"id":"en-precision-03","prompt":"Use a random forest for Landsat land cover classification.","lang":"en","expected":["geomaster"],"must_not":["satellite-preprocessing","spectral-indices"]}
+{"id":"en-precision-04","prompt":"Analyze Sentinel satellite imagery for urban growth with remote sensing.","lang":"en","expected":["geomaster"],"must_not":["satellite-preprocessing","spectral-indices"]}
+{"id":"en-precision-05","prompt":"Render a static map figure of population density in the annual report.","lang":"en","expected":["scientific-visualization"],"must_not":["geospatial-frontend"]}
+{"id":"en-precision-06","prompt":"Create an interactive chart of regression residuals with Plotly, not a map.","lang":"en","expected":["scientific-visualization","statistical-analysis"],"must_not":["geospatial-frontend"]}
+{"id":"en-precision-07","prompt":"I already have the satellite scenes locally; clip them with rasterio.","lang":"en","expected":["raster-processing"],"must_not":["geospatial-data-discovery","satellite-preprocessing","spectral-indices"]}
+{"id":"en-precision-08","prompt":"Reproject the provided STAC DEM asset using gdalwarp.","lang":"en","datasets":[{"kind":"stac","collection":"local-dem"}],"expected":["gdal"],"must_not":["geospatial-data-discovery","spectral-indices","satellite-preprocessing"]}
+{"id":"en-precision-09","prompt":"Where can I get a shapefile of the watershed boundaries?","lang":"en","expected":["geospatial-data-discovery"],"must_not":["geopandas","geospatial-frontend"]}
+{"id":"en-precision-10","prompt":"Is there an open dataset of building footprints for this province?","lang":"en","expected":["geospatial-data-discovery"],"must_not":["geopandas"]}
+{"id":"en-precision-11","prompt":"Pull imagery for the coastal study area during spring.","lang":"en","expected":["geospatial-data-discovery"],"must_not":["satellite-preprocessing","spectral-indices"]}
+{"id":"en-precision-12","prompt":"Where could we obtain a GeoJSON dataset of public parks?","lang":"en","expected":["geospatial-data-discovery"],"must_not":["geopandas"]}
+{"id":"en-precision-13","prompt":"Are there public datasets of regional soil polygons?","lang":"en","expected":["geospatial-data-discovery"],"must_not":["geopandas"]}
+{"id":"en-precision-14","prompt":"Fetch a GeoPackage of administrative boundaries, then use GeoPandas for a spatial join.","lang":"en","expected":["geospatial-data-discovery","geopandas"]}
+{"id":"en-precision-15","prompt":"Find the shortest path between nodes in the supplied road graph.","lang":"en","expected":["networkx"],"must_not":["geospatial-data-discovery","geospatial-frontend"]}
+{"id":"en-precision-16","prompt":"routing","lang":"en","expected":["networkx"],"must_not":["geospatial-data-discovery","geospatial-frontend"]}
+{"id":"en-precision-17","prompt":"connectivity","lang":"en","expected":["networkx"],"must_not":["geospatial-data-discovery"]}
+{"id":"en-precision-18","prompt":"Create a web map of the regression results with Leaflet popups.","lang":"en","expected":["geospatial-frontend","statistical-analysis"]}
+{"id":"en-precision-19","prompt":"Calculate the water index from Sentinel reflectance and plot the result.","lang":"en","expected":["spectral-indices","satellite-preprocessing","scientific-visualization"]}
+{"id":"en-precision-20","prompt":"Decode the scale and offset in my local imagery; do not search a catalog.","lang":"en","expected":["satellite-preprocessing"],"must_not":["spectral-indices","geospatial-data-discovery"]}
+{"id":"en-precision-21","prompt":"Summarize the raster pixels with descriptive statistics.","lang":"en","datasets":[{"kind":"raster","crs":{"is_projected":true},"bands":[{"dtype":"float32","scale":1,"offset":0}]}],"expected":["statistical-analysis","raster-processing"],"must_not":["spectral-indices","satellite-preprocessing","geospatial-data-discovery"]}
+{"id":"en-precision-22","prompt":"Create a spatial index in PostGIS for the existing table.","lang":"en","expected":["design-postgis-tables"],"must_not":["spectral-indices","geospatial-frontend","geospatial-data-discovery"]}
+{"id":"en-precision-23","prompt":"Download more Sentinel imagery and compute NDVI from it.","lang":"en","expected":["geospatial-data-discovery","spectral-indices"]}
+{"id":"en-precision-24","prompt":"Explain why a compass points north in a bedtime story.","lang":"en","expected":[],"must_not":["networkx","geospatial-data-discovery","geospatial-frontend","spectral-indices"]}
+{"id":"ar-precision-01","prompt":"اجمع المساحات بالكيلومترات المربعة لكل الأحواض","lang":"ar","datasets":[{"kind":"vector","crs":{"is_geographic":true,"epsg":4326}}],"expected":["crs-and-units","geopandas"],"must_not":["geospatial-data-discovery"]}
+{"id":"ar-precision-02","prompt":"عايز مجموع الأفدنة بتاعة الأراضي دي","lang":"ar","datasets":[{"kind":"vector","crs":{"is_geographic":true,"epsg":4326}}],"expected":["crs-and-units","geopandas"]}
+{"id":"ar-precision-03","prompt":"قارن المسافات بالكيلومترات بين محطاتنا","lang":"ar","datasets":[{"kind":"vector","crs":{"is_geographic":true,"epsg":4326}}],"expected":["crs-and-units","geopandas"]}
+{"id":"ar-precision-04","prompt":"ولمساحتها عايز رقم بالمتر المربع","lang":"ar","datasets":[{"kind":"vector","crs":{"horizontal_kind":"geographic"}}],"expected":["crs-and-units"]}
+{"id":"ar-precision-05","prompt":"احسب أطوالها بأمتارها بدل الدرجات","lang":"ar","datasets":[{"kind":"vector","crs":{"is_geographic":true}}],"expected":["crs-and-units"]}
+{"id":"ar-precision-06","prompt":"راجع مسافاتهم وهكتاراتنا مع EPSG:4326","lang":"ar","datasets":[{"kind":"vector","crs":{"is_geographic":true,"epsg":4326}}],"expected":["crs-and-units"]}
+{"id":"ar-precision-07","prompt":"هات مساحتها بالفدادين والأفدنة في الطبقة دي","lang":"ar","datasets":[{"kind":"vector","crs":{"is_geographic":true}}],"expected":["crs-and-units"]}
+{"id":"ar-precision-08","prompt":"محتاج أفدنتها ومساحاتها قبل التقرير","lang":"ar","datasets":[{"kind":"vector","crs":{"is_geographic":true}}],"expected":["crs-and-units"]}
+{"id":"ar-precision-09","prompt":"حلل ترابطها","lang":"ar","expected":["networkx"],"must_not":["geospatial-data-discovery","geospatial-frontend"]}
+{"id":"ar-precision-10","prompt":"عايز مساراتهم","lang":"ar","expected":["networkx"],"must_not":["geospatial-data-discovery"]}
+{"id":"ar-precision-11","prompt":"توجيه المركبات","lang":"ar","expected":["networkx"],"must_not":["geospatial-data-discovery"]}
+{"id":"ar-precision-12","prompt":"افحص اتصاليتها والعقدة اللي بتربط شبكاتنا","lang":"ar","expected":["networkx"],"must_not":["geospatial-data-discovery"]}
+{"id":"ar-precision-13","prompt":"قارن أقصر الطرق بين وصلاتها في network","lang":"ar","expected":["networkx"],"must_not":["geospatial-data-discovery","geospatial-frontend"]}
+{"id":"ar-precision-14","prompt":"ارسم مساراتها في شكل للنشر بعد حساب centrality","lang":"ar","expected":["networkx","scientific-visualization"],"must_not":["geospatial-frontend","geospatial-data-discovery"]}
+{"id":"ar-precision-15","prompt":"منين أجيب shapefile للحدود الإدارية؟","lang":"ar","expected":["geospatial-data-discovery"],"must_not":["geopandas"]}
+{"id":"ar-precision-16","prompt":"هل هناك dataset مفتوح لصور المدينة؟","lang":"ar","expected":["geospatial-data-discovery"],"must_not":["geopandas","satellite-preprocessing","spectral-indices"]}
+{"id":"ar-precision-17","prompt":"فين بيانات المباني اللي أقدر أحملها؟","lang":"ar","expected":["geospatial-data-discovery"],"must_not":["geopandas"]}
+{"id":"ar-precision-18","prompt":"عاوز ألاقي GeoJSON للقرى وأعرف ترخيصها","lang":"ar","expected":["geospatial-data-discovery"],"must_not":["geopandas"]}
+{"id":"ar-precision-19","prompt":"المرئيات عندي بالفعل؛ قصها باستخدام rasterio","lang":"ar","expected":["raster-processing"],"must_not":["geospatial-data-discovery","satellite-preprocessing","spectral-indices"]}
+{"id":"ar-precision-20","prompt":"معايا STAC item من Landsat؛ اعمل تصنيف للصور الموجودة","lang":"ar","datasets":[{"kind":"stac","collection":"landsat-c2-l2"}],"expected":["geomaster"],"must_not":["geospatial-data-discovery","satellite-preprocessing","spectral-indices"]}
+{"id":"ar-precision-21","prompt":"احسب المؤشرات بتاعتها من صور الأقمار الصناعية","lang":"ar","expected":["spectral-indices"],"must_not":["geospatial-data-discovery"]}
+{"id":"ar-precision-22","prompt":"طلع مؤشرها من الداتا اللي معايا","lang":"ar","datasets":[{"kind":"raster","crs":{"is_projected":true},"bands":[{"dtype":"float32","scale":1,"offset":0}]}],"expected":["spectral-indices","raster-processing"],"must_not":["geospatial-data-discovery"]}
+{"id":"ar-precision-23","prompt":"محتاج مؤشراتنا من مرئيات Sentinel","lang":"ar","expected":["spectral-indices"],"must_not":["geospatial-data-discovery"]}
+{"id":"ar-precision-24","prompt":"احسب معامل ارتباط rainfall براستر الارتفاعات","lang":"ar","expected":["statistical-analysis"],"must_not":["spectral-indices","satellite-preprocessing"]}
+{"id":"ar-precision-25","prompt":"اعملي figure للـ raster كخريطة في التقرير المطبوع","lang":"ar","expected":["scientific-visualization"],"must_not":["geospatial-frontend","spectral-indices","satellite-preprocessing"]}
+{"id":"ar-precision-26","prompt":"اعمل chart تفاعلي للانحدار مش خريطة ويب","lang":"ar","expected":["scientific-visualization","statistical-analysis"],"must_not":["geospatial-frontend"]}
+{"id":"ar-precision-27","prompt":"ابني خريطة تفاعلية بـ Leaflet للقياسات","lang":"ar","expected":["geospatial-frontend"]}
+{"id":"ar-precision-28","prompt":"نزل صور إضافية من STAC وبعدين احسب مؤشر المياه","lang":"ar","expected":["geospatial-data-discovery","spectral-indices"]}
+{"id":"ar-precision-29","prompt":"اعمل تصنيف supervised لمرئيات لاندسات","lang":"ar","expected":["geomaster"],"must_not":["satellite-preprocessing","spectral-indices"]}
+{"id":"ar-precision-30","prompt":"راجع شبكة خلايا الراستر ومحاذاتها في rasterio","lang":"ar","expected":["raster-processing"],"must_not":["networkx","geospatial-data-discovery"]}

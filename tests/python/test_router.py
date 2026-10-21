@@ -16,7 +16,7 @@ from terraproof.cli import main as cli_main
 from terraproof.inspect import inspect_dataset
 from terraproof.router import find_guidance
 from terraproof.router.evaluate import evaluate_file, main as evaluate_main
-from terraproof.router.index import PROCESS_SKILLS, find_root, get_index, markdown_sections
+from terraproof.router.index import PROCESS_SKILLS, Index, Section, find_root, get_index, markdown_sections
 from terraproof.router.lexicon import ARABIC_TERMS
 from terraproof.router.text import expand_query, normalize_arabic, tokenize
 
@@ -160,6 +160,37 @@ def test_arabic_prefix_stripping_matches_new_lexicon_terms():
     # Covers ال/بال/لل/و/ب attachment: المساحة، بالكيلومتر، للمؤشر، وللفدان، ولمسافة.
     query, _, _ = expand_query("المساحة بالكيلومتر والهكتار للمؤشر وللفدان ولمسافة كيلو حوالين النهر")
     assert {"area", "kilometre", "hectare", "index", "acre", "distance", "proximity"} <= set(query["expanded_terms"])
+
+
+@pytest.mark.parametrize("arabic,english", [
+    ("المساحات", "area"), ("ولمساحتها", "area"), ("مساحاتهم", "area"),
+    ("مسافاتهم", "distance"), ("المسافات", "distance"), ("بأطوالها", "length"),
+    ("بالكيلومترات", "kilometre"), ("بكيلومتراتنا", "kilometre"),
+    ("بأمتارها", "metre"), ("وهكتاراتنا", "hectare"),
+    ("الأفدنة", "acre"), ("أفدنتها", "acre"), ("بالفدادين", "acre"), ("بالأميال", "mile"),
+    ("مساراتهم", "routing"), ("ترابطها", "connectivity"), ("اتصاليتها", "connectivity"),
+    ("العقدة", "node"), ("حافتها", "edge"), ("وصلاتها", "edges"),
+    ("الجراف", "network"), ("توجيه", "routing"), ("طوبولوجيا", "topology"),
+    ("مؤشرها", "index"), ("ولمؤشراتنا", "indices"), ("مرئياتها", "satellite"),
+    ("أجيب", "acquire"), ("ألاقي", "search"), ("أحملها", "download"),
+])
+def test_arabic_plurals_and_attached_pronouns(arabic, english):
+    query, _, reasons = expand_query(arabic)
+    assert english in query["expanded_terms"]
+    assert any("Arabic lexicon" in text for text in reasons)
+
+
+@pytest.mark.parametrize("word", ["كمبيوتر", "مؤشراتيح", "مساحتهندسة", "كيلومتراتولوجيا"])
+def test_arabic_morphology_does_not_match_interior_substrings(word):
+    assert expand_query(word)[0]["expanded_terms"] == []
+
+
+@pytest.mark.parametrize("word", ["المساحات", "بالكيلومترات", "الأفدنة", "مسافاتهم", "ولمساحتها", "أفدنتها"])
+def test_geographic_metric_rule_with_arabic_morphology(word):
+    result = find_guidance(word, datasets=[vector(GEOGRAPHIC)])
+    assert names(result)[0] == "crs-and-units"
+    assert reason(result, "crs-and-units", "geographic horizontal CRS with metric wording")
+    assert not reason(find_guidance(word, datasets=[vector()]), "crs-and-units", "metric wording")
 
 
 def test_compound_horizontal_geographic_rule_and_projected_negative():
@@ -325,6 +356,10 @@ def test_line_chart_does_not_select_spatial_or_graph_tools():
     "Compute zonal statistics of the raster",
     "احسب الإحصاءات الوصفية للمرئية",
     "اعمل تصنيف للمرئية ده للغطاء الأرضي",
+    "Classify the calibrated Sentinel reflectance imagery into land cover classes",
+    "Compute descriptive statistics for the calibrated reflectance raster",
+    "Plot the calibrated reflectance bands in a figure",
+    "اعمل تصنيف للانعكاس السطحي الموجود عندي",
 ])
 def test_weak_imagery_wording_does_not_rank_satellite_skills(task):
     result = find_guidance(task)
@@ -355,11 +390,123 @@ def test_graph_analysis_wording_does_not_rank_data_discovery(task):
     assert "geospatial-data-discovery" not in names(result)
 
 
+@pytest.mark.parametrize("task", [
+    "Create a spatial index in PostGIS, then compute NDVI from Sentinel imagery",
+    "Create a spatial index in PostGIS, then compute the water index from Landsat",
+])
+def test_nonspectral_index_guard_preserves_separate_spectral_intent(task):
+    result = find_guidance(task)
+    assert {"design-postgis-tables", "spectral-indices"} <= set(names(result))
+
+
 def test_web_map_and_data_sourcing_wording_keep_frontend_and_discovery():
     assert "geospatial-frontend" in names(find_guidance("Build an interactive web map dashboard with MapLibre"))
     assert "geospatial-frontend" in names(find_guidance("ابني خريطة تفاعلية للنيل بـ MapLibre"))
     assert "geospatial-data-discovery" in names(find_guidance("Download OpenStreetMap road network data for the city"))
     assert "geospatial-data-discovery" in names(find_guidance("نزّل داتا شبكة الطرق من OpenStreetMap"))
+
+
+@pytest.mark.parametrize("task", [
+    "Where can I get a shapefile of the watershed boundaries?",
+    "Where could we obtain a GeoJSON dataset of public parks?",
+    "Is there an open dataset of building footprints?",
+    "Are there public datasets of soil polygons?",
+    "Pull imagery for the coastal study area.",
+    "Where can I get a land-cover classification shapefile?",
+    "Where can I get a spatial index dataset in GeoJSON?",
+    "منين أجيب shapefile للحدود الإدارية؟",
+    "هل هناك dataset مفتوح لصور المدينة؟",
+    "فين بيانات المباني اللي أقدر أحملها؟",
+    "عاوز ألاقي GeoJSON للقرى وأعرف ترخيصها",
+])
+def test_indirect_discovery_wording_without_geopandas(task):
+    result = find_guidance(task)
+    assert "geospatial-data-discovery" in names(result)
+    assert "geopandas" not in names(result)
+    assert reason(result, "geospatial-data-discovery", "data acquisition or availability question")
+
+
+PYTHON_SCENARIOS = json.loads((Path(__file__).parents[1] / "router" / "scenarios.json").read_text(encoding="utf-8"))["pythonScenarios"]
+
+
+@pytest.mark.parametrize("scenario", PYTHON_SCENARIOS, ids=lambda scenario: scenario["id"])
+def test_python_routing_scenarios(scenario):
+    result = find_guidance(scenario["prompt"], datasets=scenario.get("datasets"))
+    assert set(scenario["mustInclude"]) <= set(names(result))
+    assert not set(scenario.get("mustExclude", [])) & set(names(result))
+    assert len(result["skills"]) <= scenario.get("maxSkills", 5)
+
+
+@pytest.fixture
+def controlled_index(monkeypatch):
+    """Control BM25 independently of corpus wording to test selection boundaries."""
+    import terraproof.router as router
+    metadata = {
+        "raster-processing": {"triggers": ["rasterio"]},
+        "gdal": {"triggers": []}, "geozarr": {"triggers": []},
+        "geomaster": {"triggers": ["sentinel"]}, "networkx": {"triggers": []},
+        "geopandas": {"triggers": []}, "vector-quality": {"triggers": []},
+        "spectral-indices": {"triggers": ["routing"]},
+    }
+    for skill in metadata.values():
+        skill.update(explanation="raster network", capabilities=[])
+    sections = tuple(Section(name, "test", "Test", "SKILL.md#test", "raster network", {}, 1)
+                     for name in metadata)
+    index = Index(metadata, sections, {}, 1.0)
+    scores = {}
+    monkeypatch.setattr(router, "get_index", lambda: index)
+    monkeypatch.setattr(Index, "score", lambda self, section, terms: (scores.get(section.skill, 0.0), []))
+    return router, scores
+
+
+def test_relative_cutoff_boundary_and_direct_trigger_exemption(controlled_index):
+    router, scores = controlled_index
+    scores.update({"raster-processing": 38.0, "gdal": 20.0, "geozarr": 19.999, "geomaster": 5.0})
+    result = router.find_guidance("rasterio raster sentinel", top_k=10)
+    assert router.RELATIVE_CUTOFF == 0.5
+    assert names(result) == ["raster-processing", "gdal", "geomaster"]
+    assert result["skills"][1]["score"] == result["skills"][0]["score"] * router.RELATIVE_CUTOFF
+    # The directly requested sensor skill survives below the relative threshold.
+    assert result["skills"][2]["score"] < result["skills"][1]["score"]
+
+
+def test_relative_cutoff_keeps_positive_dataset_evidence(controlled_index):
+    router, scores = controlled_index
+    scores.update({"raster-processing": 100.0})
+    result = router.find_guidance("rasterio raster", datasets=[vector()], top_k=10)
+    assert {"geopandas", "vector-quality"} <= set(names(result))
+    assert all(skill["score"] < router.RELATIVE_CUTOFF * result["skills"][0]["score"]
+               for skill in result["skills"] if skill["name"] != "raster-processing")
+
+
+def test_empty_result_fallback_single_best_and_explanation(controlled_index):
+    router, scores = controlled_index
+    scores.update({"networkx": 0.5, "geomaster": 0.5})
+    result = router.find_guidance("routing sentinel")
+    assert names(result) == ["networkx"]
+    assert router.FALLBACK_MIN_SCORE <= result["skills"][0]["score"] < router.MIN_SCORE
+    assert reason(result, "networkx", "empty-result fallback")
+    assert router.find_guidance("routing sentinel", top_k=0)["skills"] == []
+    assert router.find_guidance("routing sentinel", sections_per_skill=0)["skills"][0]["sections"] == []
+
+
+def test_empty_result_fallback_floor_ties_and_guards(controlled_index, monkeypatch):
+    router, scores = controlled_index
+    scores.update({"networkx": 0.5, "geomaster": 1.5, "spectral-indices": 2.0})
+    # Both supported candidates score 3.5; names break ties. The artificial index
+    # trigger for spectral-indices must not bypass its no-index-intent guard.
+    assert names(router.find_guidance("routing sentinel")) == ["geomaster"]
+    monkeypatch.setattr(router, "FALLBACK_MIN_SCORE", 3.500001)
+    assert router.find_guidance("routing sentinel")["skills"] == []
+    assert router.find_guidance("bananas")["skills"] == []
+
+
+def test_fallback_not_added_when_another_skill_passes(controlled_index):
+    router, scores = controlled_index
+    scores.update({"raster-processing": 10.0, "networkx": 0.5})
+    result = router.find_guidance("rasterio routing")
+    assert names(result) == ["raster-processing"]
+    assert not any("fallback" in text for skill in result["skills"] for text in skill["reasons"])
 
 
 @pytest.mark.parametrize("kwargs", [
@@ -387,6 +534,7 @@ def test_evaluator_metrics_and_recall_exit_codes(tmp_path, capsys):
     ])
     metrics = evaluate_file(path, top_k=1)
     assert metrics["mean_recall_at_k"] == 0.75
+    assert metrics["mean_ranked_skills"] == 1.0
     assert metrics["per_language_recall"] == {"ar": 1.0, "en": 0.5}
     assert metrics["must_not_violations"] == 0
     assert metrics["failing_items"][0]["top_k"] == ["networkx"]
@@ -460,7 +608,10 @@ def test_cli_route_input_exit_codes(args, capsys):
 
 def test_dev_set_coverage_without_opening_any_other_evaluation_set():
     items = [json.loads(line) for line in (find_root() / "evals" / "routing" / "dev.jsonl").read_text(encoding="utf-8").splitlines()]
-    assert len(items) >= 50
+    assert len(items) >= 169
+    additions = [item for item in items if "-precision-" in item["id"]]
+    assert len(additions) >= 40
+    assert sum(item["lang"] == "ar" for item in additions) >= 20
     assert sum(item["lang"] == "en" for item in items) >= 25
     assert sum(item["lang"] == "ar" for item in items) >= 25
     assert sum(bool(item.get("datasets")) for item in items) >= 10

@@ -17,61 +17,73 @@ _METRIC_WORDS = frozenset(tokenize(
     "kilometers km hectare hectares acre acres mile miles m2 proximity"))
 _METRIC_NEAR = re.compile(r"\b\d+(?:[.,]\d+)?\s*(?:m|km|م)\b")
 
-# Intent wording for STAC item profiles: catalog search vs. processing an item in hand.
+# Sourcing requires both an acquisition intent and a data object. A question about
+# availability is an acquisition intent too; "find shortest path" is not one.
 _SOURCING_VERB = re.compile(
-    r"\b(?:find\w*|search\w*|look for|list\w*|browse\w*|quer\w*|acquir\w*|fetch\w*|download\w*|sourc\w*)\b"
-    r"|(?:ابحث|دور|لاقي|نزل|تحميل|هات|جيب)")
+    r"\b(?:find\w*|search\w*|look for|browse\w*|quer\w*|acquir\w*|fetch\w*|download\w*|sourc\w*|pull)\b"
+    r"|\bwhere\b.{0,60}\b(?:get|obtain|access)\b"
+    r"|\b(?:is|are) there\b.{0,60}\b(?:open|public|available|datasets?)\b"
+    r"|(?:ابحث|دور علي|لاقي|نزل|تحميل|هات|جيب|احمل|منين|فين.{0,30}(?:بيانات|داتا|صور)|هل (?:توجد|هناك))")
 _SOURCING_OBJECT = re.compile(
-    r"\b(?:catalog|catalogue|stac|openstreetmap|osm|overture|shapefile|dem|scenes?|imagery|images?|"
-    r"photos?|satellite|landsat|sentinel|data)\b"
+    r"\b(?:catalog|catalogue|stac|openstreetmap|osm|overture|shapefiles?|geojson|geopackage|dem|"
+    r"scenes?|imagery|images?|photos?|satellite|landsat|sentinel|data|datasets?|footprints)\b"
     r"|(?:كتالوج|مصادر|مشاهد|مرئيه|مرئيات|صور|داتا|بيانات)")
-_PROCESSING_TEXT = re.compile(
-    r"\b(?:mask\w*|decod\w*|reflectance|cloud\w*|shadow\w*|scl|qa\w*|harmoni[sz]\w*|composit\w*|"
-    r"calibrat\w*|process\w*|comput\w*|calculat\w*|statistic\w*|zonal|indices?|ndvi|ndwi|mndwi|nbr|"
-    r"dnbr|evi|savi)\b"
-    r"|(?:قناع|سحب|غيوم|ظل|ظلال|فك|انعكاس|معامل|احسب|حساب|معالج|مؤشر)")
+_PROCESSING_WORDS = frozenset(tokenize(
+    "mask decode reflectance cloud shadow scl harmonize composite calibrate process compute "
+    "calculate statistics zonal index indices ndvi ndwi mndwi nbr dnbr evi savi classify "
+    "classification reproject resample clip join overlay centrality shortest path plot figure"))
+_PROCESSING_TEXT = re.compile(r"قناع|سحب|فك|احسب|حساب|معالج|مؤشر|تصنيف|قص|ارسم|حلل")
+_VECTOR_OPERATIONS = frozenset(tokenize("join overlay buffer dissolve intersection reproject clip"))
+_IN_HAND = re.compile(
+    r"\b(?:already|provided|given|local|loaded|in hand|on disk|(?:i|we) have)\b"
+    r"|(?:عندي|عندنا|معايا|معاي|الموجود|بياناتي|داتتي)")
 
-# Satellite preprocessing and spectral indices need decoding, cloud/QA masking, reflectance
-# or index wording, or scaled-integer/STAC data signals; a bare imagery/statistics/
-# classification/raster mention is not evidence.
-_SATELLITE_WEAK = frozenset(tokenize(
-    "satellite imagery image images photograph photographs photo photos statistics statistic "
-    "statistical classify classification classified classifying raster rasters remote sensing"))
-_SATELLITE_STRONG = frozenset(tokenize(
-    "decode decoding decoded mask masking masked cloud clouds cloudless shadow shadows scl "
-    "reflectance harmonize harmonized harmonization composite composites compositing "
-    "calibration calibrated ndvi ndwi mndwi nbr dnbr evi savi index indices"))
-_SATELLITE_STRONG_TEXT = re.compile(
-    r"\b(?:scene classification|qa_?pixel|boa_add_offset|l2a|level[\s_-]*2|collection[\s_-]*2|"
-    r"surface reflectance|scale and offset)\b"
-    r"|(?:قناع|سحب|غيوم|ظل|ظلال|فك|انعكاس|معامل القياس|مؤشر)")
+# Separate preprocessing evidence from index evidence: a calibrated raster or a
+# statistic is not by itself an index request, nor is a sensor a decoding request.
+_PREPROCESS_WORDS = frozenset(tokenize(
+    "decode decoding mask masking cloud clouds shadow shadows scl reflectance harmonize "
+    "harmonization composite compositing calibration calibrated"))
+_PREPROCESS_TEXT = re.compile(
+    r"\b(?:scene classification|qa_?pixel|boa_add_offset|surface reflectance|scale and offset)\b"
+    r"|(?:قناع|سحب|غيوم|ظل|ظلال|فك|انعكاس|معامل القياس)")
+_PREPROCESS_ACTION = re.compile(
+    r"\b(?:decod\w*|mask\w*|harmoni[sz]\w*|calibrat(?:e|ion|ing)|composit(?:e|ing)|scl|qa_?pixel|boa_add_offset)\b"
+    r"|قناع|فك|ازاله|شيل")
+_CLASSIFICATION_WORDS = frozenset(tokenize("classify classification"))
+_ANALYSIS_WORDS = _CLASSIFICATION_WORDS | frozenset(tokenize(
+    "statistics statistic statistical plot chart figure visualization"))
+_NAMED_INDEX_WORDS = frozenset(tokenize("ndvi ndwi mndwi nbr dnbr evi savi"))
+_INDEX_WORDS = _NAMED_INDEX_WORDS | frozenset(tokenize("index indices"))
+_INDEX_TEXT = re.compile(r"مؤشر|\b(?:burn severity|spectral indices|vegetation index|water index)\b")
+_SATELLITE_WORDS = frozenset(tokenize("satellite imagery sentinel landsat reflectance spectral"))
+_NON_SPECTRAL_INDEX = re.compile(r"\b(?:spatial|database|pandas|dataframe|gist) index\b|فهرس مكاني")
 
-# Index wording that, with satellite reflectance profiles, surfaces spectral-indices.
-_INDEX_WORDS = frozenset(tokenize("index indices ndvi ndwi mndwi nbr dnbr evi savi"))
-_INDEX_TEXT = re.compile(r"مؤشر")
+# Web technologies or map-specific interaction, not a bare map/chart/dashboard.
+_WEB_TECH = re.compile(r"\b(?:maplibre|mapbox|leaflet|deck gl|deckgl|spatial ui)\b")
+_WEB_MAP = re.compile(
+    r"\b(?:(?:web|interactive) (?:\w+ ){0,2}maps?|map dashboard|cartography web)\b"
+    r"|(?:خريط[هه].{0,15}(?:تفاعلي|ويب)|خرائط.{0,15}(?:تفاعلي|ويب))")
 
-# Static or print figure wording is not an interactive web-map interface.
-_STATIC_FIGURE = frozenset(tokenize(
-    "paper journal png pdf publication print printing static multi panel figure matplotlib "
-    "seaborn colorblind palette"))
-_WEB_FRONTEND = frozenset(tokenize("web maplibre interactive dashboard deckgl zoom popup basemap"))
-_STATIC_FIGURE_TEXT = re.compile(r"مجله|ورقه بحثيه|للنشر|مطبوع")
-
-# Graph/network analysis wording is not a data sourcing task.
+# A graph/chart homonym is not enough: require network, algorithm, or topology wording.
 _GRAPH_WORDS = frozenset(tokenize(
-    "network graph centrality shortest path nodes edges community detection topology route "
-    "routing betweenness closeness"))
-_GRAPH_TEXT = re.compile(r"شبك[هة]|مسار|عقد|حواف|مركزيه|اقصر")
-_GRAPH_SOURCING = re.compile(
-    r"\b(?:download\w*|catalog|catalogue|stac|openstreetmap|osm|overture|shapefile|dem|scenes?|"
-    r"source|sources|sourcing|acquir\w*|browse\w*|fetch\w*|data sources?|find data|find scenes|"
-    r"find images|find imagery|find satellite|find gis)\b"
-    r"|(?:كتالوج|مصادر|مشاهد|بيانات مفتوحه|صور فضائيه|نزل|تحميل)")
+    "network networkx centrality nodes edges topology route routing betweenness closeness connectivity"))
+_GRAPH_TEXT = re.compile(r"\b(?:shortest paths?|community detection|graph analysis|network graph)\b")
+_NEGATED_INTENT = re.compile(r"\b(?:no|not|without|never|مش|بدون|ليس|لا)(?:\s+(?:a|an|any|the))?\s*$")
 
 
-def data_signals(profiles: list[dict], terms: list[str], text: str = "") -> dict[str, list[tuple[float, str]]]:
-    """One-shot boosts from dataset profiles and task wording; ``text`` is normalized task text."""
+def _affirmed(pattern: re.Pattern, text: str) -> bool:
+    """Ignore immediately negated capability requests, not arbitrary clause content."""
+    return any(not _NEGATED_INTENT.search(text[:match.start()]) for match in pattern.finditer(text))
+
+
+def data_signals(profiles: list[dict], terms: list[str], text: str = "") -> tuple[dict[str, list[tuple[float, str]]], set[str]]:
+    """Return one-shot score evidence and intent guards (also respected by fallback).
+
+    ``text`` is normalized task text. Guards cannot be outweighed by incidental
+    BM25 matches; type-preference penalties remain soft for explicitly mixed work.
+    """
     signals: dict[str, list[tuple[float, str]]] = defaultdict(list)
+    guarded: set[str] = set()
 
     def boost(name: str, value: float, reason: str):
         signals[name].append((value, f"Dataset: {reason} {value:+.6f}"))
@@ -79,10 +91,28 @@ def data_signals(profiles: list[dict], terms: list[str], text: str = "") -> dict
     def wording(name: str, value: float, reason: str):
         signals[name].append((value, f"Wording: {reason} {value:+.6f}"))
 
+    def guard(name: str, reason: str):
+        guarded.add(name)
+        wording(name, -20.0, reason)
+
+    term_set = set(terms)
+    sourcing = bool(_affirmed(_SOURCING_VERB, text) and _SOURCING_OBJECT.search(text))
+    processing = bool(_PROCESSING_WORDS & term_set or _PROCESSING_TEXT.search(text))
+    graph = bool(_GRAPH_WORDS & term_set or _GRAPH_TEXT.search(text))
+    preprocessing = bool(_PREPROCESS_WORDS & term_set or _PREPROCESS_TEXT.search(text))
+    index_wording = bool(_INDEX_WORDS & term_set or _INDEX_TEXT.search(text))
+    if _NON_SPECTRAL_INDEX.search(text) and not (_NAMED_INDEX_WORDS & term_set or _INDEX_TEXT.search(text)):
+        index_wording = False
+    if (sourcing or (_ANALYSIS_WORDS & term_set and not index_wording)) and not _PREPROCESS_ACTION.search(text):
+        # Cloud-cover filters and calibrated input descriptions are not requests
+        # to mask or decode scenes for a search, classification, statistic or plot.
+        preprocessing = False
     rasters = [ds for ds in profiles if ds["kind"] == "raster"]
     vectors = [ds for ds in profiles if ds["kind"] == "vector"]
     stac = [ds for ds in profiles if ds["kind"] == "stac"]
     positional = rasters + vectors
+    if not sourcing and (_CLASSIFICATION_WORDS & term_set) and (_SATELLITE_WORDS & term_set or rasters or stac):
+        wording("geomaster", 3.0, "classification of satellite/raster data; remote-sensing analysis intent")
     if any(not ds.get("crs") for ds in positional):
         boost("crs-and-units", 10.0, "missing CRS; establish the source coordinate reference system")
     metric = bool(_METRIC_WORDS & set(terms)) or bool(_METRIC_NEAR.search(text))
@@ -108,31 +138,39 @@ def data_signals(profiles: list[dict], terms: list[str], text: str = "") -> dict
                  for ds in rasters for band in (ds.get("bands") or []))
     if scaled:
         boost("satellite-preprocessing", 11.0, "integer raster has non-identity scale/offset; review physical-value decoding (not proof of satellite origin)")
-    index_wording = bool(_INDEX_WORDS & set(terms)) or bool(_INDEX_TEXT.search(text))
     if scaled and index_wording:
         boost("spectral-indices", 8.0, "scaled-integer reflectance raster with index wording; compute indices from decoded reflectance")
+    elif index_wording and (_SATELLITE_WORDS & term_set or rasters) and not stac:
+        wording("spectral-indices", 8.0, "satellite/raster data with index wording; choose spectral roles before computing")
     if stac:
         boost("satellite-preprocessing", 5.0, "STAC item; verify product level and calibration metadata")
         if index_wording:
             boost("spectral-indices", 8.0, "STAC item with index wording; compute indices from decoded reflectance")
-        if _SOURCING_VERB.search(text) and _SOURCING_OBJECT.search(text):
+        if sourcing:
             boost("geospatial-data-discovery", 8.0, "STAC item with catalog search wording; retain catalog, asset and acquisition provenance")
-        elif _PROCESSING_TEXT.search(text):
-            wording("geospatial-data-discovery", -18.0, "STAC item already in hand for processing; no catalog search needed")
-        else:
+        elif not processing and not _IN_HAND.search(text):
             boost("geospatial-data-discovery", 8.0, "STAC item; retain catalog, asset and acquisition provenance")
     if any(re.search(r"sentinel[\s_-]*2|landsat", str(ds.get("collection", "")), re.I) for ds in stac):
         boost("satellite-preprocessing", 10.0, "Sentinel-2/Landsat STAC collection; check reflectance encoding and QA masks")
-    if (_SATELLITE_WEAK & set(terms)) and not (_SATELLITE_STRONG & set(terms) or _SATELLITE_STRONG_TEXT.search(text)) and not scaled and not stac:
-        wording("satellite-preprocessing", -20.0,
-                 "imagery/statistics/classification/raster mention without decoding, cloud/QA masking, reflectance or index evidence")
-        wording("spectral-indices", -20.0,
-                 "imagery/statistics/classification/raster mention without reflectance or index evidence")
-    if (_STATIC_FIGURE & set(terms) or _STATIC_FIGURE_TEXT.search(text)) and not (_WEB_FRONTEND & set(terms)):
-        wording("geospatial-frontend", -16.0, "static or print figure wording; not an interactive web map interface")
-    if (_GRAPH_WORDS & set(terms) or _GRAPH_TEXT.search(text)) and not _GRAPH_SOURCING.search(text):
-        wording("geospatial-data-discovery", -16.0, "graph/network analysis wording; not a data sourcing task")
-    return signals
+    if preprocessing:
+        wording("satellite-preprocessing", 3.0, "decoding, masking or reflectance preparation intent")
+    if not preprocessing and not scaled and (not stac or (processing and not index_wording)):
+        guard("satellite-preprocessing", "no decoding, cloud/QA masking, reflectance or calibration need")
+    if not index_wording:
+        guard("spectral-indices", "no spectral-index computation or interpretation intent")
+    if not (_affirmed(_WEB_TECH, text) or _affirmed(_WEB_MAP, text)):
+        guard("geospatial-frontend", "no interactive web-map interface intent")
+    if sourcing:
+        wording("geospatial-data-discovery", 10.0, "data acquisition or availability question with a data object")
+        # Formats identify the desired download, not a vector operation. Preserve
+        # explicit processing and profiles for genuine search-then-analyze tasks.
+        if not (_VECTOR_OPERATIONS & term_set) and not vectors and not re.search(r"\b(?:geopandas|geodataframe)\b", text):
+            guard("geopandas", "data search without vector processing or a vector input")
+    elif processing or graph or _IN_HAND.search(text):
+        guard("geospatial-data-discovery", "data already in hand for processing or analysis; no catalog search needed")
+    if graph and (not sourcing or processing):
+        wording("networkx", 3.0, "network/routing analysis intent; use graph algorithms")
+    return signals, guarded
 
 
 def dataset_summary(ds: dict) -> dict:

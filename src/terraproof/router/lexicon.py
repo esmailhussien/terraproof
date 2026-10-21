@@ -159,6 +159,34 @@ ARABIC_TERMS: dict[str, str] = {
     # Generic index words.
     "مؤشر": "index spectral",
     "مؤشرات": "indices spectral",
+    # Curated plurals/irregular forms; clitic handling lives in text.py.
+    "أمتار": "metre metric",
+    "كيلومترات": "kilometre km metric",
+    "كيلومترات مربعة": "square kilometres area",
+    "هكتارات": "hectare area",
+    "أفدنة": "acre area",
+    "فدادين": "acre area",
+    "أميال": "mile distance",
+    "مسارات": "paths routing network graph",
+    "شبكات": "grid",
+    "جراف": "network graph",
+    "شبكة اتصالات": "network graph nodes edges",
+    "شبكة الطرق": "network graph shortest path",
+    "شبكات الطرق": "network graph shortest path",
+    "عقدة": "node network graph",
+    "حافة": "edge network graph",
+    "وصلات": "edges network graph",
+    "ترابط": "connectivity network graph",
+    "اتصالية": "connectivity network graph",
+    "طوبولوجيا": "topology network graph",
+    "توجيه": "routing network graph",
+    "أقصر الطرق": "shortest paths network graph",
+    # Satellite nouns and Egyptian data-sourcing expressions.
+    "مرئيات": "satellite imagery",
+    "تصنيف": "classification",
+    "أجيب": "get acquire",
+    "ألاقي": "find search",
+    "أحمل": "download",
 }
 
 ARABIC_NOISE = frozenset({

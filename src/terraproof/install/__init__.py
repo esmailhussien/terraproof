@@ -145,6 +145,8 @@ def apply(writes: list[Write], target: Path, *, dry_run: bool) -> int:
                 write.path.write_bytes(write.content)
         prefix = "would " if dry_run else ""
         print(f"{prefix}{status:<9} {relative}  ({write.note})")
+        if write.migration:
+            print(f"{'would ' if dry_run else ''}note:      {relative}  ({write.migration})")
     return changed
 
 

@@ -227,12 +227,13 @@ It prints JSON with `items`, `top_k`, `mean_recall_at_k`, `per_language_recall`,
 
 Measured results, as they stand in this checkout:
 
-| Set | Items | Mean recall@5 | English | Arabic | `must_not` violations |
-|---|---|---|---|---|---|
-| `dev.jsonl` (tuning set) | 115 | 1.000 | 1.000 | 1.000 | 0 |
-| `heldout.jsonl` (independent) | 80 | 0.950 | 0.975 | 0.925 | 6 |
+| Set | Items | Mean recall@5 | English | Arabic | `must_not` violations | Mean ranked skills |
+|---|---|---|---|---|---|---|
+| `dev.jsonl` (tuning set) | 169 | 1.000 | 1.000 | 1.000 | 0 | 1.86 |
+| `heldout.jsonl` (v1, used once for feedback) | 80 | 0.913 | 0.950 | 0.875 | 0 | 1.94 |
+| `heldout_v2.jsonl` (fresh, independent) | 100 | **0.845** | 0.890 | 0.800 | 18 | 2.23 |
 
-The held-out set was written by someone other than the router author, and its prompts were never shown to the router author. It was used once to derive category-level feedback (for example "unit words such as km are not recognised"), so it is now slightly optimistic; a fresh held-out set is planned for the next honest estimate. 11 of 80 items are not perfect. Six items rank one prohibited skill in the top five, and five more miss an expected skill without a violation. The evaluator exits `1` on that set by design. The dev set is a regression check, not evidence of generalization.
+`heldout_v2` is the honest generalization estimate: it was written independently, never shown to the router authors, and has not been used for any feedback. It is deliberately hard (symptom-only wording such as "my parcel areas come out as 0.00031", near-miss skills, Arabic dialect). On it the router misses about one expected skill in seven and still ranks a prohibited skill in 18 of 100 items. The latest precision change traded recall for precision: compared with the previous commit, v2 recall fell from 0.885 to 0.845 while violations fell from 25 to 18. Both sets are below the 0.90 target, which suggests a ceiling for purely lexical routing. `heldout.jsonl` (v1) was used once to derive category-level feedback, so its numbers are optimistic. The evaluator exits `1` on both held-out sets by design. The dev set is a regression check, not evidence of generalization.
 
 Limits: this is lexical retrieval with hand-written rules, not semantic understanding. It can over-select: a top five often contains plausible neighbouring skills (`geomaster` is a broad remote-sensing skill and tends to appear next to more specific ones). Dataset rules fire once per request and only from the keys the inspectors report, so a misleading or missing profile leads to a misleading boost. Do not tune on `heldout.jsonl`; the policy is in [`evals/routing/README.md`](evals/routing/README.md).
 
@@ -283,13 +284,14 @@ What each agent gets (`<skill>` stands for one selected skill):
 
 Every format above was checked against that agent's own documentation; the source URL is cited next to the writer in `src/terraproof/install/agents.py`.
 
-Merge and idempotency: nothing is written outside `--target`. An existing JSON or TOML config is parsed and merged, so other servers, keys, and tables survive, and only the `terraproof` server entry is replaced. Markdown goes between `<!-- terraproof:begin -->` and `<!-- terraproof:end -->`; a rerun replaces exactly that block and leaves the rest of the file alone. A rerun with the same inputs produces identical bytes, unchanged files are reported as `unchanged` and not rewritten, and the recorded MCP command is the interpreter that ran the installer. Skill copies skip `UPSTREAM.md` and `skill.json`.
+Merge and idempotency: nothing is written outside `--target`. An existing JSON or TOML config is parsed and merged, so other servers, keys, and tables survive, and only the `terraproof` server entry is replaced. Markdown goes between agent-scoped markers (`<!-- terraproof:<agent>:begin -->` and `<!-- terraproof:<agent>:end -->`); a rerun replaces only that agent's block and leaves the rest of the file alone. If a legacy unscoped `<!-- terraproof:begin -->` / `<!-- terraproof:end -->` block exists, the installer migrates it to the current agent's scoped marker and prints a note. A rerun with the same inputs produces identical bytes, unchanged files are reported as `unchanged` and not rewritten, and the recorded MCP command is the interpreter that ran the installer. Skill copies skip `UPSTREAM.md` and `skill.json`.
 
 Known limits:
 
-- Only **Claude Code** was exercised end to end in a real host. The other five formats are unit-tested against the documented file layout (`tests/python/test_install.py`); they have not been loaded by those agents here.
-- `codex` and `opencode` both write an `AGENTS.md` marker block, so installing both into one project makes the later run replace the earlier block. Codex keeps its copies under `.agents/skills/`; opencode inlines the skills, so a Codex block that was replaced leaves its skill folders unused.
-- Codex reads a project `.codex/config.toml` only for trusted projects; otherwise the MCP entry is present but ignored.
+- **Claude Code** (2.1.292) reads the generated `.mcp.json` and lists `terraproof`, but project MCP servers start as "Pending approval"; an interactive `claude` session is required to approve the server before it connects.
+- **Codex CLI** (0.160.1) parses the generated `.codex/config.toml`, but only loads project-scoped config for trusted projects. Verified by copying the same TOML into an isolated `CODEX_HOME`: `codex mcp list` / `codex mcp get terraproof` show the stdio server correctly.
+- **Gemini CLI** (0.62.0) reads the generated `.gemini/settings.json` and reports `terraproof` as a configured stdio server, but `gemini mcp list` suppresses all servers (project and user-level) in an untrusted folder. Trusting the workspace is required to list, enable, or connect to the server.
+- The other three agents (`cursor`, `copilot`, `opencode`) are unit-tested against their documented file layouts (`tests/python/test_install.py`); they have not been loaded by those agents here.
 - Writing the files does not prove the host loaded them or that the agent followed the guidance. Verify an installed setup in the agent itself, as you would verify any agent-generated work.
 
 ---

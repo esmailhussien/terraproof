@@ -247,5 +247,139 @@
       "mustInclude": ["spectral-indices", "verification"],
       "mustExclude": ["gdal", "geospatial-frontend"]
     }
+  ],
+  "pythonScenarios": [
+    {
+      "id": "python-relative-neighbours",
+      "prompt": "Use a random forest for Landsat land cover classification.",
+      "mustInclude": ["geomaster"],
+      "mustExclude": ["satellite-preprocessing", "spectral-indices", "geospatial-frontend"],
+      "maxSkills": 2
+    },
+    {
+      "id": "python-raster-statistics",
+      "prompt": "Estimate correlation between the elevation raster and rainfall observations.",
+      "mustInclude": ["statistical-analysis"],
+      "mustExclude": ["spectral-indices", "satellite-preprocessing"]
+    },
+    {
+      "id": "python-reflectance-figure",
+      "prompt": "Plot the histogram of this calibrated reflectance raster as a figure.",
+      "mustInclude": ["scientific-visualization"],
+      "mustExclude": ["spectral-indices", "satellite-preprocessing", "geospatial-frontend"]
+    },
+    {
+      "id": "python-static-map",
+      "prompt": "Render a static map figure of population density in the annual report.",
+      "mustInclude": ["scientific-visualization"],
+      "mustExclude": ["geospatial-frontend"]
+    },
+    {
+      "id": "python-negated-web-map",
+      "prompt": "اعمل chart تفاعلي للانحدار مش خريطة ويب",
+      "mustInclude": ["scientific-visualization", "statistical-analysis"],
+      "mustExclude": ["geospatial-frontend"]
+    },
+    {
+      "id": "python-web-positive",
+      "prompt": "Create a web map of the regression results with Leaflet popups.",
+      "mustInclude": ["geospatial-frontend", "statistical-analysis"]
+    },
+    {
+      "id": "python-already-held-arabic",
+      "prompt": "المرئيات عندي بالفعل؛ قصها باستخدام rasterio",
+      "mustInclude": ["raster-processing"],
+      "mustExclude": ["geospatial-data-discovery", "satellite-preprocessing", "spectral-indices"]
+    },
+    {
+      "id": "python-stac-classification",
+      "prompt": "معايا STAC item من Landsat؛ اعمل تصنيف للصور الموجودة",
+      "datasets": [{"kind": "stac", "collection": "landsat-c2-l2"}],
+      "mustInclude": ["geomaster"],
+      "mustExclude": ["geospatial-data-discovery", "satellite-preprocessing", "spectral-indices"]
+    },
+    {
+      "id": "python-indirect-discovery-where",
+      "prompt": "Where can I get a shapefile of the watershed boundaries?",
+      "mustInclude": ["geospatial-data-discovery"],
+      "mustExclude": ["geopandas"]
+    },
+    {
+      "id": "python-indirect-discovery-open",
+      "prompt": "Is there an open dataset of building footprints for this province?",
+      "mustInclude": ["geospatial-data-discovery"],
+      "mustExclude": ["geopandas"]
+    },
+    {
+      "id": "python-indirect-discovery-pull",
+      "prompt": "Pull imagery for the coastal study area during spring.",
+      "mustInclude": ["geospatial-data-discovery"],
+      "mustExclude": ["satellite-preprocessing", "spectral-indices"]
+    },
+    {
+      "id": "python-indirect-discovery-egyptian",
+      "prompt": "منين أجيب shapefile للحدود الإدارية؟",
+      "mustInclude": ["geospatial-data-discovery"],
+      "mustExclude": ["geopandas"]
+    },
+    {
+      "id": "python-search-then-process",
+      "prompt": "Fetch a GeoPackage of administrative boundaries, then use GeoPandas for a spatial join.",
+      "mustInclude": ["geospatial-data-discovery", "geopandas"]
+    },
+    {
+      "id": "python-metric-plurals-pronouns",
+      "prompt": "راجع المساحات ومساحتها والمسافات ومسافاتهم وأطوالها بالأمتار والكيلومترات والهكتارات والأفدنة والفدادين والأميال",
+      "datasets": [{"kind": "vector", "crs": {"is_geographic": true, "epsg": 4326}}],
+      "mustInclude": ["crs-and-units", "geopandas"]
+    },
+    {
+      "id": "python-network-short-intent",
+      "prompt": "routing",
+      "mustInclude": ["networkx"],
+      "mustExclude": ["geospatial-data-discovery", "geospatial-frontend"],
+      "maxSkills": 1
+    },
+    {
+      "id": "python-network-arabic-morphology",
+      "prompt": "حلل ترابطها واتصاليتها وطوبولوجيا شبكات الطرق ومساراتهم وأقصر الطرق بين عقدة وحافة ووصلاتها في الجراف وشبكة اتصالات وتوجيه المركبات",
+      "mustInclude": ["networkx"],
+      "mustExclude": ["geospatial-data-discovery", "geospatial-frontend"]
+    },
+    {
+      "id": "python-index-pronouns",
+      "prompt": "محتاج مؤشراتنا من مرئيات Sentinel",
+      "mustInclude": ["spectral-indices"],
+      "mustExclude": ["geospatial-data-discovery"]
+    },
+    {
+      "id": "python-nonspectral-index",
+      "prompt": "Create a spatial index in PostGIS for the existing table.",
+      "mustInclude": ["design-postgis-tables"],
+      "mustExclude": ["spectral-indices", "geospatial-data-discovery"]
+    },
+    {
+      "id": "python-independent-index-intents",
+      "prompt": "Create a spatial index in PostGIS, then compute the water index from Landsat",
+      "mustInclude": ["design-postgis-tables", "spectral-indices"]
+    },
+    {
+      "id": "python-calibrated-classification",
+      "prompt": "اعمل تصنيف للانعكاس السطحي الموجود عندي",
+      "mustInclude": ["geomaster"],
+      "mustExclude": ["satellite-preprocessing", "spectral-indices", "geospatial-data-discovery"]
+    },
+    {
+      "id": "python-search-cloud-filter",
+      "prompt": "Find Sentinel scenes with low cloud cover in the STAC catalog.",
+      "mustInclude": ["geospatial-data-discovery"],
+      "mustExclude": ["satellite-preprocessing", "spectral-indices"]
+    },
+    {
+      "id": "python-negated-search",
+      "prompt": "Decode the scale and offset in my local imagery; do not search a catalog.",
+      "mustInclude": ["satellite-preprocessing"],
+      "mustExclude": ["geospatial-data-discovery", "spectral-indices"]
+    }
   ]
 }

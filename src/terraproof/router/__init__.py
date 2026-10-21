@@ -11,6 +11,8 @@ from .text import expand_query, normalize, tokenize
 
 __all__ = ["find_guidance"]
 MIN_SCORE = 5.0
+RELATIVE_CUTOFF = 0.5
+FALLBACK_MIN_SCORE = 2.5
 
 
 def _profiles(datasets: list[dict] | None, data_paths: list[str] | None) -> list[dict]:
@@ -61,8 +63,11 @@ def find_guidance(
     """Rank non-process skills using BM25 sections, exact triggers and data/wording rules.
 
     Score = best section BM25 + .25 * second section BM25 + trigger boosts +
-    one-time dataset and wording boosts/penalties. Scores below MIN_SCORE are omitted;
-    incidental body-only matches without metadata/data support need at least 12.
+    one-time dataset and wording boosts/penalties. Intent guards always apply.
+    Scores below MIN_SCORE are omitted; incidental body-only matches need 12.
+    Neighbours below RELATIVE_CUTOFF * top score need a direct trigger (not bare
+    'map') or positive data/intent signal. If no skill passes, return only the best
+    directly supported candidate above FALLBACK_MIN_SCORE, with an explanation.
     The scoring top-two is independent of sections_per_skill (a display limit).
     Input profiles are never mutated. Paths are inspected locally, on demand.
     """
@@ -79,10 +84,14 @@ def find_guidance(
         if section.skill not in PROCESS_SKILLS:
             score, reasons = index.score(section, terms)
             grouped[section.skill].append((score, section, reasons))
-    signals = data_signals(profiles, terms, query["normalized"])
+    signals, guarded = data_signals(profiles, terms, query["normalized"])
     matching_text = " " + normalize(query["normalized"] + " " + " ".join(query["expanded_terms"])) + " "
-    skills = []
+    ranked = []
+    supported = set()
+    eligible = set()
     for name, candidates in sorted(grouped.items()):
+        if name in guarded:
+            continue
         candidates.sort(key=lambda item: (-item[0], item[1].id))
         score = 0.0
         reasons = []
@@ -101,23 +110,40 @@ def find_guidance(
                     boost = 0.5
                 score += boost
                 reasons.append(f"Exact trigger '{trigger}' +{boost:.6f}")
+                if phrase != "map":
+                    supported.add(name)
         for value, reason in signals.get(name, []):
             score += value
             reasons.append(reason)
+            if value > 0:
+                supported.add(name)
         metadata = index.skills[name]
         metadata_terms = set(tokenize(" ".join([name, metadata["explanation"],
                                                 *metadata["triggers"], *metadata["capabilities"]])))
         # Incidental prose/code words need stronger evidence than skill metadata.
         # This avoids promoting graph/map examples for an ordinary line chart.
         cutoff = MIN_SCORE if metadata_terms.intersection(terms) or any(value > 0 for value, _ in signals.get(name, [])) else 12.0
-        if score < cutoff:
-            continue
+        if score >= cutoff:
+            eligible.add(name)
         sections = [{"id": section.id, "title": section.title, "source": section.source,
                      "score": round(section_score, 6), "excerpt": _excerpt(section.text, terms)}
                     for section_score, section, _ in candidates[:sections_per_skill]]
-        skills.append({"name": name, "score": round(score, 6),
+        ranked.append({"name": name, "score": round(score, 6),
                        "reasons": expansion_reasons + reasons, "sections": sections})
-    skills.sort(key=lambda skill: (-skill["score"], skill["name"]))
+    ranked.sort(key=lambda skill: (-skill["score"], skill["name"]))
+    skills = [skill for skill in ranked if skill["name"] in eligible]
+    if skills:
+        relative_floor = RELATIVE_CUTOFF * skills[0]["score"]
+        skills = [skill for skill in skills if skill["score"] >= relative_floor or skill["name"] in supported]
+    else:
+        # Never resurrect guarded skills or incidental prose matches. Stable score/
+        # name ordering makes the single-candidate fallback deterministic too.
+        skills = [skill for skill in ranked if skill["name"] in supported
+                  and skill["score"] >= FALLBACK_MIN_SCORE][:1]
+        if skills:
+            skills[0]["reasons"].append(
+                f"Selection: empty-result fallback; direct trigger or data/intent signal, "
+                f"score >= {FALLBACK_MIN_SCORE:g}; no skill met the normal cutoffs +0.000000")
     return {"query": query, "skills": skills[:top_k], "process": process_skills(task),
             "datasets": [dataset_summary(ds) for ds in profiles]}
 

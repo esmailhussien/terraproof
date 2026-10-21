@@ -95,8 +95,10 @@ def test_agents_md_uses_the_terraproof_markers(tmp_path):
     for agent in ("codex", "gemini", "opencode"):
         assert install(tmp_path, agent) == 0
         text = (tmp_path / ("AGENTS.md" if agent != "gemini" else "GEMINI.md")).read_text(encoding="utf-8")
-        assert text.count("<!-- terraproof:begin -->") == 1
-        assert text.count("<!-- terraproof:end -->") == 1
+        assert text.count(f"<!-- terraproof:{agent}:begin -->") == 1
+        assert text.count(f"<!-- terraproof:{agent}:end -->") == 1
+        assert text.count("<!-- terraproof:begin -->") == 0
+        assert text.count("<!-- terraproof:end -->") == 0
         assert "gdal" in text
 
 
@@ -160,7 +162,8 @@ def test_markdown_outside_the_markers_is_preserved(tmp_path):
     text = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
 
     assert text.startswith("# Project\n\nKeep this paragraph.\n")
-    assert text.count("<!-- terraproof:begin -->") == 1
+    assert text.count("<!-- terraproof:codex:begin -->") == 1
+    assert text.count("<!-- terraproof:codex:end -->") == 1
 
 
 def test_rerun_is_byte_identical(tmp_path):
@@ -206,3 +209,50 @@ def test_task_routes_skills(tmp_path):
     assert main(["--agent", "codex", "--task", "clip a GDAL raster and build a COG", "--target", str(tmp_path)]) == 0
 
     assert list((tmp_path / ".agents/skills").iterdir())
+
+
+def test_codex_and_opencode_blocks_coexist_in_agents_md(tmp_path):
+    (tmp_path / "AGENTS.md").write_text("# Project\n\nKeep this paragraph.\n", encoding="utf-8")
+
+    assert install(tmp_path, "codex") == 0
+    assert install(tmp_path, "opencode") == 0
+
+    text = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+
+    assert text.startswith("# Project\n\nKeep this paragraph.\n")
+    assert text.count("<!-- terraproof:codex:begin -->") == 1
+    assert text.count("<!-- terraproof:codex:end -->") == 1
+    assert text.count("<!-- terraproof:opencode:begin -->") == 1
+    assert text.count("<!-- terraproof:opencode:end -->") == 1
+    assert text.count("<!-- terraproof:begin -->") == 0
+    assert text.count("<!-- terraproof:end -->") == 0
+    assert "gdal" in text
+
+
+def test_codex_and_opencode_reruns_are_idempotent(tmp_path):
+    assert install(tmp_path, "codex") == 0
+    assert install(tmp_path, "opencode") == 0
+    first = snapshot(tmp_path)
+
+    assert install(tmp_path, "codex") == 0
+    assert install(tmp_path, "opencode") == 0
+    assert snapshot(tmp_path) == first
+
+
+def test_legacy_terraproof_block_is_migrated(tmp_path, capsys):
+    legacy_block = (
+        "<!-- terraproof:begin -->\n"
+        "## Old Terraproof skills\n\nold content\n"
+        "<!-- terraproof:end -->\n"
+    )
+    (tmp_path / "AGENTS.md").write_text("# Project\n\nKeep this paragraph.\n\n" + legacy_block, encoding="utf-8")
+
+    assert install(tmp_path, "codex") == 0
+
+    text = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+    assert text.count("<!-- terraproof:begin -->") == 0
+    assert text.count("<!-- terraproof:end -->") == 0
+    assert text.count("<!-- terraproof:codex:begin -->") == 1
+    assert text.count("<!-- terraproof:codex:end -->") == 1
+    assert "Keep this paragraph." in text
+    assert "migrated legacy terraproof block to terraproof:codex scope" in capsys.readouterr().out

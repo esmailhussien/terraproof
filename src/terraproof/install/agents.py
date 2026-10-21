@@ -4,20 +4,20 @@ Every format below was checked against the agent's own documentation before it w
 implemented; the source URL is cited next to the writer that produces it.
 
 Shared rules: nothing is written outside the target project, an existing JSON or TOML
-config is merged rather than replaced, and a Markdown section lives between
-`<!-- terraproof:begin -->` and `<!-- terraproof:end -->` so a rerun replaces exactly that
-block and leaves the rest of the file alone.
+config is merged rather than replaced, and a Markdown section lives between agent-scoped
+markers (`<!-- terraproof:<agent>:begin -->` / `<!-- terraproof:<agent>:end -->`) so a
+rerun replaces exactly that agent's block and leaves the rest of the file alone. A legacy
+unscoped `<!-- terraproof:begin -->` / `<!-- terraproof:end -->` block, if present, is
+migrated to the agent's scoped marker.
 """
 
 from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
-BEGIN = "<!-- terraproof:begin -->"
-END = "<!-- terraproof:end -->"
 SERVER_NAME = "terraproof"
 SKIP_NAMES = frozenset({"UPSTREAM.md", "skill.json"})
 SKIP_PARTS = frozenset({"__pycache__", ".git"})
@@ -48,6 +48,7 @@ class Write:
     path: Path
     content: bytes
     note: str
+    migration: str | None = None
 
 
 # --- shared content ---------------------------------------------------------------
@@ -108,17 +109,46 @@ def _toml_servers(path: Path, name: str, command: str, args: list[str]) -> Write
     return Write(path, body.encode("utf-8"), f"mcp_servers.{name}")
 
 
-def _markdown_section(path: Path, body: str) -> Write:
-    """Write a Markdown file's Terraproof block, replacing the previous one on a rerun."""
-    block = f"{BEGIN}\n{body.rstrip()}\n{END}\n"
+def _markers(agent: str) -> tuple[str, str]:
+    """Agent-scoped Markdown comment markers."""
+    return f"<!-- terraproof:{agent}:begin -->", f"<!-- terraproof:{agent}:end -->"
+
+
+_LEGACY_BEGIN = "<!-- terraproof:begin -->"
+_LEGACY_END = "<!-- terraproof:end -->"
+
+
+def _markdown_section(path: Path, body: str, agent: str) -> Write:
+    """Write a Markdown file's Terraproof block, scoped to this agent.
+
+    A rerun replaces only this agent's scoped block. If a legacy unscoped block is
+    present, it is migrated to the agent's scoped marker and a note is returned.
+    """
+    begin, end = _markers(agent)
+    block = f"{begin}\n{body.rstrip()}\n{end}\n"
     existing = path.read_text(encoding="utf-8") if path.is_file() else ""
-    pattern = re.compile(re.escape(BEGIN) + r".*?" + re.escape(END) + r"\n?", re.DOTALL)
-    if pattern.search(existing):
-        content = pattern.sub(lambda _match: block, existing, count=1)
+
+    legacy_pattern = re.compile(
+        re.escape(_LEGACY_BEGIN) + r".*?" + re.escape(_LEGACY_END) + r"\n?",
+        re.DOTALL,
+    )
+    scoped_pattern = re.compile(
+        re.escape(begin) + r".*?" + re.escape(end) + r"\n?",
+        re.DOTALL,
+    )
+
+    migration: str | None = None
+    if legacy_pattern.search(existing):
+        existing = legacy_pattern.sub("", existing)
+        migration = f"migrated legacy terraproof block to terraproof:{agent} scope"
+
+    if scoped_pattern.search(existing):
+        content = scoped_pattern.sub(lambda _match: block, existing, count=1)
     else:
         base = existing.rstrip("\n")
         content = f"{base}\n\n{block}" if base else block
-    return Write(path, content.encode("utf-8"), "terraproof block")
+
+    return Write(path, content.encode("utf-8"), f"terraproof:{agent} block", migration=migration)
 
 
 def _skill_copies(skill: Skill, destination: Path) -> list[Write]:
@@ -267,7 +297,7 @@ def plan_codex(target: Path, skills: list[Skill], *, with_mcp: bool, command: li
     for skill in skills:
         writes += _skill_copies(skill, target / ".agents" / "skills" / skill.name)
     block = _index_block(skills, agent="codex", skills_dir=".agents/skills", with_mcp=with_mcp, command=command)
-    writes.append(_markdown_section(target / "AGENTS.md", block))
+    writes.append(_markdown_section(target / "AGENTS.md", block, agent="codex"))
     if with_mcp:
         writes.append(_toml_servers(target / ".codex" / "config.toml", SERVER_NAME, command[0], command[1:]))
     return writes
@@ -284,7 +314,7 @@ def plan_gemini(target: Path, skills: list[Skill], *, with_mcp: bool, command: l
     """
     writes: list[Write] = []
     block = _inline_block(skills, agent="gemini", with_mcp=with_mcp, command=command)
-    writes.append(_markdown_section(target / "GEMINI.md", block))
+    writes.append(_markdown_section(target / "GEMINI.md", block, agent="gemini"))
     if with_mcp:
         entry = {"command": command[0], "args": command[1:]}
         writes.append(_json_servers(target / ".gemini" / "settings.json", "mcpServers", SERVER_NAME, entry))
@@ -330,7 +360,7 @@ def plan_opencode(target: Path, skills: list[Skill], *, with_mcp: bool, command:
     """
     writes: list[Write] = []
     block = _inline_block(skills, agent="opencode", with_mcp=with_mcp, command=command)
-    writes.append(_markdown_section(target / "AGENTS.md", block))
+    writes.append(_markdown_section(target / "AGENTS.md", block, agent="opencode"))
     if with_mcp:
         entry = {"type": "local", "command": list(command), "enabled": True}
         writes.append(_json_servers(target / "opencode.json", "mcp", SERVER_NAME, entry,

@@ -17,6 +17,7 @@ def evaluate_file(path: str | Path, top_k: int = 5) -> dict:
     if isinstance(top_k, bool) or not isinstance(top_k, int) or top_k < 0:
         raise ValueError("top_k must be a non-negative integer")
     recalls = []
+    ranked_sizes = []
     languages: dict[str, list[float]] = {}
     failures = []
     violations = 0
@@ -49,6 +50,7 @@ def evaluate_file(path: str | Path, top_k: int = 5) -> dict:
             recall = len(expected.intersection(names)) / len(expected) if expected else 1.0
             forbidden = sorted(set(item.get("must_not", [])).intersection(names))
             recalls.append(recall)
+            ranked_sizes.append(len(names))
             languages.setdefault(item["lang"], []).append(recall)
             violations += len(forbidden)
             if recall < 1 or forbidden:
@@ -58,6 +60,7 @@ def evaluate_file(path: str | Path, top_k: int = 5) -> dict:
     if not recalls:
         raise ValueError(f"{path}: no evaluation items")
     return {"items": len(recalls), "top_k": top_k, "mean_recall_at_k": sum(recalls) / len(recalls),
+            "mean_ranked_skills": sum(ranked_sizes) / len(ranked_sizes),
             "must_not_violations": violations,
             "per_language_recall": {lang: sum(values) / len(values) for lang, values in sorted(languages.items())},
             "failing_items": failures}
