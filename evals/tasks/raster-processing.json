@@ -1,0 +1,46 @@
+{
+  "skill": "raster-processing",
+  "tasks": [
+    {
+      "id": "raster-categorical-half-pixel",
+      "prompt": "Align this land-cover raster to the reference grid for zonal statistics. Preserve class codes and explain whether matching CRS and pixel size is sufficient.",
+      "inputs": "Two known-CRS north-up categorical GeoTIFFs with equal resolution and shape but a half-pixel origin shift, explicit nodata and class lookup. Include a seeded declaration that bilinear was used; the reference origin is not on the zero-based target-aligned lattice.",
+      "acceptance": [
+        "Run python -m terraproof check reference.tif shifted.tif --categorical --resampling bilinear; expected_checks applies to this seeded unsafe preflight.",
+        "Explain both origin misalignment and category blending; do not claim -tap alone matches the arbitrary reference origin.",
+        "Create a new raster on the exact reference CRS, transform and shape with nearest or a justified categorical aggregation method; output codes remain in the permitted set and nodata remains distinct.",
+        "Recheck the aligned output and compare its complete grid and class histogram independently."
+      ],
+      "expected_checks": { "raster.grid_alignment": "fail", "raster.resampling": "fail", "raster.nodata_declared": "pass" },
+      "pitfall": "Equal resolution conceals a half-pixel shift, and bilinear interpolation creates meaningless category values."
+    },
+    {
+      "id": "raster-nodata-dtype-windowing",
+      "prompt": "Calculate a continuous difference from these unsigned rasters without overflow or turning valid zero into nodata. Keep memory bounded for the full dataset.",
+      "inputs": "Aligned large unsigned-integer rasters with explicit nodata, masks, legitimate zero pixels, values whose difference is negative, and a small independent expected-difference sample. Provide a fixed memory budget and block layout metadata.",
+      "acceptance": [
+        "Cast operands before arithmetic, intersect both input masks, and preserve negative differences and legitimate zero in floating output.",
+        "Process block-aligned windows within the fixture's memory budget and write matching array/window shapes without implicit decimation.",
+        "Reopen difference.tif and compare known values, finite extrema and valid-pixel masks against the independent sample.",
+        "Run python -m terraproof check difference.tif; expected_checks applies to the output with declared nodata.",
+        "Explain that the check cannot prove overflow avoidance, mask correctness or bounded memory."
+      ],
+      "expected_checks": { "crs.defined": "pass", "raster.nodata_declared": "pass" },
+      "pitfall": "Unsigned subtraction wraps, mask polarity is inverted, or a whole-scene read defeats an apparently windowed workflow."
+    },
+    {
+      "id": "raster-cog-delivery",
+      "prompt": "Deliver this continuous analysis raster as a lossless COG with suitable overviews and evidence of both layout and pixel correctness.",
+      "inputs": "A continuous, known-CRS GeoTIFF large enough to require overviews, declared nodata and a reference pixel/mask sample. Supply an analysis environment with the COG driver and a full COG validator; include misleading source overviews built with an unsuitable method.",
+      "acceptance": [
+        "Generate a new COG with lossless compression and regenerated continuous-data overviews; do not inherit unreviewed source overviews or mutate the completed COG in-place.",
+        "Run a full COG validator available in the environment and inspect its warnings, not only gdalinfo or the Terraproof heuristic.",
+        "Reopen delivery.tif and compare CRS, transform, dimensions, dtype, masks and representative full-resolution values to the original analysis raster.",
+        "Run python -m terraproof check delivery.tif; expected_checks applies to this tiled output with overviews and declared nodata.",
+        "Explain that raster.cog_layout checks tiling and overview presence, not optimized TIFF byte ordering or scientific correctness."
+      ],
+      "expected_checks": { "raster.cog_layout": "pass", "raster.nodata_declared": "pass", "crs.defined": "pass" },
+      "pitfall": "A tiled GeoTIFF with overviews is called a verified COG, or continuous overview values are copied from an unsuitable source."
+    }
+  ]
+}

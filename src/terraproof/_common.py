@@ -37,22 +37,51 @@ def sha256_and_size(path: str | os.PathLike) -> tuple[str, int]:
     return digest.hexdigest(), size
 
 
+def _horizontal_component(crs: pyproj.CRS) -> pyproj.CRS | None:
+    """The horizontal part of a compound CRS (its first non-vertical component), or the CRS itself."""
+    if not crs.is_compound:
+        return crs
+    for component in crs.sub_crs_list:
+        if not component.is_vertical:
+            return component
+    return None
+
+
+def _kind(crs: pyproj.CRS | None) -> str:
+    if crs is None:
+        return "none"
+    if crs.is_projected:
+        return "projected"
+    if crs.is_geographic:
+        return "geographic"
+    if crs.is_geocentric:
+        return "geocentric"
+    return "other"
+
+
 def crs_summary(crs_value: Any) -> dict | None:
     """Describe a CRS given as WKT, an authority string, or a rasterio/pyproj CRS.
 
-    Returns None when there is no CRS.
+    `horizontal_kind` and `horizontal_axis_units` describe the horizontal component, which
+    for a compound CRS (horizontal + vertical) is the first non-vertical sub-CRS. `horizontal_kind`
+    is one of projected, geographic, geocentric, other, or none. Returns None when there is no CRS.
     """
     if crs_value is None:
         return None
     crs = pyproj.CRS.from_user_input(crs_value)
     axis_units = crs.axis_info[0].unit_name if crs.axis_info else None
+    horizontal = _horizontal_component(crs)
+    horizontal_units = horizontal.axis_info[0].unit_name if horizontal is not None and horizontal.axis_info else None
     return {
         "wkt": crs.to_wkt(),
         "epsg": crs.to_epsg(),
         "name": crs.name,
         "is_geographic": bool(crs.is_geographic),
         "is_projected": bool(crs.is_projected),
+        "is_geocentric": bool(crs.is_geocentric),
         "axis_units": axis_units,
+        "horizontal_kind": _kind(horizontal),
+        "horizontal_axis_units": horizontal_units,
     }
 
 

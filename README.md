@@ -6,7 +6,7 @@
 
 Terraproof is a focused collection of mapping and remote-sensing skills for AI coding agents, plus a deterministic router that selects the smallest useful set of them for a task. The direction is to make geospatial agents prove their work: inspect real datasets, apply section-level expert guidance, run executable checks, and attach an evidence grade to each result. Read the full plan in [`Terraproof_v1_PLAN.md`](Terraproof_v1_PLAN.md).
 
-**Today:** 15 skills, a router with 28 test scenarios, and an experimental Python core for dataset inspection, checks, and evidence grades (see [Python core](#python-core-phase-1-experimental)).
+**Today:** 20 skills, a router with 55 test scenarios, and an experimental Python core for dataset inspection, checks, and evidence grades (see [Python core](#python-core-phase-1-experimental)).
 **Planned, not implemented yet:** MCP server, sectioned skills, and a Python router.
 
 ---
@@ -25,7 +25,7 @@ node router/index.ts validate
 node router/index.ts route "Download Sentinel-2 imagery from a STAC catalog, compute NDVI, and map the change with MapLibre" --dry-run
 ```
 
-**Expected result:** `--version` prints `terraproof v0.2.0`, and `validate` ends with `✓ Registry validation passed: 15 skills, 3 collections.` The route prints the task, a confidence score (75% for this prompt), the selected skill count (4), and the skills grouped by layer with a score and rationale: `geomaster`, `geospatial-data-discovery`, `geospatial-frontend`, and `verification`. Dry-run output also lists dropped candidates. It does not create files or call a model.
+**Expected result:** `--version` prints `terraproof v0.2.0`, and `validate` ends with `✓ Registry validation passed: 20 skills, 4 collections.` The route prints the task, a confidence score (75% for this prompt), the selected skill count (5), and the skills grouped by layer with a score and rationale: `geomaster`, `geospatial-data-discovery`, `spectral-indices`, `geospatial-frontend`, and `verification`. Dry-run output also lists dropped candidates. It does not create files or call a model.
 
 The walkthrough is illustrative, not a recorded execution. Exact selections and scores depend on the prompt, overrides, and registry revision. The commands that run offline were checked against this checkout. The download, NDVI, and MapLibre steps need network access and data, so they are illustrative only.
 
@@ -33,13 +33,13 @@ The walkthrough is illustrative, not a recorded execution. Exact selections and 
 
 The task needs satellite imagery, a spectral index, and a web map. First inspect the route above. If the recommendation misses a requirement, revise the prompt or use overrides.
 
-Bundle the selected skills into one reviewable context file. The `--include` flags force the four registered skills:
+Bundle the selected skills into one reviewable context file. The `--include` flags force four skills; the router also selects `spectral-indices` for the NDVI step, so the bundle holds five:
 
 ```bash
 node router/index.ts bundle "Download Sentinel-2 imagery from a STAC catalog, compute NDVI, and map the change with MapLibre" --include geospatial-data-discovery --include geomaster --include geospatial-frontend --include verification --out ndvi-context.md
 ```
 
-**Expected artifact:** `ndvi-context.md` in the current directory. The CLI prints `✓ Composed bundle written to: ndvi-context.md (4 skills, <N> bytes)`; the size in this checkout was 27113 bytes. The file starts with a header listing the task, the four skills, and their layers, then the universal engineering instructions and the skill text grouped by layer. Review it, then give it to your coding agent together with your project requirements. The file is instructions, not generated application code.
+**Expected artifact:** `ndvi-context.md` in the current directory. The CLI prints `✓ Composed bundle written to: ndvi-context.md (5 skills, <N> bytes)`; the size in this checkout was 40130 bytes. The file starts with a header listing the task, the five skills, and their layers, then the universal engineering instructions and the skill text grouped by layer. Review it, then give it to your coding agent together with your project requirements. The file is instructions, not generated application code.
 
 For agents that support project skill directories, export to a separate demo folder first. The `--dry-run` form prints the same recommendation with `Mode: DRY RUN (No changes made)` and writes nothing:
 
@@ -61,6 +61,7 @@ terraproof-demo/
         ├── geomaster/
         ├── geospatial-data-discovery/
         ├── geospatial-frontend/
+        ├── spectral-indices/
         └── verification/
 ```
 
@@ -192,14 +193,19 @@ Arabic Markdown reports translate the labels, headings, status words, and the li
 - `design-postgis-tables` — PostGIS table design, geometry vs geography, spatial indexing.
 - `geoparquet-validation` — GeoParquet metadata validation and cloud-native vector distribution.
 - `geospatial-frontend` — MapLibre GL and geospatial visualization interfaces.
+- `crs-and-units` — Coordinate reference systems, axis order, datum transformations, and measurement units.
+- `raster-processing` — Raster reading, grid alignment, resampling, nodata and masks, and COG delivery checks.
 
 ### Remote Sensing & Earth Observation
 - `geomaster` — Earth observation, satellite processing, spectral indices, terrain, and spatial ML.
 - `geospatial-data-discovery` — Open geospatial data acquisition (STAC, OSM, Overture, Sentinel, Landsat, DEMs).
 - `geozarr` — Multidimensional geospatial raster and cube arrays.
+- `satellite-preprocessing` — Sentinel-2 L2A and Landsat Collection 2 surface reflectance decoding, QA masks, and composites.
+- `spectral-indices` — NDVI, NDWI/MNDWI, NBR/dNBR, EVI, and SAVI from calibrated, masked reflectance.
 
 ### Spatial Analysis & Visualization
 - `geopandas` — Vector operations, spatial joins, geometric overlays, and CRS transforms.
+- `vector-quality` — Geometry validity and repair, duplicate and coverage audits, and join cardinality checks.
 - `scientific-visualization` — Publication-ready figures with colorblind-safe palettes and multi-panel layouts.
 - `statistical-analysis` — Hypothesis testing, assumption diagnostics, effect sizes, and power analysis.
 - `networkx` — Graph structures, centrality, community detection, and shortest paths.
@@ -213,17 +219,19 @@ Arabic Markdown reports translate the labels, headings, status words, and the li
 | `gis` | Geospatial engineering and mapping | `geomaster`, `geopandas`, `gdal`, `geospatial-data-discovery`, `verification` |
 | `data-analysis` | Statistical modeling and scientific figures | `statistical-analysis`, `scientific-visualization`, `verification` |
 | `production` | Core engineering discipline and debugging | `brainstorming`, `writing-plans`, `systematic-debugging`, `verification` |
+| `remote-sensing` | Optical satellite preprocessing, spectral indices, raster processing, and verification | `geospatial-data-discovery`, `satellite-preprocessing`, `spectral-indices`, `raster-processing`, `verification` |
 
 ---
 
 ## Repository Overview
 
-- **`skills/`** — Task-specific instructions, scripts, and references (15 skills).
-- **`routing/`** — Declarative skill registry, scoring rules, and preset collections.
+- **`skills/`** — Task-specific instructions, scripts, and references (20 skills, each with a `skill.json` routing manifest).
+- **`routing/`** — Skill registry generated from `skills/*/skill.json`, check catalog, scoring rules, and preset collections.
 - **`router/`** — Deterministic routing engine with CLI and programmatic API.
+- **`evals/`** — Benchmark task specifications for the five newest skills (15 tasks). These are specifications only; the harness is planned, not implemented yet.
 - **`src/terraproof/`** — Experimental Python core: dataset inspectors, checks, and evidence reports (`pyproject.toml`).
 - **`instructions/`** — Universal engineering rules (engineering discipline, simplicity, security).
-- **`tests/`** — Router test suites (28 scenarios, 100% pass rate) and upstream fixtures.
+- **`tests/`** — Router test suites (55 scenarios, 100% pass rate) and upstream fixtures.
 - **`third_party/`** — Upstream licenses and notices for vendored material.
 - **`sources/`** — Attribution log mapping each skill to its upstream source, commit SHA, and license.
 

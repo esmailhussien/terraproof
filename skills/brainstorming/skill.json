@@ -1,0 +1,73 @@
+{
+  "name": "brainstorming",
+  "layer": "process",
+  "domains": [
+    "general",
+    "architecture",
+    "planning"
+  ],
+  "capabilities": [
+    "requirements-exploration",
+    "design-options",
+    "intent-clarification"
+  ],
+  "triggers": [
+    "brainstorm",
+    "explore",
+    "design",
+    "new feature",
+    "create app",
+    "build",
+    "scaffold",
+    "from scratch"
+  ],
+  "recommended": [
+    "writing-plans"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Explores intent, requirements, and design choices before initiating construction.",
+  "sections": [
+    {
+      "id": "three-paths",
+      "title": "Three Paths",
+      "source": "SKILL.md#three-paths"
+    },
+    {
+      "id": "anti-pattern-too-simple-to-need-approval",
+      "title": "Anti-Pattern: \"Too Simple To Need Approval\"",
+      "source": "SKILL.md#anti-pattern-too-simple-to-need-approval"
+    },
+    {
+      "id": "red-flags",
+      "title": "Red Flags",
+      "source": "SKILL.md#red-flags"
+    },
+    {
+      "id": "checklist",
+      "title": "Checklist",
+      "source": "SKILL.md#checklist"
+    },
+    {
+      "id": "process-flow",
+      "title": "Process Flow",
+      "source": "SKILL.md#process-flow"
+    },
+    {
+      "id": "the-process",
+      "title": "The Process",
+      "source": "SKILL.md#the-process"
+    },
+    {
+      "id": "after-the-design-architectural-path",
+      "title": "After the Design (architectural path)",
+      "source": "SKILL.md#after-the-design-architectural-path"
+    },
+    {
+      "id": "visual-companion",
+      "title": "Visual Companion",
+      "source": "SKILL.md#visual-companion"
+    }
+  ],
+  "checks": []
+}

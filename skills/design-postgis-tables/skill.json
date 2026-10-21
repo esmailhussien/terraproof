@@ -1,0 +1,90 @@
+{
+  "name": "design-postgis-tables",
+  "layer": "implementation",
+  "domains": [
+    "database",
+    "geospatial"
+  ],
+  "capabilities": [
+    "postgis-schema",
+    "spatial-indexing",
+    "geometry-types",
+    "spatial-sql"
+  ],
+  "triggers": [
+    "postgis",
+    "spatial database",
+    "geometry column",
+    "geography",
+    "gist index",
+    "spatial sql",
+    "st_contains",
+    "st_intersects",
+    "st_dwithin"
+  ],
+  "recommended": [],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Architects PostGIS spatial tables, geometry/geography types, and spatial indexes.",
+  "sections": [
+    {
+      "id": "before-you-start-5-questions",
+      "title": "Before You Start (5 Questions)",
+      "source": "SKILL.md#before-you-start-5-questions"
+    },
+    {
+      "id": "core-rules",
+      "title": "Core Rules",
+      "source": "SKILL.md#core-rules"
+    },
+    {
+      "id": "geometry-vs-geography",
+      "title": "Geometry vs Geography",
+      "source": "SKILL.md#geometry-vs-geography"
+    },
+    {
+      "id": "geometry-types",
+      "title": "Geometry Types",
+      "source": "SKILL.md#geometry-types"
+    },
+    {
+      "id": "coordinate-systems-srid",
+      "title": "Coordinate Systems (SRID)",
+      "source": "SKILL.md#coordinate-systems-srid"
+    },
+    {
+      "id": "spatial-indexing",
+      "title": "Spatial Indexing",
+      "source": "SKILL.md#spatial-indexing"
+    },
+    {
+      "id": "table-design-examples",
+      "title": "Table Design Examples",
+      "source": "SKILL.md#table-design-examples"
+    },
+    {
+      "id": "performance-patterns",
+      "title": "Performance Patterns",
+      "source": "SKILL.md#performance-patterns"
+    },
+    {
+      "id": "data-validation",
+      "title": "Data Validation",
+      "source": "SKILL.md#data-validation"
+    },
+    {
+      "id": "do-not-use",
+      "title": "Do Not Use",
+      "source": "SKILL.md#do-not-use"
+    },
+    {
+      "id": "common-pitfalls",
+      "title": "Common Pitfalls",
+      "source": "SKILL.md#common-pitfalls"
+    }
+  ],
+  "checks": [
+    "crs.consistent",
+    "geometry.valid"
+  ]
+}

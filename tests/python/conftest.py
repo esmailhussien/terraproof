@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pyogrio.raw
@@ -19,6 +20,12 @@ from terraproof.evidence import grade_for
 from terraproof.inspect import inspect_dataset
 
 UTM36 = "EPSG:32636"
+
+
+def pytest_configure(config):
+    """pytest does not create the parent of --basetemp (set in pyproject.toml); a fresh checkout has no .pytest_cache yet."""
+    if config.option.basetemp:
+        Path(config.option.basetemp).parent.mkdir(parents=True, exist_ok=True)
 
 
 def square(x: float, y: float, size: float = 10.0) -> Polygon:

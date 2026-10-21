@@ -1,0 +1,95 @@
+{
+  "name": "scientific-visualization",
+  "layer": "domain",
+  "domains": [
+    "data",
+    "design"
+  ],
+  "capabilities": [
+    "publication-figures",
+    "matplotlib",
+    "seaborn",
+    "colorblind-palettes",
+    "multi-panel-plots"
+  ],
+  "triggers": [
+    "plot",
+    "chart",
+    "figure",
+    "visualization",
+    "matplotlib",
+    "seaborn",
+    "publish figure",
+    "multi-panel",
+    "graphical abstract"
+  ],
+  "recommended": [
+    "verification"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Generates publication-ready scientific figures with colorblind-safe palettes.",
+  "sections": [
+    {
+      "id": "non-negotiable-guardrails",
+      "title": "Non-negotiable guardrails",
+      "source": "SKILL.md#non-negotiable-guardrails"
+    },
+    {
+      "id": "workflow",
+      "title": "Workflow",
+      "source": "SKILL.md#workflow"
+    },
+    {
+      "id": "pinned-snapshot",
+      "title": "Pinned snapshot",
+      "source": "SKILL.md#pinned-snapshot"
+    },
+    {
+      "id": "bundled-clis",
+      "title": "Bundled CLIs",
+      "source": "SKILL.md#bundled-clis"
+    },
+    {
+      "id": "assets",
+      "title": "Assets",
+      "source": "SKILL.md#assets"
+    },
+    {
+      "id": "references",
+      "title": "References",
+      "source": "SKILL.md#references"
+    },
+    {
+      "id": "final-review-checklist",
+      "title": "Final review checklist",
+      "source": "SKILL.md#final-review-checklist"
+    },
+    {
+      "id": "color_palettes",
+      "title": "Color, Contrast, and Palette Selection",
+      "source": "references/color_palettes.md"
+    },
+    {
+      "id": "journal_requirements",
+      "title": "Publisher and Journal Figure Snapshots",
+      "source": "references/journal_requirements.md"
+    },
+    {
+      "id": "matplotlib_examples",
+      "title": "Current Matplotlib, Seaborn, and Plotly Patterns",
+      "source": "references/matplotlib_examples.md"
+    },
+    {
+      "id": "publication_guidelines",
+      "title": "Publication Figure Principles",
+      "source": "references/publication_guidelines.md"
+    },
+    {
+      "id": "sources",
+      "title": "Sources and Version Snapshot",
+      "source": "references/sources.md"
+    }
+  ],
+  "checks": []
+}

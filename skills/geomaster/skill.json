@@ -1,0 +1,157 @@
+{
+  "name": "geomaster",
+  "layer": "domain",
+  "domains": [
+    "geospatial",
+    "remote-sensing"
+  ],
+  "capabilities": [
+    "earth-observation",
+    "satellite-processing",
+    "sentinel",
+    "landsat",
+    "terrain-analysis",
+    "spatial-ml"
+  ],
+  "triggers": [
+    "remote sensing",
+    "satellite",
+    "sentinel",
+    "landsat",
+    "earth observation",
+    "ndvi",
+    "elevation dem",
+    "point cloud lidar",
+    "spatial modeling"
+  ],
+  "recommended": [
+    "verification"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Provides Earth observation, satellite imagery, remote sensing, and spatial ML guidance.",
+  "sections": [
+    {
+      "id": "installation",
+      "title": "Installation",
+      "source": "SKILL.md#installation"
+    },
+    {
+      "id": "quick-start",
+      "title": "Quick Start",
+      "source": "SKILL.md#quick-start"
+    },
+    {
+      "id": "core-concepts",
+      "title": "Core Concepts",
+      "source": "SKILL.md#core-concepts"
+    },
+    {
+      "id": "common-operations",
+      "title": "Common Operations",
+      "source": "SKILL.md#common-operations"
+    },
+    {
+      "id": "image-classification",
+      "title": "Image Classification",
+      "source": "SKILL.md#image-classification"
+    },
+    {
+      "id": "modern-cloud-native-workflows",
+      "title": "Modern Cloud-Native Workflows",
+      "source": "SKILL.md#modern-cloud-native-workflows"
+    },
+    {
+      "id": "performance-tips",
+      "title": "Performance Tips",
+      "source": "SKILL.md#performance-tips"
+    },
+    {
+      "id": "best-practices",
+      "title": "Best Practices",
+      "source": "SKILL.md#best-practices"
+    },
+    {
+      "id": "detailed-documentation",
+      "title": "Detailed Documentation",
+      "source": "SKILL.md#detailed-documentation"
+    },
+    {
+      "id": "advanced-gis",
+      "title": "Advanced GIS Topics",
+      "source": "references/advanced-gis.md"
+    },
+    {
+      "id": "big-data",
+      "title": "Big Data and Cloud Computing",
+      "source": "references/big-data.md"
+    },
+    {
+      "id": "code-examples",
+      "title": "Code Examples",
+      "source": "references/code-examples.md"
+    },
+    {
+      "id": "coordinate-systems",
+      "title": "Coordinate Reference Systems (CRS)",
+      "source": "references/coordinate-systems.md"
+    },
+    {
+      "id": "core-libraries",
+      "title": "Core Geospatial Libraries",
+      "source": "references/core-libraries.md"
+    },
+    {
+      "id": "data-sources",
+      "title": "Geospatial Data Sources",
+      "source": "references/data-sources.md"
+    },
+    {
+      "id": "gis-software",
+      "title": "GIS Software Integration",
+      "source": "references/gis-software.md"
+    },
+    {
+      "id": "industry-applications",
+      "title": "Industry Applications",
+      "source": "references/industry-applications.md"
+    },
+    {
+      "id": "machine-learning",
+      "title": "Machine Learning for Geospatial Data",
+      "source": "references/machine-learning.md"
+    },
+    {
+      "id": "programming-languages",
+      "title": "Multi-Language Geospatial Programming",
+      "source": "references/programming-languages.md"
+    },
+    {
+      "id": "remote-sensing",
+      "title": "Remote Sensing Reference",
+      "source": "references/remote-sensing.md"
+    },
+    {
+      "id": "scientific-domains",
+      "title": "Scientific Domain Applications",
+      "source": "references/scientific-domains.md"
+    },
+    {
+      "id": "specialized-topics",
+      "title": "Specialized Topics",
+      "source": "references/specialized-topics.md"
+    },
+    {
+      "id": "troubleshooting",
+      "title": "GeoMaster Troubleshooting Guide",
+      "source": "references/troubleshooting.md"
+    }
+  ],
+  "checks": [
+    "crs.metric_operation",
+    "raster.nodata_declared",
+    "raster.resampling",
+    "rs.reflectance_range",
+    "rs.index_range"
+  ]
+}

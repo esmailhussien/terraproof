@@ -1,0 +1,87 @@
+{
+  "name": "geospatial-frontend",
+  "layer": "implementation",
+  "domains": [
+    "frontend",
+    "geospatial"
+  ],
+  "capabilities": [
+    "web-map",
+    "maplibre",
+    "duckdb-wasm",
+    "deckgl",
+    "spatial-ui"
+  ],
+  "triggers": [
+    "map",
+    "web map",
+    "maplibre",
+    "deck.gl",
+    "interactive map",
+    "map dashboard",
+    "spatial ui",
+    "cartography web"
+  ],
+  "recommended": [],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Configures MapLibre GL, interactive layers, and map dashboard interfaces.",
+  "sections": [
+    {
+      "id": "architecture",
+      "title": "Architecture",
+      "source": "SKILL.md#architecture"
+    },
+    {
+      "id": "design-system",
+      "title": "Design System",
+      "source": "SKILL.md#design-system"
+    },
+    {
+      "id": "ui-rules",
+      "title": "UI Rules",
+      "source": "SKILL.md#ui-rules"
+    },
+    {
+      "id": "layout",
+      "title": "Layout",
+      "source": "SKILL.md#layout"
+    },
+    {
+      "id": "map-integration",
+      "title": "Map Integration",
+      "source": "SKILL.md#map-integration"
+    },
+    {
+      "id": "data-pipeline-pattern",
+      "title": "Data Pipeline Pattern",
+      "source": "SKILL.md#data-pipeline-pattern"
+    },
+    {
+      "id": "tutorial-system",
+      "title": "Tutorial System",
+      "source": "SKILL.md#tutorial-system"
+    },
+    {
+      "id": "responsive",
+      "title": "Responsive",
+      "source": "SKILL.md#responsive"
+    },
+    {
+      "id": "file-organization",
+      "title": "File Organization",
+      "source": "SKILL.md#file-organization"
+    },
+    {
+      "id": "design-system-reference",
+      "title": "Design System Tokens",
+      "source": "references/design-system.md"
+    },
+    {
+      "id": "user-preferences",
+      "title": "UI Preferences & Design Rules",
+      "source": "references/user-preferences.md"
+    }
+  ],
+  "checks": []
+}

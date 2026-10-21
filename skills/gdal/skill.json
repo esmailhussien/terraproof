@@ -1,0 +1,66 @@
+{
+  "name": "gdal",
+  "layer": "domain",
+  "domains": [
+    "geospatial"
+  ],
+  "capabilities": [
+    "raster-processing",
+    "reprojection",
+    "cog-conversion",
+    "ogr2ogr",
+    "raster-clipping"
+  ],
+  "triggers": [
+    "gdal",
+    "ogr",
+    "geotiff",
+    "cog",
+    "cloud-optimized geotiff",
+    "reproject",
+    "gdalwarp",
+    "gdal_translate",
+    "raster clip",
+    "raster mosaic"
+  ],
+  "recommended": [
+    "verification"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Executes GDAL/OGR CLI operations for raster reprojection, clipping, and COG conversion.",
+  "sections": [
+    {
+      "id": "tools",
+      "title": "Tools",
+      "source": "SKILL.md#tools"
+    },
+    {
+      "id": "workflow",
+      "title": "Workflow",
+      "source": "SKILL.md#workflow"
+    },
+    {
+      "id": "quick-reference",
+      "title": "Quick Reference",
+      "source": "SKILL.md#quick-reference"
+    },
+    {
+      "id": "references",
+      "title": "References",
+      "source": "SKILL.md#references"
+    },
+    {
+      "id": "gdal-recipes",
+      "title": "GDAL Recipes",
+      "source": "references/gdal-recipes.md"
+    }
+  ],
+  "checks": [
+    "crs.defined",
+    "crs.consistent",
+    "raster.nodata_declared",
+    "raster.resampling",
+    "raster.cog_layout"
+  ]
+}

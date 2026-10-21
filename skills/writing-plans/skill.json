@@ -1,0 +1,80 @@
+{
+  "name": "writing-plans",
+  "layer": "process",
+  "domains": [
+    "general",
+    "planning"
+  ],
+  "capabilities": [
+    "task-decomposition",
+    "execution-plan",
+    "milestone-planning"
+  ],
+  "triggers": [
+    "plan",
+    "step-by-step",
+    "roadmap",
+    "implementation plan",
+    "break down",
+    "complex feature"
+  ],
+  "recommended": [
+    "verification"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Decomposes the task into an executable, task-by-task engineering plan.",
+  "sections": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "source": "SKILL.md#overview"
+    },
+    {
+      "id": "scope-check",
+      "title": "Scope Check",
+      "source": "SKILL.md#scope-check"
+    },
+    {
+      "id": "file-structure",
+      "title": "File Structure",
+      "source": "SKILL.md#file-structure"
+    },
+    {
+      "id": "task-right-sizing",
+      "title": "Task Right-Sizing",
+      "source": "SKILL.md#task-right-sizing"
+    },
+    {
+      "id": "bite-sized-task-granularity",
+      "title": "Bite-Sized Task Granularity",
+      "source": "SKILL.md#bite-sized-task-granularity"
+    },
+    {
+      "id": "plan-document-header",
+      "title": "Plan Document Header",
+      "source": "SKILL.md#plan-document-header"
+    },
+    {
+      "id": "task-structure",
+      "title": "Task Structure",
+      "source": "SKILL.md#task-structure"
+    },
+    {
+      "id": "no-placeholders",
+      "title": "No Placeholders",
+      "source": "SKILL.md#no-placeholders"
+    },
+    {
+      "id": "self-review",
+      "title": "Self-Review",
+      "source": "SKILL.md#self-review"
+    },
+    {
+      "id": "execution-handoff",
+      "title": "Execution Handoff",
+      "source": "SKILL.md#execution-handoff"
+    }
+  ],
+  "checks": []
+}

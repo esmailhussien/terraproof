@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pyproj import CRS
 
-from terraproof.checks.base import FAIL, NOT_RUN, PASS, WARN, result
+from terraproof.checks.base import FAIL, NOT_RUN, PASS, WARN, CheckResult, result
 
 
 def _label(dataset: dict) -> str:
@@ -105,42 +105,66 @@ def check_metric_operation(datasets: list[dict], operation: str) -> list:
                     operation=operation,
                 )
             )
-        elif crs["is_geographic"]:
-            results.append(
-                result(
-                    "crs.metric_operation",
-                    FAIL,
-                    f"Operation '{operation}' on {path} uses a geographic CRS (units: {crs['axis_units']}), "
-                    "so distances and areas would be in degrees. Reproject to a projected CRS first.",
-                    input=path,
-                    operation=operation,
-                    epsg=crs["epsg"],
-                    axis_units=crs["axis_units"],
-                )
-            )
-        elif _is_metric_or_foot(crs["axis_units"]):
-            results.append(
-                result(
-                    "crs.metric_operation",
-                    PASS,
-                    f"Projected CRS in {crs['axis_units']} is suitable for '{operation}' on {path}.",
-                    input=path,
-                    operation=operation,
-                    epsg=crs["epsg"],
-                    axis_units=crs["axis_units"],
-                )
-            )
         else:
-            results.append(
-                result(
-                    "crs.metric_operation",
-                    WARN,
-                    f"Projected CRS on {path} uses units '{crs['axis_units']}'. Confirm they are metric or "
-                    f"foot-based before '{operation}'.",
-                    input=path,
-                    operation=operation,
-                    epsg=crs["epsg"],
-                    axis_units=crs["axis_units"],
-                )
-            )
+            results.append(_metric_operation_result(path, operation, crs))
     return results
+
+
+def _metric_operation_result(path: str, operation: str, crs: dict) -> CheckResult:
+    """Decision rules, applied to the horizontal component of the CRS (see crs_summary):
+
+    - geographic: fail (distances and areas would be in degrees);
+    - geocentric: fail (Earth-centred X/Y/Z, not map distances);
+    - projected with metre or foot units: pass;
+    - projected with other units, or any other kind (vertical-only, engineering, unknown): warn,
+      because the units for the operation cannot be confirmed.
+    """
+    kind = crs["horizontal_kind"]
+    units = crs["horizontal_axis_units"]
+    evidence = {
+        "input": path,
+        "operation": operation,
+        "epsg": crs["epsg"],
+        "axis_units": crs["axis_units"],
+        "horizontal_kind": kind,
+        "horizontal_axis_units": units,
+        "is_geocentric": crs["is_geocentric"],
+    }
+    if kind == "geographic":
+        return result(
+            "crs.metric_operation",
+            FAIL,
+            f"Operation '{operation}' on {path} uses a geographic CRS (units: {units}), "
+            "so distances and areas would be in degrees. Reproject to a projected CRS first.",
+            **evidence,
+        )
+    if kind == "geocentric":
+        return result(
+            "crs.metric_operation",
+            FAIL,
+            f"Operation '{operation}' on {path} uses a geocentric CRS (units: {units}); its X, Y and Z axes are "
+            "Earth-centred Cartesian coordinates, not map distances. Reproject to a projected CRS first.",
+            **evidence,
+        )
+    if kind == "projected" and _is_metric_or_foot(units):
+        return result(
+            "crs.metric_operation",
+            PASS,
+            f"Projected CRS in {units} is suitable for '{operation}' on {path}.",
+            **evidence,
+        )
+    if kind == "projected":
+        return result(
+            "crs.metric_operation",
+            WARN,
+            f"Units for '{operation}' on {path} cannot be confirmed: the projected CRS uses units '{units}'. "
+            "Confirm they are metric or foot-based before the operation.",
+            **evidence,
+        )
+    return result(
+        "crs.metric_operation",
+        WARN,
+        f"Units for '{operation}' on {path} cannot be confirmed: {crs['name']} has no projected horizontal "
+        "component. Confirm the operation's units before using it.",
+        **evidence,
+    )

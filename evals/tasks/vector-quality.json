@@ -1,0 +1,46 @@
+{
+  "skill": "vector-quality",
+  "tasks": [
+    {
+      "id": "vector-repair-inventory",
+      "prompt": "Audit these parcel geometries before overlay. Identify which need repair, but do not silently remove empty records or force every repair into a Polygon.",
+      "inputs": "A known-CRS GeoPackage with stable IDs: a self-crossing bow-tie Polygon, a collapsed polygon ring, a null geometry, an empty Polygon, valid Polygon/MultiPolygon records, and a valid Point in a mixed-geometry layer. Include authoritative intended repair regions and attribute nulls.",
+      "acceptance": [
+        "Run python -m terraproof check parcels.gpkg; expected_checks applies to the original seeded input inventory.",
+        "Report null, empty and invalid counts separately and distinguish exact geometry types from families.",
+        "Show a proposed make_valid repair ledger retaining original IDs, type/dimension changes and collapsed parts; require review before dropping anything.",
+        "Do not present a successful validity repair as proof that the intended parcel regions were recovered."
+      ],
+      "expected_checks": { "geometry.valid": "fail", "geometry.non_empty": "warn", "geometry.type_consistent": "warn" },
+      "pitfall": "Repair hides collapsed lower-dimensional pieces, nulls or missing scope while producing a valid-looking output."
+    },
+    {
+      "id": "vector-coverage-and-duplicates",
+      "prompt": "These zoning polygons each validate, but the coverage total looks wrong. Find overlaps, gaps, slivers and duplicate shapes without dissolving away zone identities.",
+      "inputs": "A projected polygon GeoPackage with individually valid, nonempty Polygon/MultiPolygon records, an expected coverage boundary, a positive-area overlap, an uncovered strip, an authorized interior hole, a narrow overlay fragment and equal geometries with different ring/vertex ordering and different attributes.",
+      "acceptance": [
+        "Run python -m terraproof check zones.gpkg; expected_checks applies to the individually valid seeded coverage, which should pass these per-feature checks despite coverage defects.",
+        "Measure overlap regions and boundary-minus-union gaps in justified units, excluding the documented legitimate hole and shared-edge-only contacts.",
+        "Identify topological duplicates independently of WKB ordering; explain any legitimate co-located records rather than deleting them by shape alone.",
+        "Report slivers against a fixture-supplied accuracy/tolerance policy and compare topology after any snapping or precision change.",
+        "State that coverage topology and duplicate detection are not checked automatically yet."
+      ],
+      "expected_checks": { "geometry.valid": "pass", "geometry.non_empty": "pass", "geometry.type_consistent": "pass" },
+      "pitfall": "Per-feature validity is confused with a gap-free, non-overlapping coverage, and exact-byte deduplication misses equivalent shapes."
+    },
+    {
+      "id": "vector-join-scope-and-geojson",
+      "prompt": "Join owner attributes to parcels and export RFC 7946 GeoJSON without losing unmatched parcels. Diagnose why the supplied legacy join looks complete but contains fewer records.",
+      "inputs": "A valid, nonempty projected parcel layer with unique stable IDs; an owner table with a duplicate key, a null key and an unmatched parcel key; a legacy inner-join polygon output with fewer rows; polygons with holes and initially opposite RFC winding. Include expected ID sets and owner relationships.",
+      "acceptance": [
+        "Run python -m terraproof check legacy_join.gpkg --compare-to parcels.gpkg; expected_checks applies to the seeded legacy output, not the corrected export.",
+        "Audit attribute nulls, duplicate/null join keys, unmatched records and join cardinality before selecting an explicit owner-resolution policy.",
+        "Produce a reviewed left-join result preserving every parcel ID; detect record substitution even when total counts agree.",
+        "Export longitude/latitude WGS 84 GeoJSON with counterclockwise exteriors and clockwise holes, then reopen and compare IDs, nulls, types and ring coordinates.",
+        "State that scope.record_count does not validate join semantics, attributes or GeoJSON winding."
+      ],
+      "expected_checks": { "geometry.valid": "pass", "geometry.non_empty": "pass", "scope.record_count": "warn" },
+      "pitfall": "An inner join or null-key handling silently drops or multiplies parcels, and valid polygons are exported with the wrong coordinate/winding contract."
+    }
+  ]
+}

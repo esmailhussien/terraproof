@@ -1,0 +1,82 @@
+{
+  "name": "vector-quality",
+  "layer": "domain",
+  "domains": [
+    "geospatial"
+  ],
+  "capabilities": [
+    "geometry-validity",
+    "geometry-repair",
+    "coverage-topology",
+    "geojson-export"
+  ],
+  "triggers": [
+    "make_valid",
+    "self-intersecting",
+    "self-intersection",
+    "sliver",
+    "invalid geometries",
+    "coverage gaps",
+    "duplicate geometries"
+  ],
+  "recommended": [
+    "crs-and-units"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Audits and repairs invalid, empty, duplicate, and topologically inconsistent vector geometry while preserving feature identity.",
+  "sections": [
+    {
+      "id": "inventory-geometry-and-attribute-states",
+      "title": "Inventory geometry and attribute states",
+      "source": "SKILL.md#inventory-geometry-and-attribute-states"
+    },
+    {
+      "id": "check-validity-before-choosing-a-repair",
+      "title": "Check validity before choosing a repair",
+      "source": "SKILL.md#check-validity-before-choosing-a-repair"
+    },
+    {
+      "id": "detect-duplicate-geometries-without-deleting-legitimate-records",
+      "title": "Detect duplicate geometries without deleting legitimate records",
+      "source": "SKILL.md#detect-duplicate-geometries-without-deleting-legitimate-records"
+    },
+    {
+      "id": "audit-coverage-topology-gaps-overlaps-and-slivers",
+      "title": "Audit coverage topology: gaps, overlaps, and slivers",
+      "source": "SKILL.md#audit-coverage-topology-gaps-overlaps-and-slivers"
+    },
+    {
+      "id": "choose-precision-and-snapping-deliberately",
+      "title": "Choose precision and snapping deliberately",
+      "source": "SKILL.md#choose-precision-and-snapping-deliberately"
+    },
+    {
+      "id": "preserve-records-through-null-handling-and-joins",
+      "title": "Preserve records through null handling and joins",
+      "source": "SKILL.md#preserve-records-through-null-handling-and-joins"
+    },
+    {
+      "id": "export-geojson-winding-correctly",
+      "title": "Export GeoJSON winding correctly",
+      "source": "SKILL.md#export-geojson-winding-correctly"
+    },
+    {
+      "id": "verify-with-terraproof",
+      "title": "Verify with Terraproof",
+      "source": "SKILL.md#verify-with-terraproof"
+    },
+    {
+      "id": "sources",
+      "title": "Sources",
+      "source": "SKILL.md#sources"
+    }
+  ],
+  "checks": [
+    "geometry.valid",
+    "geometry.non_empty",
+    "geometry.type_consistent",
+    "scope.record_count",
+    "crs.defined"
+  ]
+}

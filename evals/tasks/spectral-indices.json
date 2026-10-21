@@ -1,0 +1,47 @@
+{
+  "skill": "spectral-indices",
+  "tasks": [
+    {
+      "id": "indices-ndvi-physical-inputs",
+      "prompt": "Compute NDVI for these Sentinel-2 and Landsat 8/9 samples and explain why the supplied DN-ratio shortcut is wrong even though the map looks reasonable.",
+      "inputs": "Sensor-labelled red/NIR bands in original offset DN encoding and independently decoded surface-reflectance equivalents, common grids and QA masks. Include nodata, a valid zero NDVI pixel, equal-zero denominator, unsigned subtraction risk and control NDVI values within [-1, 1].",
+      "acceptance": [
+        "Map Sentinel-2 B08/B04 and Landsat 8/9 SR_B5/SR_B4, apply source calibration exactly once, then use (NIR - red) / (NIR + red).",
+        "Cast before arithmetic, propagate both masks, keep valid zero and mark zero-denominator/nonfinite results nodata without silently clipping.",
+        "Compare control values to independent physical-reflectance calculations; explain that additive offsets do not cancel in the ratio.",
+        "Run python -m terraproof check ndvi.tif --expect index; expected_checks applies to the correctly decoded, masked output with declared nodata.",
+        "Explain that an incorrect DN-ratio can still pass the nominal range check."
+      ],
+      "expected_checks": { "rs.index_range": "pass", "raster.nodata_declared": "pass" },
+      "pitfall": "An unscaled DN ratio remains within the nominal range and is falsely accepted as calibrated NDVI."
+    },
+    {
+      "id": "indices-water-definition-grid",
+      "prompt": "Map open-water contrast near an urban shoreline using both McFeeters NDWI and MNDWI. Explain which formula each map uses instead of returning an ambiguously named NDWI layer.",
+      "inputs": "Aligned physical SR green/NIR/SWIR1 bands for Sentinel-2 and Landsat 8/9, plus Sentinel-2 coarser native SWIR1 data and reference grid metadata. Include water, built-up land, shadows and a local reference sample whose known NDWI/MNDWI values differ; corrected inputs are nonnegative and nonzero-sum on valid controls.",
+      "acceptance": [
+        "Use (green - NIR) / (green + NIR) for McFeeters NDWI and (green - SWIR1) / (green + SWIR1) for MNDWI; do not substitute the Gao moisture definition.",
+        "Map Sentinel-2 B03/B08/B11 and Landsat 8/9 SR_B3/SR_B5/SR_B6; align the full grid and explain the effective SWIR information resolution.",
+        "Verify both formulas on independent control pixels and masks, then choose any water threshold using the local reference sample rather than asserting a universal cutoff.",
+        "Run python -m terraproof check ndwi_mcfeeters.tif mndwi.tif --expect index; expected_checks applies to these same-grid, declared-nodata outputs.",
+        "State that rs.index_range cannot identify a wrong water-index definition."
+      ],
+      "expected_checks": { "rs.index_range": "pass", "raster.grid_alignment": "pass", "raster.nodata_declared": "pass" },
+      "pitfall": "An NIR/SWIR moisture ratio is mislabeled McFeeters NDWI, or SWIR is paired with a shifted/finer array without documented alignment."
+    },
+    {
+      "id": "indices-burn-evi-savi-ranges",
+      "prompt": "Produce pre/post NBR and dNBR plus EVI and SAVI from these reflectance samples. Do not clip valid formula results just to satisfy a generic index-range test.",
+      "inputs": "Same-grid, masked, physical SR blue/red/NIR/SWIR2 bands with seasonal metadata for both dates and independent formula controls. Include a pre/post NBR pair whose unscaled dNBR exceeds 1, a finite EVI outside [-1, 1], a zero EVI denominator, and SAVI controls with L=0.5 and reflectances in [0, 1].",
+      "acceptance": [
+        "Use NIR/SWIR2 NBR and prefire-minus-postfire dNBR with both-date mask intersection; match control signs and values and report seasonal confounding.",
+        "Use EVI gain 2.5, red coefficient 6, blue coefficient 7.5 and background constant 1; compute SAVI with L=0.5 on physical reflectance, not DN.",
+        "Preserve the finite out-of-nominal EVI/dNBR control results for review, mark zero denominators nodata and explain why dNBR can span [-2, 2] and EVI is not universally bounded by [-1, 1].",
+        "Run python -m terraproof check nbr_prefire.tif nbr_postfire.tif --expect index; expected_checks applies only to the two NBR outputs, not EVI or dNBR.",
+        "Do not claim automatic formula, burn-severity threshold or denominator-policy validation; independently compare all index controls within the fixture's stated floating tolerance."
+      ],
+      "expected_checks": { "rs.index_range": "pass", "raster.grid_alignment": "pass", "raster.nodata_declared": "pass" },
+      "pitfall": "dNBR sign is reversed, NBR uses SWIR1, EVI/SAVI constants are mixed with DN units, or valid changes are clipped to pass a generic range test."
+    }
+  ]
+}

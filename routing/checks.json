@@ -1,0 +1,61 @@
+{
+  "version": "1.0.0",
+  "checks": {
+    "crs.defined": {
+      "family": "crs",
+      "description": "Each georeferenced input declares a CRS."
+    },
+    "crs.consistent": {
+      "family": "crs",
+      "description": "Inputs that are combined share one CRS; a mismatch fails until they are reprojected."
+    },
+    "crs.metric_operation": {
+      "family": "crs",
+      "description": "A distance, area, or buffer operation runs in a projected horizontal CRS with metre or foot units, not in degrees or geocentric coordinates."
+    },
+    "geometry.valid": {
+      "family": "geometry",
+      "description": "Every geometry is valid (no self-intersections or invalid rings)."
+    },
+    "geometry.non_empty": {
+      "family": "geometry",
+      "description": "No null or empty geometries are present."
+    },
+    "geometry.type_consistent": {
+      "family": "geometry",
+      "description": "The layer holds one geometry family; single and multi-part types count together."
+    },
+    "scope.record_count": {
+      "family": "scope",
+      "description": "The output feature count is compared with a reference dataset's count."
+    },
+    "raster.nodata_declared": {
+      "family": "raster",
+      "description": "Every raster band declares a nodata value."
+    },
+    "raster.resampling": {
+      "family": "raster",
+      "description": "The resampling method suits categorical data (nearest or mode)."
+    },
+    "raster.grid_alignment": {
+      "family": "raster",
+      "description": "Rasters share CRS, pixel size, and pixel-grid origin so they can be combined."
+    },
+    "raster.cog_layout": {
+      "family": "raster",
+      "description": "Heuristic layout screen for GeoTIFFs: tiled, with internal overviews unless the raster fits in one block; not COG validation."
+    },
+    "rs.reflectance_range": {
+      "family": "rs",
+      "description": "Sampled plausibility screen: reflectance values lie within [-0.5, 1.5]; non-finite scale, offset, or values fail. Not a calibration check."
+    },
+    "rs.index_range": {
+      "family": "rs",
+      "description": "Sampled plausibility screen: spectral index values lie within [-1, 1]; non-finite scale, offset, or values fail."
+    },
+    "stac.provenance": {
+      "family": "stac",
+      "description": "A STAC Item records a time and a projection code."
+    }
+  }
+}

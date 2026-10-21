@@ -1,0 +1,67 @@
+{
+  "name": "verification",
+  "layer": "verification",
+  "domains": [
+    "general",
+    "qa"
+  ],
+  "capabilities": [
+    "completion-validation",
+    "truthfulness-audit",
+    "pre-commit-check"
+  ],
+  "triggers": [
+    "verify",
+    "verification",
+    "check completion",
+    "done check",
+    "validate result"
+  ],
+  "recommended": [],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Validates completion and truthfulness before marking the task complete.",
+  "sections": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "source": "SKILL.md#overview"
+    },
+    {
+      "id": "the-iron-law",
+      "title": "The Iron Law",
+      "source": "SKILL.md#the-iron-law"
+    },
+    {
+      "id": "the-gate-function",
+      "title": "The Gate Function",
+      "source": "SKILL.md#the-gate-function"
+    },
+    {
+      "id": "common-failures",
+      "title": "Common Failures",
+      "source": "SKILL.md#common-failures"
+    },
+    {
+      "id": "red-flags---stop",
+      "title": "Red Flags - STOP",
+      "source": "SKILL.md#red-flags---stop"
+    },
+    {
+      "id": "rationalization-prevention",
+      "title": "Rationalization Prevention",
+      "source": "SKILL.md#rationalization-prevention"
+    },
+    {
+      "id": "key-patterns",
+      "title": "Key Patterns",
+      "source": "SKILL.md#key-patterns"
+    },
+    {
+      "id": "when-to-apply",
+      "title": "When To Apply",
+      "source": "SKILL.md#when-to-apply"
+    }
+  ],
+  "checks": []
+}

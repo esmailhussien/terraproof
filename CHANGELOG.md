@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - The published package failed to run: `npx agentlayer` ended with `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING` because raw `.ts` router sources shipped inside `node_modules`. The router is now compiled to `dist/router/*.js` by `npm run build` (run automatically by `prepack`), and the CLI runs on Node 20 or newer. The package root is found by walking up from the module to the directory holding `package.json` and `routing/registry.json`.
+- CI pytest on fresh checkouts: `tests/python/conftest.py` now creates the parent of the `--basetemp` directory (`.pytest_cache/basetemp`, set in `pyproject.toml`), which pytest does not create itself.
+- Check false passes: `crs.metric_operation` now passes only projected horizontal CRSs in metre or foot units (geocentric CRSs fail, unconfirmable units warn); `rs.reflectance_range` and `rs.index_range` fail on non-finite scale, offset, or decoded values; `raster.cog_layout` is a layout heuristic with neutral wording that no longer warns about missing overviews for rasters that fit in one block.
 
 ### Added
 - Experimental Python core (Phase 1, `pyproject.toml`, `src/terraproof/`): `python -m terraproof inspect` (vector, raster, and local STAC Item inspection, read-only, no network) and `python -m terraproof check` (checks for CRS and units, geometry, record counts, raster integrity, remote-sensing value ranges, and STAC provenance). Each run yields an evidence grade (Decision-grade, Review required, Advisory only) in a JSON or Markdown report; the Markdown report has English and Arabic (`--lang ar`) output. Exit codes: 0, 2, 3 for the grades and 1 for usage errors or unreadable inputs. Tests in `tests/python/` generate fixtures at test time.
@@ -30,6 +32,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `tests/router/cli.test.ts`: CLI argument validation tests, wired into `npm run test:router`.
 - `npm run test:package` (`tests/package/smoke.mjs`): packs the package, installs the tarball into a fresh project, and checks `--version`, `route --format json`, `validate`, and unknown-collection rejection.
 - CI job `package-smoke` runs the package smoke test on Ubuntu, Windows, and macOS with Node 20, 22, and 24.
+- Per-skill `skill.json` manifests in `skills/<name>/` (schema in `routing/SKILL_MANIFEST.md`), replacing hand-edited registry entries.
+- Generated registry: `npm run registry:build` writes `routing/registry.json` from the manifests, and `npm run registry:check` verifies it. `npm run test:router` runs the same check.
+- `routing/checks.json` check catalog, kept in sync with the Python check ids by `tests/python/test_check_catalog.py`.
+- Data-driven explanations: each skill's routed explanation comes from its manifest.
+- Five new skills: `crs-and-units`, `vector-quality`, `raster-processing`, `satellite-preprocessing`, and `spectral-indices`.
+- 15 benchmark task specs in `evals/` (5 skills, 3 tasks each). These are specifications only; the harness is planned, not implemented.
+- `remote-sensing` preset collection: `geospatial-data-discovery`, `satellite-preprocessing`, `spectral-indices`, `raster-processing`, and `verification`.
+- 27 router scenarios (`scenario-30` to `scenario-56`) for the new skills, including precision cases where a new skill must not be selected; every trigger in the new manifests appears in at least one scenario prompt. Core suite: 41 scenarios; total with the real-world suite: 55.
 
 ### Removed
 - Off-scope skills: `frontend-design`, `react-best-practices`, `codebase-architecture`, `supabase`, `supabase-postgres-best-practices`, `security-review`, `api-discovery`, `api-integration`, `ai-sdk`, `unit-testing`, `integration-testing`, `browser-testing`, `test-driven-development`, `exploratory-data-analysis`.

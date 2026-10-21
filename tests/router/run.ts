@@ -5,6 +5,7 @@ import { testCollections } from "./collections.test.ts";
 import { testCliArgs } from "./cli.test.ts";
 import { testApplyAndBundle } from "./apply.test.ts";
 import { runScenarioTests } from "./resolution.test.ts";
+import { checkRegistry } from "../../router/build-registry.ts";
 import * as path from "path";
 import { fileURLToPath } from "url";
 
@@ -19,7 +20,7 @@ console.log("===================================================================
 let allPassed = true;
 
 // 1. Registry Validation
-console.log("[1/8] Validating Registry & Skill Paths...");
+console.log("[1/9] Validating Registry & Skill Paths...");
 const regReport = validateRegistry(workspaceRoot);
 if (regReport.valid) {
   console.log(`  ✓ Registry valid (${regReport.skillsCount} skills, ${regReport.collectionsCount} collections)`);
@@ -34,7 +35,7 @@ if (regReport.valid) {
 }
 
 // 2. Classification Tests
-console.log("\n[2/8] Running Task Classification Tests...");
+console.log("\n[2/9] Running Task Classification Tests...");
 const classRes = testClassification();
 if (classRes.passed) {
   console.log(`  ✓ ${classRes.message}`);
@@ -44,7 +45,7 @@ if (classRes.passed) {
 }
 
 // 3. Conflicts & Overrides Tests
-console.log("\n[3/8] Running Conflicts & Overrides Tests...");
+console.log("\n[3/9] Running Conflicts & Overrides Tests...");
 const confRes = testConflictsAndOverrides();
 if (confRes.passed) {
   console.log(`  ✓ ${confRes.message}`);
@@ -54,7 +55,7 @@ if (confRes.passed) {
 }
 
 // 4. Collections Tests
-console.log("\n[4/8] Running Preset Collections Tests...");
+console.log("\n[4/9] Running Preset Collections Tests...");
 const collRes = testCollections();
 if (collRes.passed) {
   console.log(`  ✓ ${collRes.message}`);
@@ -64,7 +65,7 @@ if (collRes.passed) {
 }
 
 // 5. CLI Argument Validation Tests
-console.log("\n[5/8] Running CLI Argument Validation Tests...");
+console.log("\n[5/9] Running CLI Argument Validation Tests...");
 const cliRes = testCliArgs();
 if (cliRes.passed) {
   console.log(`  ✓ ${cliRes.message}`);
@@ -74,7 +75,7 @@ if (cliRes.passed) {
 }
 
 // 6. Apply & Bundle Integration Tests
-console.log("\n[6/8] Running Apply & Bundle Integration Tests...");
+console.log("\n[6/9] Running Apply & Bundle Integration Tests...");
 const applyRes = testApplyAndBundle();
 if (applyRes.passed) {
   console.log(`  ✓ ${applyRes.message}`);
@@ -84,7 +85,7 @@ if (applyRes.passed) {
 }
 
 // 7. Core Scenario Suite
-console.log("\n[7/8] Running Core Scenario Suite (14 Scenarios)...");
+console.log("\n[7/9] Running Core Scenario Suite (41 Scenarios)...");
 const coreReport = runScenarioTests(path.join(__dirname, "scenarios.json"));
 
 for (const sc of coreReport.results) {
@@ -107,7 +108,7 @@ for (const sc of coreReport.results) {
 }
 
 // 8. Real-World Scenario Suite
-console.log("\n[8/8] Running Real-World Benchmark Suite (14 Scenarios)...");
+console.log("\n[8/9] Running Real-World Benchmark Suite (14 Scenarios)...");
 const rwReport = runScenarioTests(path.join(__dirname, "real-world-scenarios.json"));
 
 for (const sc of rwReport.results) {
@@ -127,6 +128,19 @@ for (const sc of rwReport.results) {
     console.error(`      Actual selected: ${sc.selectedSkills.join(", ")}`);
     allPassed = false;
   }
+}
+
+// 9. Generated Registry Freshness
+console.log("\n[9/9] Checking routing/registry.json is generated from skills/*/skill.json...");
+const genReport = checkRegistry(workspaceRoot);
+for (const w of genReport.warnings) {
+  console.log(`    ⚠ ${w}`);
+}
+if (genReport.ok) {
+  console.log(`  ✓ routing/registry.json is up to date (${genReport.skillCount} skills)`);
+} else {
+  console.error(`  ✗ Registry generation check failed:`, genReport.errors.length > 0 ? genReport.errors : genReport.summary);
+  allPassed = false;
 }
 
 const totalScenarios = coreReport.total + rwReport.total;

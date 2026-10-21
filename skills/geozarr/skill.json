@@ -1,0 +1,97 @@
+{
+  "name": "geozarr",
+  "layer": "domain",
+  "domains": [
+    "geospatial",
+    "data"
+  ],
+  "capabilities": [
+    "geozarr",
+    "zarr-multidim",
+    "cloud-native-raster"
+  ],
+  "triggers": [
+    "geozarr",
+    "zarr",
+    "multidimensional raster",
+    "climate grid",
+    "xarray zarr"
+  ],
+  "recommended": [
+    "verification"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Handles multidimensional geospatial raster arrays and GeoZarr conventions.",
+  "sections": [
+    {
+      "id": "how-to-use-this-skill",
+      "title": "How to use this skill",
+      "source": "SKILL.md#how-to-use-this-skill"
+    },
+    {
+      "id": "status-and-version-guidance",
+      "title": "Status and version guidance",
+      "source": "SKILL.md#status-and-version-guidance"
+    },
+    {
+      "id": "when-to-use-this-skill",
+      "title": "When to use this skill",
+      "source": "SKILL.md#when-to-use-this-skill"
+    },
+    {
+      "id": "the-compliance-checklist",
+      "title": "The compliance checklist",
+      "source": "SKILL.md#the-compliance-checklist"
+    },
+    {
+      "id": "cell-center-vs-pixel-edge",
+      "title": "Cell-center vs pixel-edge",
+      "source": "SKILL.md#cell-center-vs-pixel-edge"
+    },
+    {
+      "id": "zarr-v2-vs-v3-dimension-declaration",
+      "title": "Zarr v2 vs v3 dimension declaration",
+      "source": "SKILL.md#zarr-v2-vs-v3-dimension-declaration"
+    },
+    {
+      "id": "optional-layered-conventions",
+      "title": "Optional layered conventions",
+      "source": "SKILL.md#optional-layered-conventions"
+    },
+    {
+      "id": "authoring-from-xarrayrioxarray",
+      "title": "Authoring from xarray/rioxarray",
+      "source": "SKILL.md#authoring-from-xarrayrioxarray"
+    },
+    {
+      "id": "patching-an-existing-store-in-place",
+      "title": "Patching an existing store in place",
+      "source": "SKILL.md#patching-an-existing-store-in-place"
+    },
+    {
+      "id": "common-gotchas",
+      "title": "Common gotchas",
+      "source": "SKILL.md#common-gotchas"
+    },
+    {
+      "id": "validation",
+      "title": "Validation",
+      "source": "SKILL.md#validation"
+    },
+    {
+      "id": "tooling-matrix",
+      "title": "Tooling matrix",
+      "source": "SKILL.md#tooling-matrix"
+    },
+    {
+      "id": "references",
+      "title": "References",
+      "source": "SKILL.md#references"
+    }
+  ],
+  "checks": [
+    "crs.defined",
+    "raster.nodata_declared"
+  ]
+}

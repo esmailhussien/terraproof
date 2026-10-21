@@ -1,0 +1,84 @@
+{
+  "name": "satellite-preprocessing",
+  "layer": "domain",
+  "domains": [
+    "geospatial"
+  ],
+  "capabilities": [
+    "surface-reflectance-decoding",
+    "cloud-masking",
+    "sensor-harmonization",
+    "temporal-compositing"
+  ],
+  "triggers": [
+    "surface reflectance",
+    "scene classification",
+    "scl band",
+    "qa_pixel",
+    "boa_add_offset",
+    "landsat collection 2"
+  ],
+  "recommended": [
+    "raster-processing"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Decodes Sentinel-2 L2A and Landsat Collection 2 Level-2 surface reflectance once, applies sensor-specific QA masks, and prepares harmonized composites.",
+  "sections": [
+    {
+      "id": "establish-the-product-and-encoding",
+      "title": "Establish the product and encoding",
+      "source": "SKILL.md#establish-the-product-and-encoding"
+    },
+    {
+      "id": "decode-sentinel-2-l2a-reflectance",
+      "title": "Decode Sentinel-2 L2A reflectance",
+      "source": "SKILL.md#decode-sentinel-2-l2a-reflectance"
+    },
+    {
+      "id": "mask-sentinel-2-scl-cloud-and-shadow-classes",
+      "title": "Mask Sentinel-2 SCL cloud and shadow classes",
+      "source": "SKILL.md#mask-sentinel-2-scl-cloud-and-shadow-classes"
+    },
+    {
+      "id": "decode-landsat-collection-2-level-2-sr",
+      "title": "Decode Landsat Collection 2 Level-2 SR",
+      "source": "SKILL.md#decode-landsat-collection-2-level-2-sr"
+    },
+    {
+      "id": "apply-scale-and-offset-exactly-once",
+      "title": "Apply scale and offset exactly once",
+      "source": "SKILL.md#apply-scale-and-offset-exactly-once"
+    },
+    {
+      "id": "harmonize-sensors-before-comparing-them",
+      "title": "Harmonize sensors before comparing them",
+      "source": "SKILL.md#harmonize-sensors-before-comparing-them"
+    },
+    {
+      "id": "build-temporal-composites-from-masked-observations",
+      "title": "Build temporal composites from masked observations",
+      "source": "SKILL.md#build-temporal-composites-from-masked-observations"
+    },
+    {
+      "id": "verify-with-terraproof",
+      "title": "Verify with Terraproof",
+      "source": "SKILL.md#verify-with-terraproof"
+    },
+    {
+      "id": "sources",
+      "title": "Sources",
+      "source": "SKILL.md#sources"
+    }
+  ],
+  "checks": [
+    "rs.reflectance_range",
+    "raster.nodata_declared",
+    "raster.grid_alignment",
+    "raster.resampling",
+    "stac.provenance",
+    "crs.defined",
+    "crs.consistent",
+    "raster.cog_layout"
+  ]
+}

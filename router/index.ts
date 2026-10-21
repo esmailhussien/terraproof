@@ -236,7 +236,7 @@ Options:
   --dry-run              Display recommendation without modifying project
   --include <skill>      Force inclusion of a specific skill (can repeat)
   --exclude <skill>      Force exclusion of a specific skill (can repeat)
-  --collection <name>    Seed from a preset collection (gis, data-analysis, production)
+  --collection <name>    Seed from a preset collection (gis, data-analysis, production, remote-sensing)
   --format <json|table>  Output format (default: table)
   --version, -v          Show version number
   --help, -h             Show this help message

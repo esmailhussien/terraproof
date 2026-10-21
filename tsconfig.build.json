@@ -23,6 +23,7 @@
     "node_modules",
     "dist",
     "third_party",
-    "tests"
+    "tests",
+    "router/build-registry.ts"
   ]
 }

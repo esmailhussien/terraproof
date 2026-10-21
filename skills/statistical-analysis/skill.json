@@ -1,0 +1,127 @@
+{
+  "name": "statistical-analysis",
+  "layer": "domain",
+  "domains": [
+    "data",
+    "statistics"
+  ],
+  "capabilities": [
+    "hypothesis-testing",
+    "anova",
+    "t-test",
+    "regression",
+    "effect-sizes",
+    "power-analysis"
+  ],
+  "triggers": [
+    "statistics",
+    "hypothesis test",
+    "t-test",
+    "anova",
+    "p-value",
+    "significance",
+    "regression",
+    "correlation",
+    "effect size",
+    "statistical power"
+  ],
+  "recommended": [
+    "verification"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Conducts hypothesis testing, ANOVA, regressions, and effect size calculations.",
+  "sections": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "source": "SKILL.md#overview"
+    },
+    {
+      "id": "when-to-use-this-skill",
+      "title": "When to Use This Skill",
+      "source": "SKILL.md#when-to-use-this-skill"
+    },
+    {
+      "id": "installation",
+      "title": "Installation",
+      "source": "SKILL.md#installation"
+    },
+    {
+      "id": "analysis-workflow",
+      "title": "Analysis Workflow",
+      "source": "SKILL.md#analysis-workflow"
+    },
+    {
+      "id": "test-selection-guide",
+      "title": "Test Selection Guide",
+      "source": "SKILL.md#test-selection-guide"
+    },
+    {
+      "id": "assumption-checking",
+      "title": "Assumption Checking",
+      "source": "SKILL.md#assumption-checking"
+    },
+    {
+      "id": "running-statistical-tests",
+      "title": "Running Statistical Tests",
+      "source": "SKILL.md#running-statistical-tests"
+    },
+    {
+      "id": "effect-sizes",
+      "title": "Effect Sizes",
+      "source": "SKILL.md#effect-sizes"
+    },
+    {
+      "id": "power-analysis",
+      "title": "Power Analysis",
+      "source": "SKILL.md#power-analysis"
+    },
+    {
+      "id": "reporting-results",
+      "title": "Reporting Results",
+      "source": "SKILL.md#reporting-results"
+    },
+    {
+      "id": "bayesian-statistics",
+      "title": "Bayesian Statistics",
+      "source": "SKILL.md#bayesian-statistics"
+    },
+    {
+      "id": "bundled-resources",
+      "title": "Bundled Resources",
+      "source": "SKILL.md#bundled-resources"
+    },
+    {
+      "id": "statistical-integrity",
+      "title": "Statistical Integrity",
+      "source": "SKILL.md#statistical-integrity"
+    },
+    {
+      "id": "assumptions_and_diagnostics",
+      "title": "Statistical Assumptions and Diagnostic Procedures",
+      "source": "references/assumptions_and_diagnostics.md"
+    },
+    {
+      "id": "bayesian_statistics",
+      "title": "Bayesian Statistical Analysis",
+      "source": "references/bayesian_statistics.md"
+    },
+    {
+      "id": "effect_sizes_and_power",
+      "title": "Effect Sizes and Power Analysis",
+      "source": "references/effect_sizes_and_power.md"
+    },
+    {
+      "id": "reporting_standards",
+      "title": "Statistical Reporting Standards",
+      "source": "references/reporting_standards.md"
+    },
+    {
+      "id": "test_selection_guide",
+      "title": "Statistical Test Selection Guide",
+      "source": "references/test_selection_guide.md"
+    }
+  ],
+  "checks": []
+}

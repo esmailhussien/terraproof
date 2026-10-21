@@ -1,0 +1,88 @@
+{
+  "name": "systematic-debugging",
+  "layer": "process",
+  "domains": [
+    "general",
+    "debugging"
+  ],
+  "capabilities": [
+    "root-cause-analysis",
+    "hypothesis-testing",
+    "regression-isolation"
+  ],
+  "triggers": [
+    "bug",
+    "fix",
+    "error",
+    "fail",
+    "broken",
+    "debug",
+    "issue",
+    "crash",
+    "intermittent",
+    "unexpected",
+    "exception",
+    "401",
+    "500",
+    "timeout"
+  ],
+  "recommended": [
+    "verification"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Applies structured 4-phase root cause investigation for the reported bug/error.",
+  "sections": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "source": "SKILL.md#overview"
+    },
+    {
+      "id": "the-iron-law",
+      "title": "The Iron Law",
+      "source": "SKILL.md#the-iron-law"
+    },
+    {
+      "id": "when-to-use",
+      "title": "When to Use",
+      "source": "SKILL.md#when-to-use"
+    },
+    {
+      "id": "the-four-phases",
+      "title": "The Four Phases",
+      "source": "SKILL.md#the-four-phases"
+    },
+    {
+      "id": "red-flags---stop-and-follow-process",
+      "title": "Red Flags - STOP and Follow Process",
+      "source": "SKILL.md#red-flags---stop-and-follow-process"
+    },
+    {
+      "id": "your-human-partners-signals-youre-doing-it-wrong",
+      "title": "your human partner's Signals You're Doing It Wrong",
+      "source": "SKILL.md#your-human-partners-signals-youre-doing-it-wrong"
+    },
+    {
+      "id": "common-rationalizations",
+      "title": "Common Rationalizations",
+      "source": "SKILL.md#common-rationalizations"
+    },
+    {
+      "id": "quick-reference",
+      "title": "Quick Reference",
+      "source": "SKILL.md#quick-reference"
+    },
+    {
+      "id": "when-process-reveals-no-root-cause",
+      "title": "When Process Reveals \"No Root Cause\"",
+      "source": "SKILL.md#when-process-reveals-no-root-cause"
+    },
+    {
+      "id": "supporting-techniques",
+      "title": "Supporting Techniques",
+      "source": "SKILL.md#supporting-techniques"
+    }
+  ],
+  "checks": []
+}

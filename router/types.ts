@@ -10,6 +10,25 @@ export interface SkillMetadata {
   recommended: string[];
   requires: string[];
   conflicts: string[];
+  explanation?: string;
+  sections?: SkillSection[];
+  checks?: string[];
+}
+
+export interface SkillSection {
+  id: string;
+  title: string;
+  source: string;
+}
+
+export interface CheckMetadata {
+  family: string;
+  description: string;
+}
+
+export interface ChecksData {
+  version: string;
+  checks: Record<string, CheckMetadata>;
 }
 
 export interface RegistryData {

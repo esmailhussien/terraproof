@@ -1,0 +1,74 @@
+{
+  "name": "crs-and-units",
+  "layer": "domain",
+  "domains": [
+    "geospatial"
+  ],
+  "capabilities": [
+    "coordinate-reference-systems",
+    "datum-transformation",
+    "axis-order",
+    "measurement-units"
+  ],
+  "triggers": [
+    "coordinate reference system",
+    "datum transformation",
+    "axis order",
+    "utm zone",
+    "equal-area projection",
+    "measurement crs",
+    "nad83",
+    "wgs 84"
+  ],
+  "recommended": [],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Chooses and verifies coordinate reference systems, axis order, datum transformations, and measurement units before distance, area, buffer, or reprojection work.",
+  "sections": [
+    {
+      "id": "choose-a-measurement-crs",
+      "title": "Choose a measurement CRS",
+      "source": "SKILL.md#choose-a-measurement-crs"
+    },
+    {
+      "id": "look-up-epsg-definitions-and-units",
+      "title": "Look up EPSG definitions and units",
+      "source": "SKILL.md#look-up-epsg-definitions-and-units"
+    },
+    {
+      "id": "resolve-axis-order-explicitly",
+      "title": "Resolve axis order explicitly",
+      "source": "SKILL.md#resolve-axis-order-explicitly"
+    },
+    {
+      "id": "inspect-datum-transformations-and-grids",
+      "title": "Inspect datum transformations and grids",
+      "source": "SKILL.md#inspect-datum-transformations-and-grids"
+    },
+    {
+      "id": "compute-area-length-and-buffers-with-honest-units",
+      "title": "Compute area, length, and buffers with honest units",
+      "source": "SKILL.md#compute-area-length-and-buffers-with-honest-units"
+    },
+    {
+      "id": "handle-antimeridian-and-polar-data",
+      "title": "Handle antimeridian and polar data",
+      "source": "SKILL.md#handle-antimeridian-and-polar-data"
+    },
+    {
+      "id": "verify-with-terraproof",
+      "title": "Verify with Terraproof",
+      "source": "SKILL.md#verify-with-terraproof"
+    },
+    {
+      "id": "sources",
+      "title": "Sources",
+      "source": "SKILL.md#sources"
+    }
+  ],
+  "checks": [
+    "crs.defined",
+    "crs.consistent",
+    "crs.metric_operation"
+  ]
+}

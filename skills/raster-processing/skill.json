@@ -1,0 +1,81 @@
+{
+  "name": "raster-processing",
+  "layer": "domain",
+  "domains": [
+    "geospatial"
+  ],
+  "capabilities": [
+    "raster-grid-alignment",
+    "nodata-handling",
+    "categorical-resampling",
+    "raster-delivery"
+  ],
+  "triggers": [
+    "rasterio",
+    "rioxarray",
+    "nodata",
+    "resampling",
+    "target aligned pixels",
+    "land-cover raster",
+    "class values"
+  ],
+  "recommended": [],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Reads, aligns, resamples, and writes rasters with explicit nodata, masks, dtypes, and COG delivery checks.",
+  "sections": [
+    {
+      "id": "inspect-the-storage-and-analysis-contract",
+      "title": "Inspect the storage and analysis contract",
+      "source": "SKILL.md#inspect-the-storage-and-analysis-contract"
+    },
+    {
+      "id": "distinguish-nodata-values-masks-and-valid-zero",
+      "title": "Distinguish nodata values, masks, and valid zero",
+      "source": "SKILL.md#distinguish-nodata-values-masks-and-valid-zero"
+    },
+    {
+      "id": "avoid-dtype-overflow-and-stale-scale-metadata",
+      "title": "Avoid dtype overflow and stale scale metadata",
+      "source": "SKILL.md#avoid-dtype-overflow-and-stale-scale-metadata"
+    },
+    {
+      "id": "match-a-complete-grid-not-just-resolution",
+      "title": "Match a complete grid, not just resolution",
+      "source": "SKILL.md#match-a-complete-grid-not-just-resolution"
+    },
+    {
+      "id": "select-resampling-from-the-data-meaning",
+      "title": "Select resampling from the data meaning",
+      "source": "SKILL.md#select-resampling-from-the-data-meaning"
+    },
+    {
+      "id": "process-windows-or-lazy-chunks",
+      "title": "Process windows or lazy chunks",
+      "source": "SKILL.md#process-windows-or-lazy-chunks"
+    },
+    {
+      "id": "create-and-validate-a-cog-with-overviews",
+      "title": "Create and validate a COG with overviews",
+      "source": "SKILL.md#create-and-validate-a-cog-with-overviews"
+    },
+    {
+      "id": "verify-with-terraproof",
+      "title": "Verify with Terraproof",
+      "source": "SKILL.md#verify-with-terraproof"
+    },
+    {
+      "id": "sources",
+      "title": "Sources",
+      "source": "SKILL.md#sources"
+    }
+  ],
+  "checks": [
+    "raster.nodata_declared",
+    "raster.resampling",
+    "raster.grid_alignment",
+    "raster.cog_layout",
+    "crs.defined",
+    "crs.consistent"
+  ]
+}

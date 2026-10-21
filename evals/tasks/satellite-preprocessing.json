@@ -1,0 +1,49 @@
+{
+  "skill": "satellite-preprocessing",
+  "tasks": [
+    {
+      "id": "satellite-s2-baseline-offset-mask",
+      "prompt": "Prepare this Sentinel-2 L2A scene for NDVI. It was acquired before the offset change but reprocessed with a newer baseline; use the metadata and mask clouds and shadows.",
+      "inputs": "Original undecoded L2A single-band red/NIR DN rasters, product XML declaring a baseline at or after 04.00, BOA_ADD_OFFSET=-1000 and BOA quantification 10000, and SCL on its native coarser grid. Include DN 0, valid dark pixels, SCL 3/8/9/10 cloud-shadow/cirrus pixels and water pixels, with independently decoded controls.",
+      "acceptance": [
+        "Read the processing baseline and actual band calibration from metadata rather than choosing an offset from acquisition date.",
+        "Mask DN 0 and align SCL with nearest-neighbor; reject cloud shadow and cloud/cirrus classes while explicitly declaring snow, unclassified and cast-shadow policy.",
+        "Cast DN before applying (DN + offset) / quantification exactly once, preserve required-band mask intersection and retain physically reviewable negative reflectance.",
+        "Write physical reflectance with identity scale/offset and declared nodata; known control pixels match independent calibration values within a fixture-supplied floating tolerance.",
+        "Run python -m terraproof check sr_red.tif sr_nir.tif --expect reflectance; expected_checks applies to these aligned decoded outputs, whose control distributions lie in the check's plausibility interval.",
+        "State that a range pass alone does not prove masks or offset application."
+      ],
+      "expected_checks": { "rs.reflectance_range": "pass", "raster.grid_alignment": "pass", "raster.nodata_declared": "pass" },
+      "pitfall": "Acquisition date selects the wrong baseline, DN zero becomes negative valid reflectance, or SCL is bilinearly interpolated."
+    },
+    {
+      "id": "satellite-landsat-qa-once",
+      "prompt": "Make a snow-free Landsat 8/9 Collection 2 Level-2 reflectance product. Compare direct rasterio reads with a loader that already applies calibration, and avoid decoding twice.",
+      "inputs": "SR DN rasters with MTL scale 0.0000275 and offset -0.2, aligned QA_PIXEL/QA_RADSAT, plus a loader-decoded floating equivalent. Include independent pixels with individual QA_PIXEL bits 0 through 7, clear-bit pixels that also contain shadow or snow flags, saturated pixels and unflagged water.",
+      "acceptance": [
+        "Decode original DN with 0.0000275 * DN - 0.2 once; do not repeat the operation on loader-decoded arrays.",
+        "Use zero-based Landsat 8/9 bit masks for fill, dilated cloud, high-confidence cirrus/cloud/shadow and snow; clear bit alone is not accepted as complete QA.",
+        "Apply an explicit saturation/aerosol policy and retain water unless excluded by the task rather than treating bit 7 as a cloud flag.",
+        "Both loader paths produce equivalent calibrated values and masks on control pixels; output scale/offset is identity and nodata is declared.",
+        "Run python -m terraproof check landsat_sr.tif --expect reflectance; expected_checks applies to the decoded output, with fixture controls inside the check's plausibility interval.",
+        "Explain why exact-once decoding and QA semantics need independent tests even if the range check passes."
+      ],
+      "expected_checks": { "rs.reflectance_range": "pass", "raster.nodata_declared": "pass" },
+      "pitfall": "A clear flag is treated as complete quality assurance, or scale/offset is applied twice because the loader already decoded the raster."
+    },
+    {
+      "id": "satellite-seasonal-harmonized-composite",
+      "prompt": "Build a cloud-screened seasonal surface-reflectance composite from Sentinel-2 and Landsat observations and show where temporal support is insufficient.",
+      "inputs": "Small multi-date original or clearly documented decoded scenes from both sensors, timestamps, QA and calibration metadata, spectral-role mapping, a common-grid specification and STAC Items with time/projection fields. Include cloudy dates, unequal sensor sampling, a wholly invalid pixel, stable cross-sensor targets and independently expected masked composite values/counts.",
+      "acceptance": [
+        "Harmonize radiometric state, spectral roles, spatial grid, QA policy and season; document residual spectral/angular differences or use a documented harmonized-product contract instead of invented coefficients.",
+        "Produce a named masked statistic, a valid-observation count layer and temporal/acquisition support; all-invalid pixels remain nodata.",
+        "Verify known composite/control values and per-pixel counts; explain that a reflectance median and median of per-date indices need not agree.",
+        "Run python -m terraproof check composite.tif --expect reflectance and python -m terraproof check source-item.json; expected_checks applies to the decoded composite and a source Item with valid time and projection fields.",
+        "Do not claim that stac.provenance verifies harmonization, masks, all scene dates, licenses or a complete processing lineage."
+      ],
+      "expected_checks": { "rs.reflectance_range": "pass", "raster.nodata_declared": "pass", "stac.provenance": "pass" },
+      "pitfall": "A common pixel size is mistaken for sensor harmonization, or cloudy/absent observations bias the composite while the range remains plausible."
+    }
+  ]
+}

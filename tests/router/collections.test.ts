@@ -31,5 +31,15 @@ export function testCollections(): { passed: boolean; message: string } {
     }
   }
 
-  return { passed: true, message: "Collections tests passed (3/3 collections verified)" };
+  // Test 4: Remote-sensing collection
+  const res4 = route("My remote sensing project", { collection: "remote-sensing" });
+  const names4 = res4.skills.map((s) => s.name);
+  const expectedRs = ["geospatial-data-discovery", "satellite-preprocessing", "spectral-indices", "raster-processing", "verification"];
+  for (const exp of expectedRs) {
+    if (!names4.includes(exp)) {
+      return { passed: false, message: `Collection 'remote-sensing' missing expected base skill: ${exp}` };
+    }
+  }
+
+  return { passed: true, message: "Collections tests passed (4/4 collections verified)" };
 }

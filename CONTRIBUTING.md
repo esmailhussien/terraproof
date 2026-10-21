@@ -39,7 +39,7 @@ Follow the README's [Quick Start](README.md#quick-start-route-a-real-task) to in
 - Preserve working behavior and existing repository structure; avoid unrelated refactors or formatting churn.
 - Keep each skill focused on one task or domain. Put universal engineering principles in `instructions/` rather than repeating them in every skill.
 - For routing changes, read [router/README.md](router/README.md) and [routing/ROUTER_DESIGN.md](routing/ROUTER_DESIGN.md). Add a corresponding scenario in `tests/router/scenarios.json` for each new rule or trigger. Preserve deterministic output and explain dependencies or recommendations.
-- Register only real skills in `routing/registry.json`; do not present placeholders as ready to use.
+- Register only real skills: add or edit `skills/<name>/skill.json`, run `npm run registry:build`, and add scenarios to `tests/router/scenarios.json`. Do not edit `routing/registry.json` by hand, and do not present placeholders as ready to use.
 - Preserve existing licenses and notices. For adapted or vendored material, record the upstream source, commit and license in `sources/SOURCES.md`, and maintain the relevant notices under `third_party/`. Do not add material you lack permission to redistribute.
 - Review AI-assisted changes yourself. Verify references, examples, licensing and test claims just as you would for any other contribution.
 

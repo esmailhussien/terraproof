@@ -36,6 +36,15 @@ node router/index.ts route "Design PostGIS schema" --format json
 node router/index.ts validate
 ```
 
+Routing metadata lives in each skill's `skills/<name>/skill.json`, and `routing/registry.json` is generated from those files:
+
+```bash
+npm run registry:build   # regenerate routing/registry.json
+npm run registry:check   # exit 1 if it is out of date
+```
+
+See [routing/SKILL_MANIFEST.md](../routing/SKILL_MANIFEST.md) for the schema.
+
 ---
 
 ## Programmatic API
@@ -71,5 +80,6 @@ Executes:
 4. Preset collection resolution tests
 5. CLI argument validation tests (unknown options, missing values, invalid format, unknown collection or skill)
 6. Apply & bundle integration tests
-7. 14 core scenario regression tests
+7. 41 core scenario regression tests
 8. 14 real-world scenario regression tests, with positive and negative assertions
+9. Generated registry check: `routing/registry.json` matches `skills/*/skill.json`

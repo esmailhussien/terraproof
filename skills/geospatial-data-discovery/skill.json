@@ -1,0 +1,51 @@
+{
+  "name": "geospatial-data-discovery",
+  "layer": "domain",
+  "domains": [
+    "geospatial",
+    "data"
+  ],
+  "capabilities": [
+    "gis-data-sourcing",
+    "stac-catalog",
+    "osm-data",
+    "overture-data",
+    "satellite-sourcing"
+  ],
+  "triggers": [
+    "find gis data",
+    "source satellite data",
+    "stac",
+    "openstreetmap data",
+    "overture maps",
+    "download dem",
+    "find shapefile",
+    "acquire spatial data"
+  ],
+  "recommended": [
+    "verification"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Sources open geospatial data (STAC, OSM, Sentinel, Landsat, DEMs).",
+  "sections": [
+    {
+      "id": "when-to-use",
+      "title": "When to Use",
+      "source": "SKILL.md#when-to-use"
+    },
+    {
+      "id": "10-point-geospatial-evaluation-checklist",
+      "title": "10-Point Geospatial Evaluation Checklist",
+      "source": "SKILL.md#10-point-geospatial-evaluation-checklist"
+    },
+    {
+      "id": "recommended-authoritative-data-sources",
+      "title": "Recommended Authoritative Data Sources",
+      "source": "SKILL.md#recommended-authoritative-data-sources"
+    }
+  ],
+  "checks": [
+    "stac.provenance"
+  ]
+}

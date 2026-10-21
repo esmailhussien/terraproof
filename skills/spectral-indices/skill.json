@@ -1,0 +1,88 @@
+{
+  "name": "spectral-indices",
+  "layer": "domain",
+  "domains": [
+    "geospatial"
+  ],
+  "capabilities": [
+    "spectral-index",
+    "vegetation-index",
+    "water-index",
+    "burn-index"
+  ],
+  "triggers": [
+    "spectral indices",
+    "vegetation index",
+    "water index",
+    "burn severity",
+    "ndvi",
+    "ndwi",
+    "mndwi",
+    "nbr",
+    "dnbr",
+    "evi",
+    "savi"
+  ],
+  "recommended": [
+    "satellite-preprocessing"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Computes and interprets NDVI, NDWI/MNDWI, NBR/dNBR, EVI, and SAVI from calibrated, masked reflectance with safe numeric handling.",
+  "sections": [
+    {
+      "id": "require-calibrated-aligned-inputs",
+      "title": "Require calibrated, aligned inputs",
+      "source": "SKILL.md#require-calibrated-aligned-inputs"
+    },
+    {
+      "id": "map-spectral-roles-to-the-sensor",
+      "title": "Map spectral roles to the sensor",
+      "source": "SKILL.md#map-spectral-roles-to-the-sensor"
+    },
+    {
+      "id": "ndvi-vegetation-contrast",
+      "title": "NDVI: vegetation contrast",
+      "source": "SKILL.md#ndvi-vegetation-contrast"
+    },
+    {
+      "id": "ndwi-mcfeeters-versus-mndwi-specify-the-water-index",
+      "title": "NDWI (McFeeters) versus MNDWI: specify the water index",
+      "source": "SKILL.md#ndwi-mcfeeters-versus-mndwi-specify-the-water-index"
+    },
+    {
+      "id": "nbr-and-dnbr-burn-sensitive-contrast-and-change",
+      "title": "NBR and dNBR: burn-sensitive contrast and change",
+      "source": "SKILL.md#nbr-and-dnbr-burn-sensitive-contrast-and-change"
+    },
+    {
+      "id": "evi-and-savi-additive-constants-require-physical-reflectance",
+      "title": "EVI and SAVI: additive constants require physical reflectance",
+      "source": "SKILL.md#evi-and-savi-additive-constants-require-physical-reflectance"
+    },
+    {
+      "id": "divide-safely-and-write-explicit-nodata",
+      "title": "Divide safely and write explicit nodata",
+      "source": "SKILL.md#divide-safely-and-write-explicit-nodata"
+    },
+    {
+      "id": "verify-with-terraproof",
+      "title": "Verify with Terraproof",
+      "source": "SKILL.md#verify-with-terraproof"
+    },
+    {
+      "id": "sources",
+      "title": "Sources",
+      "source": "SKILL.md#sources"
+    }
+  ],
+  "checks": [
+    "rs.reflectance_range",
+    "rs.index_range",
+    "raster.nodata_declared",
+    "raster.grid_alignment",
+    "crs.defined",
+    "crs.consistent",
+    "raster.cog_layout"
+  ]
+}

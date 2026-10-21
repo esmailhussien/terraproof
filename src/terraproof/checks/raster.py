@@ -35,29 +35,52 @@ def check_nodata(dataset: dict) -> list:
 
 
 def check_cog_layout(dataset: dict) -> list:
-    """Only GeoTIFFs are checked; a Cloud Optimized GeoTIFF needs tiling and overviews."""
+    """Heuristic layout screen for GeoTIFFs: tiling, and internal overviews when needed.
+
+    Overviews are expected only when the raster is larger than one block in some dimension
+    (in any band); a raster that fits in one block gets none from GDAL and is not warned about.
+    This is not Cloud Optimized GeoTIFF validation.
+    """
     if dataset["driver"] != "GTiff":
         return []
     path = dataset["path"]
     tiled = dataset["tiled"]
     overview_counts = [band["overview_count"] for band in dataset["bands"]]
     has_overviews = all(count > 0 for count in overview_counts)
-    evidence = {"input": path, "tiled": tiled, "overview_counts": overview_counts}
-    if tiled and has_overviews:
-        return [result("raster.cog_layout", PASS, f"{path} is tiled and has overviews.", **evidence)]
+    one_block = all(
+        dataset["width"] <= band["block_size"]["width"] and dataset["height"] <= band["block_size"]["height"]
+        for band in dataset["bands"]
+    )
+    evidence = {
+        "input": path,
+        "tiled": tiled,
+        "overview_counts": overview_counts,
+        "fits_one_block": one_block,
+        "block_sizes": [band["block_size"] for band in dataset["bands"]],
+    }
     problems = []
     if not tiled:
-        problems.append("it is not tiled (striped layout)")
-    if not has_overviews:
-        problems.append("it has no overviews")
-    return [
-        result(
-            "raster.cog_layout",
-            WARN,
-            f"{path} is not a valid Cloud Optimized GeoTIFF: {' and '.join(problems)}.",
-            **evidence,
+        problems.append("not tiled (striped layout)")
+    if not one_block and not has_overviews:
+        problems.append("no internal overviews")
+    if problems:
+        return [
+            result(
+                "raster.cog_layout",
+                WARN,
+                f"{path} layout: {'; '.join(problems)}. This is a heuristic layout screen, not Cloud Optimized "
+                "GeoTIFF validation; full conformance needs a COG validator.",
+                **evidence,
+            )
+        ]
+    if one_block and not has_overviews:
+        message = (
+            f"{path} is tiled and fits in one block, so no internal overviews are expected. "
+            "Layout screen only; not Cloud Optimized GeoTIFF validation."
         )
-    ]
+    else:
+        message = f"{path} is tiled and has internal overviews. Layout screen only; not Cloud Optimized GeoTIFF validation."
+    return [result("raster.cog_layout", PASS, message, **evidence)]
 
 
 def _same_crs(first: dict, second: dict) -> bool:

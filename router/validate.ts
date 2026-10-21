@@ -57,6 +57,11 @@ export function validateRegistry(workspaceRoot: string): ValidationReport {
       errors.push(`Placeholder '${name}' must not be registered in registry.json`);
     }
 
+    // Every registered skill needs its own explanation; routed output reads it from the registry.
+    if (!skill.explanation || skill.explanation.trim() === "") {
+      errors.push(`Skill '${name}' has no explanation in routing/registry.json`);
+    }
+
     // Warn on low trigger count
     if (skill.triggers.length < 2) {
       warnings.push(`Skill '${name}' has only ${skill.triggers.length} trigger(s); may under-match.`);
@@ -85,17 +90,6 @@ export function validateRegistry(workspaceRoot: string): ValidationReport {
     for (const sName of coll.base) {
       if (!registry.skills[sName]) {
         errors.push(`Collection '${cName}' references unknown skill '${sName}'`);
-      }
-    }
-  }
-
-  // Validate explain.ts coverage — every registered skill should have a dedicated explanation
-  const explainPath = path.join(workspaceRoot, "router", "explain.ts");
-  if (fs.existsSync(explainPath)) {
-    const explainSrc = fs.readFileSync(explainPath, "utf-8");
-    for (const name of skillNames) {
-      if (!explainSrc.includes(`case "${name}"`)) {
-        warnings.push(`Skill '${name}' has no dedicated explanation in explain.ts (will use generic fallback).`);
       }
     }
   }

@@ -17,6 +17,8 @@
     "prepack": "npm run build",
     "route": "node router/index.ts route",
     "validate": "node router/index.ts validate",
+    "registry:build": "node router/build-registry.ts",
+    "registry:check": "node router/build-registry.ts --check",
     "test:router": "node tests/router/run.ts",
     "test:validate": "python tests/validate_repo.py",
     "test:package": "node tests/package/smoke.mjs",

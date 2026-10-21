@@ -1,0 +1,116 @@
+{
+  "name": "geopandas",
+  "layer": "domain",
+  "domains": [
+    "geospatial",
+    "data"
+  ],
+  "capabilities": [
+    "vector-analysis",
+    "spatial-join",
+    "geometry-overlay",
+    "geodataframe",
+    "buffer"
+  ],
+  "triggers": [
+    "geopandas",
+    "geodataframe",
+    "shapefile",
+    "geojson",
+    "geopackage",
+    "spatial join",
+    "buffer",
+    "polygon intersection",
+    "vector spatial"
+  ],
+  "recommended": [
+    "verification"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Processes vector spatial data, spatial joins, overlays, and coordinate transforms.",
+  "sections": [
+    {
+      "id": "reproducible-environment",
+      "title": "Reproducible environment",
+      "source": "SKILL.md#reproducible-environment"
+    },
+    {
+      "id": "safety-and-privacy-contract",
+      "title": "Safety and privacy contract",
+      "source": "SKILL.md#safety-and-privacy-contract"
+    },
+    {
+      "id": "correctness-gates",
+      "title": "Correctness gates",
+      "source": "SKILL.md#correctness-gates"
+    },
+    {
+      "id": "crs-and-antimeridian-rules",
+      "title": "CRS and antimeridian rules",
+      "source": "SKILL.md#crs-and-antimeridian-rules"
+    },
+    {
+      "id": "core-api-decisions",
+      "title": "Core API decisions",
+      "source": "SKILL.md#core-api-decisions"
+    },
+    {
+      "id": "migration-checklist",
+      "title": "Migration checklist",
+      "source": "SKILL.md#migration-checklist"
+    },
+    {
+      "id": "bundled-local-clis",
+      "title": "Bundled local CLIs",
+      "source": "SKILL.md#bundled-local-clis"
+    },
+    {
+      "id": "reference-index",
+      "title": "Reference index",
+      "source": "SKILL.md#reference-index"
+    },
+    {
+      "id": "sources-verified-2026-07-23",
+      "title": "Sources (verified 2026-07-23)",
+      "source": "SKILL.md#sources-verified-2026-07-23"
+    },
+    {
+      "id": "crs-management",
+      "title": "CRS, units, and reprojection",
+      "source": "references/crs-management.md"
+    },
+    {
+      "id": "data-io",
+      "title": "Vector I/O, GeoParquet, Arrow, and PostGIS",
+      "source": "references/data-io.md"
+    },
+    {
+      "id": "data-structures",
+      "title": "GeoPandas data structures",
+      "source": "references/data-structures.md"
+    },
+    {
+      "id": "geometric-operations",
+      "title": "Geometric operations, validity, and precision",
+      "source": "references/geometric-operations.md"
+    },
+    {
+      "id": "spatial-analysis",
+      "title": "Spatial joins, overlay, clip, and dissolve",
+      "source": "references/spatial-analysis.md"
+    },
+    {
+      "id": "visualization",
+      "title": "Static and interactive visualization",
+      "source": "references/visualization.md"
+    }
+  ],
+  "checks": [
+    "crs.defined",
+    "crs.consistent",
+    "crs.metric_operation",
+    "geometry.valid",
+    "geometry.type_consistent"
+  ]
+}

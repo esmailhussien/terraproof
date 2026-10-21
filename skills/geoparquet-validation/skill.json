@@ -1,0 +1,71 @@
+{
+  "name": "geoparquet-validation",
+  "layer": "domain",
+  "domains": [
+    "geospatial",
+    "data"
+  ],
+  "capabilities": [
+    "geoparquet",
+    "parquet-validation",
+    "cloud-native-vector"
+  ],
+  "triggers": [
+    "geoparquet",
+    "parquet spatial",
+    "cloud native vector",
+    "validate geoparquet"
+  ],
+  "recommended": [
+    "verification"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Validates GeoParquet metadata and cloud-native vector distribution formatting.",
+  "sections": [
+    {
+      "id": "what-this-skill-is-for",
+      "title": "What this skill is for",
+      "source": "SKILL.md#what-this-skill-is-for"
+    },
+    {
+      "id": "tools",
+      "title": "Tools",
+      "source": "SKILL.md#tools"
+    },
+    {
+      "id": "workflow",
+      "title": "Workflow",
+      "source": "SKILL.md#workflow"
+    },
+    {
+      "id": "quick-reference",
+      "title": "Quick Reference",
+      "source": "SKILL.md#quick-reference"
+    },
+    {
+      "id": "references",
+      "title": "References",
+      "source": "SKILL.md#references"
+    },
+    {
+      "id": "distribution-best-practices",
+      "title": "GeoParquet Distribution Best Practices",
+      "source": "references/distribution-best-practices.md"
+    },
+    {
+      "id": "gpio-commands",
+      "title": "gpio Command Reference",
+      "source": "references/gpio-commands.md"
+    },
+    {
+      "id": "tool-comparison",
+      "title": "GeoParquet Tool Comparison",
+      "source": "references/tool-comparison.md"
+    }
+  ],
+  "checks": [
+    "crs.defined",
+    "geometry.type_consistent"
+  ]
+}

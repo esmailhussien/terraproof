@@ -9,6 +9,7 @@ This file tracks upstream repositories, specifications, and references evaluated
 | Source | Area | Status |
 |---|---|---|
 | Agent Skills specification | Skill format | Research |
+| Terraproof Native | CRS/units, vector quality, raster processing, satellite preprocessing, spectral indices | Authored for Terraproof by Geova, MIT; no upstream source: [crs-and-units](../skills/crs-and-units/SKILL.md), [vector-quality](../skills/vector-quality/SKILL.md), [raster-processing](../skills/raster-processing/SKILL.md), [satellite-preprocessing](../skills/satellite-preprocessing/SKILL.md), [spectral-indices](../skills/spectral-indices/SKILL.md). Primary references are documented in each skill; no upstream material is vendored. |
 | [obra/superpowers](https://github.com/obra/superpowers) | Planning, debugging, verification | Imported (`systematic-debugging`, `verification` (upstream name `verification-before-completion`), `brainstorming`, `writing-plans`) |
 | [arjunprabhulal/agent-skills](https://github.com/arjunprabhulal/agent-skills) | Quality Assurance, Testing, TDD | Imported then removed in 0.2.0 (off-scope): `unit-testing`, `integration-testing`, `browser-testing`, `test-driven-development` |
 | [vercel-labs/open-agents](https://github.com/vercel-labs/open-agents) | Frontend Design & UI Quality | Imported then removed in 0.2.0 (off-scope): `frontend-design` |

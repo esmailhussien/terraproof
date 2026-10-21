@@ -31,6 +31,17 @@
         "systematic-debugging",
         "verification"
       ]
+    },
+    "remote-sensing": {
+      "name": "remote-sensing",
+      "description": "Optical satellite preprocessing, spectral indices, raster processing, and verification",
+      "base": [
+        "geospatial-data-discovery",
+        "satellite-preprocessing",
+        "spectral-indices",
+        "raster-processing",
+        "verification"
+      ]
     }
   }
 }

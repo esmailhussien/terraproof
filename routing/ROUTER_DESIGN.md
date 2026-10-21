@@ -54,7 +54,7 @@ Every production skill has exactly one primary layer:
 | Layer | Purpose | Core Skills |
 |---|---|---|
 | **1. Process** | Engineering discipline, exploration, and structured breakdown | `brainstorming`, `writing-plans`, `systematic-debugging` |
-| **2. Domain** | Geospatial, remote-sensing, and data domain knowledge | `gdal`, `geopandas`, `geomaster`, `geozarr`, `geoparquet-validation`, `geospatial-data-discovery`, `statistical-analysis`, `scientific-visualization`, `networkx` |
+| **2. Domain** | Geospatial, remote-sensing, and data domain knowledge | `gdal`, `geopandas`, `geomaster`, `geozarr`, `geoparquet-validation`, `geospatial-data-discovery`, `statistical-analysis`, `scientific-visualization`, `networkx`, `crs-and-units`, `vector-quality`, `raster-processing`, `satellite-preprocessing`, `spectral-indices` |
 | **3. Implementation** | Mapping frameworks and spatial database design | `geospatial-frontend`, `design-postgis-tables` |
 | **4. Risk** | Security, vulnerability detection, and authorization audits | *(no skills in v0.2.0)* |
 | **5. Verification** | Truthfulness and completion validation | `verification` |
@@ -121,8 +121,10 @@ npx terraproof route "Design PostGIS schema" --format json
 ## 7. Relationship to Existing Files
 
 - **`routing/DOMAIN_ROUTING.md`**: Human-readable composition guidance and canonical architectural patterns.
-- **`routing/registry.json`**: Machine-readable metadata and relationship graph for all production skills.
-- **`routing/collections.json`**: Preset skill bundles (`gis`, `data-analysis`, `production`).
+- **`skills/<name>/skill.json`**: Routing metadata for each skill, the source of truth. To add or change a skill, add or edit its manifest, run `npm run registry:build`, and add scenarios to `tests/router/scenarios.json`. Field reference: [`routing/SKILL_MANIFEST.md`](SKILL_MANIFEST.md).
+- **`routing/registry.json`**: Generated from the manifests by `npm run registry:build`. Do not edit it by hand; `npm run registry:check` verifies that it matches.
+- **`routing/checks.json`**: Check catalog listing the check ids that manifests may reference.
+- **`routing/collections.json`**: Preset skill bundles (`gis`, `data-analysis`, `production`, `remote-sensing`).
 - **`routing/rules.json`**: Scoring weights, intent heuristics, risk boundaries, and layer prioritization.
 - **`router/`**: High-performance, deterministic TypeScript resolution engine and CLI runner.
 

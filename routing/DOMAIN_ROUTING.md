@@ -84,3 +84,17 @@ User Task: "Compute shortest emergency evacuation routes across a city road netw
    → Re-project route geometries and export GeoJSON/GeoPackage
 4. skills/verification
 ```
+
+---
+
+## Recommended and Required Links
+
+AGENTS.md rule 15 requires a documented reason for every `recommended` and `requires` link in a skill manifest. The resolver applies them differently. A `requires` skill is always selected. A `recommended` skill is added only if it also scores at or above the selection threshold (4), or if it is `verification`, which is always selected. A recommendation therefore never adds a skill on its own; the prompt must also contain a direct signal for that skill. No skill declares `requires` or `conflicts`. A recommended companion (for example, `satellite-preprocessing` alongside `spectral-indices`) is acceptable in any scenario and must not be listed in `mustExclude`.
+
+| From | Type | To | Rationale |
+|---|---|---|---|
+| `spectral-indices` | recommended | `satellite-preprocessing` | Indices are defined on decoded, masked, calibrated surface reflectance, with scale and offset applied exactly once. `satellite-preprocessing` produces that input. |
+| `satellite-preprocessing` | recommended | `raster-processing` | Mask application, grid harmonization, and COG delivery use the rules in `raster-processing`. |
+| `vector-quality` | recommended | `crs-and-units` | Snapping tolerances, precision grids, and area checks are in coordinate units, so they need a reviewed metric CRS first. |
+| `gdal`, `geomaster`, `geopandas`, `geoparquet-validation`, `geospatial-data-discovery`, `geozarr`, `networkx`, `scientific-visualization`, `statistical-analysis`, `systematic-debugging`, `writing-plans` | recommended | `verification` | Pre-existing link. `verification` is the completion audit for the skill's output, and it is always selected, so this link adds no skill. |
+| `brainstorming` | recommended | `writing-plans` | Pre-existing link. Design options that are chosen become an execution plan. |

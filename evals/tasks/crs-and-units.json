@@ -1,0 +1,45 @@
+{
+  "skill": "crs-and-units",
+  "tasks": [
+    {
+      "id": "crs-local-metric-buffer",
+      "prompt": "Create a 500 m access buffer around these village roads and report its area in square metres. Explain the measurement CRS choice rather than using the web-map CRS.",
+      "inputs": "A local roads GeoPackage in EPSG:4326, a compact AOI within one suitable UTM zone, and independent geodesic/control-point measurements. Include a projected foot-based candidate to catch unit assumptions.",
+      "acceptance": [
+        "Select a justified local metre-based CRS after checking the full AOI and units; transform coordinates instead of relabelling them.",
+        "Buffer radius is 500 metres and the reported area is square metres, within a fixture-defined distortion/tessellation tolerance against independent reference calculations.",
+        "Evaluate the projected pre-buffer roads with python -m terraproof check roads_projected.gpkg --operation buffer; expected_checks applies to this preflight.",
+        "Explain that crs.metric_operation also accepts feet and does not prove projection distortion is acceptable."
+      ],
+      "expected_checks": { "crs.defined": "pass", "crs.metric_operation": "pass" },
+      "pitfall": "A buffer in degrees, a 500-foot buffer labelled metres, or an unsuitable projected CRS produces plausible but wrong distances."
+    },
+    {
+      "id": "crs-axis-datum-control",
+      "prompt": "Transform these local-datum survey observations into the delivery CRS. Verify coordinate order and reject a lower-quality fallback if the required datum grid is unavailable.",
+      "inputs": "A known-CRS point GeoPackage, the target CRS definition, AOI bounds, required transformation-grid metadata and independently surveyed target control points. Include longitude/latitude pairs that remain numerically plausible when swapped; supply grid-present and grid-missing environment variants.",
+      "acceptance": [
+        "Inspect source/target axes, area of use, available operations, accuracy and unavailable grids with PROJ/pyproj; explicitly state the array axis convention.",
+        "In the grid-present variant, match independent target control points within the fixture's stated accuracy budget and preserve all stable feature IDs.",
+        "In the grid-missing variant, stop the accuracy claim and identify the missing grid instead of silently accepting a fallback; do not publish a purported accurate output.",
+        "In the grid-present variant evaluate python -m terraproof check transformed.gpkg --compare-to observations.gpkg; expected_checks applies to this output, not to grid availability.",
+        "State that axis order, grid availability and transform accuracy are not checked automatically yet."
+      ],
+      "expected_checks": { "crs.defined": "pass", "scope.record_count": "pass" },
+      "pitfall": "A reversible transformation or a defined CRS is mistaken for evidence of correct axis order and datum accuracy."
+    },
+    {
+      "id": "crs-crossing-scope-preflight",
+      "prompt": "Plan an area comparison for an archipelago that crosses the antimeridian and a separate polar ice region. Can these supplied layers be combined as-is? Do not compute final areas until the CRS and boundary issues are resolved.",
+      "inputs": "A valid antimeridian-split archipelago GeoJSON in WGS 84 and a valid polar-region GeoPackage in an authoritative polar projected CRS, plus intended region/control extents. The two CRSs differ; no file has missing CRS.",
+      "acceptance": [
+        "Run python -m terraproof check archipelago.geojson --operation area, then python -m terraproof check archipelago.geojson polar.gpkg; expected_checks applies to these deliberately unsafe input preflights (metric_operation on the geographic input only).",
+        "Report the geographic metric-operation failure and CRS mismatch; propose separate suitable equal-area or geodesic measurements rather than a single guessed UTM zone.",
+        "Explain antimeridian bbox/edge semantics and how to validate the enclosed region and polar projection domain before computation.",
+        "Do not claim that the current checker automatically validates antimeridian cuts or projection distortion."
+      ],
+      "expected_checks": { "crs.defined": "pass", "crs.consistent": "fail", "crs.metric_operation": "fail" },
+      "pitfall": "Naive longitude bounds select the long way around Earth or a centroid UTM choice is applied to polar and crossing regions."
+    }
+  ]
+}

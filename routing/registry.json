@@ -6,166 +6,1788 @@
       "name": "brainstorming",
       "path": "skills/brainstorming",
       "layer": "process",
-      "domains": ["general", "architecture", "planning"],
-      "capabilities": ["requirements-exploration", "design-options", "intent-clarification"],
-      "triggers": ["brainstorm", "explore", "design", "new feature", "create app", "build", "scaffold", "from scratch"],
-      "recommended": ["writing-plans"],
+      "domains": [
+        "general",
+        "architecture",
+        "planning"
+      ],
+      "capabilities": [
+        "requirements-exploration",
+        "design-options",
+        "intent-clarification"
+      ],
+      "triggers": [
+        "brainstorm",
+        "explore",
+        "design",
+        "new feature",
+        "create app",
+        "build",
+        "scaffold",
+        "from scratch"
+      ],
+      "recommended": [
+        "writing-plans"
+      ],
       "requires": [],
-      "conflicts": []
+      "conflicts": [],
+      "explanation": "Explores intent, requirements, and design choices before initiating construction.",
+      "sections": [
+        {
+          "id": "three-paths",
+          "title": "Three Paths",
+          "source": "SKILL.md#three-paths"
+        },
+        {
+          "id": "anti-pattern-too-simple-to-need-approval",
+          "title": "Anti-Pattern: \"Too Simple To Need Approval\"",
+          "source": "SKILL.md#anti-pattern-too-simple-to-need-approval"
+        },
+        {
+          "id": "red-flags",
+          "title": "Red Flags",
+          "source": "SKILL.md#red-flags"
+        },
+        {
+          "id": "checklist",
+          "title": "Checklist",
+          "source": "SKILL.md#checklist"
+        },
+        {
+          "id": "process-flow",
+          "title": "Process Flow",
+          "source": "SKILL.md#process-flow"
+        },
+        {
+          "id": "the-process",
+          "title": "The Process",
+          "source": "SKILL.md#the-process"
+        },
+        {
+          "id": "after-the-design-architectural-path",
+          "title": "After the Design (architectural path)",
+          "source": "SKILL.md#after-the-design-architectural-path"
+        },
+        {
+          "id": "visual-companion",
+          "title": "Visual Companion",
+          "source": "SKILL.md#visual-companion"
+        }
+      ],
+      "checks": []
     },
-    "writing-plans": {
-      "name": "writing-plans",
-      "path": "skills/writing-plans",
-      "layer": "process",
-      "domains": ["general", "planning"],
-      "capabilities": ["task-decomposition", "execution-plan", "milestone-planning"],
-      "triggers": ["plan", "step-by-step", "roadmap", "implementation plan", "break down", "complex feature"],
-      "recommended": ["verification"],
-      "requires": [],
-      "conflicts": []
-    },
-    "systematic-debugging": {
-      "name": "systematic-debugging",
-      "path": "skills/systematic-debugging",
-      "layer": "process",
-      "domains": ["general", "debugging"],
-      "capabilities": ["root-cause-analysis", "hypothesis-testing", "regression-isolation"],
-      "triggers": ["bug", "fix", "error", "fail", "broken", "debug", "issue", "crash", "intermittent", "unexpected", "exception", "401", "500", "timeout"],
-      "recommended": ["verification"],
-      "requires": [],
-      "conflicts": []
-    },
-    "geospatial-frontend": {
-      "name": "geospatial-frontend",
-      "path": "skills/geospatial-frontend",
-      "layer": "implementation",
-      "domains": ["frontend", "geospatial"],
-      "capabilities": ["web-map", "maplibre", "duckdb-wasm", "deckgl", "spatial-ui"],
-      "triggers": ["map", "web map", "maplibre", "deck.gl", "interactive map", "map dashboard", "spatial ui", "cartography web"],
+    "crs-and-units": {
+      "name": "crs-and-units",
+      "path": "skills/crs-and-units",
+      "layer": "domain",
+      "domains": [
+        "geospatial"
+      ],
+      "capabilities": [
+        "coordinate-reference-systems",
+        "datum-transformation",
+        "axis-order",
+        "measurement-units"
+      ],
+      "triggers": [
+        "coordinate reference system",
+        "datum transformation",
+        "axis order",
+        "utm zone",
+        "equal-area projection",
+        "measurement crs",
+        "nad83",
+        "wgs 84"
+      ],
       "recommended": [],
       "requires": [],
-      "conflicts": []
+      "conflicts": [],
+      "explanation": "Chooses and verifies coordinate reference systems, axis order, datum transformations, and measurement units before distance, area, buffer, or reprojection work.",
+      "sections": [
+        {
+          "id": "choose-a-measurement-crs",
+          "title": "Choose a measurement CRS",
+          "source": "SKILL.md#choose-a-measurement-crs"
+        },
+        {
+          "id": "look-up-epsg-definitions-and-units",
+          "title": "Look up EPSG definitions and units",
+          "source": "SKILL.md#look-up-epsg-definitions-and-units"
+        },
+        {
+          "id": "resolve-axis-order-explicitly",
+          "title": "Resolve axis order explicitly",
+          "source": "SKILL.md#resolve-axis-order-explicitly"
+        },
+        {
+          "id": "inspect-datum-transformations-and-grids",
+          "title": "Inspect datum transformations and grids",
+          "source": "SKILL.md#inspect-datum-transformations-and-grids"
+        },
+        {
+          "id": "compute-area-length-and-buffers-with-honest-units",
+          "title": "Compute area, length, and buffers with honest units",
+          "source": "SKILL.md#compute-area-length-and-buffers-with-honest-units"
+        },
+        {
+          "id": "handle-antimeridian-and-polar-data",
+          "title": "Handle antimeridian and polar data",
+          "source": "SKILL.md#handle-antimeridian-and-polar-data"
+        },
+        {
+          "id": "verify-with-terraproof",
+          "title": "Verify with Terraproof",
+          "source": "SKILL.md#verify-with-terraproof"
+        },
+        {
+          "id": "sources",
+          "title": "Sources",
+          "source": "SKILL.md#sources"
+        }
+      ],
+      "checks": [
+        "crs.defined",
+        "crs.consistent",
+        "crs.metric_operation"
+      ]
     },
     "design-postgis-tables": {
       "name": "design-postgis-tables",
       "path": "skills/design-postgis-tables",
       "layer": "implementation",
-      "domains": ["database", "geospatial"],
-      "capabilities": ["postgis-schema", "spatial-indexing", "geometry-types", "spatial-sql"],
-      "triggers": ["postgis", "spatial database", "geometry column", "geography", "gist index", "spatial sql", "st_contains", "st_intersects", "st_dwithin"],
+      "domains": [
+        "database",
+        "geospatial"
+      ],
+      "capabilities": [
+        "postgis-schema",
+        "spatial-indexing",
+        "geometry-types",
+        "spatial-sql"
+      ],
+      "triggers": [
+        "postgis",
+        "spatial database",
+        "geometry column",
+        "geography",
+        "gist index",
+        "spatial sql",
+        "st_contains",
+        "st_intersects",
+        "st_dwithin"
+      ],
       "recommended": [],
       "requires": [],
-      "conflicts": []
+      "conflicts": [],
+      "explanation": "Architects PostGIS spatial tables, geometry/geography types, and spatial indexes.",
+      "sections": [
+        {
+          "id": "before-you-start-5-questions",
+          "title": "Before You Start (5 Questions)",
+          "source": "SKILL.md#before-you-start-5-questions"
+        },
+        {
+          "id": "core-rules",
+          "title": "Core Rules",
+          "source": "SKILL.md#core-rules"
+        },
+        {
+          "id": "geometry-vs-geography",
+          "title": "Geometry vs Geography",
+          "source": "SKILL.md#geometry-vs-geography"
+        },
+        {
+          "id": "geometry-types",
+          "title": "Geometry Types",
+          "source": "SKILL.md#geometry-types"
+        },
+        {
+          "id": "coordinate-systems-srid",
+          "title": "Coordinate Systems (SRID)",
+          "source": "SKILL.md#coordinate-systems-srid"
+        },
+        {
+          "id": "spatial-indexing",
+          "title": "Spatial Indexing",
+          "source": "SKILL.md#spatial-indexing"
+        },
+        {
+          "id": "table-design-examples",
+          "title": "Table Design Examples",
+          "source": "SKILL.md#table-design-examples"
+        },
+        {
+          "id": "performance-patterns",
+          "title": "Performance Patterns",
+          "source": "SKILL.md#performance-patterns"
+        },
+        {
+          "id": "data-validation",
+          "title": "Data Validation",
+          "source": "SKILL.md#data-validation"
+        },
+        {
+          "id": "do-not-use",
+          "title": "Do Not Use",
+          "source": "SKILL.md#do-not-use"
+        },
+        {
+          "id": "common-pitfalls",
+          "title": "Common Pitfalls",
+          "source": "SKILL.md#common-pitfalls"
+        }
+      ],
+      "checks": [
+        "crs.consistent",
+        "geometry.valid"
+      ]
     },
     "gdal": {
       "name": "gdal",
       "path": "skills/gdal",
       "layer": "domain",
-      "domains": ["geospatial"],
-      "capabilities": ["raster-processing", "reprojection", "cog-conversion", "ogr2ogr", "raster-clipping"],
-      "triggers": ["gdal", "ogr", "geotiff", "cog", "cloud-optimized geotiff", "reproject", "gdalwarp", "gdal_translate", "raster clip", "raster mosaic"],
-      "recommended": ["verification"],
+      "domains": [
+        "geospatial"
+      ],
+      "capabilities": [
+        "raster-processing",
+        "reprojection",
+        "cog-conversion",
+        "ogr2ogr",
+        "raster-clipping"
+      ],
+      "triggers": [
+        "gdal",
+        "ogr",
+        "geotiff",
+        "cog",
+        "cloud-optimized geotiff",
+        "reproject",
+        "gdalwarp",
+        "gdal_translate",
+        "raster clip",
+        "raster mosaic"
+      ],
+      "recommended": [
+        "verification"
+      ],
       "requires": [],
-      "conflicts": []
-    },
-    "geopandas": {
-      "name": "geopandas",
-      "path": "skills/geopandas",
-      "layer": "domain",
-      "domains": ["geospatial", "data"],
-      "capabilities": ["vector-analysis", "spatial-join", "geometry-overlay", "geodataframe", "buffer"],
-      "triggers": ["geopandas", "geodataframe", "shapefile", "geojson", "geopackage", "spatial join", "buffer", "polygon intersection", "vector spatial"],
-      "recommended": ["verification"],
-      "requires": [],
-      "conflicts": []
+      "conflicts": [],
+      "explanation": "Executes GDAL/OGR CLI operations for raster reprojection, clipping, and COG conversion.",
+      "sections": [
+        {
+          "id": "tools",
+          "title": "Tools",
+          "source": "SKILL.md#tools"
+        },
+        {
+          "id": "workflow",
+          "title": "Workflow",
+          "source": "SKILL.md#workflow"
+        },
+        {
+          "id": "quick-reference",
+          "title": "Quick Reference",
+          "source": "SKILL.md#quick-reference"
+        },
+        {
+          "id": "references",
+          "title": "References",
+          "source": "SKILL.md#references"
+        },
+        {
+          "id": "gdal-recipes",
+          "title": "GDAL Recipes",
+          "source": "references/gdal-recipes.md"
+        }
+      ],
+      "checks": [
+        "crs.defined",
+        "crs.consistent",
+        "raster.nodata_declared",
+        "raster.resampling",
+        "raster.cog_layout"
+      ]
     },
     "geomaster": {
       "name": "geomaster",
       "path": "skills/geomaster",
       "layer": "domain",
-      "domains": ["geospatial", "remote-sensing"],
-      "capabilities": ["earth-observation", "satellite-processing", "sentinel", "landsat", "terrain-analysis", "spatial-ml"],
-      "triggers": ["remote sensing", "satellite", "sentinel", "landsat", "earth observation", "ndvi", "elevation dem", "point cloud lidar", "spatial modeling"],
-      "recommended": ["verification"],
+      "domains": [
+        "geospatial",
+        "remote-sensing"
+      ],
+      "capabilities": [
+        "earth-observation",
+        "satellite-processing",
+        "sentinel",
+        "landsat",
+        "terrain-analysis",
+        "spatial-ml"
+      ],
+      "triggers": [
+        "remote sensing",
+        "satellite",
+        "sentinel",
+        "landsat",
+        "earth observation",
+        "ndvi",
+        "elevation dem",
+        "point cloud lidar",
+        "spatial modeling"
+      ],
+      "recommended": [
+        "verification"
+      ],
       "requires": [],
-      "conflicts": []
+      "conflicts": [],
+      "explanation": "Provides Earth observation, satellite imagery, remote sensing, and spatial ML guidance.",
+      "sections": [
+        {
+          "id": "installation",
+          "title": "Installation",
+          "source": "SKILL.md#installation"
+        },
+        {
+          "id": "quick-start",
+          "title": "Quick Start",
+          "source": "SKILL.md#quick-start"
+        },
+        {
+          "id": "core-concepts",
+          "title": "Core Concepts",
+          "source": "SKILL.md#core-concepts"
+        },
+        {
+          "id": "common-operations",
+          "title": "Common Operations",
+          "source": "SKILL.md#common-operations"
+        },
+        {
+          "id": "image-classification",
+          "title": "Image Classification",
+          "source": "SKILL.md#image-classification"
+        },
+        {
+          "id": "modern-cloud-native-workflows",
+          "title": "Modern Cloud-Native Workflows",
+          "source": "SKILL.md#modern-cloud-native-workflows"
+        },
+        {
+          "id": "performance-tips",
+          "title": "Performance Tips",
+          "source": "SKILL.md#performance-tips"
+        },
+        {
+          "id": "best-practices",
+          "title": "Best Practices",
+          "source": "SKILL.md#best-practices"
+        },
+        {
+          "id": "detailed-documentation",
+          "title": "Detailed Documentation",
+          "source": "SKILL.md#detailed-documentation"
+        },
+        {
+          "id": "advanced-gis",
+          "title": "Advanced GIS Topics",
+          "source": "references/advanced-gis.md"
+        },
+        {
+          "id": "big-data",
+          "title": "Big Data and Cloud Computing",
+          "source": "references/big-data.md"
+        },
+        {
+          "id": "code-examples",
+          "title": "Code Examples",
+          "source": "references/code-examples.md"
+        },
+        {
+          "id": "coordinate-systems",
+          "title": "Coordinate Reference Systems (CRS)",
+          "source": "references/coordinate-systems.md"
+        },
+        {
+          "id": "core-libraries",
+          "title": "Core Geospatial Libraries",
+          "source": "references/core-libraries.md"
+        },
+        {
+          "id": "data-sources",
+          "title": "Geospatial Data Sources",
+          "source": "references/data-sources.md"
+        },
+        {
+          "id": "gis-software",
+          "title": "GIS Software Integration",
+          "source": "references/gis-software.md"
+        },
+        {
+          "id": "industry-applications",
+          "title": "Industry Applications",
+          "source": "references/industry-applications.md"
+        },
+        {
+          "id": "machine-learning",
+          "title": "Machine Learning for Geospatial Data",
+          "source": "references/machine-learning.md"
+        },
+        {
+          "id": "programming-languages",
+          "title": "Multi-Language Geospatial Programming",
+          "source": "references/programming-languages.md"
+        },
+        {
+          "id": "remote-sensing",
+          "title": "Remote Sensing Reference",
+          "source": "references/remote-sensing.md"
+        },
+        {
+          "id": "scientific-domains",
+          "title": "Scientific Domain Applications",
+          "source": "references/scientific-domains.md"
+        },
+        {
+          "id": "specialized-topics",
+          "title": "Specialized Topics",
+          "source": "references/specialized-topics.md"
+        },
+        {
+          "id": "troubleshooting",
+          "title": "GeoMaster Troubleshooting Guide",
+          "source": "references/troubleshooting.md"
+        }
+      ],
+      "checks": [
+        "crs.metric_operation",
+        "raster.nodata_declared",
+        "raster.resampling",
+        "rs.reflectance_range",
+        "rs.index_range"
+      ]
+    },
+    "geopandas": {
+      "name": "geopandas",
+      "path": "skills/geopandas",
+      "layer": "domain",
+      "domains": [
+        "geospatial",
+        "data"
+      ],
+      "capabilities": [
+        "vector-analysis",
+        "spatial-join",
+        "geometry-overlay",
+        "geodataframe",
+        "buffer"
+      ],
+      "triggers": [
+        "geopandas",
+        "geodataframe",
+        "shapefile",
+        "geojson",
+        "geopackage",
+        "spatial join",
+        "buffer",
+        "polygon intersection",
+        "vector spatial"
+      ],
+      "recommended": [
+        "verification"
+      ],
+      "requires": [],
+      "conflicts": [],
+      "explanation": "Processes vector spatial data, spatial joins, overlays, and coordinate transforms.",
+      "sections": [
+        {
+          "id": "reproducible-environment",
+          "title": "Reproducible environment",
+          "source": "SKILL.md#reproducible-environment"
+        },
+        {
+          "id": "safety-and-privacy-contract",
+          "title": "Safety and privacy contract",
+          "source": "SKILL.md#safety-and-privacy-contract"
+        },
+        {
+          "id": "correctness-gates",
+          "title": "Correctness gates",
+          "source": "SKILL.md#correctness-gates"
+        },
+        {
+          "id": "crs-and-antimeridian-rules",
+          "title": "CRS and antimeridian rules",
+          "source": "SKILL.md#crs-and-antimeridian-rules"
+        },
+        {
+          "id": "core-api-decisions",
+          "title": "Core API decisions",
+          "source": "SKILL.md#core-api-decisions"
+        },
+        {
+          "id": "migration-checklist",
+          "title": "Migration checklist",
+          "source": "SKILL.md#migration-checklist"
+        },
+        {
+          "id": "bundled-local-clis",
+          "title": "Bundled local CLIs",
+          "source": "SKILL.md#bundled-local-clis"
+        },
+        {
+          "id": "reference-index",
+          "title": "Reference index",
+          "source": "SKILL.md#reference-index"
+        },
+        {
+          "id": "sources-verified-2026-07-23",
+          "title": "Sources (verified 2026-07-23)",
+          "source": "SKILL.md#sources-verified-2026-07-23"
+        },
+        {
+          "id": "crs-management",
+          "title": "CRS, units, and reprojection",
+          "source": "references/crs-management.md"
+        },
+        {
+          "id": "data-io",
+          "title": "Vector I/O, GeoParquet, Arrow, and PostGIS",
+          "source": "references/data-io.md"
+        },
+        {
+          "id": "data-structures",
+          "title": "GeoPandas data structures",
+          "source": "references/data-structures.md"
+        },
+        {
+          "id": "geometric-operations",
+          "title": "Geometric operations, validity, and precision",
+          "source": "references/geometric-operations.md"
+        },
+        {
+          "id": "spatial-analysis",
+          "title": "Spatial joins, overlay, clip, and dissolve",
+          "source": "references/spatial-analysis.md"
+        },
+        {
+          "id": "visualization",
+          "title": "Static and interactive visualization",
+          "source": "references/visualization.md"
+        }
+      ],
+      "checks": [
+        "crs.defined",
+        "crs.consistent",
+        "crs.metric_operation",
+        "geometry.valid",
+        "geometry.type_consistent"
+      ]
     },
     "geoparquet-validation": {
       "name": "geoparquet-validation",
       "path": "skills/geoparquet-validation",
       "layer": "domain",
-      "domains": ["geospatial", "data"],
-      "capabilities": ["geoparquet", "parquet-validation", "cloud-native-vector"],
-      "triggers": ["geoparquet", "parquet spatial", "cloud native vector", "validate geoparquet"],
-      "recommended": ["verification"],
+      "domains": [
+        "geospatial",
+        "data"
+      ],
+      "capabilities": [
+        "geoparquet",
+        "parquet-validation",
+        "cloud-native-vector"
+      ],
+      "triggers": [
+        "geoparquet",
+        "parquet spatial",
+        "cloud native vector",
+        "validate geoparquet"
+      ],
+      "recommended": [
+        "verification"
+      ],
       "requires": [],
-      "conflicts": []
-    },
-    "geozarr": {
-      "name": "geozarr",
-      "path": "skills/geozarr",
-      "layer": "domain",
-      "domains": ["geospatial", "data"],
-      "capabilities": ["geozarr", "zarr-multidim", "cloud-native-raster"],
-      "triggers": ["geozarr", "zarr", "multidimensional raster", "climate grid", "xarray zarr"],
-      "recommended": ["verification"],
-      "requires": [],
-      "conflicts": []
+      "conflicts": [],
+      "explanation": "Validates GeoParquet metadata and cloud-native vector distribution formatting.",
+      "sections": [
+        {
+          "id": "what-this-skill-is-for",
+          "title": "What this skill is for",
+          "source": "SKILL.md#what-this-skill-is-for"
+        },
+        {
+          "id": "tools",
+          "title": "Tools",
+          "source": "SKILL.md#tools"
+        },
+        {
+          "id": "workflow",
+          "title": "Workflow",
+          "source": "SKILL.md#workflow"
+        },
+        {
+          "id": "quick-reference",
+          "title": "Quick Reference",
+          "source": "SKILL.md#quick-reference"
+        },
+        {
+          "id": "references",
+          "title": "References",
+          "source": "SKILL.md#references"
+        },
+        {
+          "id": "distribution-best-practices",
+          "title": "GeoParquet Distribution Best Practices",
+          "source": "references/distribution-best-practices.md"
+        },
+        {
+          "id": "gpio-commands",
+          "title": "gpio Command Reference",
+          "source": "references/gpio-commands.md"
+        },
+        {
+          "id": "tool-comparison",
+          "title": "GeoParquet Tool Comparison",
+          "source": "references/tool-comparison.md"
+        }
+      ],
+      "checks": [
+        "crs.defined",
+        "geometry.type_consistent"
+      ]
     },
     "geospatial-data-discovery": {
       "name": "geospatial-data-discovery",
       "path": "skills/geospatial-data-discovery",
       "layer": "domain",
-      "domains": ["geospatial", "data"],
-      "capabilities": ["gis-data-sourcing", "stac-catalog", "osm-data", "overture-data", "satellite-sourcing"],
-      "triggers": ["find gis data", "source satellite data", "stac", "openstreetmap data", "overture maps", "download dem", "find shapefile", "acquire spatial data"],
-      "recommended": ["verification"],
+      "domains": [
+        "geospatial",
+        "data"
+      ],
+      "capabilities": [
+        "gis-data-sourcing",
+        "stac-catalog",
+        "osm-data",
+        "overture-data",
+        "satellite-sourcing"
+      ],
+      "triggers": [
+        "find gis data",
+        "source satellite data",
+        "stac",
+        "openstreetmap data",
+        "overture maps",
+        "download dem",
+        "find shapefile",
+        "acquire spatial data"
+      ],
+      "recommended": [
+        "verification"
+      ],
       "requires": [],
-      "conflicts": []
+      "conflicts": [],
+      "explanation": "Sources open geospatial data (STAC, OSM, Sentinel, Landsat, DEMs).",
+      "sections": [
+        {
+          "id": "when-to-use",
+          "title": "When to Use",
+          "source": "SKILL.md#when-to-use"
+        },
+        {
+          "id": "10-point-geospatial-evaluation-checklist",
+          "title": "10-Point Geospatial Evaluation Checklist",
+          "source": "SKILL.md#10-point-geospatial-evaluation-checklist"
+        },
+        {
+          "id": "recommended-authoritative-data-sources",
+          "title": "Recommended Authoritative Data Sources",
+          "source": "SKILL.md#recommended-authoritative-data-sources"
+        }
+      ],
+      "checks": [
+        "stac.provenance"
+      ]
     },
-    "statistical-analysis": {
-      "name": "statistical-analysis",
-      "path": "skills/statistical-analysis",
-      "layer": "domain",
-      "domains": ["data", "statistics"],
-      "capabilities": ["hypothesis-testing", "anova", "t-test", "regression", "effect-sizes", "power-analysis"],
-      "triggers": ["statistics", "hypothesis test", "t-test", "anova", "p-value", "significance", "regression", "correlation", "effect size", "statistical power"],
-      "recommended": ["verification"],
+    "geospatial-frontend": {
+      "name": "geospatial-frontend",
+      "path": "skills/geospatial-frontend",
+      "layer": "implementation",
+      "domains": [
+        "frontend",
+        "geospatial"
+      ],
+      "capabilities": [
+        "web-map",
+        "maplibre",
+        "duckdb-wasm",
+        "deckgl",
+        "spatial-ui"
+      ],
+      "triggers": [
+        "map",
+        "web map",
+        "maplibre",
+        "deck.gl",
+        "interactive map",
+        "map dashboard",
+        "spatial ui",
+        "cartography web"
+      ],
+      "recommended": [],
       "requires": [],
-      "conflicts": []
+      "conflicts": [],
+      "explanation": "Configures MapLibre GL, interactive layers, and map dashboard interfaces.",
+      "sections": [
+        {
+          "id": "architecture",
+          "title": "Architecture",
+          "source": "SKILL.md#architecture"
+        },
+        {
+          "id": "design-system",
+          "title": "Design System",
+          "source": "SKILL.md#design-system"
+        },
+        {
+          "id": "ui-rules",
+          "title": "UI Rules",
+          "source": "SKILL.md#ui-rules"
+        },
+        {
+          "id": "layout",
+          "title": "Layout",
+          "source": "SKILL.md#layout"
+        },
+        {
+          "id": "map-integration",
+          "title": "Map Integration",
+          "source": "SKILL.md#map-integration"
+        },
+        {
+          "id": "data-pipeline-pattern",
+          "title": "Data Pipeline Pattern",
+          "source": "SKILL.md#data-pipeline-pattern"
+        },
+        {
+          "id": "tutorial-system",
+          "title": "Tutorial System",
+          "source": "SKILL.md#tutorial-system"
+        },
+        {
+          "id": "responsive",
+          "title": "Responsive",
+          "source": "SKILL.md#responsive"
+        },
+        {
+          "id": "file-organization",
+          "title": "File Organization",
+          "source": "SKILL.md#file-organization"
+        },
+        {
+          "id": "design-system-reference",
+          "title": "Design System Tokens",
+          "source": "references/design-system.md"
+        },
+        {
+          "id": "user-preferences",
+          "title": "UI Preferences & Design Rules",
+          "source": "references/user-preferences.md"
+        }
+      ],
+      "checks": []
     },
-    "scientific-visualization": {
-      "name": "scientific-visualization",
-      "path": "skills/scientific-visualization",
+    "geozarr": {
+      "name": "geozarr",
+      "path": "skills/geozarr",
       "layer": "domain",
-      "domains": ["data", "design"],
-      "capabilities": ["publication-figures", "matplotlib", "seaborn", "colorblind-palettes", "multi-panel-plots"],
-      "triggers": ["plot", "chart", "figure", "visualization", "matplotlib", "seaborn", "publish figure", "multi-panel", "graphical abstract"],
-      "recommended": ["verification"],
+      "domains": [
+        "geospatial",
+        "data"
+      ],
+      "capabilities": [
+        "geozarr",
+        "zarr-multidim",
+        "cloud-native-raster"
+      ],
+      "triggers": [
+        "geozarr",
+        "zarr",
+        "multidimensional raster",
+        "climate grid",
+        "xarray zarr"
+      ],
+      "recommended": [
+        "verification"
+      ],
       "requires": [],
-      "conflicts": []
+      "conflicts": [],
+      "explanation": "Handles multidimensional geospatial raster arrays and GeoZarr conventions.",
+      "sections": [
+        {
+          "id": "how-to-use-this-skill",
+          "title": "How to use this skill",
+          "source": "SKILL.md#how-to-use-this-skill"
+        },
+        {
+          "id": "status-and-version-guidance",
+          "title": "Status and version guidance",
+          "source": "SKILL.md#status-and-version-guidance"
+        },
+        {
+          "id": "when-to-use-this-skill",
+          "title": "When to use this skill",
+          "source": "SKILL.md#when-to-use-this-skill"
+        },
+        {
+          "id": "the-compliance-checklist",
+          "title": "The compliance checklist",
+          "source": "SKILL.md#the-compliance-checklist"
+        },
+        {
+          "id": "cell-center-vs-pixel-edge",
+          "title": "Cell-center vs pixel-edge",
+          "source": "SKILL.md#cell-center-vs-pixel-edge"
+        },
+        {
+          "id": "zarr-v2-vs-v3-dimension-declaration",
+          "title": "Zarr v2 vs v3 dimension declaration",
+          "source": "SKILL.md#zarr-v2-vs-v3-dimension-declaration"
+        },
+        {
+          "id": "optional-layered-conventions",
+          "title": "Optional layered conventions",
+          "source": "SKILL.md#optional-layered-conventions"
+        },
+        {
+          "id": "authoring-from-xarrayrioxarray",
+          "title": "Authoring from xarray/rioxarray",
+          "source": "SKILL.md#authoring-from-xarrayrioxarray"
+        },
+        {
+          "id": "patching-an-existing-store-in-place",
+          "title": "Patching an existing store in place",
+          "source": "SKILL.md#patching-an-existing-store-in-place"
+        },
+        {
+          "id": "common-gotchas",
+          "title": "Common gotchas",
+          "source": "SKILL.md#common-gotchas"
+        },
+        {
+          "id": "validation",
+          "title": "Validation",
+          "source": "SKILL.md#validation"
+        },
+        {
+          "id": "tooling-matrix",
+          "title": "Tooling matrix",
+          "source": "SKILL.md#tooling-matrix"
+        },
+        {
+          "id": "references",
+          "title": "References",
+          "source": "SKILL.md#references"
+        }
+      ],
+      "checks": [
+        "crs.defined",
+        "raster.nodata_declared"
+      ]
     },
     "networkx": {
       "name": "networkx",
       "path": "skills/networkx",
       "layer": "domain",
-      "domains": ["data"],
-      "capabilities": ["graph-algorithms", "centrality", "community-detection", "network-topology", "shortest-path"],
-      "triggers": ["networkx", "graph analysis", "network graph", "centrality", "community detection", "shortest path graph", "nodes edges", "network topology"],
-      "recommended": ["verification"],
+      "domains": [
+        "data"
+      ],
+      "capabilities": [
+        "graph-algorithms",
+        "centrality",
+        "community-detection",
+        "network-topology",
+        "shortest-path"
+      ],
+      "triggers": [
+        "networkx",
+        "graph analysis",
+        "network graph",
+        "centrality",
+        "community detection",
+        "shortest path graph",
+        "nodes edges",
+        "network topology"
+      ],
+      "recommended": [
+        "verification"
+      ],
       "requires": [],
-      "conflicts": []
+      "conflicts": [],
+      "explanation": "Executes graph analysis, centrality metrics, and community detection algorithms.",
+      "sections": [
+        {
+          "id": "overview",
+          "title": "Overview",
+          "source": "SKILL.md#overview"
+        },
+        {
+          "id": "when-to-use-this-skill",
+          "title": "When to Use This Skill",
+          "source": "SKILL.md#when-to-use-this-skill"
+        },
+        {
+          "id": "core-capabilities",
+          "title": "Core Capabilities",
+          "source": "SKILL.md#core-capabilities"
+        },
+        {
+          "id": "working-with-networkx",
+          "title": "Working with NetworkX",
+          "source": "SKILL.md#working-with-networkx"
+        },
+        {
+          "id": "quick-reference",
+          "title": "Quick Reference",
+          "source": "SKILL.md#quick-reference"
+        },
+        {
+          "id": "resources",
+          "title": "Resources",
+          "source": "SKILL.md#resources"
+        },
+        {
+          "id": "additional-resources",
+          "title": "Additional Resources",
+          "source": "SKILL.md#additional-resources"
+        },
+        {
+          "id": "algorithms",
+          "title": "NetworkX Graph Algorithms",
+          "source": "references/algorithms.md"
+        },
+        {
+          "id": "generators",
+          "title": "NetworkX Graph Generators",
+          "source": "references/generators.md"
+        },
+        {
+          "id": "graph-basics",
+          "title": "NetworkX Graph Basics",
+          "source": "references/graph-basics.md"
+        },
+        {
+          "id": "io",
+          "title": "NetworkX Input/Output",
+          "source": "references/io.md"
+        },
+        {
+          "id": "visualization",
+          "title": "NetworkX Graph Visualization",
+          "source": "references/visualization.md"
+        }
+      ],
+      "checks": []
+    },
+    "raster-processing": {
+      "name": "raster-processing",
+      "path": "skills/raster-processing",
+      "layer": "domain",
+      "domains": [
+        "geospatial"
+      ],
+      "capabilities": [
+        "raster-grid-alignment",
+        "nodata-handling",
+        "categorical-resampling",
+        "raster-delivery"
+      ],
+      "triggers": [
+        "rasterio",
+        "rioxarray",
+        "nodata",
+        "resampling",
+        "target aligned pixels",
+        "land-cover raster",
+        "class values"
+      ],
+      "recommended": [],
+      "requires": [],
+      "conflicts": [],
+      "explanation": "Reads, aligns, resamples, and writes rasters with explicit nodata, masks, dtypes, and COG delivery checks.",
+      "sections": [
+        {
+          "id": "inspect-the-storage-and-analysis-contract",
+          "title": "Inspect the storage and analysis contract",
+          "source": "SKILL.md#inspect-the-storage-and-analysis-contract"
+        },
+        {
+          "id": "distinguish-nodata-values-masks-and-valid-zero",
+          "title": "Distinguish nodata values, masks, and valid zero",
+          "source": "SKILL.md#distinguish-nodata-values-masks-and-valid-zero"
+        },
+        {
+          "id": "avoid-dtype-overflow-and-stale-scale-metadata",
+          "title": "Avoid dtype overflow and stale scale metadata",
+          "source": "SKILL.md#avoid-dtype-overflow-and-stale-scale-metadata"
+        },
+        {
+          "id": "match-a-complete-grid-not-just-resolution",
+          "title": "Match a complete grid, not just resolution",
+          "source": "SKILL.md#match-a-complete-grid-not-just-resolution"
+        },
+        {
+          "id": "select-resampling-from-the-data-meaning",
+          "title": "Select resampling from the data meaning",
+          "source": "SKILL.md#select-resampling-from-the-data-meaning"
+        },
+        {
+          "id": "process-windows-or-lazy-chunks",
+          "title": "Process windows or lazy chunks",
+          "source": "SKILL.md#process-windows-or-lazy-chunks"
+        },
+        {
+          "id": "create-and-validate-a-cog-with-overviews",
+          "title": "Create and validate a COG with overviews",
+          "source": "SKILL.md#create-and-validate-a-cog-with-overviews"
+        },
+        {
+          "id": "verify-with-terraproof",
+          "title": "Verify with Terraproof",
+          "source": "SKILL.md#verify-with-terraproof"
+        },
+        {
+          "id": "sources",
+          "title": "Sources",
+          "source": "SKILL.md#sources"
+        }
+      ],
+      "checks": [
+        "raster.nodata_declared",
+        "raster.resampling",
+        "raster.grid_alignment",
+        "raster.cog_layout",
+        "crs.defined",
+        "crs.consistent"
+      ]
+    },
+    "satellite-preprocessing": {
+      "name": "satellite-preprocessing",
+      "path": "skills/satellite-preprocessing",
+      "layer": "domain",
+      "domains": [
+        "geospatial"
+      ],
+      "capabilities": [
+        "surface-reflectance-decoding",
+        "cloud-masking",
+        "sensor-harmonization",
+        "temporal-compositing"
+      ],
+      "triggers": [
+        "surface reflectance",
+        "scene classification",
+        "scl band",
+        "qa_pixel",
+        "boa_add_offset",
+        "landsat collection 2"
+      ],
+      "recommended": [
+        "raster-processing"
+      ],
+      "requires": [],
+      "conflicts": [],
+      "explanation": "Decodes Sentinel-2 L2A and Landsat Collection 2 Level-2 surface reflectance once, applies sensor-specific QA masks, and prepares harmonized composites.",
+      "sections": [
+        {
+          "id": "establish-the-product-and-encoding",
+          "title": "Establish the product and encoding",
+          "source": "SKILL.md#establish-the-product-and-encoding"
+        },
+        {
+          "id": "decode-sentinel-2-l2a-reflectance",
+          "title": "Decode Sentinel-2 L2A reflectance",
+          "source": "SKILL.md#decode-sentinel-2-l2a-reflectance"
+        },
+        {
+          "id": "mask-sentinel-2-scl-cloud-and-shadow-classes",
+          "title": "Mask Sentinel-2 SCL cloud and shadow classes",
+          "source": "SKILL.md#mask-sentinel-2-scl-cloud-and-shadow-classes"
+        },
+        {
+          "id": "decode-landsat-collection-2-level-2-sr",
+          "title": "Decode Landsat Collection 2 Level-2 SR",
+          "source": "SKILL.md#decode-landsat-collection-2-level-2-sr"
+        },
+        {
+          "id": "apply-scale-and-offset-exactly-once",
+          "title": "Apply scale and offset exactly once",
+          "source": "SKILL.md#apply-scale-and-offset-exactly-once"
+        },
+        {
+          "id": "harmonize-sensors-before-comparing-them",
+          "title": "Harmonize sensors before comparing them",
+          "source": "SKILL.md#harmonize-sensors-before-comparing-them"
+        },
+        {
+          "id": "build-temporal-composites-from-masked-observations",
+          "title": "Build temporal composites from masked observations",
+          "source": "SKILL.md#build-temporal-composites-from-masked-observations"
+        },
+        {
+          "id": "verify-with-terraproof",
+          "title": "Verify with Terraproof",
+          "source": "SKILL.md#verify-with-terraproof"
+        },
+        {
+          "id": "sources",
+          "title": "Sources",
+          "source": "SKILL.md#sources"
+        }
+      ],
+      "checks": [
+        "rs.reflectance_range",
+        "raster.nodata_declared",
+        "raster.grid_alignment",
+        "raster.resampling",
+        "stac.provenance",
+        "crs.defined",
+        "crs.consistent",
+        "raster.cog_layout"
+      ]
+    },
+    "scientific-visualization": {
+      "name": "scientific-visualization",
+      "path": "skills/scientific-visualization",
+      "layer": "domain",
+      "domains": [
+        "data",
+        "design"
+      ],
+      "capabilities": [
+        "publication-figures",
+        "matplotlib",
+        "seaborn",
+        "colorblind-palettes",
+        "multi-panel-plots"
+      ],
+      "triggers": [
+        "plot",
+        "chart",
+        "figure",
+        "visualization",
+        "matplotlib",
+        "seaborn",
+        "publish figure",
+        "multi-panel",
+        "graphical abstract"
+      ],
+      "recommended": [
+        "verification"
+      ],
+      "requires": [],
+      "conflicts": [],
+      "explanation": "Generates publication-ready scientific figures with colorblind-safe palettes.",
+      "sections": [
+        {
+          "id": "non-negotiable-guardrails",
+          "title": "Non-negotiable guardrails",
+          "source": "SKILL.md#non-negotiable-guardrails"
+        },
+        {
+          "id": "workflow",
+          "title": "Workflow",
+          "source": "SKILL.md#workflow"
+        },
+        {
+          "id": "pinned-snapshot",
+          "title": "Pinned snapshot",
+          "source": "SKILL.md#pinned-snapshot"
+        },
+        {
+          "id": "bundled-clis",
+          "title": "Bundled CLIs",
+          "source": "SKILL.md#bundled-clis"
+        },
+        {
+          "id": "assets",
+          "title": "Assets",
+          "source": "SKILL.md#assets"
+        },
+        {
+          "id": "references",
+          "title": "References",
+          "source": "SKILL.md#references"
+        },
+        {
+          "id": "final-review-checklist",
+          "title": "Final review checklist",
+          "source": "SKILL.md#final-review-checklist"
+        },
+        {
+          "id": "color_palettes",
+          "title": "Color, Contrast, and Palette Selection",
+          "source": "references/color_palettes.md"
+        },
+        {
+          "id": "journal_requirements",
+          "title": "Publisher and Journal Figure Snapshots",
+          "source": "references/journal_requirements.md"
+        },
+        {
+          "id": "matplotlib_examples",
+          "title": "Current Matplotlib, Seaborn, and Plotly Patterns",
+          "source": "references/matplotlib_examples.md"
+        },
+        {
+          "id": "publication_guidelines",
+          "title": "Publication Figure Principles",
+          "source": "references/publication_guidelines.md"
+        },
+        {
+          "id": "sources",
+          "title": "Sources and Version Snapshot",
+          "source": "references/sources.md"
+        }
+      ],
+      "checks": []
+    },
+    "spectral-indices": {
+      "name": "spectral-indices",
+      "path": "skills/spectral-indices",
+      "layer": "domain",
+      "domains": [
+        "geospatial"
+      ],
+      "capabilities": [
+        "spectral-index",
+        "vegetation-index",
+        "water-index",
+        "burn-index"
+      ],
+      "triggers": [
+        "spectral indices",
+        "vegetation index",
+        "water index",
+        "burn severity",
+        "ndvi",
+        "ndwi",
+        "mndwi",
+        "nbr",
+        "dnbr",
+        "evi",
+        "savi"
+      ],
+      "recommended": [
+        "satellite-preprocessing"
+      ],
+      "requires": [],
+      "conflicts": [],
+      "explanation": "Computes and interprets NDVI, NDWI/MNDWI, NBR/dNBR, EVI, and SAVI from calibrated, masked reflectance with safe numeric handling.",
+      "sections": [
+        {
+          "id": "require-calibrated-aligned-inputs",
+          "title": "Require calibrated, aligned inputs",
+          "source": "SKILL.md#require-calibrated-aligned-inputs"
+        },
+        {
+          "id": "map-spectral-roles-to-the-sensor",
+          "title": "Map spectral roles to the sensor",
+          "source": "SKILL.md#map-spectral-roles-to-the-sensor"
+        },
+        {
+          "id": "ndvi-vegetation-contrast",
+          "title": "NDVI: vegetation contrast",
+          "source": "SKILL.md#ndvi-vegetation-contrast"
+        },
+        {
+          "id": "ndwi-mcfeeters-versus-mndwi-specify-the-water-index",
+          "title": "NDWI (McFeeters) versus MNDWI: specify the water index",
+          "source": "SKILL.md#ndwi-mcfeeters-versus-mndwi-specify-the-water-index"
+        },
+        {
+          "id": "nbr-and-dnbr-burn-sensitive-contrast-and-change",
+          "title": "NBR and dNBR: burn-sensitive contrast and change",
+          "source": "SKILL.md#nbr-and-dnbr-burn-sensitive-contrast-and-change"
+        },
+        {
+          "id": "evi-and-savi-additive-constants-require-physical-reflectance",
+          "title": "EVI and SAVI: additive constants require physical reflectance",
+          "source": "SKILL.md#evi-and-savi-additive-constants-require-physical-reflectance"
+        },
+        {
+          "id": "divide-safely-and-write-explicit-nodata",
+          "title": "Divide safely and write explicit nodata",
+          "source": "SKILL.md#divide-safely-and-write-explicit-nodata"
+        },
+        {
+          "id": "verify-with-terraproof",
+          "title": "Verify with Terraproof",
+          "source": "SKILL.md#verify-with-terraproof"
+        },
+        {
+          "id": "sources",
+          "title": "Sources",
+          "source": "SKILL.md#sources"
+        }
+      ],
+      "checks": [
+        "rs.reflectance_range",
+        "rs.index_range",
+        "raster.nodata_declared",
+        "raster.grid_alignment",
+        "crs.defined",
+        "crs.consistent",
+        "raster.cog_layout"
+      ]
+    },
+    "statistical-analysis": {
+      "name": "statistical-analysis",
+      "path": "skills/statistical-analysis",
+      "layer": "domain",
+      "domains": [
+        "data",
+        "statistics"
+      ],
+      "capabilities": [
+        "hypothesis-testing",
+        "anova",
+        "t-test",
+        "regression",
+        "effect-sizes",
+        "power-analysis"
+      ],
+      "triggers": [
+        "statistics",
+        "hypothesis test",
+        "t-test",
+        "anova",
+        "p-value",
+        "significance",
+        "regression",
+        "correlation",
+        "effect size",
+        "statistical power"
+      ],
+      "recommended": [
+        "verification"
+      ],
+      "requires": [],
+      "conflicts": [],
+      "explanation": "Conducts hypothesis testing, ANOVA, regressions, and effect size calculations.",
+      "sections": [
+        {
+          "id": "overview",
+          "title": "Overview",
+          "source": "SKILL.md#overview"
+        },
+        {
+          "id": "when-to-use-this-skill",
+          "title": "When to Use This Skill",
+          "source": "SKILL.md#when-to-use-this-skill"
+        },
+        {
+          "id": "installation",
+          "title": "Installation",
+          "source": "SKILL.md#installation"
+        },
+        {
+          "id": "analysis-workflow",
+          "title": "Analysis Workflow",
+          "source": "SKILL.md#analysis-workflow"
+        },
+        {
+          "id": "test-selection-guide",
+          "title": "Test Selection Guide",
+          "source": "SKILL.md#test-selection-guide"
+        },
+        {
+          "id": "assumption-checking",
+          "title": "Assumption Checking",
+          "source": "SKILL.md#assumption-checking"
+        },
+        {
+          "id": "running-statistical-tests",
+          "title": "Running Statistical Tests",
+          "source": "SKILL.md#running-statistical-tests"
+        },
+        {
+          "id": "effect-sizes",
+          "title": "Effect Sizes",
+          "source": "SKILL.md#effect-sizes"
+        },
+        {
+          "id": "power-analysis",
+          "title": "Power Analysis",
+          "source": "SKILL.md#power-analysis"
+        },
+        {
+          "id": "reporting-results",
+          "title": "Reporting Results",
+          "source": "SKILL.md#reporting-results"
+        },
+        {
+          "id": "bayesian-statistics",
+          "title": "Bayesian Statistics",
+          "source": "SKILL.md#bayesian-statistics"
+        },
+        {
+          "id": "bundled-resources",
+          "title": "Bundled Resources",
+          "source": "SKILL.md#bundled-resources"
+        },
+        {
+          "id": "statistical-integrity",
+          "title": "Statistical Integrity",
+          "source": "SKILL.md#statistical-integrity"
+        },
+        {
+          "id": "assumptions_and_diagnostics",
+          "title": "Statistical Assumptions and Diagnostic Procedures",
+          "source": "references/assumptions_and_diagnostics.md"
+        },
+        {
+          "id": "bayesian_statistics",
+          "title": "Bayesian Statistical Analysis",
+          "source": "references/bayesian_statistics.md"
+        },
+        {
+          "id": "effect_sizes_and_power",
+          "title": "Effect Sizes and Power Analysis",
+          "source": "references/effect_sizes_and_power.md"
+        },
+        {
+          "id": "reporting_standards",
+          "title": "Statistical Reporting Standards",
+          "source": "references/reporting_standards.md"
+        },
+        {
+          "id": "test_selection_guide",
+          "title": "Statistical Test Selection Guide",
+          "source": "references/test_selection_guide.md"
+        }
+      ],
+      "checks": []
+    },
+    "systematic-debugging": {
+      "name": "systematic-debugging",
+      "path": "skills/systematic-debugging",
+      "layer": "process",
+      "domains": [
+        "general",
+        "debugging"
+      ],
+      "capabilities": [
+        "root-cause-analysis",
+        "hypothesis-testing",
+        "regression-isolation"
+      ],
+      "triggers": [
+        "bug",
+        "fix",
+        "error",
+        "fail",
+        "broken",
+        "debug",
+        "issue",
+        "crash",
+        "intermittent",
+        "unexpected",
+        "exception",
+        "401",
+        "500",
+        "timeout"
+      ],
+      "recommended": [
+        "verification"
+      ],
+      "requires": [],
+      "conflicts": [],
+      "explanation": "Applies structured 4-phase root cause investigation for the reported bug/error.",
+      "sections": [
+        {
+          "id": "overview",
+          "title": "Overview",
+          "source": "SKILL.md#overview"
+        },
+        {
+          "id": "the-iron-law",
+          "title": "The Iron Law",
+          "source": "SKILL.md#the-iron-law"
+        },
+        {
+          "id": "when-to-use",
+          "title": "When to Use",
+          "source": "SKILL.md#when-to-use"
+        },
+        {
+          "id": "the-four-phases",
+          "title": "The Four Phases",
+          "source": "SKILL.md#the-four-phases"
+        },
+        {
+          "id": "red-flags---stop-and-follow-process",
+          "title": "Red Flags - STOP and Follow Process",
+          "source": "SKILL.md#red-flags---stop-and-follow-process"
+        },
+        {
+          "id": "your-human-partners-signals-youre-doing-it-wrong",
+          "title": "your human partner's Signals You're Doing It Wrong",
+          "source": "SKILL.md#your-human-partners-signals-youre-doing-it-wrong"
+        },
+        {
+          "id": "common-rationalizations",
+          "title": "Common Rationalizations",
+          "source": "SKILL.md#common-rationalizations"
+        },
+        {
+          "id": "quick-reference",
+          "title": "Quick Reference",
+          "source": "SKILL.md#quick-reference"
+        },
+        {
+          "id": "when-process-reveals-no-root-cause",
+          "title": "When Process Reveals \"No Root Cause\"",
+          "source": "SKILL.md#when-process-reveals-no-root-cause"
+        },
+        {
+          "id": "supporting-techniques",
+          "title": "Supporting Techniques",
+          "source": "SKILL.md#supporting-techniques"
+        }
+      ],
+      "checks": []
+    },
+    "vector-quality": {
+      "name": "vector-quality",
+      "path": "skills/vector-quality",
+      "layer": "domain",
+      "domains": [
+        "geospatial"
+      ],
+      "capabilities": [
+        "geometry-validity",
+        "geometry-repair",
+        "coverage-topology",
+        "geojson-export"
+      ],
+      "triggers": [
+        "make_valid",
+        "self-intersecting",
+        "self-intersection",
+        "sliver",
+        "invalid geometries",
+        "coverage gaps",
+        "duplicate geometries"
+      ],
+      "recommended": [
+        "crs-and-units"
+      ],
+      "requires": [],
+      "conflicts": [],
+      "explanation": "Audits and repairs invalid, empty, duplicate, and topologically inconsistent vector geometry while preserving feature identity.",
+      "sections": [
+        {
+          "id": "inventory-geometry-and-attribute-states",
+          "title": "Inventory geometry and attribute states",
+          "source": "SKILL.md#inventory-geometry-and-attribute-states"
+        },
+        {
+          "id": "check-validity-before-choosing-a-repair",
+          "title": "Check validity before choosing a repair",
+          "source": "SKILL.md#check-validity-before-choosing-a-repair"
+        },
+        {
+          "id": "detect-duplicate-geometries-without-deleting-legitimate-records",
+          "title": "Detect duplicate geometries without deleting legitimate records",
+          "source": "SKILL.md#detect-duplicate-geometries-without-deleting-legitimate-records"
+        },
+        {
+          "id": "audit-coverage-topology-gaps-overlaps-and-slivers",
+          "title": "Audit coverage topology: gaps, overlaps, and slivers",
+          "source": "SKILL.md#audit-coverage-topology-gaps-overlaps-and-slivers"
+        },
+        {
+          "id": "choose-precision-and-snapping-deliberately",
+          "title": "Choose precision and snapping deliberately",
+          "source": "SKILL.md#choose-precision-and-snapping-deliberately"
+        },
+        {
+          "id": "preserve-records-through-null-handling-and-joins",
+          "title": "Preserve records through null handling and joins",
+          "source": "SKILL.md#preserve-records-through-null-handling-and-joins"
+        },
+        {
+          "id": "export-geojson-winding-correctly",
+          "title": "Export GeoJSON winding correctly",
+          "source": "SKILL.md#export-geojson-winding-correctly"
+        },
+        {
+          "id": "verify-with-terraproof",
+          "title": "Verify with Terraproof",
+          "source": "SKILL.md#verify-with-terraproof"
+        },
+        {
+          "id": "sources",
+          "title": "Sources",
+          "source": "SKILL.md#sources"
+        }
+      ],
+      "checks": [
+        "geometry.valid",
+        "geometry.non_empty",
+        "geometry.type_consistent",
+        "scope.record_count",
+        "crs.defined"
+      ]
     },
     "verification": {
       "name": "verification",
       "path": "skills/verification",
       "layer": "verification",
-      "domains": ["general", "qa"],
-      "capabilities": ["completion-validation", "truthfulness-audit", "pre-commit-check"],
-      "triggers": ["verify", "verification", "check completion", "done check", "validate result"],
+      "domains": [
+        "general",
+        "qa"
+      ],
+      "capabilities": [
+        "completion-validation",
+        "truthfulness-audit",
+        "pre-commit-check"
+      ],
+      "triggers": [
+        "verify",
+        "verification",
+        "check completion",
+        "done check",
+        "validate result"
+      ],
       "recommended": [],
       "requires": [],
-      "conflicts": []
+      "conflicts": [],
+      "explanation": "Validates completion and truthfulness before marking the task complete.",
+      "sections": [
+        {
+          "id": "overview",
+          "title": "Overview",
+          "source": "SKILL.md#overview"
+        },
+        {
+          "id": "the-iron-law",
+          "title": "The Iron Law",
+          "source": "SKILL.md#the-iron-law"
+        },
+        {
+          "id": "the-gate-function",
+          "title": "The Gate Function",
+          "source": "SKILL.md#the-gate-function"
+        },
+        {
+          "id": "common-failures",
+          "title": "Common Failures",
+          "source": "SKILL.md#common-failures"
+        },
+        {
+          "id": "red-flags---stop",
+          "title": "Red Flags - STOP",
+          "source": "SKILL.md#red-flags---stop"
+        },
+        {
+          "id": "rationalization-prevention",
+          "title": "Rationalization Prevention",
+          "source": "SKILL.md#rationalization-prevention"
+        },
+        {
+          "id": "key-patterns",
+          "title": "Key Patterns",
+          "source": "SKILL.md#key-patterns"
+        },
+        {
+          "id": "when-to-apply",
+          "title": "When To Apply",
+          "source": "SKILL.md#when-to-apply"
+        }
+      ],
+      "checks": []
+    },
+    "writing-plans": {
+      "name": "writing-plans",
+      "path": "skills/writing-plans",
+      "layer": "process",
+      "domains": [
+        "general",
+        "planning"
+      ],
+      "capabilities": [
+        "task-decomposition",
+        "execution-plan",
+        "milestone-planning"
+      ],
+      "triggers": [
+        "plan",
+        "step-by-step",
+        "roadmap",
+        "implementation plan",
+        "break down",
+        "complex feature"
+      ],
+      "recommended": [
+        "verification"
+      ],
+      "requires": [],
+      "conflicts": [],
+      "explanation": "Decomposes the task into an executable, task-by-task engineering plan.",
+      "sections": [
+        {
+          "id": "overview",
+          "title": "Overview",
+          "source": "SKILL.md#overview"
+        },
+        {
+          "id": "scope-check",
+          "title": "Scope Check",
+          "source": "SKILL.md#scope-check"
+        },
+        {
+          "id": "file-structure",
+          "title": "File Structure",
+          "source": "SKILL.md#file-structure"
+        },
+        {
+          "id": "task-right-sizing",
+          "title": "Task Right-Sizing",
+          "source": "SKILL.md#task-right-sizing"
+        },
+        {
+          "id": "bite-sized-task-granularity",
+          "title": "Bite-Sized Task Granularity",
+          "source": "SKILL.md#bite-sized-task-granularity"
+        },
+        {
+          "id": "plan-document-header",
+          "title": "Plan Document Header",
+          "source": "SKILL.md#plan-document-header"
+        },
+        {
+          "id": "task-structure",
+          "title": "Task Structure",
+          "source": "SKILL.md#task-structure"
+        },
+        {
+          "id": "no-placeholders",
+          "title": "No Placeholders",
+          "source": "SKILL.md#no-placeholders"
+        },
+        {
+          "id": "self-review",
+          "title": "Self-Review",
+          "source": "SKILL.md#self-review"
+        },
+        {
+          "id": "execution-handoff",
+          "title": "Execution Handoff",
+          "source": "SKILL.md#execution-handoff"
+        }
+      ],
+      "checks": []
     }
   }
 }

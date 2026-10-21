@@ -1,0 +1,93 @@
+{
+  "name": "networkx",
+  "layer": "domain",
+  "domains": [
+    "data"
+  ],
+  "capabilities": [
+    "graph-algorithms",
+    "centrality",
+    "community-detection",
+    "network-topology",
+    "shortest-path"
+  ],
+  "triggers": [
+    "networkx",
+    "graph analysis",
+    "network graph",
+    "centrality",
+    "community detection",
+    "shortest path graph",
+    "nodes edges",
+    "network topology"
+  ],
+  "recommended": [
+    "verification"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Executes graph analysis, centrality metrics, and community detection algorithms.",
+  "sections": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "source": "SKILL.md#overview"
+    },
+    {
+      "id": "when-to-use-this-skill",
+      "title": "When to Use This Skill",
+      "source": "SKILL.md#when-to-use-this-skill"
+    },
+    {
+      "id": "core-capabilities",
+      "title": "Core Capabilities",
+      "source": "SKILL.md#core-capabilities"
+    },
+    {
+      "id": "working-with-networkx",
+      "title": "Working with NetworkX",
+      "source": "SKILL.md#working-with-networkx"
+    },
+    {
+      "id": "quick-reference",
+      "title": "Quick Reference",
+      "source": "SKILL.md#quick-reference"
+    },
+    {
+      "id": "resources",
+      "title": "Resources",
+      "source": "SKILL.md#resources"
+    },
+    {
+      "id": "additional-resources",
+      "title": "Additional Resources",
+      "source": "SKILL.md#additional-resources"
+    },
+    {
+      "id": "algorithms",
+      "title": "NetworkX Graph Algorithms",
+      "source": "references/algorithms.md"
+    },
+    {
+      "id": "generators",
+      "title": "NetworkX Graph Generators",
+      "source": "references/generators.md"
+    },
+    {
+      "id": "graph-basics",
+      "title": "NetworkX Graph Basics",
+      "source": "references/graph-basics.md"
+    },
+    {
+      "id": "io",
+      "title": "NetworkX Input/Output",
+      "source": "references/io.md"
+    },
+    {
+      "id": "visualization",
+      "title": "NetworkX Graph Visualization",
+      "source": "references/visualization.md"
+    }
+  ],
+  "checks": []
+}

@@ -84,6 +84,168 @@
       "prompt": "Rename the AI Settings page heading.",
       "mustInclude": ["verification"],
       "mustExclude": ["brainstorming", "writing-plans"]
+    },
+    {
+      "id": "scenario-30",
+      "prompt": "Choose a measurement CRS for our county parcels: the layer is EPSG:4326, so pick a UTM zone and confirm the axis order before measuring areas.",
+      "mustInclude": ["crs-and-units", "verification"],
+      "mustExclude": ["vector-quality", "raster-processing", "satellite-preprocessing", "spectral-indices"]
+    },
+    {
+      "id": "scenario-31",
+      "prompt": "Sort the GeoPandas GeoDataFrame by feature name and export it to GeoPackage.",
+      "mustInclude": ["geopandas", "verification"],
+      "mustExclude": ["crs-and-units", "vector-quality"]
+    },
+    {
+      "id": "scenario-32",
+      "prompt": "Use make_valid on the self-intersecting parcel polygons before computing areas.",
+      "mustInclude": ["vector-quality", "verification"],
+      "mustExclude": ["raster-processing", "satellite-preprocessing", "spectral-indices"]
+    },
+    {
+      "id": "scenario-33",
+      "prompt": "Dissolve county polygons by state in GeoPandas and export to GeoPackage.",
+      "mustInclude": ["geopandas", "verification"],
+      "mustExclude": ["vector-quality", "raster-processing", "spectral-indices"]
+    },
+    {
+      "id": "scenario-34",
+      "prompt": "Reproject a categorical land-cover raster without changing class values.",
+      "mustInclude": ["raster-processing", "verification"],
+      "mustExclude": ["geopandas", "satellite-preprocessing", "spectral-indices"]
+    },
+    {
+      "id": "scenario-35",
+      "prompt": "Compress this GeoTIFF with DEFLATE and write it as a Cloud-Optimized GeoTIFF using gdal_translate.",
+      "mustInclude": ["gdal", "verification"],
+      "mustExclude": ["raster-processing", "geopandas", "geospatial-frontend"]
+    },
+    {
+      "id": "scenario-36",
+      "prompt": "Mask clouds in Sentinel-2 L2A using the SCL band before computing NDVI.",
+      "mustInclude": ["satellite-preprocessing", "verification"],
+      "mustExclude": ["geopandas", "gdal", "geospatial-frontend"]
+    },
+    {
+      "id": "scenario-37",
+      "prompt": "Decode the Landsat 9 Collection 2 Level-2 surface reflectance and check the QA_PIXEL bits.",
+      "mustInclude": ["satellite-preprocessing", "verification"],
+      "mustExclude": ["spectral-indices", "geopandas", "geospatial-frontend"]
+    },
+    {
+      "id": "scenario-38",
+      "prompt": "Find Sentinel-2 scenes over our study area in the STAC catalog and list their cloud cover.",
+      "mustInclude": ["geospatial-data-discovery", "verification"],
+      "mustExclude": ["satellite-preprocessing", "spectral-indices", "geospatial-frontend"]
+    },
+    {
+      "id": "scenario-39",
+      "prompt": "Compute MNDWI from Landsat 9 surface reflectance.",
+      "mustInclude": ["spectral-indices", "satellite-preprocessing", "verification"],
+      "mustExclude": ["gdal", "geopandas", "geospatial-frontend"]
+    },
+    {
+      "id": "scenario-40",
+      "prompt": "Calculate NBR and dNBR burn severity from pre- and post-fire Sentinel-2 scenes.",
+      "mustInclude": ["spectral-indices", "verification"],
+      "mustExclude": ["geopandas", "gdal", "geospatial-frontend"]
+    },
+    {
+      "id": "scenario-41",
+      "prompt": "Pick an equal-area projection for the EPSG:4326 protected-area layer before summing areas.",
+      "mustInclude": ["crs-and-units", "verification"],
+      "mustExclude": ["vector-quality", "raster-processing", "spectral-indices"]
+    },
+    {
+      "id": "scenario-42",
+      "prompt": "Which coordinate reference system should I use to measure buffer distances around these wells?",
+      "mustInclude": ["crs-and-units", "verification"],
+      "mustExclude": ["raster-processing", "satellite-preprocessing", "spectral-indices"]
+    },
+    {
+      "id": "scenario-43",
+      "prompt": "Move the NAD83 layer onto WGS 84 and check the datum transformation before overlaying it.",
+      "mustInclude": ["crs-and-units", "verification"],
+      "mustExclude": ["raster-processing", "spectral-indices"]
+    },
+    {
+      "id": "scenario-44",
+      "prompt": "Check the zoning layer for self-intersection before the spatial join.",
+      "mustInclude": ["vector-quality", "geopandas", "verification"],
+      "mustExclude": ["raster-processing", "spectral-indices"]
+    },
+    {
+      "id": "scenario-45",
+      "prompt": "Flag invalid geometries and duplicate geometries in the spatial parcel layer before export.",
+      "mustInclude": ["vector-quality", "verification"],
+      "mustExclude": ["raster-processing", "satellite-preprocessing"]
+    },
+    {
+      "id": "scenario-46",
+      "prompt": "Find sliver polygons and coverage gaps in the cadastral layer before the overlay.",
+      "mustInclude": ["vector-quality", "verification"],
+      "mustExclude": ["raster-processing", "satellite-preprocessing", "spectral-indices"]
+    },
+    {
+      "id": "scenario-47",
+      "prompt": "Choose the resampling method for this rasterio pipeline and keep nodata at -9999.",
+      "mustInclude": ["raster-processing", "verification"],
+      "mustExclude": ["satellite-preprocessing", "spectral-indices", "vector-quality"]
+    },
+    {
+      "id": "scenario-48",
+      "prompt": "Open the scene with rioxarray and write a subset with the nodata mask preserved.",
+      "mustInclude": ["raster-processing", "verification"],
+      "mustExclude": ["satellite-preprocessing", "spectral-indices", "vector-quality"]
+    },
+    {
+      "id": "scenario-49",
+      "prompt": "Resample the two rasters onto the target aligned pixels of the reference grid, keeping nodata.",
+      "mustInclude": ["raster-processing", "verification"],
+      "mustExclude": ["satellite-preprocessing", "spectral-indices", "vector-quality"]
+    },
+    {
+      "id": "scenario-50",
+      "prompt": "Mask cloud and shadow pixels with the scene classification band in these Sentinel-2 scenes.",
+      "mustInclude": ["satellite-preprocessing", "verification"],
+      "mustExclude": ["spectral-indices", "gdal", "geospatial-frontend"]
+    },
+    {
+      "id": "scenario-51",
+      "prompt": "Apply the BOA_ADD_OFFSET and quantification value to these Sentinel-2 scenes.",
+      "mustInclude": ["satellite-preprocessing", "verification"],
+      "mustExclude": ["spectral-indices", "gdal", "geospatial-frontend"]
+    },
+    {
+      "id": "scenario-52",
+      "prompt": "Compare spectral indices across the two Sentinel-2 dates for the orchard parcels.",
+      "mustInclude": ["spectral-indices", "verification"],
+      "mustExclude": ["gdal", "geospatial-frontend"]
+    },
+    {
+      "id": "scenario-53",
+      "prompt": "Compute the vegetation index change for the orchard parcels from Landsat 8 scenes.",
+      "mustInclude": ["spectral-indices", "verification"],
+      "mustExclude": ["gdal", "geospatial-frontend"]
+    },
+    {
+      "id": "scenario-54",
+      "prompt": "Compute the water index for the reservoir from Sentinel-2 bands.",
+      "mustInclude": ["spectral-indices", "verification"],
+      "mustExclude": ["gdal", "geospatial-frontend"]
+    },
+    {
+      "id": "scenario-55",
+      "prompt": "Compute NDWI for the lake from Sentinel-2 bands.",
+      "mustInclude": ["spectral-indices", "verification"],
+      "mustExclude": ["gdal", "geospatial-frontend"]
+    },
+    {
+      "id": "scenario-56",
+      "prompt": "Compute EVI and SAVI time series from Sentinel-2 for the orchard parcels.",
+      "mustInclude": ["spectral-indices", "verification"],
+      "mustExclude": ["gdal", "geospatial-frontend"]
     }
   ]
 }
