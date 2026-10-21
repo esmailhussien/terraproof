@@ -28,6 +28,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest"]
+semantic = ["fastembed==0.9.0"]
 # Optional: the MCP server (`python -m terraproof.mcp`). The core install stays dependency-light.
 # The official Python SDK's current stable line is 2.x, where FastMCP is renamed MCPServer
 # (https://py.sdk.modelcontextprotocol.io/whats-new/#fastmcp-is-now-mcpserver).

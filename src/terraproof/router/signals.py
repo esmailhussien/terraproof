@@ -61,14 +61,21 @@ _NON_SPECTRAL_INDEX = re.compile(r"\b(?:spatial|database|pandas|dataframe|gist) 
 # Web technologies or map-specific interaction, not a bare map/chart/dashboard.
 _WEB_TECH = re.compile(r"\b(?:maplibre|mapbox|leaflet|deck gl|deckgl|spatial ui)\b")
 _WEB_MAP = re.compile(
-    r"\b(?:(?:web|interactive) (?:\w+ ){0,2}maps?|map dashboard|cartography web)\b"
-    r"|(?:خريط[هه].{0,15}(?:تفاعلي|ويب)|خرائط.{0,15}(?:تفاعلي|ويب))")
+    r"\b(?:(?:web|interactive|slippy) (?:\w+ ){0,2}maps?|map dashboard|cartography web|dashboard.{0,30}\bmap\b)\b"
+    r"|(?:خريط[هه].{0,15}(?:تفاعلي|ويب)|خرائط.{0,15}(?:تفاعلي|ويب)|dashboard.{0,30}خريط[هه])")
 
 # A graph/chart homonym is not enough: require network, algorithm, or topology wording.
 _GRAPH_WORDS = frozenset(tokenize(
     "network networkx centrality nodes edges topology route routing betweenness closeness connectivity"))
 _GRAPH_TEXT = re.compile(r"\b(?:shortest paths?|community detection|graph analysis|network graph)\b")
 _NEGATED_INTENT = re.compile(r"\b(?:no|not|without|never|مش|بدون|ليس|لا)(?:\s+(?:a|an|any|the))?\s*$")
+
+# Symptom-style wording that points to a skill even when exact triggers are absent.
+_VECTOR_QUALITY_WORDS = frozenset(tokenize("validity valid invalid repair records rows duplicate geometry"))
+_CRS_WORDS = frozenset(tokenize("epsg wgs84 projection coordinate system"))
+_STATISTICAL_WORDS = frozenset(tokenize("confidence interval statistical analysis difference between"))
+_NETWORK_WORDS = frozenset(tokenize("travel time nearest facility road network routing connectivity"))
+_GEOZARR_WORDS = frozenset(tokenize("multidimensional cube object storage publish store zarr"))
 
 
 def _affirmed(pattern: re.Pattern, text: str) -> bool:
@@ -170,6 +177,31 @@ def data_signals(profiles: list[dict], terms: list[str], text: str = "") -> tupl
         guard("geospatial-data-discovery", "data already in hand for processing or analysis; no catalog search needed")
     if graph and (not sourcing or processing):
         wording("networkx", 3.0, "network/routing analysis intent; use graph algorithms")
+    if "routing" in term_set and not sourcing:
+        wording("networkx", 4.0, "routing intent")
+
+    # Symptom-style indirect signals (dev-only tuning, kept narrow to avoid over-selection).
+    if _VECTOR_QUALITY_WORDS & term_set and ("join" in term_set or "shapefil" in term_set
+                                              or "record" in term_set or "row" in term_set
+                                              or (("valid" in term_set or "validity" in term_set or "repair" in term_set)
+                                                  and ("polygon" in term_set or "geometry" in term_set))):
+        wording("vector-quality", 4.0, "geometry or record-quality concern")
+    if not rasters and (_CRS_WORDS & term_set) and "reproject" not in term_set:
+        wording("crs-and-units", 5.0, "CRS or projection wording without a raster input")
+    if rasters and ("reproject" in term_set or "reprojection" in term_set) and (_CRS_WORDS & term_set):
+        wording("crs-and-units", 6.0, "raster reprojection to a named CRS")
+    if rasters and "geotiff" in term_set and ("crs" in term_set or "alignment" in term_set):
+        wording("crs-and-units", 5.0, "GeoTIFF CRS/alignment validation wording")
+    if _STATISTICAL_WORDS & term_set and ("confidence" in term_set or "interval" in term_set
+                                          or "statistical" in term_set or "difference" in term_set):
+        wording("statistical-analysis", 6.0, "statistical inference wording")
+    if (not graph and not sourcing and _NETWORK_WORDS & term_set
+            and ("travel" in term_set or "nearest" in term_set
+                 or "road" in term_set or "network" in term_set)):
+        wording("networkx", 4.0, "network routing or accessibility wording")
+    if (_GEOZARR_WORDS & term_set and ("multidimensional" in term_set or "cube" in term_set)
+            and "geozarr" not in term_set and "zarr" not in term_set):
+        wording("geozarr", 8.0, "multidimensional array or cloud storage wording")
     return signals, guarded
 
 

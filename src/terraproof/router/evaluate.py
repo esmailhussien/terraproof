@@ -12,10 +12,22 @@ from . import find_guidance
 from .index import PROCESS_SKILLS, get_index
 
 
-def evaluate_file(path: str | Path, top_k: int = 5) -> dict:
+VALID_MODES = {"ranked", "candidates"}
+
+
+def evaluate_file(
+    path: str | Path,
+    top_k: int = 5,
+    mode: str = "ranked",
+    semantic: bool = False,
+) -> dict:
     """Mean per-item recall (empty expected = 1), forbidden-skill occurrences."""
     if isinstance(top_k, bool) or not isinstance(top_k, int) or top_k < 0:
         raise ValueError("top_k must be a non-negative integer")
+    if mode not in VALID_MODES:
+        raise ValueError("mode must be ranked or candidates")
+    if not isinstance(semantic, bool):
+        raise ValueError("semantic must be a boolean")
     recalls = []
     ranked_sizes = []
     languages: dict[str, list[float]] = {}
@@ -41,7 +53,13 @@ def evaluate_file(path: str | Path, top_k: int = 5) -> dict:
                         raise ValueError(f"{key} must list registered non-process skills")
                 if set(item["expected"]) & set(item.get("must_not", [])):
                     raise ValueError("expected and must_not must not overlap")
-                result = find_guidance(item.get("prompt"), datasets=item.get("datasets"), top_k=top_k)
+                result = find_guidance(
+                    item.get("prompt"),
+                    datasets=item.get("datasets"),
+                    top_k=top_k,
+                    mode=mode,
+                    semantic=semantic,
+                )
             except (ValueError, TypeError) as exc:
                 raise ValueError(f"{path}:{line_number}: {exc}") from exc
             ids.add(item["id"])
@@ -59,7 +77,8 @@ def evaluate_file(path: str | Path, top_k: int = 5) -> dict:
                                  "top_k": names})
     if not recalls:
         raise ValueError(f"{path}: no evaluation items")
-    return {"items": len(recalls), "top_k": top_k, "mean_recall_at_k": sum(recalls) / len(recalls),
+    return {"items": len(recalls), "top_k": top_k, "mode": mode, "semantic": semantic,
+            "mean_recall_at_k": sum(recalls) / len(recalls),
             "mean_ranked_skills": sum(ranked_sizes) / len(ranked_sizes),
             "must_not_violations": violations,
             "per_language_recall": {lang: sum(values) / len(values) for lang, values in sorted(languages.items())},
@@ -77,11 +96,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("file", metavar="FILE")
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--min-recall", type=float, default=0.9)
+    parser.add_argument("--mode", choices=sorted(VALID_MODES), default="ranked")
+    parser.add_argument("--semantic", action="store_true",
+                        help="Enable the local semantic retrieval pass (or set TERRAPROOF_SEMANTIC=1).")
     args = parser.parse_args(argv)
     try:
         if not math.isfinite(args.min_recall) or not 0 <= args.min_recall <= 1:
             raise ValueError("min-recall must be between 0 and 1")
-        metrics = evaluate_file(args.file, top_k=args.top_k)
+        metrics = evaluate_file(args.file, top_k=args.top_k, mode=args.mode, semantic=args.semantic)
     except (OSError, ValueError, TypeError) as exc:
         print(f"terraproof.router.evaluate: error: {exc}", file=sys.stderr)
         return 1

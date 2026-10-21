@@ -1,0 +1,45 @@
+{
+  "skill": "time-series-and-change",
+  "tasks": [
+    {
+      "id": "ts-monthly-ndvi-composite-counts",
+      "prompt": "Make monthly NDVI composites for this AOI from the cloud-masked Sentinel-2 reflectance stack, and tell me how reliable each month is.",
+      "inputs": "A small aligned stack of decoded, cloud-masked red/NIR reflectance (NaN = invalid) for several dates across two months, plus STAC Items with datetimes. Include a pixel with three valid dates whose per-band medians come from different dates (red/NIR 0.05/0.40, 0.10/0.20, 0.04/0.30), a month with only one valid date, an all-invalid pixel and a date whose red is masked but NIR is valid. Independent expected values: median of per-date NDVI 0.765, NDVI of per-band medians 0.714, valid counts per month.",
+      "acceptance": [
+        "Use the intersection of red and NIR validity per date; a date with only one valid band does not count.",
+        "Produce a valid-observation count per pixel and month and mask months below a declared minimum count instead of reporting them.",
+        "Name the composite rule; if both are produced, the control pixel gives 0.765 (median of NDVI) and 0.714 (NDVI of medians) within 0.001, and the response explains why they differ and that per-band medians can mix dates.",
+        "All-invalid pixels are nodata, not 0; outputs share one grid and declare nodata.",
+        "Run python -m terraproof check ndvi_2024-06.tif ndvi_2024-07.tif --expect index and python -m terraproof check source-item.json; expected_checks applies to these outputs and the Items, whose datetimes lie in the declared months (rs.temporal_scope as added in Phase 4)."
+      ],
+      "expected_checks": { "raster.grid_alignment": "pass", "raster.nodata_declared": "pass", "rs.index_range": "pass", "rs.temporal_scope": "pass" },
+      "pitfall": "A composite of indices and an index of composites are treated as interchangeable, or months with one cloudy-edge observation are reported with the same confidence as well-observed months."
+    },
+    {
+      "id": "ts-phenology-matched-difference",
+      "prompt": "Detect vegetation loss between 2023 and 2024 with an NDVI difference. Here are the scenes I downloaded.",
+      "inputs": "STAC Items and decoded reflectance for an April 2023 scene, a July 2023 scene and a July 2024 scene over cropland and forest, an aligned SCL raster for each date, and a declared analysis window of June-August. Seed residual cloud (SCL 8/9) and cloud shadow (SCL 3) pixels in the 2024 scene and a phenology-only NDVI drop when April is compared with July. Independent reference polygons of true clearing and stable fields.",
+      "acceptance": [
+        "Report that the April 2023 Item falls outside the declared June-August window and exclude it rather than editing its datetime; expected_checks rs.temporal_scope applies to python -m terraproof check on the originally supplied Item set (an intentional input preflight).",
+        "Compare anniversary-matched dates (July 2023 vs July 2024) using the intersection of both dates' valid masks; SCL 3, 8, 9 and 10 pixels are nodata in the difference output (rs.cloud_mask_applied applies to the corrected difference raster with its aligned SCL).",
+        "Derive the change threshold from the reference polygons or a documented histogram analysis, report sensitivity, and do not present a universal NDVI threshold.",
+        "State that a difference measures signal change, not cause, and that the change map still needs a stratified accuracy assessment."
+      ],
+      "expected_checks": { "rs.temporal_scope": "fail", "rs.cloud_mask_applied": "pass", "raster.nodata_declared": "pass" },
+      "pitfall": "A spring-to-summer phenology difference or unmasked cloud is mapped as vegetation loss with an arbitrary threshold."
+    },
+    {
+      "id": "ts-post-classification-change-validation",
+      "prompt": "I classified land cover for 2015 and 2024 separately; both maps are about 90% accurate. Subtract them to get deforestation area and its accuracy.",
+      "inputs": "Two independently classified rasters on one grid (equal-area CRS), their single-date accuracy reports, a derived from-to change raster with rare loss/gain classes, and a stratified random reference sample (points with labels for both dates) drawn from the change-map classes with per-stratum mapped areas. Seed spurious change caused by classification errors in stable areas.",
+      "acceptance": [
+        "Explain that single-date accuracies do not describe change accuracy and that errors in either map appear as false change.",
+        "Assess the change map itself with the stratified sample: report the area-proportion error matrix, overall/user's/producer's accuracy with 95% CIs and area-adjusted loss and gain areas with 95% CIs, distinguishing them from mapped pixel-count areas.",
+        "Verify that every change stratum has reference units and that stratum weights come from the change map's mapped areas.",
+        "Run python -m terraproof check change_map.tif and the Phase 4 accuracy checks on the sample and estimates; expected_checks applies to the change map and the corrected estimates."
+      ],
+      "expected_checks": { "raster.nodata_declared": "pass", "crs.defined": "pass", "accuracy.sample_design": "pass", "accuracy.estimates": "pass" },
+      "pitfall": "Deforestation area is reported as the pixel count of a map difference, with accuracy inferred from the two single-date accuracies."
+    }
+  ]
+}

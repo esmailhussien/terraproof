@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from terraproof.checks import crs, geometry, raster, rs, scope, stac
+from terraproof.checks import accuracy, crs, geometry, raster, rs, rs_processing, sar, scope, stac
 from terraproof.checks.base import STATUSES, CheckResult, result
 
 __all__ = ["STATUSES", "CheckResult", "result", "run_checks"]
@@ -16,6 +16,16 @@ def run_checks(
     resampling: str | None = None,
     categorical: bool = False,
     expect: str | None = None,
+    reference_input: dict | None = None,
+    encoding: str | None = None,
+    qa_path: str | None = None,
+    qa_kind: str | None = None,
+    time_range: tuple[str, str] | list | None = None,
+    sar_expect: str | None = None,
+    accuracy_samples: dict | None = None,
+    class_areas=None,
+    min_per_class: int | None = None,
+    estimates_requested: bool = False,
 ) -> list[CheckResult]:
     """Run every check that applies to the inspected inputs, in a fixed order."""
     vectors = [d for d in inputs if d["kind"] == "vector"]
@@ -50,4 +60,29 @@ def run_checks(
 
     for dataset in stac_items:
         results += stac.check_provenance(dataset)
+
+    # Processing-level checks (§3.3). Each one is emitted only when its own input was supplied:
+    # a check that applies but cannot run reports not-run itself rather than being omitted.
+    if reference_input is not None or encoding is not None:
+        for dataset in rasters:
+            results += rs_processing.check_scale_applied_once(dataset, reference_input, encoding)
+    if qa_path is not None or qa_kind is not None:
+        for dataset in rasters:
+            results += rs_processing.check_cloud_mask_applied(dataset, qa_path, qa_kind)
+    if time_range is not None:
+        results += rs_processing.check_temporal_scope(stac_items, time_range)
+
+    if sar_expect is not None:
+        results += sar.check_value_domain(rasters, sar_expect)
+        results += sar.check_geocoded(rasters)
+
+    if accuracy_samples is not None:
+        design_kwargs = {} if min_per_class is None else {"min_per_class": min_per_class}
+        results += accuracy.check_sample_design(
+            accuracy_samples,
+            class_areas=class_areas,
+            estimates_requested=estimates_requested,
+            **design_kwargs,
+        )
+        results += accuracy.check_estimates(accuracy_samples, class_areas=class_areas)
     return results

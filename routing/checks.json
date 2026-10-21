@@ -56,6 +56,34 @@
     "stac.provenance": {
       "family": "stac",
       "description": "A STAC Item records a time and a projection code."
+    },
+    "rs.scale_applied_once": {
+      "family": "rs",
+      "description": "Sampled output pixels equal the input DN through the declared calibration (raster scale/offset metadata, or a product encoding such as s2-l2a or landsat-c2-l2) exactly once; raw DN or a twice-applied calibration fails. Comparison is on a fixed stride and says nothing about other processing steps."
+    },
+    "rs.cloud_mask_applied": {
+      "family": "rs",
+      "description": "Pixels flagged as cloud or shadow by an aligned QA raster (Sentinel-2 SCL classes 3, 8, 9, 10; Landsat QA_PIXEL bits 1-4) are nodata or NaN in the output; unaligned grids are not-run."
+    },
+    "rs.temporal_scope": {
+      "family": "rs",
+      "description": "Every STAC item datetime, or the whole start/end interval, falls inside a declared time range; items without a usable acquisition time are not-run."
+    },
+    "sar.value_domain": {
+      "family": "sar",
+      "description": "Sampled backscatter values lie in the domain declared by the expected scale (sigma0-db within [-50, 15] dB; sigma0-linear non-negative with p99 <= 5). Flags decibel/linear confusion as one possible cause; not a calibration check."
+    },
+    "sar.geocoded": {
+      "family": "sar",
+      "description": "A raster carries both a CRS and a non-identity geotransform; GCP-only geometry or an identity transform fails as not geocoded."
+    },
+    "accuracy.sample_design": {
+      "family": "accuracy",
+      "description": "Every map class in the reference-sample CSV has at least min_per_class samples (default 50, a configurable rule of thumb); missing class areas when area estimates are requested are warned."
+    },
+    "accuracy.estimates": {
+      "family": "accuracy",
+      "description": "Confusion matrix, user's and area-weighted producer's accuracy, overall accuracy, and the stratified area-adjusted area of each reference class with 95% confidence intervals (Olofsson et al. 2014, eqs. 5-6 and 10-12); not-run when map-class areas are missing."
     }
   }
 }

@@ -119,6 +119,8 @@ ARABIC_TERMS: dict[str, str] = {
     "تحليل التباين": "anova",
     "إحصاءات": "statistics",
     "إحصاء": "statistics statistical",
+    "إحصائي": "statistical",
+    "مجموعتين": "two groups",
     # Unit and proximity wording for the metric-wording rule.
     "كم": "kilometre km",
     "كم مربع": "square kilometres area",
@@ -130,6 +132,16 @@ ARABIC_TERMS: dict[str, str] = {
     "في نطاق": "within distance proximity",
     "على بعد": "away distance proximity",
     "حوالين": "near proximity around",
+    # Statistical and quality wording.
+    "سجلات": "records",
+    "صفوف": "rows",
+    "فاصل ثقة": "confidence interval",
+    "أقرب": "nearest",
+    "وقت الوصول": "travel time",
+    "أبعاد": "multidimensional",
+    "مكعب": "cube",
+    "الهيستوجرام": "histogram",
+    "قيم": "values",
     # Scientific publication figures.
     "شكل": "figure plot chart",
     "لوحة متعددة": "multi panel figure",

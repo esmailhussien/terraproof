@@ -10,6 +10,7 @@ This file tracks upstream repositories, specifications, and references evaluated
 |---|---|---|
 | Agent Skills specification | Skill format | Research |
 | Terraproof Native | CRS/units, vector quality, raster processing, satellite preprocessing, spectral indices | Authored for Terraproof by Geova, MIT; no upstream source: [crs-and-units](../skills/crs-and-units/SKILL.md), [vector-quality](../skills/vector-quality/SKILL.md), [raster-processing](../skills/raster-processing/SKILL.md), [satellite-preprocessing](../skills/satellite-preprocessing/SKILL.md), [spectral-indices](../skills/spectral-indices/SKILL.md). Primary references are documented in each skill; no upstream material is vendored. |
+| Terraproof Native (Phase 4) | Time series and change, SAR basics, accuracy assessment, STAC and cloud access | Authored for Terraproof by Geova, MIT; no upstream source: [time-series-and-change](../skills/time-series-and-change/SKILL.md), [sar-basics](../skills/sar-basics/SKILL.md), [accuracy-assessment](../skills/accuracy-assessment/SKILL.md), [stac-and-cloud-access](../skills/stac-and-cloud-access/SKILL.md). Primary references (ESA Sentinel-1 documentation, STAC specifications, GDAL and library documentation, peer-reviewed methods papers) are cited in each skill's `## Sources`; no upstream material is vendored. |
 | [obra/superpowers](https://github.com/obra/superpowers) | Planning, debugging, verification | Imported (`systematic-debugging`, `verification` (upstream name `verification-before-completion`), `brainstorming`, `writing-plans`) |
 | [arjunprabhulal/agent-skills](https://github.com/arjunprabhulal/agent-skills) | Quality Assurance, Testing, TDD | Imported then removed in 0.2.0 (off-scope): `unit-testing`, `integration-testing`, `browser-testing`, `test-driven-development` |
 | [vercel-labs/open-agents](https://github.com/vercel-labs/open-agents) | Frontend Design & UI Quality | Imported then removed in 0.2.0 (off-scope): `frontend-design` |
@@ -217,6 +218,14 @@ This file tracks upstream repositories, specifications, and references evaluated
 - **License:** MIT
 - **Local AgentLayer Path:** [skills/geospatial-data-discovery/](../skills/geospatial-data-discovery/) (`SKILL.md`, `UPSTREAM.md`)
 - **References:** OGC STAC/COG, OpenStreetMap (ODbL), Overture Maps, Copernicus Open Access
+
+### time-series-and-change, sar-basics, accuracy-assessment, stac-and-cloud-access (Terraproof Native, Phase 4)
+
+- **Author:** Geova (Terraproof)
+- **License:** MIT (see [LICENSE](../LICENSE))
+- **Local Paths:** [skills/time-series-and-change/](../skills/time-series-and-change/), [skills/sar-basics/](../skills/sar-basics/), [skills/accuracy-assessment/](../skills/accuracy-assessment/), [skills/stac-and-cloud-access/](../skills/stac-and-cloud-access/) (each `SKILL.md`, `references/`, `UPSTREAM.md`); benchmark specs in [evals/tasks/](../evals/tasks/)
+- **Upstream:** none; no third-party text or code copied.
+- **Primary references:** ESA SentiWiki Sentinel-1 pages and ESA-EOPG-CSCOP-TN-0002 (radiometric calibration); STAC Item, Item Search, Query/Filter and extension specifications; GDAL, rasterio, pystac-client, odc-stac, stackstac, xarray and Planetary Computer SDK documentation/source; Olofsson et al. 2014 and 2013, Stehman 2014, Stehman & Czaplewski 1998, Stehman & Foody 2019, FAO 2016; Verbesselt et al. 2010, Zhu & Woodcock 2014, Kennedy et al. 2010, Zhu 2017, Singh 1989; Small 2011, Lee 1980; ASF HyP3 RTC product guide. The `mapaccuracy` R package (by H. Costa) was consulted only to cross-check formulas; none of its code is included.
 
 ---
 

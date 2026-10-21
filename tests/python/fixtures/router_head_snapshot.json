@@ -1,0 +1,1995 @@
+﻿{
+ "head": "1cac039",
+ "prompts": [
+  {
+   "datasets": [
+    {
+     "band_count": 4,
+     "bands": [
+      {
+       "dtype": "uint16",
+       "nodata": 0,
+       "offset": -0.2,
+       "scale": 2.75e-05
+      }
+     ],
+     "crs": {
+      "epsg": 32636,
+      "horizontal_kind": "projected",
+      "is_geographic": false,
+      "is_projected": true
+     },
+     "kind": "raster"
+    }
+   ],
+   "output": {
+    "datasets": [
+     {
+      "kind": "raster",
+      "path": null,
+      "summary": "4 bands; uint16; EPSG:32636"
+     }
+    ],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "en",
+     "normalized": "compute ndvi from this sentinel 2 scl item",
+     "text": "Compute NDVI from this Sentinel-2 SCL item"
+    },
+    "skills": [
+     {
+      "name": "satellite-preprocessing",
+      "reasons": [
+       "BM25 verify-with-terraproof (section weight 1; item=4.738547, scl=4.480952, sentinel=1.790934) +11.010433",
+       "BM25 mask-sentinel-2-scl-cloud-and-shadow-classes (section weight 0.25; scl=1.433942, sentinel=0.599063) +2.033005",
+       "Dataset: integer raster has non-identity scale/offset; review physical-value decoding (not proof of satellite origin) +11.000000",
+       "Wording: decoding, masking or reflectance preparation intent +3.000000"
+      ],
+      "score": 27.043438,
+      "sections": [
+       {
+        "excerpt": "Use an installed Python core and real local outputs/STAC Items: ```bash python -m terraproof check sr_red.tif sr_nir.tif --expect reflectance --format md --lang en --out sr-report.md python -m terraproof check scl_aligned.tif --categorical --resampling nearest python -m terraproof check source-item.json ``` `rs.reflectance_range` checks sampled statistics after raster scale/offset metadata is applied. It is only a coarse plausibility test, not proof of the correct processing …",
+        "id": "verify-with-terraproof",
+        "score": 11.010433,
+        "source": "SKILL.md#verify-with-terraproof",
+        "title": "Verify with Terraproof"
+       },
+       {
+        "excerpt": "SCL is a classification, not a probability band. ESA's class values are [S4]: | SCL | Meaning | Example policy | |---|---|---| | 0 | No data | Exclude | | 1 | Saturated or defective | Exclude | | 2 | Cast shadows; historically dark features/shadows | Review baseline; exclude in the conservative example | | 3 | Cloud shadows | Exclude | | 4 | Vegetation | Retain if task-relevant | | 5 | Not vegetated | Retain if task-relevant | | 6 | Water | Retain for water tasks; not automat…",
+        "id": "mask-sentinel-2-scl-cloud-and-shadow-classes",
+        "score": 8.13202,
+        "source": "SKILL.md#mask-sentinel-2-scl-cloud-and-shadow-classes",
+        "title": "Mask Sentinel-2 SCL cloud and shadow classes"
+       }
+      ]
+     },
+     {
+      "name": "geomaster",
+      "reasons": [
+       "BM25 remote-sensing (section weight 1; item=3.209426, ndvi=3.143442, scl=3.400243, sentinel=2.657582) +12.410694",
+       "BM25 data-sources (section weight 0.25; item=1.014181, ndvi=0.249572, sentinel=0.688291) +1.952044",
+       "Exact trigger 'sentinel' +2.000000",
+       "Exact trigger 'ndvi' +2.000000"
+      ],
+      "score": 18.362738,
+      "sections": [
+       {
+        "excerpt": "…y Features | |-----------|----------|------------|---------|--------------| | **Sentinel-2** | ESA | 10-60m | 5 days | 13 bands, free access | | **Landsat 8/9** | USGS | 30m | 16 days | Historical archive (1972+) | | **MODIS** | NASA | 250-1000m | Daily | Vegetation indices | | **PlanetScope** | Planet | 3m | Daily | Commercial, high-res | | **WorldView** | Maxar | 0.3m | Variable | Very high resolution | | **Sentinel-1** | ESA | 5-40m | 6-12 days | SAR, all-weather | | **Env…",
+        "id": "remote-sensing",
+        "score": 12.410694,
+        "source": "references/remote-sensing.md",
+        "title": "Remote Sensing Reference"
+       },
+       {
+        "excerpt": "…y, vector data, and APIs for geospatial analysis. ## Satellite Data Sources ### Sentinel Missions (ESA) | Platform | Resolution | Coverage | Access | |----------|------------|----------|--------| | **Sentinel-2** | 10-60m | Global | https://scihub.copernicus.eu/ | | **Sentinel-1** | 5-40m (SAR) | Global | https://scihub.copernicus.eu/ | | **Sentinel-3** | 300m-1km | Global | https://scihub.copernicus.eu/ | | **Sentinel-5P** | Various | Global | https://scihub.copernicus.eu/ |…",
+        "id": "data-sources",
+        "score": 7.808176,
+        "source": "references/data-sources.md",
+        "title": "Geospatial Data Sources"
+       }
+      ]
+     },
+     {
+      "name": "spectral-indices",
+      "reasons": [
+       "BM25 ndvi-vegetation-contrast (section weight 1; ndvi=3.771674, sentinel=2.033765) +5.805439",
+       "BM25 map-spectral-roles-to-the-sensor (section weight 0.25; ndvi=0.734312, sentinel=0.716700) +1.451012",
+       "Exact trigger 'ndvi' +2.000000",
+       "Dataset: scaled-integer reflectance raster with index wording; compute indices from decoded reflectance +8.000000"
+      ],
+      "score": 17.256451,
+      "sections": [
+       {
+        "excerpt": "Use physical, masked red and NIR reflectance on the same grid [S3]: ```text NDVI = (N - R) / (N + R) Sentinel-2: (B08 - B04) / (B08 + B04) Landsat 8/9: (SR_B5 - SR_B4) / (SR_B5 + SR_B4) ``` For nonnegative inputs with nonzero sum, NDVI lies in **[-1, 1]**. High values indicate stronger NIR/red contrast, not a universal biomass or plant-health measurement. NDVI can saturate in dense vegetation and responds to soil, phenology, water, shadow and atmosphere. Do not apply universa…",
+        "id": "ndvi-vegetation-contrast",
+        "score": 5.805439,
+        "source": "SKILL.md#ndvi-vegetation-contrast",
+        "title": "NDVI: vegetation contrast"
+       },
+       {
+        "excerpt": "…fiers, not positions in an arbitrary raster stack. The following mapping is for Sentinel-2 MSI and Landsat **8/9 OLI**, not older Landsat sensors [S1, S2]: | Spectral role | Sentinel-2 | Landsat 8/9 surface reflectance | |---|---|---| | Blue (`B`) | B02 | SR_B2 | | Green (`G`) | B03 | SR_B3 | | Red (`R`) | B04 | SR_B4 | | Broad NIR (`N`) | B08 | SR_B5 (OLI NIR) | | Narrow NIR alternative | B8A | No interchangeable extra NIR band | | SWIR1 (`S1`) | B11 | SR_B6 | | SWIR2 (`S2`)…",
+        "id": "map-spectral-roles-to-the-sensor",
+        "score": 5.804048,
+        "source": "SKILL.md#map-spectral-roles-to-the-sensor",
+        "title": "Map spectral roles to the sensor"
+       }
+      ]
+     },
+     {
+      "name": "raster-processing",
+      "reasons": [
+       "BM25 select-resampling-from-the-data-meaning (section weight 1; scl=3.666861) +3.666861",
+       "BM25 distinguish-nodata-values-masks-and-valid-zero (section weight 0.25; sentinel=0.458839) +0.458839",
+       "Dataset: raster input; inspect masks, nodata, grid and dtype +6.000000"
+      ],
+      "score": 10.1257,
+      "sections": [
+       {
+        "excerpt": "…uitable starting choice | What to verify | |---|---|---| | Categorical classes, SCL, bit-packed QA | Nearest; mode for majority-class aggregation | Codes stay in the permitted set; mode must not be used to decode/recombine QA bits | | Continuous reflectance/elevation | Bilinear or cubic for interpolation | Cubic may overshoot; inspect range and nodata-edge behavior | | Continuous data aggregated to coarser cells | Average when a weighted mean is appropriate | A mean is not a …",
+        "id": "select-resampling-from-the-data-meaning",
+        "score": 3.666861,
+        "source": "SKILL.md#select-resampling-from-the-data-meaning",
+        "title": "Select resampling from the data meaning"
+       },
+       {
+        "excerpt": "….getmaskarray(band) & np.isfinite(values) ``` When writing, use a representable sentinel outside the valid domain, an explicit mask, or floating NaN with declared nodata as appropriate for downstream readers. Changing the nodata label does not replace existing pixels. Reopen and compare valid-pixel counts and the spatial mask, not just the metadata. Never fill missing pixels with zero merely to simplify arithmetic.",
+        "id": "distinguish-nodata-values-masks-and-valid-zero",
+        "score": 1.835355,
+        "source": "SKILL.md#distinguish-nodata-values-masks-and-valid-zero",
+        "title": "Distinguish nodata values, masks, and valid zero"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "Compute NDVI from this Sentinel-2 SCL item",
+   "slug": "ndvi"
+  },
+  {
+   "datasets": null,
+   "output": {
+    "datasets": [],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "en",
+     "normalized": "compute ndvi",
+     "text": "Compute NDVI"
+    },
+    "skills": [
+     {
+      "name": "spectral-indices",
+      "reasons": [
+       "BM25 ndvi-vegetation-contrast (section weight 1; ndvi=3.771674) +3.771674",
+       "BM25 divide-safely-and-write-explicit-nodata (section weight 0.25; ndvi=0.909137) +0.909137",
+       "Exact trigger 'ndvi' +2.000000"
+      ],
+      "score": 6.680811,
+      "sections": [
+       {
+        "excerpt": "Use physical, masked red and NIR reflectance on the same grid [S3]: ```text NDVI = (N - R) / (N + R) Sentinel-2: (B08 - B04) / (B08 + B04) Landsat 8/9: (SR_B5 - SR_B4) / (SR_B5 + SR_B4) ``` For nonnegative inputs with nonzero sum, NDVI lies in **[-1, 1]**. High values indicate stronger NIR/red contrast, not a universal biomass or plant-health measurement. NDVI can saturate in dense vegetation and responds to soil, phenology, water, shadow and atmosphere. Do not apply universa…",
+        "id": "ndvi-vegetation-contrast",
+        "score": 3.771674,
+        "source": "SKILL.md#ndvi-vegetation-contrast",
+        "title": "NDVI: vegetation contrast"
+       },
+       {
+        "excerpt": "…out=out, where=valid) out[~np.isfinite(out)] = np.nan return out ``` Standalone NDVI read/write example for **already decoded** single-band reflectance files with identity scale/offset (small rasters; use windows for large scenes). The helper above can be used for other formulas: ```python import numpy as np import rasterio with rasterio.open(\"sr_red.tif\") as red_src, rasterio.open(\"sr_nir.tif\") as nir_src: if red_src.crs is None or red_src.crs != nir_src.crs: raise ValueErro…",
+        "id": "divide-safely-and-write-explicit-nodata",
+        "score": 3.636549,
+        "source": "SKILL.md#divide-safely-and-write-explicit-nodata",
+        "title": "Divide safely and write explicit nodata"
+       }
+      ]
+     },
+     {
+      "name": "geomaster",
+      "reasons": [
+       "BM25 quick-start (section weight 1; ndvi=3.784526) +3.784526",
+       "BM25 common-operations (section weight 0.25; ndvi=0.847586) +0.847586",
+       "Exact trigger 'ndvi' +2.000000"
+      ],
+      "score": 6.632112,
+      "sections": [
+       {
+        "excerpt": "### NDVI from Sentinel-2 ```python import rasterio import numpy as np with rasterio.open('sentinel2.tif') as src: red = src.read(4).astype(float) # B04 nir = src.read(8).astype(float) # B08 ndvi = (nir - red) / (nir + red + 1e-8) ndvi = np.nan_to_num(ndvi, nan=0) profile = src.profile profile.update(count=1, dtype=rasterio.float32) with rasterio.open('ndvi.tif', 'w', **profile) as dst: dst.write(ndvi.astype(rasterio.float32), 1) ``` ### Spatial Analysis with GeoPandas ```pyth…",
+        "id": "quick-start",
+        "score": 3.784526,
+        "source": "SKILL.md#quick-start",
+        "title": "Quick Start"
+       },
+       {
+        "excerpt": "### Spectral Indices ```python def calculate_indices(image_path): \"\"\"NDVI, EVI, SAVI, NDWI from Sentinel-2.\"\"\" with rasterio.open(image_path) as src: B02, B03, B04, B08, B11 = [src.read(i).astype(float) for i in [1,2,3,4,5]] ndvi = (B08 - B04) / (B08 + B04 + 1e-8) evi = 2.5 * (B08 - B04) / (B08 + 6*B04 - 7.5*B02 + 1) savi = ((B08 - B04) / (B08 + B04 + 0.5)) * 1.5 ndwi = (B03 - B08) / (B03 + B08 + 1e-8) return {'NDVI': ndvi, 'EVI': evi, 'SAVI': savi, 'NDWI': ndwi} ``` ### Vect…",
+        "id": "common-operations",
+        "score": 3.390343,
+        "source": "SKILL.md#common-operations",
+        "title": "Common Operations"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "Compute NDVI",
+   "slug": "ndvi-plain"
+  },
+  {
+   "datasets": [
+    {
+     "crs": {
+      "epsg": 4326,
+      "horizontal_kind": "geographic",
+      "is_geographic": true,
+      "is_projected": false
+     },
+     "feature_count": 4800,
+     "geometry_types": [
+      "Polygon",
+      "Point"
+     ],
+     "kind": "vector"
+    }
+   ],
+   "output": {
+    "datasets": [
+     {
+      "kind": "vector",
+      "path": null,
+      "summary": "4800 features; Polygon, Point; EPSG:4326"
+     }
+    ],
+    "process": [
+     "brainstorming",
+     "writing-plans",
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "en",
+     "normalized": "create a 500 m buffer around the parcels",
+     "text": "Create a 500 m buffer around the parcels"
+    },
+    "skills": [
+     {
+      "name": "crs-and-units",
+      "reasons": [
+       "BM25 compute-area-length-and-buffers-with-honest-units (section weight 1; buffer=3.227109) +3.227109",
+       "BM25 verify-with-terraproof (section weight 0.25; buffer=0.740210) +0.740210",
+       "Dataset: geographic horizontal CRS with metric wording; do not measure in degrees +12.000000"
+      ],
+      "score": 15.967319,
+      "sections": [
+       {
+        "excerpt": "For planar GeoPandas/Shapely operations, length/distance/buffer parameters use CRS units and area uses squared CRS units. Transform all operands into the chosen CRS before analysis. In a foot-based CRS, convert requested metric tolerances before buffering; for areas, square the linear conversion factor. Do not label an area as square metres just because the CRS is projected. For a compact AOI with an already reviewed metre-based `measurement_crs`: ```python import geopandas a…",
+        "id": "compute-area-length-and-buffers-with-honest-units",
+        "score": 3.227109,
+        "source": "SKILL.md#compute-area-length-and-buffers-with-honest-units",
+        "title": "Compute area, length, and buffers with honest units"
+       },
+       {
+        "excerpt": "…eration distance python -m terraproof check parcels_geographic.gpkg --operation buffer ``` `crs.defined` checks presence, not whether the label is true. `crs.consistent` compares multiple positional datasets with the first; it does not reproject them. `crs.metric_operation` fails for a geographic or geocentric CRS with the declared operation. It passes only a projected horizontal CRS (including a compound CRS whose horizontal part is projected) in metre- **or foot-based** uni…",
+        "id": "verify-with-terraproof",
+        "score": 2.960841,
+        "source": "SKILL.md#verify-with-terraproof",
+        "title": "Verify with Terraproof"
+       }
+      ]
+     },
+     {
+      "name": "geopandas",
+      "reasons": [
+       "BM25 safety-and-privacy-contract (section weight 1; buffer=2.688427, parcel=3.327465) +6.015891",
+       "BM25 spatial-analysis (section weight 0.25; 500=0.358218, buffer=0.344234, parcel=0.338115) +1.040567",
+       "Exact trigger 'buffer' +2.000000",
+       "Dataset: vector input; use vector geometry/attribute operations +6.000000"
+      ],
+      "score": 15.056458,
+      "sections": [
+       {
+        "excerpt": "- Treat exact coordinates, addresses, parcel boundaries, trajectories, and small-area joins as sensitive. Default reports to counts, categories, coarse extents, and redacted identifiers. Generalize before publication. - Never automatically load a URL, cloud URI, GDAL `/vsi*` path, archive, or geocode an address. Obtain explicit approval, validate provenance and hashes, then stage an unpacked local file in an isolated workspace. - GDAL/OGR drivers, GEOS, PROJ, pyogrio, Shapely…",
+        "id": "safety-and-privacy-contract",
+        "score": 6.015891,
+        "source": "SKILL.md#safety-and-privacy-contract",
+        "title": "Safety and privacy contract"
+       },
+       {
+        "excerpt": "… CRS units: ```python joined = left.sjoin( right, predicate=\"dwithin\", distance=500, ) ``` `on_attribute=\"category\"` (or a list/tuple) adds equality on columns present in both frames after the spatial predicate. It is a restriction, not a substitute for checking nulls, normalization, and duplicates in the attribute. ### Geometry and index retention - `how=\"left\"` keeps left keys and only left geometry. - `how=\"right\"` keeps right keys and only right geometry. - `how=\"inner\"` …",
+        "id": "spatial-analysis",
+        "score": 4.162268,
+        "source": "references/spatial-analysis.md",
+        "title": "Spatial joins, overlay, clip, and dissolve"
+       }
+      ]
+     },
+     {
+      "name": "vector-quality",
+      "reasons": [
+       "BM25 verify-with-terraproof (section weight 1; parcel=4.437786) +4.437786",
+       "BM25 check-validity-before-choosing-a-repair (section weight 0.25; buffer=0.413818, parcel=0.668132) +1.081950",
+       "Dataset: vector input; audit geometry validity and record preservation +5.000000"
+      ],
+      "score": 10.519736,
+      "sections": [
+       {
+        "excerpt": "…hon core and substitute real local datasets: ```bash python -m terraproof check parcels.gpkg --format md --lang en --out vector-input-report.md python -m terraproof check repaired.gpkg --compare-to parcels.gpkg python -m terraproof check joined.gpkg --compare-to repaired.gpkg ``` `geometry.valid` fails for invalid geometries. `geometry.non_empty` **warns** on nulls or empties. `geometry.type_consistent` warns across type families, but Polygon plus MultiPolygon is considered c…",
+        "id": "verify-with-terraproof",
+        "score": 4.437786,
+        "source": "SKILL.md#verify-with-terraproof",
+        "title": "Verify with Terraproof"
+       },
+       {
+        "excerpt": "…s. Removing them is a scope decision, not a neutral cleanup. Do not substitute `buffer(0)` as a universal repair or assume it preserves the original region. Minimal repair audit (default `make_valid` avoids version-specific method options): ```python import geopandas as gpd import shapely original = gpd.read_file(\"parcels.gpkg\", engine=\"pyogrio\") repaired = original.copy() needs_repair = original.geometry.notna() & ~original.geometry.is_valid repaired.loc[needs_repair, origin…",
+        "id": "check-validity-before-choosing-a-repair",
+        "score": 4.327799,
+        "source": "SKILL.md#check-validity-before-choosing-a-repair",
+        "title": "Check validity before choosing a repair"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "Create a 500 m buffer around the parcels",
+   "slug": "buffer-vector"
+  },
+  {
+   "datasets": [
+    {
+     "crs": {
+      "epsg": 4326,
+      "horizontal_kind": "geographic",
+      "is_geographic": true,
+      "is_projected": false
+     },
+     "feature_count": 4800,
+     "geometry_types": [
+      "Polygon",
+      "Point"
+     ],
+     "kind": "vector"
+    }
+   ],
+   "output": {
+    "datasets": [
+     {
+      "kind": "vector",
+      "path": null,
+      "summary": "4800 features; Polygon, Point; EPSG:4326"
+     }
+    ],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "en",
+     "normalized": "buffer the coastline 2 km",
+     "text": "Buffer the coastline 2 km"
+    },
+    "skills": [
+     {
+      "name": "crs-and-units",
+      "reasons": [
+       "BM25 compute-area-length-and-buffers-with-honest-units (section weight 1; buffer=3.227109) +3.227109",
+       "BM25 verify-with-terraproof (section weight 0.25; buffer=0.740210) +0.740210",
+       "Dataset: geographic horizontal CRS with metric wording; do not measure in degrees +12.000000"
+      ],
+      "score": 15.967319,
+      "sections": [
+       {
+        "excerpt": "For planar GeoPandas/Shapely operations, length/distance/buffer parameters use CRS units and area uses squared CRS units. Transform all operands into the chosen CRS before analysis. In a foot-based CRS, convert requested metric tolerances before buffering; for areas, square the linear conversion factor. Do not label an area as square metres just because the CRS is projected. For a compact AOI with an already reviewed metre-based `measurement_crs`: ```python import geopandas a…",
+        "id": "compute-area-length-and-buffers-with-honest-units",
+        "score": 3.227109,
+        "source": "SKILL.md#compute-area-length-and-buffers-with-honest-units",
+        "title": "Compute area, length, and buffers with honest units"
+       },
+       {
+        "excerpt": "…eration distance python -m terraproof check parcels_geographic.gpkg --operation buffer ``` `crs.defined` checks presence, not whether the label is true. `crs.consistent` compares multiple positional datasets with the first; it does not reproject them. `crs.metric_operation` fails for a geographic or geocentric CRS with the declared operation. It passes only a projected horizontal CRS (including a compound CRS whose horizontal part is projected) in metre- **or foot-based** uni…",
+        "id": "verify-with-terraproof",
+        "score": 2.960841,
+        "source": "SKILL.md#verify-with-terraproof",
+        "title": "Verify with Terraproof"
+       }
+      ]
+     },
+     {
+      "name": "geopandas",
+      "reasons": [
+       "BM25 reference-index (section weight 1; buffer=3.015231) +3.015231",
+       "BM25 correctness-gates (section weight 0.25; buffer=0.732555) +0.732555",
+       "Exact trigger 'buffer' +2.000000",
+       "Dataset: vector input; use vector geometry/attribute operations +6.000000"
+      ],
+      "score": 11.747786,
+      "sections": [
+       {
+        "excerpt": "- [Data structures](references/data-structures.md) - [CRS management](references/crs-management.md) - [Geometric operations](references/geometric-operations.md) - [Spatial analysis](references/spatial-analysis.md) - [Data I/O](references/data-io.md) - [Visualization](references/visualization.md)",
+        "id": "reference-index",
+        "score": 3.015231,
+        "source": "SKILL.md#reference-index",
+        "title": "Reference index"
+       },
+       {
+        "excerpt": "…das is planar. Geographic coordinates are angular; do not use them directly for buffer, distance, area, nearest joins, precision grids, or tolerances. Choose a fit-for-purpose local/equal-area CRS or a geodesic method. 5. **Transform quality** — inspect axis order, area of use, datum pipeline, expected accuracy, ballpark status, and missing grids. Keep PROJ network disabled unless the user explicitly approves grid retrieval. 6. **Topology and precision** — validate before and…",
+        "id": "correctness-gates",
+        "score": 2.930221,
+        "source": "SKILL.md#correctness-gates",
+        "title": "Correctness gates"
+       }
+      ]
+     },
+     {
+      "name": "vector-quality",
+      "reasons": [
+       "BM25 check-validity-before-choosing-a-repair (section weight 1; buffer=1.655271) +1.655271",
+       "Dataset: vector input; audit geometry validity and record preservation +5.000000"
+      ],
+      "score": 6.655271,
+      "sections": [
+       {
+        "excerpt": "…s. Removing them is a scope decision, not a neutral cleanup. Do not substitute `buffer(0)` as a universal repair or assume it preserves the original region. Minimal repair audit (default `make_valid` avoids version-specific method options): ```python import geopandas as gpd import shapely original = gpd.read_file(\"parcels.gpkg\", engine=\"pyogrio\") repaired = original.copy() needs_repair = original.geometry.notna() & ~original.geometry.is_valid repaired.loc[needs_repair, origin…",
+        "id": "check-validity-before-choosing-a-repair",
+        "score": 1.655271,
+        "source": "SKILL.md#check-validity-before-choosing-a-repair",
+        "title": "Check validity before choosing a repair"
+       },
+       {
+        "excerpt": "For a polygon coverage, validate individual inputs first and work in a suitable shared CRS. Define the expected coverage boundary and legitimate holes before labelling missing area a gap. - Use spatial-index candidate pairs, then intersect polygon interiors; positive intersection area indicates overlap, while shared edges alone are not overlap. Exclude a feature paired with itself and count each pair once. - Compare the union with the expected coverage boundary. Boundary minu…",
+        "id": "audit-coverage-topology-gaps-overlaps-and-slivers",
+        "score": 0,
+        "source": "SKILL.md#audit-coverage-topology-gaps-overlaps-and-slivers",
+        "title": "Audit coverage topology: gaps, overlaps, and slivers"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "Buffer the coastline 2 km",
+   "slug": "buffer-geographic"
+  },
+  {
+   "datasets": null,
+   "output": {
+    "datasets": [],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "en",
+     "normalized": "reproject the elevation raster to epsg 4326",
+     "text": "Reproject the elevation raster to EPSG:4326"
+    },
+    "skills": [
+     {
+      "name": "gdal",
+      "reasons": [
+       "BM25 gdal-recipes (section weight 1; 4326=3.362914, epsg=4.132580, raster=2.448547, reproject=3.921555) +13.865596",
+       "BM25 quick-reference (section weight 0.25; 4326=0.754656, epsg=1.014891, raster=0.598630, reproject=0.880018) +3.248196",
+       "Exact trigger 'reproject' +2.000000"
+      ],
+      "score": 19.113791,
+      "sections": [
+       {
+        "excerpt": "# GDAL Recipes General GDAL command patterns for raster and vector processing. ## Vector recipes ```bash # Create polygon of raster extent gdaltindex -t_srs epsg:4326 -f GeoJSON OUTPUT_EXTENT.geojson INPUT_RASTER.tif # Clip shapefile to raster extent gdaltindex -t_srs epsg:4326 -f GeoJSON OUTPUT_EXTENT.geojson INPUT_RASTER.tif ogr2ogr -f GeoJSON -clipsrc OUTPUT_EXTENT.geojson OUTPUT_CLIPPED.geojson INPUT.shp # Convert shapefile to GeoJSON ogr2ogr -f GeoJSON -t_srs epsg:4326 O…",
+        "id": "gdal-recipes",
+        "score": 13.865596,
+        "source": "references/gdal-recipes.md",
+        "title": "GDAL Recipes"
+       },
+       {
+        "excerpt": "…grinfo INPUT.shp -so # Vector conversion and clipping ogr2ogr -f GeoJSON -t_srs epsg:4326 OUTPUT.geojson INPUT.shp gdaltindex -t_srs epsg:4326 -f GeoJSON OUTPUT_EXTENT.geojson INPUT_RASTER.tif ogr2ogr -f GeoJSON -clipsrc OUTPUT_EXTENT.geojson OUTPUT_CLIPPED.geojson INPUT.shp # Raster reprojection (choose -r intentionally: bilinear/cubic for continuous, near for categorical) gdalwarp -t_srs EPSG:XXXX -tr XRES YRES -r bilinear -co TILED=YES -co COMPRESS=DEFLATE -co PREDICTOR=2 …",
+        "id": "quick-reference",
+        "score": 12.992783,
+        "source": "SKILL.md#quick-reference",
+        "title": "Quick Reference"
+       }
+      ]
+     },
+     {
+      "name": "geomaster",
+      "reasons": [
+       "BM25 core-libraries (section weight 1; 4326=3.178322, elevation=1.195591, epsg=3.799892, raster=2.136892, reproject=1.565435) +11.876132",
+       "BM25 coordinate-systems (section weight 0.25; 4326=0.864663, elevation=0.235441, epsg=1.167862, reproject=0.643171) +2.911137"
+      ],
+      "score": 14.787269,
+      "sections": [
+       {
+        "excerpt": "…ndation for geospatial I/O in Python. ```python from osgeo import gdal # Open a raster file ds = gdal.Open('raster.tif') band = ds.GetRasterBand(1) data = band.ReadAsArray() # Get geotransform geotransform = ds.GetGeoTransform() origin_x = geotransform[0] pixel_width = geotransform[1] # Get projection proj = ds.GetProjection() ``` ## Rasterio Rasterio provides a cleaner interface to GDAL. ```python import rasterio import numpy as np # Basic reading with rasterio.open('raster.…",
+        "id": "core-libraries",
+        "score": 11.876132,
+        "source": "references/core-libraries.md",
+        "title": "Core Geospatial Libraries"
+       },
+       {
+        "excerpt": "…hts) ### Components 1. **Datum**: Mathematical model of Earth's shape - WGS 84 (EPSG:4326) - Global GPS - NAD 83 (EPSG:4269) - North America - ETRS89 (EPSG:4258) - Europe 2. **Projection**: Transformation from curved to flat surface - Cylindrical (Mercator) - Conic (Lambert Conformal) - Azimuthal (Polar Stereographic) 3. **Units**: Degrees, meters, feet, etc. ## Common CRS Codes ### Geographic CRS (Lat/Lon) | EPSG | Name | Area | Notes | |------|------|------|-------| | 4326 …",
+        "id": "coordinate-systems",
+        "score": 11.644549,
+        "source": "references/coordinate-systems.md",
+        "title": "Coordinate Reference Systems (CRS)"
+       }
+      ]
+     },
+     {
+      "name": "geozarr",
+      "reasons": [
+       "BM25 authoring-from-xarrayrioxarray (section weight 1; 4326=2.884889, epsg=3.006864, raster=2.248439) +8.140191",
+       "BM25 optional-layered-conventions (section weight 0.25; 4326=0.664952, epsg=0.693066, raster=0.541240) +1.899258"
+      ],
+      "score": 10.039449,
+      "sections": [
+       {
+        "excerpt": "…ataset(name=\"reflectance\") ds.attrs[\"Conventions\"] = \"CF-1.8\" ds.rio.write_crs(\"EPSG:4326\", inplace=True) # writes spatial_ref ds.rio.write_coordinate_system(inplace=True) # writes axis/standard_name ds.rio.write_transform(inplace=True) # writes GeoTransform on spatial_ref ds.to_zarr(\"out.zarr\", mode=\"w\", zarr_format=3, consolidated=True) ``` Verify: `xr.open_zarr(\"out.zarr\").reflectance.rio.crs` should be non-None.",
+        "id": "authoring-from-xarrayrioxarray",
+        "score": 8.140191,
+        "source": "SKILL.md#authoring-from-xarrayrioxarray",
+        "title": "Authoring from xarray/rioxarray"
+       },
+       {
+        "excerpt": "…j v1) CRS info as root attrs alongside CF grid_mapping: ```json { \"proj:code\": \"EPSG:4326\", \"proj:wkt2\": \"...\", \"proj:projjson\": { ... } } ``` ### `spatial:` (zarr-conventions/spatial v1) Compact affine + bbox at the root, redundant with grid_mapping but easier to read: ```json { \"spatial:dimensions\": [\"y\", \"x\"], \"spatial:transform\": [dx, 0, x0, 0, dy, y0], \"spatial:transform_type\": \"affine\", \"spatial:bbox\": [xmin, ymin, xmax, ymax], \"spatial:shape\": [NY, NX], \"spatial:regist…",
+        "id": "optional-layered-conventions",
+        "score": 7.597032,
+        "source": "SKILL.md#optional-layered-conventions",
+        "title": "Optional layered conventions"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "Reproject the elevation raster to EPSG:4326",
+   "slug": "reproject"
+  },
+  {
+   "datasets": [
+    {
+     "crs": {
+      "epsg": 4326,
+      "horizontal_kind": "geographic",
+      "is_geographic": true,
+      "is_projected": false
+     },
+     "feature_count": 4800,
+     "geometry_types": [
+      "Polygon",
+      "Point"
+     ],
+     "kind": "vector"
+    }
+   ],
+   "output": {
+    "datasets": [
+     {
+      "kind": "vector",
+      "path": null,
+      "summary": "4800 features; Polygon, Point; EPSG:4326"
+     }
+    ],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [
+      "near",
+      "proximity",
+      "around",
+      "buffer",
+      "metre",
+      "metric",
+      "polygon",
+      "vector"
+     ],
+     "language": "ar",
+     "normalized": "اعمل عازل 500 متر حوالين المضلعات",
+     "text": "اعمل عازل 500 متر حوالين المضلعات"
+    },
+    "skills": [
+     {
+      "name": "crs-and-units",
+      "reasons": [
+       "Arabic lexicon: حوالين -> near proximity around",
+       "Arabic lexicon: عازل -> buffer",
+       "Arabic lexicon: متر -> metre metric",
+       "Arabic lexicon: مضلعات -> polygon vector",
+       "BM25 compute-area-length-and-buffers-with-honest-units (section weight 1; buffer=3.227109, metr=6.325221, metric=2.530918) +12.083248",
+       "BM25 look-up-epsg-definitions-and-units (section weight 0.25; buffer=0.481299, metr=1.311426) +1.792725",
+       "Dataset: geographic horizontal CRS with metric wording; do not measure in degrees +12.000000"
+      ],
+      "score": 25.875973,
+      "sections": [
+       {
+        "excerpt": "For planar GeoPandas/Shapely operations, length/distance/buffer parameters use CRS units and area uses squared CRS units. Transform all operands into the chosen CRS before analysis. In a foot-based CRS, convert requested metric tolerances before buffering; for areas, square the linear conversion factor. Do not label an area as square metres just because the CRS is projected. For a compact AOI with an already reviewed metre-based `measurement_crs`: ```python import geopandas a…",
+        "id": "compute-area-length-and-buffers-with-honest-units",
+        "score": 12.083248,
+        "source": "SKILL.md#compute-area-length-and-buffers-with-honest-units",
+        "title": "Compute area, length, and buffers with honest units"
+       },
+       {
+        "excerpt": "…eographic horizontal coordinates are angular. Projected horizontal units can be metres, feet, or other units; inspect each relevant axis instead of assuming that projected means metres.",
+        "id": "look-up-epsg-definitions-and-units",
+        "score": 7.1709,
+        "source": "SKILL.md#look-up-epsg-definitions-and-units",
+        "title": "Look up EPSG definitions and units"
+       }
+      ]
+     },
+     {
+      "name": "geopandas",
+      "reasons": [
+       "Arabic lexicon: حوالين -> near proximity around",
+       "Arabic lexicon: عازل -> buffer",
+       "Arabic lexicon: متر -> metre metric",
+       "Arabic lexicon: مضلعات -> polygon vector",
+       "BM25 crs-and-antimeridian-rules (section weight 1; buffer=2.767194, metr=4.398140, polygon=1.980513, vector=2.317558) +11.463404",
+       "BM25 geometric-operations (section weight 0.25; buffer=0.650792, metr=0.448842, metric=0.286393, near=0.400983, polygon=0.678699, vector=0.343761) +2.809470",
+       "Exact trigger 'buffer' +2.000000",
+       "Dataset: vector input; use vector geometry/attribute operations +6.000000"
+      ],
+      "score": 22.272874,
+      "sections": [
+       {
+        "excerpt": "…is_info] areas = gdf.geometry.area # square CRS units, not automatically square metres ``` See [CRS management](references/crs-management.md).",
+        "id": "crs-and-antimeridian-rules",
+        "score": 11.463404,
+        "source": "SKILL.md#crs-and-antimeridian-rules",
+        "title": "CRS and antimeridian rules"
+       },
+       {
+        "excerpt": "…metry.geom_type.value_counts(dropna=False).to_dict(), } ``` `is_valid` concerns polygon/ring topology; points and lines are generally valid unless malformed. `is_simple`, `is_ring`, and `minimum_clearance` answer different questions. ### Redacted validity diagnostics `is_valid_reason()` can include the coordinate of a defect, for example a self-intersection. Precise coordinates can be sensitive. Aggregate only the reason category before `[` and retain detailed diagnostics in …",
+        "id": "geometric-operations",
+        "score": 11.237878,
+        "source": "references/geometric-operations.md",
+        "title": "Geometric operations, validity, and precision"
+       }
+      ]
+     },
+     {
+      "name": "vector-quality",
+      "reasons": [
+       "Arabic lexicon: حوالين -> near proximity around",
+       "Arabic lexicon: عازل -> buffer",
+       "Arabic lexicon: متر -> metre metric",
+       "Arabic lexicon: مضلعات -> polygon vector",
+       "BM25 export-geojson-winding-correctly (section weight 1; metr=4.413632, polygon=1.987489, vector=2.102821) +8.503943",
+       "BM25 inventory-geometry-and-attribute-states (section weight 0.25; metric=0.643941, polygon=0.454450, vector=0.496014) +1.594406",
+       "Dataset: vector input; audit geometry validity and record preservation +5.000000"
+      ],
+      "score": 15.098349,
+      "sections": [
+       {
+        "excerpt": "…is not an OGC validity substitute. Readers should tolerate older opposite-wound polygons, but producers should emit the RFC convention. Use the GDAL GeoJSON driver's RFC mode after reviewing geometry quality: ```bash ogr2ogr -f GeoJSON -t_srs EPSG:4326 -lco RFC7946=YES parcels.geojson parcels_reviewed.gpkg ``` Reopen and inspect the output rings, types, stable IDs and scope. RFC mode handles antimeridian splitting, but precision reduction at export can still affect tiny featu…",
+        "id": "export-geojson-winding-correctly",
+        "score": 8.503943,
+        "source": "SKILL.md#export-geojson-winding-correctly",
+        "title": "Export GeoJSON winding correctly"
+       },
+       {
+        "excerpt": "….sum().to_dict(), }) reasons = shapely.is_valid_reason(g.array) ``` Distinguish Polygon from MultiPolygon even when both are acceptable polygonal outputs. Inspect GeometryCollection members explicitly: a collection can hide lower-dimensional remnants. A consistent type family is not proof of the requested exact type, multipart policy, or dimensionality. Use [GeoPandas](../geopandas/SKILL.md) for I/O and operation APIs, and [CRS and units](../crs-and-units/SKILL.md) for metric…",
+        "id": "inventory-geometry-and-attribute-states",
+        "score": 6.377624,
+        "source": "SKILL.md#inventory-geometry-and-attribute-states",
+        "title": "Inventory geometry and attribute states"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "اعمل عازل 500 متر حوالين المضلعات",
+   "slug": "ar-buffer"
+  },
+  {
+   "datasets": [
+    {
+     "crs": {
+      "epsg": 4326,
+      "horizontal_kind": "geographic",
+      "is_geographic": true,
+      "is_projected": false
+     },
+     "feature_count": 4800,
+     "geometry_types": [
+      "Polygon",
+      "Point"
+     ],
+     "kind": "vector"
+    }
+   ],
+   "output": {
+    "datasets": [
+     {
+      "kind": "vector",
+      "path": null,
+      "summary": "4800 features; Polygon, Point; EPSG:4326"
+     }
+    ],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [
+      "square",
+      "metres",
+      "area",
+      "metre",
+      "metric"
+     ],
+     "language": "ar",
+     "normalized": "عايز احسب مساحه الخريطه بالمتر المربع",
+     "text": "عايز احسب مساحة الخريطة بالمتر المربع"
+    },
+    "skills": [
+     {
+      "name": "crs-and-units",
+      "reasons": [
+       "Arabic lexicon: بالمتر المربع -> square metres area",
+       "Arabic lexicon: متر مربع -> square metres area",
+       "Arabic lexicon: بالمتر -> metre metric",
+       "Arabic lexicon: متر -> metre metric",
+       "Arabic lexicon: مساحة -> area",
+       "BM25 compute-area-length-and-buffers-with-honest-units (section weight 1; area=3.109891, metr=6.325221, metric=2.530918, squar=4.136623) +16.102654",
+       "BM25 look-up-epsg-definitions-and-units (section weight 0.25; area=0.727039, metr=1.311426) +2.038465",
+       "Dataset: geographic horizontal CRS with metric wording; do not measure in degrees +12.000000"
+      ],
+      "score": 30.141119,
+      "sections": [
+       {
+        "excerpt": "…oPandas/Shapely operations, length/distance/buffer parameters use CRS units and area uses squared CRS units. Transform all operands into the chosen CRS before analysis. In a foot-based CRS, convert requested metric tolerances before buffering; for areas, square the linear conversion factor. Do not label an area as square metres just because the CRS is projected. For a compact AOI with an already reviewed metre-based `measurement_crs`: ```python import geopandas as gpd from py…",
+        "id": "compute-area-length-and-buffers-with-honest-units",
+        "score": 16.102654,
+        "source": "SKILL.md#compute-area-length-and-buffers-with-honest-units",
+        "title": "Compute area, length, and buffers with honest units"
+       },
+       {
+        "excerpt": "Use `projinfo EPSG:4326` to inspect the authoritative axes, units, datum and area of use [S3]. Use the PROJ CRS Explorer linked in [S3] or query the local EPSG catalog through pyproj; prefer an authority ID or WKT over a lossy PROJ string. Do not assign a guessed EPSG code based only on coordinate magnitude. This example estimates a UTM candidate for a compact, non-crossing AOI. Review its area of use and distortion before accepting it: ```python import geopandas as gpd from …",
+        "id": "look-up-epsg-definitions-and-units",
+        "score": 8.15386,
+        "source": "SKILL.md#look-up-epsg-definitions-and-units",
+        "title": "Look up EPSG definitions and units"
+       }
+      ]
+     },
+     {
+      "name": "geopandas",
+      "reasons": [
+       "Arabic lexicon: بالمتر المربع -> square metres area",
+       "Arabic lexicon: متر مربع -> square metres area",
+       "Arabic lexicon: بالمتر -> metre metric",
+       "Arabic lexicon: متر -> metre metric",
+       "Arabic lexicon: مساحة -> area",
+       "BM25 crs-and-antimeridian-rules (section weight 1; area=2.501561, metr=4.398140, squar=3.937552) +10.837252",
+       "BM25 crs-management (section weight 0.25; area=0.659654, metr=0.947743, squar=0.324077) +1.931474",
+       "Dataset: vector input; use vector geometry/attribute operations +6.000000"
+      ],
+      "score": 18.768727,
+      "sections": [
+       {
+        "excerpt": "…re planar measurement\") unit_names = [axis.unit_name for axis in crs.axis_info] areas = gdf.geometry.area # square CRS units, not automatically square metres ``` See [CRS management](references/crs-management.md).",
+        "id": "crs-and-antimeridian-rules",
+        "score": 10.837252,
+        "source": "SKILL.md#crs-and-antimeridian-rules",
+        "title": "CRS and antimeridian rules"
+       },
+       {
+        "excerpt": "…c longitude/latitude axes are angular, usually degrees; - projected axes may be metres, US survey feet, feet, or another linear unit; - `.area` returns squared coordinate units; - `.length`, `.distance`, `.buffer`, `sjoin_nearest(max_distance=...)`, `sjoin(predicate=\"dwithin\", distance=...)`, precision grids, simplify tolerances, and gap widths use coordinate units. ```python axis_units = [(axis.unit_name, axis.unit_conversion_factor) for axis in crs.axis_info] if crs.is_geog…",
+        "id": "crs-management",
+        "score": 7.725897,
+        "source": "references/crs-management.md",
+        "title": "CRS, units, and reprojection"
+       }
+      ]
+     },
+     {
+      "name": "vector-quality",
+      "reasons": [
+       "Arabic lexicon: بالمتر المربع -> square metres area",
+       "Arabic lexicon: متر مربع -> square metres area",
+       "Arabic lexicon: بالمتر -> metre metric",
+       "Arabic lexicon: متر -> metre metric",
+       "Arabic lexicon: مساحة -> area",
+       "BM25 export-geojson-winding-correctly (section weight 1; metr=4.413632) +4.413632",
+       "BM25 audit-coverage-topology-gaps-overlaps-and-slivers (section weight 0.25; area=0.713475) +0.713475",
+       "Dataset: vector input; audit geometry validity and record preservation +5.000000"
+      ],
+      "score": 10.127107,
+      "sections": [
+       {
+        "excerpt": "…ion reduction at export can still affect tiny features. Do not export projected metre coordinates under a GeoJSON CRS label.",
+        "id": "export-geojson-winding-correctly",
+        "score": 4.413632,
+        "source": "SKILL.md#export-geojson-winding-correctly",
+        "title": "Export GeoJSON winding correctly"
+       },
+       {
+        "excerpt": "…ne the expected coverage boundary and legitimate holes before labelling missing area a gap. - Use spatial-index candidate pairs, then intersect polygon interiors; positive intersection area indicates overlap, while shared edges alone are not overlap. Exclude a feature paired with itself and count each pair once. - Compare the union with the expected coverage boundary. Boundary minus union identifies uncovered regions; union minus boundary identifies excess coverage. The summe…",
+        "id": "audit-coverage-topology-gaps-overlaps-and-slivers",
+        "score": 2.853899,
+        "source": "SKILL.md#audit-coverage-topology-gaps-overlaps-and-slivers",
+        "title": "Audit coverage topology: gaps, overlaps, and slivers"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "عايز احسب مساحة الخريطة بالمتر المربع",
+   "slug": "ar-areas"
+  },
+  {
+   "datasets": [
+    {
+     "band_count": 4,
+     "bands": [
+      {
+       "dtype": "uint16",
+       "nodata": 0,
+       "offset": -0.2,
+       "scale": 2.75e-05
+      }
+     ],
+     "crs": {
+      "epsg": 32636,
+      "horizontal_kind": "projected",
+      "is_geographic": false,
+      "is_projected": true
+     },
+     "kind": "raster"
+    }
+   ],
+   "output": {
+    "datasets": [
+     {
+      "kind": "raster",
+      "path": null,
+      "summary": "4 bands; uint16; EPSG:32636"
+     }
+    ],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [
+      "ndvi",
+      "vegetation",
+      "index",
+      "sentinel",
+      "2",
+      "spectral",
+      "satellite",
+      "imagery"
+     ],
+     "language": "ar",
+     "normalized": "احسب مؤشر الغطاء النباتي من مرئيه سنتينل 2",
+     "text": "احسب مؤشر الغطاء النباتي من مرئية سنتينل 2"
+    },
+    "skills": [
+     {
+      "name": "spectral-indices",
+      "reasons": [
+       "Arabic lexicon: مؤشر الغطاء النباتي -> ndvi vegetation index",
+       "Arabic lexicon: سنتينل 2 -> sentinel 2",
+       "Arabic lexicon: سنتينل -> sentinel",
+       "Arabic lexicon: مؤشر -> index spectral",
+       "Arabic lexicon: مرئية -> satellite imagery",
+       "BM25 ndvi-vegetation-contrast (section weight 1; index=2.832280, ndvi=3.771674, sentinel=2.033765, spectral=4.437835, vegetation=5.613257) +18.688811",
+       "BM25 map-spectral-roles-to-the-sensor (section weight 0.25; index=0.691860, ndvi=0.734312, sentinel=0.716700, spectral=1.199941, vegetation=1.116217) +4.459030",
+       "Exact trigger 'vegetation index' +4.000000",
+       "Exact trigger 'ndvi' +2.000000",
+       "Dataset: scaled-integer reflectance raster with index wording; compute indices from decoded reflectance +8.000000"
+      ],
+      "score": 37.147841,
+      "sections": [
+       {
+        "excerpt": "Use physical, masked red and NIR reflectance on the same grid [S3]: ```text NDVI = (N - R) / (N + R) Sentinel-2: (B08 - B04) / (B08 + B04) Landsat 8/9: (SR_B5 - SR_B4) / (SR_B5 + SR_B4) ``` For nonnegative inputs with nonzero sum, NDVI lies in **[-1, 1]**. High values indicate stronger NIR/red contrast, not a universal biomass or plant-health measurement. NDVI can saturate in dense vegetation and responds to soil, phenology, water, shadow and atmosphere. Do not apply universa…",
+        "id": "ndvi-vegetation-contrast",
+        "score": 18.688811,
+        "source": "SKILL.md#ndvi-vegetation-contrast",
+        "title": "NDVI: vegetation contrast"
+       },
+       {
+        "excerpt": "…fiers, not positions in an arbitrary raster stack. The following mapping is for Sentinel-2 MSI and Landsat **8/9 OLI**, not older Landsat sensors [S1, S2]: | Spectral role | Sentinel-2 | Landsat 8/9 surface reflectance | |---|---|---| | Blue (`B`) | B02 | SR_B2 | | Green (`G`) | B03 | SR_B3 | | Red (`R`) | B04 | SR_B4 | | Broad NIR (`N`) | B08 | SR_B5 (OLI NIR) | | Narrow NIR alternative | B8A | No interchangeable extra NIR band | | SWIR1 (`S1`) | B11 | SR_B6 | | SWIR2 (`S2`)…",
+        "id": "map-spectral-roles-to-the-sensor",
+        "score": 17.836121,
+        "source": "SKILL.md#map-spectral-roles-to-the-sensor",
+        "title": "Map spectral roles to the sensor"
+       }
+      ]
+     },
+     {
+      "name": "geomaster",
+      "reasons": [
+       "Arabic lexicon: مؤشر الغطاء النباتي -> ndvi vegetation index",
+       "Arabic lexicon: سنتينل 2 -> sentinel 2",
+       "Arabic lexicon: سنتينل -> sentinel",
+       "Arabic lexicon: مؤشر -> index spectral",
+       "Arabic lexicon: مرئية -> satellite imagery",
+       "BM25 remote-sensing (section weight 1; imagery=1.010753, index=2.154010, ndvi=3.143442, satellit=2.331466, sentinel=2.657582, spectral=3.132883, vegetation=3.939086) +18.369221",
+       "BM25 industry-applications (section weight 0.25; imagery=0.255892, index=0.354026, ndvi=0.369261, satellit=0.424165, sentinel=0.305536, spectral=0.614012, vegetation=1.095632) +3.418524",
+       "Exact trigger 'satellite' +2.000000",
+       "Exact trigger 'sentinel' +2.000000",
+       "Exact trigger 'ndvi' +2.000000"
+      ],
+      "score": 27.787745,
+      "sections": [
+       {
+        "excerpt": "# Remote Sensing Reference Comprehensive guide to satellite data acquisition, processing, and analysis. ## Satellite Missions Overview | Satellite | Operator | Resolution | Revisit | Key Features | |-----------|----------|------------|---------|--------------| | **Sentinel-2** | ESA | 10-60m | 5 days | 13 bands, free access | | **Landsat 8/9** | USGS | 30m | 16 days | Historical archive (1972+) | | **MODIS** | NASA | 250-1000m | Daily | Vegetation indices | | **PlanetScope** …",
+        "id": "remote-sensing",
+        "score": 18.369221,
+        "source": "references/remote-sensing.md",
+        "title": "Remote Sensing Reference"
+       },
+       {
+        "excerpt": "…1. Load training data training = gpd.read_file(training_data_path) # 2. Extract spectral and textural features features = extract_features(sentinel2_path, training) # 3. Train classifier rf = RandomForestClassifier(n_estimators=100, max_depth=20) rf.fit(features['X'], features['y']) # 4. Classify full image classified = classify_image(sentinel2_path, rf) # 5. Post-processing cleaned = remove_small_objects(classified, min_size=100) smoothed = majority_filter(cleaned, size=3) #…",
+        "id": "industry-applications",
+        "score": 13.674096,
+        "source": "references/industry-applications.md",
+        "title": "Industry Applications"
+       }
+      ]
+     },
+     {
+      "name": "satellite-preprocessing",
+      "reasons": [
+       "Arabic lexicon: مؤشر الغطاء النباتي -> ndvi vegetation index",
+       "Arabic lexicon: سنتينل 2 -> sentinel 2",
+       "Arabic lexicon: سنتينل -> sentinel",
+       "Arabic lexicon: مؤشر -> index spectral",
+       "Arabic lexicon: مرئية -> satellite imagery",
+       "BM25 establish-the-product-and-encoding (section weight 1; imagery=2.557807, index=1.679572, satellit=2.012325, sentinel=2.419758, spectral=3.808792) +12.478255",
+       "BM25 build-temporal-composites-from-masked-observations (section weight 0.25; index=0.445127, satellit=0.533314, sentinel=0.490468, spectral=0.772015) +2.240924",
+       "Dataset: integer raster has non-identity scale/offset; review physical-value decoding (not proof of satellite origin) +11.000000"
+      ],
+      "score": 25.719179,
+      "sections": [
+       {
+        "excerpt": "… acquisition time, band identity, nodata, scale/offset and previous processing. Sentinel-2 L2A provides surface (formerly BOA) reflectance; L1C provides TOA reflectance. Landsat Collection 2 Level-2 SR is not Level-1 imagery, temperature, or a display composite. QA arrays are categorical/bit-packed, not reflectance. A provider may already decode or harmonize the original DN encoding. Inspect both raster scale metadata and product XML/MTL/STAC metadata, plus the reader's behav…",
+        "id": "establish-the-product-and-encoding",
+        "score": 12.478255,
+        "source": "SKILL.md#establish-the-product-and-encoding",
+        "title": "Establish the product and encoding"
+       },
+       {
+        "excerpt": "…n dates across bands. A medoid/selected-observation composite can retain a real spectral observation. Document tie-breaking and quality ranking. Store valid-observation count and acquisition/date support alongside the composite. All-invalid pixels remain nodata, not zero. Report coverage gaps, seasonal bias and scenes rejected by QA. An index of a reflectance composite is not generally the same as a composite of per-date indices.",
+        "id": "build-temporal-composites-from-masked-observations",
+        "score": 8.963696,
+        "source": "SKILL.md#build-temporal-composites-from-masked-observations",
+        "title": "Build temporal composites from masked observations"
+       }
+      ]
+     },
+     {
+      "name": "raster-processing",
+      "reasons": [
+       "Arabic lexicon: مؤشر الغطاء النباتي -> ndvi vegetation index",
+       "Arabic lexicon: سنتينل 2 -> sentinel 2",
+       "Arabic lexicon: سنتينل -> sentinel",
+       "Arabic lexicon: مؤشر -> index spectral",
+       "Arabic lexicon: مرئية -> satellite imagery",
+       "BM25 distinguish-nodata-values-masks-and-valid-zero (section weight 1; index=1.665686, sentinel=1.835355) +3.501041",
+       "BM25 inspect-the-storage-and-analysis-contract (section weight 0.25; satellit=0.743753) +0.743753",
+       "Dataset: raster input; inspect masks, nodata, grid and dtype +6.000000"
+      ],
+      "score": 10.244794,
+      "sections": [
+       {
+        "excerpt": "…ically zero. A valid zero can represent no rainfall, sea-level elevation, or an index value. Inspect per-band masks, alpha/internal masks, and nodata metadata; a mask can override nodata-derived validity. Multi-band calculations normally require the intersection of validity across required bands, not the union. GDAL-style masks use zero for invalid and nonzero (usually 255) for valid pixels; NumPy masked-array masks use `True` for invalid pixels [S2]. Do not invert twice. ```…",
+        "id": "distinguish-nodata-values-masks-and-valid-zero",
+        "score": 3.501041,
+        "source": "SKILL.md#distinguish-nodata-values-masks-and-valid-zero",
+        "title": "Distinguish nodata values, masks, and valid zero"
+       },
+       {
+        "excerpt": "…it applied scale/offset metadata. Choose raw or physical values explicitly. For satellite calibration use [satellite preprocessing](../satellite-preprocessing/SKILL.md). For general commands use [GDAL](../gdal/SKILL.md), not another full recipe catalog. Shared rules: [engineering](../../instructions/engineering.md), [simplicity](../../instructions/simplicity.md), [security](../../instructions/security.md).",
+        "id": "inspect-the-storage-and-analysis-contract",
+        "score": 2.975011,
+        "source": "SKILL.md#inspect-the-storage-and-analysis-contract",
+        "title": "Inspect the storage and analysis contract"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "احسب مؤشر الغطاء النباتي من مرئية سنتينل 2",
+   "slug": "ar-ndvi"
+  },
+  {
+   "datasets": [
+    {
+     "bands": [
+      {
+       "offset": 0,
+       "scale": 0.0001
+      }
+     ],
+     "collection": "sentinel-2-l2a",
+     "kind": "stac"
+    }
+   ],
+   "output": {
+    "datasets": [
+     {
+      "kind": "stac",
+      "path": null,
+      "summary": "STAC collection: sentinel-2-l2a; item: unknown"
+     }
+    ],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [
+      "sentinel",
+      "2",
+      "cloud",
+      "mask",
+      "index",
+      "spectral"
+     ],
+     "language": "ar",
+     "normalized": "قناع السحب باستخدام scl band من سنتينل 2 وبعدين المؤشر",
+     "text": "قناع السحب باستخدام SCL band من سنتينل 2 وبعدين المؤشر"
+    },
+    "skills": [
+     {
+      "name": "satellite-preprocessing",
+      "reasons": [
+       "Arabic lexicon: سنتينل 2 -> sentinel 2",
+       "Arabic lexicon: قناع السحب -> cloud mask",
+       "Arabic lexicon: السحب -> cloud",
+       "Arabic lexicon: سنتينل -> sentinel",
+       "Arabic lexicon: مؤشر -> index spectral",
+       "BM25 build-temporal-composites-from-masked-observations (section weight 1; band=3.066844, cloud=1.749809, index=1.780507, mask=2.924983, scl=3.712230, sentinel=1.961871, spectral=3.088060) +18.284304",
+       "BM25 establish-the-product-and-encoding (section weight 0.25; band=0.669176, cloud=0.322169, index=0.419893, mask=0.652354, scl=0.875447, sentinel=0.604940, spectral=0.952198) +4.496176",
+       "Exact trigger 'scl band' +4.000000",
+       "Dataset: STAC item; verify product level and calibration metadata +5.000000",
+       "Dataset: Sentinel-2/Landsat STAC collection; check reflectance encoding and QA masks +10.000000",
+       "Wording: decoding, masking or reflectance preparation intent +3.000000"
+      ],
+      "score": 44.78048,
+      "sections": [
+       {
+        "excerpt": "Select acquisition dates and season first. Decode and mask each observation, align required bands to a common grid, and retain acquisition IDs. De-duplicate overlapping tiles from the same acquisition before counting temporal observations. Choose a composite statistic suited to the question: a masked median suppresses some outliers but is not cloud detection and may combine different acquisition dates across bands. A medoid/selected-observation composite can retain a real spe…",
+        "id": "build-temporal-composites-from-masked-observations",
+        "score": 18.284304,
+        "source": "SKILL.md#build-temporal-composites-from-masked-observations",
+        "title": "Build temporal composites from masked observations"
+       },
+       {
+        "excerpt": "…ta to identify sensor, processing level, collection/baseline, acquisition time, band identity, nodata, scale/offset and previous processing. Sentinel-2 L2A provides surface (formerly BOA) reflectance; L1C provides TOA reflectance. Landsat Collection 2 Level-2 SR is not Level-1 imagery, temperature, or a display composite. QA arrays are categorical/bit-packed, not reflectance. A provider may already decode or harmonize the original DN encoding. Inspect both raster scale metada…",
+        "id": "establish-the-product-and-encoding",
+        "score": 17.984705,
+        "source": "SKILL.md#establish-the-product-and-encoding",
+        "title": "Establish the product and encoding"
+       }
+      ]
+     },
+     {
+      "name": "spectral-indices",
+      "reasons": [
+       "Arabic lexicon: سنتينل 2 -> sentinel 2",
+       "Arabic lexicon: قناع السحب -> cloud mask",
+       "Arabic lexicon: السحب -> cloud",
+       "Arabic lexicon: سنتينل -> sentinel",
+       "Arabic lexicon: مؤشر -> index spectral",
+       "BM25 map-spectral-roles-to-the-sensor (section weight 1; band=3.373131, index=2.767438, mask=1.803163, sentinel=2.866799, spectral=4.799765) +15.610296",
+       "BM25 require-calibrated-aligned-inputs (section weight 0.25; band=0.667721, cloud=0.321098, index=0.713092, mask=0.690973, spectral=1.059235) +3.452119",
+       "Dataset: STAC item with index wording; compute indices from decoded reflectance +8.000000"
+      ],
+      "score": 27.062415,
+      "sections": [
+       {
+        "excerpt": "Use product band identifiers, not positions in an arbitrary raster stack. The following mapping is for Sentinel-2 MSI and Landsat **8/9 OLI**, not older Landsat sensors [S1, S2]: | Spectral role | Sentinel-2 | Landsat 8/9 surface reflectance | |---|---|---| | Blue (`B`) | B02 | SR_B2 | | Green (`G`) | B03 | SR_B3 | | Red (`R`) | B04 | SR_B4 | | Broad NIR (`N`) | B08 | SR_B5 (OLI NIR) | | Narrow NIR alternative | B8A | No interchangeable extra NIR band | | SWIR1 (`S1`) | B11 |…",
+        "id": "map-spectral-roles-to-the-sensor",
+        "score": 15.610296,
+        "source": "SKILL.md#map-spectral-roles-to-the-sensor",
+        "title": "Map spectral roles to the sensor"
+       },
+       {
+        "excerpt": "For this skill's quantitative comparison workflows, use cloud/shadow-screened, physical **surface reflectance**, not raw DN, RGB display values, QA codes, or a mixture of TOA and surface reflectance. Decode scale and additive offset exactly once using [satellite preprocessing](../satellite-preprocessing/SKILL.md). A common multiplicative scale cancels in a normalized difference, but an additive offset does not. EVI/SAVI constants also require physical reflectance units. Verif…",
+        "id": "require-calibrated-aligned-inputs",
+        "score": 13.808476,
+        "source": "SKILL.md#require-calibrated-aligned-inputs",
+        "title": "Require calibrated, aligned inputs"
+       }
+      ]
+     },
+     {
+      "name": "geomaster",
+      "reasons": [
+       "Arabic lexicon: سنتينل 2 -> sentinel 2",
+       "Arabic lexicon: قناع السحب -> cloud mask",
+       "Arabic lexicon: السحب -> cloud",
+       "Arabic lexicon: سنتينل -> sentinel",
+       "Arabic lexicon: مؤشر -> index spectral",
+       "BM25 remote-sensing (section weight 1; band=2.939783, cloud=1.652693, index=2.154010, mask=1.926337, scl=3.400243, sentinel=2.657582, spectral=3.132883) +17.863532",
+       "BM25 troubleshooting (section weight 0.25; band=0.400889, cloud=0.439309, index=0.151548, mask=0.495813, scl=0.969346, sentinel=0.473152) +2.930057",
+       "Exact trigger 'sentinel' +2.000000"
+      ],
+      "score": 22.793588,
+      "sections": [
+       {
+        "excerpt": "…y Features | |-----------|----------|------------|---------|--------------| | **Sentinel-2** | ESA | 10-60m | 5 days | 13 bands, free access | | **Landsat 8/9** | USGS | 30m | 16 days | Historical archive (1972+) | | **MODIS** | NASA | 250-1000m | Daily | Vegetation indices | | **PlanetScope** | Planet | 3m | Daily | Commercial, high-res | | **WorldView** | Maxar | 0.3m | Variable | Very high resolution | | **Sentinel-1** | ESA | 5-40m | 6-12 days | SAR, all-weather | | **Env…",
+        "id": "remote-sensing",
+        "score": 17.863532,
+        "source": "references/remote-sensing.md",
+        "title": "Remote Sensing Reference"
+       },
+       {
+        "excerpt": "…# Problem: sjoin takes too long import geopandas as gpd # Solution: Use spatial index gdf1.sindex # Auto-created gdf2.sindex # For nearest neighbor joins, use specialized function result = gpd.sjoin_nearest(gdf1, gdf2, max_distance=1000) # Use intersection predicate (faster than 'intersects' for points) result = gpd.sjoin(points, polygons, predicate='within') # Clip to bounding box first bbox = gdf1.total_bounds gdf2_clipped = gdf2.cx[bbox[0]:bbox[2], bbox[1]:bbox[3]] result …",
+        "id": "troubleshooting",
+        "score": 11.720228,
+        "source": "references/troubleshooting.md",
+        "title": "GeoMaster Troubleshooting Guide"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "قناع السحب باستخدام SCL band من سنتينل 2 وبعدين المؤشر",
+   "slug": "ar-mask"
+  },
+  {
+   "datasets": null,
+   "output": {
+    "datasets": [],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "en",
+     "normalized": "draw a line chart",
+     "text": "Draw a line chart"
+    },
+    "skills": [
+     {
+      "name": "scientific-visualization",
+      "reasons": [
+       "BM25 color_palettes (section weight 1; chart=2.444403, line=3.107581) +5.551983",
+       "BM25 journal_requirements (section weight 0.25; chart=0.311268, line=0.803807) +1.115075",
+       "Exact trigger 'chart' +2.000000"
+      ],
+      "score": 8.667059,
+      "sections": [
+       {
+        "excerpt": "…e” palette is not a guarantee that a rendered figure is accessible: background, line thickness, adjacency, text, category count, display/print conversion, and redundant encoding all matter. ## Start with data semantics - **Qualitative:** unordered categories. Hue can separate groups; lightness should not imply an unintended ranking. - **Sequential:** ordered low-to-high values. Use monotonic perceived lightness. - **Diverging:** departure around a meaningful center. Use a neu…",
+        "id": "color_palettes",
+        "score": 5.551983,
+        "source": "references/color_palettes.md",
+        "title": "Color, Contrast, and Palette Selection"
+       },
+       {
+        "excerpt": "…Other text: 5-7 pt at final size; Helvetica or Arial preferred. - Keep text and line art editable; do not outline or rasterize them. - Preferred line/graph containers include AI, PostScript, vector EPS, and PDF. - Preferred raster source: layered PSD or TIFF. The final-submission page states 300-600 dpi for photographs; minimum 300 dpi at maximum use size. - The newer research-figure guide recommends export images at 450 dpi or above because online proofs top out at 450 dpi. …",
+        "id": "journal_requirements",
+        "score": 4.460302,
+        "source": "references/journal_requirements.md",
+        "title": "Publisher and Journal Figure Snapshots"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "Draw a line chart",
+   "slug": "line-chart"
+  },
+  {
+   "datasets": null,
+   "output": {
+    "datasets": [],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [
+      "chart",
+      "plot",
+      "figure"
+     ],
+     "language": "ar",
+     "normalized": "عايز رسم بياني لتغير الحراره",
+     "text": "عايز رسم بياني لتغير الحرارة"
+    },
+    "skills": [
+     {
+      "name": "scientific-visualization",
+      "reasons": [
+       "Arabic lexicon: رسم بياني -> chart plot figure",
+       "BM25 final-review-checklist (section weight 1; chart=3.908145, figur=5.113526, plot=3.379436) +12.401107",
+       "BM25 pinned-snapshot (section weight 0.25; chart=0.988402, figur=1.248071, plot=0.850941) +3.087414",
+       "Exact trigger 'plot' +2.000000",
+       "Exact trigger 'chart' +2.000000",
+       "Exact trigger 'figure' +2.000000"
+      ],
+      "score": 21.488521,
+      "sections": [
+       {
+        "excerpt": "… are honest. - [ ] Color is redundant and rendered contrast was reviewed. - [ ] Figure has an accessible description/data alternative where applicable. - [ ] Physical dimensions, DPI, format, fonts, transparency, and file size were inspected after export. - [ ] Publisher rules were verified for the exact journal and phase. - [ ] No automated report is presented as a scientific, accessibility, or compliance certification.",
+        "id": "final-review-checklist",
+        "score": 12.401107,
+        "source": "SKILL.md#final-review-checklist",
+        "title": "Final review checklist"
+       },
+       {
+        "excerpt": "The examples and smoke tests use direct package pins current on 2026-07-23: ```bash uv run --isolated --no-project --python 3.13 \\ --with \"matplotlib==3.11.1\" \\ --with \"seaborn==0.13.2\" \\ --with \"plotly==6.9.0\" \\ --with \"kaleido==1.3.0\" \\ --with \"pillow==12.3.0\" \\ --with \"pypdf==6.14.2\" \\ python your_figure.py ``` This is a dated direct-dependency snapshot, not a transitive lock. Use the project's uv lock for exact replay; this skill intentionally ships no dependency lock.",
+        "id": "pinned-snapshot",
+        "score": 12.349657,
+        "source": "SKILL.md#pinned-snapshot",
+        "title": "Pinned snapshot"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "عايز رسم بياني لتغير الحرارة",
+   "slug": "ar-chart"
+  },
+  {
+   "datasets": null,
+   "output": {
+    "datasets": [],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "en",
+     "normalized": "tell me a joke about bananas",
+     "text": "Tell me a joke about bananas"
+    },
+    "skills": []
+   },
+   "prompt": "Tell me a joke about bananas",
+   "slug": "off-topic"
+  },
+  {
+   "datasets": null,
+   "output": {
+    "datasets": [],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "ar",
+     "normalized": "احكي لي حكايه عن قطه نايمه جنب الشباك",
+     "text": "احكي لي حكاية عن قطة نايمة جنب الشباك"
+    },
+    "skills": []
+   },
+   "prompt": "احكي لي حكاية عن قطة نايمة جنب الشباك",
+   "slug": "ar-off-topic"
+  },
+  {
+   "datasets": null,
+   "output": {
+    "datasets": [],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "en",
+     "normalized": "where can i get an openstreetmap road network extract",
+     "text": "Where can I get an OpenStreetMap road network extract?"
+    },
+    "skills": [
+     {
+      "name": "geospatial-data-discovery",
+      "reasons": [
+       "BM25 recommended-authoritative-data-sources (section weight 1; openstreetmap=6.273459, road=4.141354) +10.414814",
+       "BM25 when-to-use (section weight 0.25; openstreetmap=1.349742, road=1.136889) +2.486631",
+       "Wording: data acquisition or availability question with a data object +10.000000"
+      ],
+      "score": 22.901445,
+      "sections": [
+       {
+        "excerpt": "- **OpenStreetMap (OSM) / Geofabrik:** Global crowd-sourced vector data (roads, POIs, land use). License: ODbL. - **Overture Maps Foundation:** Cloud-native GeoParquet releases of buildings, places, transportation, and base layers. License: CDLA-Permissive-2.0 / ODbL. - **USGS EarthExplorer / Landsat:** 30m multispectral global archive (Landsat 8/9). Public Domain. - **Copernicus Open Access / Sentinel Hub:** 10m multispectral (Sentinel-2), SAR (Sentinel-1). Open access with …",
+        "id": "recommended-authoritative-data-sources",
+        "score": 10.414814,
+        "source": "SKILL.md#recommended-authoritative-data-sources",
+        "title": "Recommended Authoritative Data Sources"
+       },
+       {
+        "excerpt": "Use this skill when: - Sourcing geographic boundaries, admin polygons, roads, or building footprints - Locating satellite imagery (Copernicus Sentinel-2, USGS Landsat, MODIS, NAIP) - Finding elevation/DEM rasters (SRTM, Copernicus DEM, 3DEP) - Querying SpatioTemporal Asset Catalogs (STAC) or cloud-native buckets - Checking data licenses (ODbL, CC-BY, Public Domain) before ingestion ---",
+        "id": "when-to-use",
+        "score": 9.946524,
+        "source": "SKILL.md#when-to-use",
+        "title": "When to Use"
+       }
+      ]
+     },
+     {
+      "name": "geomaster",
+      "reasons": [
+       "BM25 programming-languages (section weight 1; extract=3.174733, openstreetmap=2.955531, road=5.520710) +11.650974",
+       "BM25 industry-applications (section weight 0.25; extract=0.696696, network=0.376093, road=1.462066) +2.534856"
+      ],
+      "score": 14.18583,
+      "sections": [
+       {
+        "excerpt": "… Features) ```r library(sf) library(dplyr) library(ggplot2) # Read spatial data roads <- st_read(\"roads.shp\") zones <- st_read(\"zones.geojson\") # Basic operations st_crs(roads) # Check CRS roads_utm <- st_transform(roads, 32610) # Reproject # Geometric operations roads_buffer <- st_buffer(roads, dist = 100) # Buffer roads_simplify <- st_simplify(roads, tol = 0.0001) # Simplify roads_centroid <- st_centroid(roads) # Centroid # Spatial joins joined <- st_join(roads, zones, join…",
+        "id": "programming-languages",
+        "score": 11.650974,
+        "source": "references/programming-languages.md",
+        "title": "Multi-Language Geospatial Programming"
+       },
+       {
+        "excerpt": "…terio # 1. Load training data training = gpd.read_file(training_data_path) # 2. Extract spectral and textural features features = extract_features(sentinel2_path, training) # 3. Train classifier rf = RandomForestClassifier(n_estimators=100, max_depth=20) rf.fit(features['X'], features['y']) # 4. Classify full image classified = classify_image(sentinel2_path, rf) # 5. Post-processing cleaned = remove_small_objects(classified, min_size=100) smoothed = majority_filter(cleaned, s…",
+        "id": "industry-applications",
+        "score": 10.139422,
+        "source": "references/industry-applications.md",
+        "title": "Industry Applications"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "Where can I get an OpenStreetMap road network extract?",
+   "slug": "discover-osm"
+  },
+  {
+   "datasets": null,
+   "output": {
+    "datasets": [],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [
+      "get",
+      "acquire"
+     ],
+     "language": "ar",
+     "normalized": "منين اجيب shapefile للحدود الاداريه",
+     "text": "منين أجيب shapefile للحدود الإدارية؟"
+    },
+    "skills": [
+     {
+      "name": "geospatial-data-discovery",
+      "reasons": [
+       "Arabic lexicon: أجيب -> get acquire",
+       "BM25 when-to-use (section weight 1; acquir=6.103077, shapefil=2.891765) +8.994842",
+       "BM25 recommended-authoritative-data-sources (section weight 0.25; acquir=1.389483, shapefil=0.658366) +2.047849",
+       "Wording: data acquisition or availability question with a data object +10.000000"
+      ],
+      "score": 21.042691,
+      "sections": [
+       {
+        "excerpt": "Use this skill when: - Sourcing geographic boundaries, admin polygons, roads, or building footprints - Locating satellite imagery (Copernicus Sentinel-2, USGS Landsat, MODIS, NAIP) - Finding elevation/DEM rasters (SRTM, Copernicus DEM, 3DEP) - Querying SpatioTemporal Asset Catalogs (STAC) or cloud-native buckets - Checking data licenses (ODbL, CC-BY, Public Domain) before ingestion ---",
+        "id": "when-to-use",
+        "score": 8.994842,
+        "source": "SKILL.md#when-to-use",
+        "title": "When to Use"
+       },
+       {
+        "excerpt": "- **OpenStreetMap (OSM) / Geofabrik:** Global crowd-sourced vector data (roads, POIs, land use). License: ODbL. - **Overture Maps Foundation:** Cloud-native GeoParquet releases of buildings, places, transportation, and base layers. License: CDLA-Permissive-2.0 / ODbL. - **USGS EarthExplorer / Landsat:** 30m multispectral global archive (Landsat 8/9). Public Domain. - **Copernicus Open Access / Sentinel Hub:** 10m multispectral (Sentinel-2), SAR (Sentinel-1). Open access with …",
+        "id": "recommended-authoritative-data-sources",
+        "score": 8.191396,
+        "source": "SKILL.md#recommended-authoritative-data-sources",
+        "title": "Recommended Authoritative Data Sources"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "منين أجيب shapefile للحدود الإدارية؟",
+   "slug": "ar-discover"
+  },
+  {
+   "datasets": null,
+   "output": {
+    "datasets": [],
+    "process": [
+     "brainstorming",
+     "writing-plans",
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "en",
+     "normalized": "build an interactive web map dashboard with maplibre and a legend",
+     "text": "Build an interactive web map dashboard with MapLibre and a legend"
+    },
+    "skills": [
+     {
+      "name": "geospatial-frontend",
+      "reasons": [
+       "BM25 ui-rules (section weight 1; dashboard=5.393155, interactiv=3.898002, map=3.375227, maplibr=5.797543, web=3.525397) +21.989324",
+       "BM25 responsive (section weight 0.25; dashboard=1.343273, interactiv=0.970875, map=0.842588, maplibr=1.445517, web=0.878997) +5.481251",
+       "Exact trigger 'map' +0.500000",
+       "Exact trigger 'web map' +4.000000",
+       "Exact trigger 'maplibre' +2.000000",
+       "Exact trigger 'map dashboard' +4.000000"
+      ],
+      "score": 37.970574,
+      "sections": [
+       {
+        "excerpt": "See [references/user-preferences.md](references/user-preferences.md) for battle-tested patterns, confirmed features, and design rules.",
+        "id": "ui-rules",
+        "score": 21.989324,
+        "source": "SKILL.md#ui-rules",
+        "title": "UI Rules"
+       },
+       {
+        "excerpt": "Two breakpoints only: - **1100px**: shrink panels, hide secondary nav - **900px**: panels collapse to bottom-center stack, max-height 40-45vh",
+        "id": "responsive",
+        "score": 21.925002,
+        "source": "SKILL.md#responsive",
+        "title": "Responsive"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "Build an interactive web map dashboard with MapLibre and a legend",
+   "slug": "web-map"
+  },
+  {
+   "datasets": null,
+   "output": {
+    "datasets": [],
+    "process": [
+     "brainstorming",
+     "writing-plans",
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [
+      "interactive",
+      "web",
+      "map"
+     ],
+     "language": "ar",
+     "normalized": "ابني خريطه تفاعليه للمدينه ب maplibre",
+     "text": "ابني خريطة تفاعلية للمدينة بـ MapLibre"
+    },
+    "skills": [
+     {
+      "name": "geospatial-frontend",
+      "reasons": [
+       "Arabic lexicon: خريطة تفاعلية -> interactive web map",
+       "Arabic lexicon: خريطه تفاعليه -> interactive web map",
+       "BM25 ui-rules (section weight 1; interactiv=3.898002, map=3.375227, maplibr=5.797543, web=3.525397) +16.596168",
+       "BM25 file-organization (section weight 0.25; interactiv=0.936052, map=0.842074, maplibr=1.472075, web=0.895147) +4.145348",
+       "Exact trigger 'map' +0.500000",
+       "Exact trigger 'web map' +4.000000",
+       "Exact trigger 'maplibre' +2.000000"
+      ],
+      "score": 27.241517,
+      "sections": [
+       {
+        "excerpt": "See [references/user-preferences.md](references/user-preferences.md) for battle-tested patterns, confirmed features, and design rules.",
+        "id": "ui-rules",
+        "score": 16.596168,
+        "source": "SKILL.md#ui-rules",
+        "title": "UI Rules"
+       },
+       {
+        "excerpt": "…C. Split by concern: - `main.ts` -- app state, DOM, event handlers, tutorial - `map.ts` -- MapLibre setup, layers, drawing, camera - `types.ts` -- interfaces - `util.ts` -- geometry, color interpolation, formatting - `scoring-worker.ts` -- Web Worker for compute - `styles.css` -- all CSS (pure, no preprocessor) - `index.html` -- entry with font preloads + meta tags",
+        "id": "file-organization",
+        "score": 16.581392,
+        "source": "SKILL.md#file-organization",
+        "title": "File Organization"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "ابني خريطة تفاعلية للمدينة بـ MapLibre",
+   "slug": "ar-web-map"
+  },
+  {
+   "datasets": null,
+   "output": {
+    "datasets": [],
+    "process": [
+     "brainstorming",
+     "writing-plans",
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "en",
+     "normalized": "design a postgis spatial database schema with gist indexes",
+     "text": "Design a PostGIS spatial database schema with GiST indexes"
+    },
+    "skills": [
+     {
+      "name": "design-postgis-tables",
+      "reasons": [
+       "BM25 spatial-indexing (section weight 1; databas=2.521714, gist=6.349037, index=2.998174, postgis=4.580602, schema=2.761684, spatial=1.698545) +20.909756",
+       "BM25 core-rules (section weight 0.25; databas=0.734788, gist=1.240230, index=0.667690, postgis=1.282450, schema=0.804711, spatial=0.423323) +5.153192",
+       "Exact trigger 'postgis' +2.000000",
+       "Exact trigger 'spatial database' +4.000000"
+      ],
+      "score": 32.062948,
+      "sections": [
+       {
+        "excerpt": "### GiST Index (Default) Most versatile spatial index. Use for all geometry/geography columns. ```sql -- Geometry (most common) CREATE INDEX idx_your_table_geom_gist ON your_table_name USING GIST (geom); -- Geography (GiST is the supported option) CREATE INDEX idx_your_table_geog_gist ON your_table_name USING GIST (geog); -- Analyze after index creation VACUUM ANALYZE your_table_name; ``` **Supports:** All spatial operators (`&&`, `@>`, `<@`, `~=`, `<->`) **Best for:** Genera…",
+        "id": "spatial-indexing",
+        "score": 20.909756,
+        "source": "SKILL.md#spatial-indexing",
+        "title": "Spatial Indexing"
+       },
+       {
+        "excerpt": "- **Always use PostGIS geometry/geography types** instead of PostgreSQL's built-in geometric types (`POINT`, `LINE`, `POLYGON`, `CIRCLE`). PostGIS types provide true spatial capabilities. - **Choose between GEOMETRY and GEOGRAPHY** based on your use case: GEOMETRY for projected/local data with Cartesian math; GEOGRAPHY for global data requiring accurate spherical calculations. - **Always specify SRID** (Spatial Reference Identifier) when creating geometry columns. Use `4326` …",
+        "id": "core-rules",
+        "score": 20.61277,
+        "source": "SKILL.md#core-rules",
+        "title": "Core Rules"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "Design a PostGIS spatial database schema with GiST indexes",
+   "slug": "postgis"
+  },
+  {
+   "datasets": null,
+   "output": {
+    "datasets": [],
+    "process": [
+     "brainstorming",
+     "writing-plans",
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "ar",
+     "normalized": "صمم جداول بوستجي اس للاصول مع الفهارس",
+     "text": "صمم جداول بوستجي إس للأصول مع الفهارس"
+    },
+    "skills": []
+   },
+   "prompt": "صمم جداول بوستجي إس للأصول مع الفهارس",
+   "slug": "ar-postgis"
+  },
+  {
+   "datasets": null,
+   "output": {
+    "datasets": [],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "en",
+     "normalized": "betweenness centrality for the road network in networkx",
+     "text": "Betweenness centrality for the road network in NetworkX"
+    },
+    "skills": [
+     {
+      "name": "networkx",
+      "reasons": [
+       "BM25 core-capabilities (section weight 1; betweenness=4.331356, centrality=5.247936, network=3.744030, networkx=4.623800) +17.947122",
+       "BM25 algorithms (section weight 0.25; betweenness=1.299395, centrality=1.279286, network=0.532854, networkx=1.004443) +4.115979",
+       "Exact trigger 'networkx' +2.000000",
+       "Exact trigger 'centrality' +2.000000",
+       "Wording: network/routing analysis intent; use graph algorithms +3.000000"
+      ],
+      "score": 29.0631,
+      "sections": [
+       {
+        "excerpt": "### 1. Graph Creation and Manipulation NetworkX supports four main graph types: - **Graph**: Undirected graphs with single edges - **DiGraph**: Directed graphs with one-way connections - **MultiGraph**: Undirected graphs allowing multiple edges between nodes - **MultiDiGraph**: Directed graphs with multiple edges Create graphs by: ```python import networkx as nx # Create empty graph G = nx.Graph() # Add nodes (can be any hashable type) G.add_node(1) G.add_nodes_from([2, 3, 4]…",
+        "id": "core-capabilities",
+        "score": 17.947122,
+        "source": "SKILL.md#core-capabilities",
+        "title": "Core Capabilities"
+       },
+       {
+        "excerpt": "# NetworkX Graph Algorithms ## Shortest Paths ### Single Source Shortest Paths ```python # Dijkstra's algorithm (weighted graphs) path = nx.shortest_path(G, source=1, target=5, weight='weight') length = nx.shortest_path_length(G, source=1, target=5, weight='weight') # All shortest paths from source paths = nx.single_source_shortest_path(G, source=1) lengths = nx.single_source_shortest_path_length(G, source=1) # Bellman-Ford (handles negative weights) path = nx.bellman_ford_pa…",
+        "id": "algorithms",
+        "score": 16.463914,
+        "source": "references/algorithms.md",
+        "title": "NetworkX Graph Algorithms"
+       }
+      ]
+     },
+     {
+      "name": "geomaster",
+      "reasons": [
+       "BM25 advanced-gis (section weight 1; betweenness=4.275300, centrality=3.806693, network=2.315034, networkx=2.124771) +12.521798",
+       "BM25 industry-applications (section weight 0.25; network=0.376093, networkx=0.305761, road=1.462066) +2.143920"
+      ],
+      "score": 14.665719,
+      "sections": [
+       {
+        "excerpt": "…ced spatial analysis techniques: 3D GIS, spatiotemporal analysis, topology, and network analysis. ## 3D GIS ### 3D Vector Operations ```python import geopandas as gpd from shapely.geometry import Point, LineString, Polygon import pyproj import numpy as np # Create 3D geometries (with Z coordinate) point_3d = Point(0, 0, 100) # x, y, elevation line_3d = LineString([(0, 0, 0), (100, 100, 50)]) # Load 3D data gdf_3d = gpd.read_file('buildings_3d.geojson') # Access Z coordinates …",
+        "id": "advanced-gis",
+        "score": 12.521798,
+        "source": "references/advanced-gis.md",
+        "title": "Advanced GIS Topics"
+       },
+       {
+        "excerpt": "… # Water (land_use_classified != 4) & # Industrial (land_use_classified != 5) # Roads ) # 2. Assign weights by land use type weights = np.zeros_like(land_use_classified, dtype=float) weights[land_use_classified == 1] = 1.0 # Residential weights[land_use_classified == 2] = 0.3 # Commercial weights[land_use_classified == 3] = 0.5 # Green Space # 3. Calculate weighting layer weighting_layer = weights * inhabitable_mask total_weight = np.sum(weighting_layer) # 4. Redistribute pop…",
+        "id": "industry-applications",
+        "score": 8.57568,
+        "source": "references/industry-applications.md",
+        "title": "Industry Applications"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "Betweenness centrality for the road network in NetworkX",
+   "slug": "centrality"
+  },
+  {
+   "datasets": null,
+   "output": {
+    "datasets": [],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "ar",
+     "normalized": "اختبر هل الفرق بين المعالجتين حقيقي ولا صدفه",
+     "text": "اختبر هل الفرق بين المعالجتين حقيقي ولا صدفة"
+    },
+    "skills": []
+   },
+   "prompt": "اختبر هل الفرق بين المعالجتين حقيقي ولا صدفة",
+   "slug": "ar-stats"
+  },
+  {
+   "datasets": null,
+   "output": {
+    "datasets": [],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "en",
+     "normalized": "validate the geoparquet metadata before cloud distribution",
+     "text": "Validate the GeoParquet metadata before cloud distribution"
+    },
+    "skills": [
+     {
+      "name": "geoparquet-validation",
+      "reasons": [
+       "BM25 references (section weight 1; cloud=2.088810, distribution=4.515126, geoparquet=5.251226, metadata=2.262721, validat=3.448401) +17.566285",
+       "BM25 distribution-best-practices (section weight 0.25; cloud=0.486101, distribution=1.158350, geoparquet=1.253594, metadata=0.724125, validat=0.715549) +4.337718",
+       "Exact trigger 'geoparquet' +2.000000"
+      ],
+      "score": 23.904003,
+      "sections": [
+       {
+        "excerpt": "- `references/gpio-commands.md` - `references/distribution-best-practices.md` - `references/tool-comparison.md`",
+        "id": "references",
+        "score": 17.566285,
+        "source": "SKILL.md#references",
+        "title": "References"
+       },
+       {
+        "excerpt": "# GeoParquet Distribution Best Practices When preparing GeoParquet files for public distribution or cloud storage, optimize for query performance and size efficiency. ## Compression Use zstd compression at level 15 for distribution: ```bash # gpio uses zstd by default (level 3 for speed during development) # For distribution, use higher compression: gpio convert geoparquet input.geojson output.parquet --compression-level 15 ``` This typically reduces file size by 10-30% compa…",
+        "id": "distribution-best-practices",
+        "score": 17.350874,
+        "source": "references/distribution-best-practices.md",
+        "title": "GeoParquet Distribution Best Practices"
+       }
+      ]
+     },
+     {
+      "name": "satellite-preprocessing",
+      "reasons": [
+       "BM25 verify-with-terraproof (section weight 1; cloud=1.649011, metadata=2.732260) +4.381271",
+       "BM25 apply-scale-and-offset-exactly-once (section weight 0.25; cloud=0.323246, metadata=0.653412) +0.976658",
+       "Wording: decoding, masking or reflectance preparation intent +3.000000"
+      ],
+      "score": 8.357929,
+      "sections": [
+       {
+        "excerpt": "… ``` `rs.reflectance_range` checks sampled statistics after raster scale/offset metadata is applied. It is only a coarse plausibility test, not proof of the correct processing level or calibration. `raster.nodata_declared` checks nodata metadata. `raster.grid_alignment` compares CRS/pixel sizes/grid origin for multiple rasters, not equal extents or actual image co-registration. `raster.resampling` checks a declared categorical method, not historical usage. `stac.provenance` c…",
+        "id": "verify-with-terraproof",
+        "score": 4.381271,
+        "source": "SKILL.md#verify-with-terraproof",
+        "title": "Verify with Terraproof"
+       },
+       {
+        "excerpt": "Declare one of two states at every boundary: encoded DN with calibration metadata, or decoded physical reflectance. Apply the source calibration only when crossing from the first to the second. If a loader already decoded the values, skip manual decoding. If a provider shifted the original DN, use that provider's encoding. For a decoded single-band array, save physical values with identity metadata: ```python import numpy as np import rasterio def write_reflectance(path, sr, …",
+        "id": "apply-scale-and-offset-exactly-once",
+        "score": 3.906633,
+        "source": "SKILL.md#apply-scale-and-offset-exactly-once",
+        "title": "Apply scale and offset exactly once"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "Validate the GeoParquet metadata before cloud distribution",
+   "slug": "parquet"
+  },
+  {
+   "datasets": null,
+   "output": {
+    "datasets": [],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "en",
+     "normalized": "publish the multidimensional rainfall store as geozarr",
+     "text": "Publish the multidimensional rainfall store as GeoZarr"
+    },
+    "skills": [
+     {
+      "name": "geozarr",
+      "reasons": [
+       "BM25 when-to-use-this-skill (section weight 1; geozarr=5.576788, multidimensional=4.809210, publish=3.294583, stor=3.314550) +16.995131",
+       "BM25 patching-an-existing-store-in-place (section weight 0.25; geozarr=1.239218, multidimensional=1.027769, publish=0.645358, stor=0.708348) +3.620694",
+       "Exact trigger 'geozarr' +2.000000"
+      ],
+      "score": 22.615825,
+      "sections": [
+       {
+        "excerpt": "…ing Zarr that \"opens but has no CRS\" or where `rio.crs` is `None`. - Patching a published store in place to add CF + grid_mapping without rewriting chunks. - Building virtual references (kerchunk / virtualizarr / icechunk) and need the resulting store to be GeoZarr-compliant. - Adding multiscale overviews (pyramids) for tile-server / web-map consumption.",
+        "id": "when-to-use-this-skill",
+        "score": 16.995131,
+        "source": "SKILL.md#when-to-use-this-skill",
+        "title": "When to use this skill"
+       },
+       {
+        "excerpt": "…ta chunks; the coordinate arrays dominate. Dry-run/apply separation matters for published or shared stores; for a scratch copy, an assert-guarded single-pass patch script is fine. A re-runnable additive patch is safe; the predicate to skip is \"child arrays already exist with the right shape and attrs.\"",
+        "id": "patching-an-existing-store-in-place",
+        "score": 14.482774,
+        "source": "SKILL.md#patching-an-existing-store-in-place",
+        "title": "Patching an existing store in place"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "Publish the multidimensional rainfall store as GeoZarr",
+   "slug": "zarr"
+  },
+  {
+   "datasets": [
+    {
+     "crs": {
+      "epsg": 4326,
+      "horizontal_kind": "geographic",
+      "is_geographic": true,
+      "is_projected": false
+     },
+     "feature_count": 4800,
+     "geometry_types": [
+      "Polygon",
+      "Point"
+     ],
+     "kind": "vector"
+    },
+    {
+     "band_count": 4,
+     "bands": [
+      {
+       "dtype": "uint16",
+       "nodata": 0,
+       "offset": -0.2,
+       "scale": 2.75e-05
+      }
+     ],
+     "crs": {
+      "epsg": 32636,
+      "horizontal_kind": "projected",
+      "is_geographic": false,
+      "is_projected": true
+     },
+     "kind": "raster"
+    }
+   ],
+   "output": {
+    "datasets": [
+     {
+      "kind": "vector",
+      "path": null,
+      "summary": "4800 features; Polygon, Point; EPSG:4326"
+     },
+     {
+      "kind": "raster",
+      "path": null,
+      "summary": "4 bands; uint16; EPSG:32636"
+     }
+    ],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "en",
+     "normalized": "prepare these inputs",
+     "text": "Prepare these inputs"
+    },
+    "skills": [
+     {
+      "name": "satellite-preprocessing",
+      "reasons": [
+       "BM25 harmonize-sensors-before-comparing-them (section weight 1; prepar=3.662467) +3.662467",
+       "BM25 build-temporal-composites-from-masked-observations (section weight 0.25; prepar=0.901051) +0.901051",
+       "Dataset: integer raster has non-identity scale/offset; review physical-value decoding (not proof of satellite origin) +11.000000"
+      ],
+      "score": 15.563519,
+      "sections": [
+       {
+        "excerpt": "Common CRS and resolution are necessary but not sufficient. Match band meaning, spatial grid and effective resolution, atmospheric processing, QA policy, angular conditions, acquisition season and temporal sampling. Sentinel-2 broad NIR and narrow NIR are not interchangeable without analysis. Resampling a coarse band to a finer grid does not create finer information. Do not invent a universal regression to turn Sentinel-2 into Landsat. For work requiring consistent multi-sens…",
+        "id": "harmonize-sensors-before-comparing-them",
+        "score": 3.662467,
+        "source": "SKILL.md#harmonize-sensors-before-comparing-them",
+        "title": "Harmonize sensors before comparing them"
+       },
+       {
+        "excerpt": "Select acquisition dates and season first. Decode and mask each observation, align required bands to a common grid, and retain acquisition IDs. De-duplicate overlapping tiles from the same acquisition before counting temporal observations. Choose a composite statistic suited to the question: a masked median suppresses some outliers but is not cloud detection and may combine different acquisition dates across bands. A medoid/selected-observation composite can retain a real spe…",
+        "id": "build-temporal-composites-from-masked-observations",
+        "score": 3.604206,
+        "source": "SKILL.md#build-temporal-composites-from-masked-observations",
+        "title": "Build temporal composites from masked observations"
+       }
+      ]
+     },
+     {
+      "name": "geopandas",
+      "reasons": [
+       "BM25 geometric-operations (section weight 1; input=3.618099) +3.618099",
+       "BM25 spatial-analysis (section weight 0.25; input=0.797710) +0.797710",
+       "Dataset: vector input; use vector geometry/attribute operations +6.000000"
+      ],
+      "score": 10.415809,
+      "sections": [
+       {
+        "excerpt": "…am predicate/coverage behavior. `overlay(make_valid=True)` also repairs invalid inputs, but that convenience can hide type changes. Audit and repair explicitly for traceable work. ## Precision models `set_precision(grid_size, mode=...)` rounds x/y to a grid in **CRS units**: ```python snapped = geometry.set_precision( grid_size=0.01, mode=\"valid_output\", ) ``` Shapely 2.1 modes: - `valid_output` removes collapsed polygonal/linear elements and duplicate vertices while producin…",
+        "id": "geometric-operations",
+        "score": 3.618099,
+        "source": "references/geometric-operations.md",
+        "title": "Geometric operations, validity, and precision"
+       },
+       {
+        "excerpt": "…rm supported family: (Multi)Polygon, (Multi)Point, or line/LinearRing family. - Inputs need the same CRS. - `make_valid=True` repairs invalid inputs and may change types; pre-audit repair is more traceable. With `False`, invalid inputs raise. - `keep_geom_type=None` behaves as `True` and warns when dropping other result types. Set it explicitly and count dropped/type-changed results. - Union-like modes place `NaN` in attributes absent from one side. - Near-coincident boundari…",
+        "id": "spatial-analysis",
+        "score": 3.190841,
+        "source": "references/spatial-analysis.md",
+        "title": "Spatial joins, overlay, clip, and dissolve"
+       }
+      ]
+     },
+     {
+      "name": "vector-quality",
+      "reasons": [
+       "BM25 audit-coverage-topology-gaps-overlaps-and-slivers (section weight 1; input=3.200959) +3.200959",
+       "Dataset: vector input; audit geometry validity and record preservation +5.000000"
+      ],
+      "score": 8.200959,
+      "sections": [
+       {
+        "excerpt": "For a polygon coverage, validate individual inputs first and work in a suitable shared CRS. Define the expected coverage boundary and legitimate holes before labelling missing area a gap. - Use spatial-index candidate pairs, then intersect polygon interiors; positive intersection area indicates overlap, while shared edges alone are not overlap. Exclude a feature paired with itself and count each pair once. - Compare the union with the expected coverage boundary. Boundary minu…",
+        "id": "audit-coverage-topology-gaps-overlaps-and-slivers",
+        "score": 3.200959,
+        "source": "SKILL.md#audit-coverage-topology-gaps-overlaps-and-slivers",
+        "title": "Audit coverage topology: gaps, overlaps, and slivers"
+       },
+       {
+        "excerpt": "OGC Simple Features polygon rules concern the represented region, not just a closed coordinate list [S1]. Rings must be closed and simple; ring boundaries must not cross. Holes must lie within their shell and polygon interiors must be connected. MultiPolygon interiors must not overlap. Boundary-touch cases require the actual OGC rules, not a blanket rule that all touching is invalid. Use Shapely `is_valid` and `is_valid_reason` to diagnose individual features. Planar topology…",
+        "id": "check-validity-before-choosing-a-repair",
+        "score": 0,
+        "source": "SKILL.md#check-validity-before-choosing-a-repair",
+        "title": "Check validity before choosing a repair"
+       }
+      ]
+     },
+     {
+      "name": "raster-processing",
+      "reasons": [
+       "Dataset: raster input; inspect masks, nodata, grid and dtype +6.000000"
+      ],
+      "score": 6.0,
+      "sections": [
+       {
+        "excerpt": "Cast integer operands to a sufficient signed/float type **before** subtraction, multiplication, division, or calibration. Unsigned subtraction can wrap; integer output can truncate continuous results. Check finite extrema before conversion with `numpy.iinfo`/`numpy.finfo`; decide rounding and nodata representability. Compression is not a substitute for preserving numeric precision. When physical values have been materialized, write identity scale/offset metadata rather than r…",
+        "id": "avoid-dtype-overflow-and-stale-scale-metadata",
+        "score": 0,
+        "source": "SKILL.md#avoid-dtype-overflow-and-stale-scale-metadata",
+        "title": "Avoid dtype overflow and stale scale metadata"
+       },
+       {
+        "excerpt": "Finish analysis first, then create a COG as a delivery step. Choose lossless compression for scientific values. Regenerate overviews if existing ones have unknown or incorrect resampling [S7]. For a continuous raster: ```bash gdal_translate -of COG -co COMPRESS=DEFLATE -co OVERVIEWS=IGNORE_EXISTING -co RESAMPLING=AVERAGE analysis.tif delivery.tif gdalinfo delivery.tif ``` For categorical rasters change `RESAMPLING=AVERAGE` to `RESAMPLING=NEAREST`. The COG driver generates app…",
+        "id": "create-and-validate-a-cog-with-overviews",
+        "score": 0,
+        "source": "SKILL.md#create-and-validate-a-cog-with-overviews",
+        "title": "Create and validate a COG with overviews"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "Prepare these inputs",
+   "slug": "prepare-mixed"
+  },
+  {
+   "datasets": [
+    {
+     "bands": [
+      {
+       "offset": 0,
+       "scale": 0.0001
+      }
+     ],
+     "collection": "sentinel-2-l2a",
+     "kind": "stac"
+    }
+   ],
+   "output": {
+    "datasets": [
+     {
+      "kind": "stac",
+      "path": null,
+      "summary": "STAC collection: sentinel-2-l2a; item: unknown"
+     }
+    ],
+    "process": [
+     "verification"
+    ],
+    "query": {
+     "expanded_terms": [],
+     "language": "en",
+     "normalized": "prepare this input",
+     "text": "Prepare this input"
+    },
+    "skills": [
+     {
+      "name": "satellite-preprocessing",
+      "reasons": [
+       "BM25 harmonize-sensors-before-comparing-them (section weight 1; prepar=3.662467) +3.662467",
+       "BM25 build-temporal-composites-from-masked-observations (section weight 0.25; prepar=0.901051) +0.901051",
+       "Dataset: STAC item; verify product level and calibration metadata +5.000000",
+       "Dataset: Sentinel-2/Landsat STAC collection; check reflectance encoding and QA masks +10.000000"
+      ],
+      "score": 19.563519,
+      "sections": [
+       {
+        "excerpt": "Common CRS and resolution are necessary but not sufficient. Match band meaning, spatial grid and effective resolution, atmospheric processing, QA policy, angular conditions, acquisition season and temporal sampling. Sentinel-2 broad NIR and narrow NIR are not interchangeable without analysis. Resampling a coarse band to a finer grid does not create finer information. Do not invent a universal regression to turn Sentinel-2 into Landsat. For work requiring consistent multi-sens…",
+        "id": "harmonize-sensors-before-comparing-them",
+        "score": 3.662467,
+        "source": "SKILL.md#harmonize-sensors-before-comparing-them",
+        "title": "Harmonize sensors before comparing them"
+       },
+       {
+        "excerpt": "Select acquisition dates and season first. Decode and mask each observation, align required bands to a common grid, and retain acquisition IDs. De-duplicate overlapping tiles from the same acquisition before counting temporal observations. Choose a composite statistic suited to the question: a masked median suppresses some outliers but is not cloud detection and may combine different acquisition dates across bands. A medoid/selected-observation composite can retain a real spe…",
+        "id": "build-temporal-composites-from-masked-observations",
+        "score": 3.604206,
+        "source": "SKILL.md#build-temporal-composites-from-masked-observations",
+        "title": "Build temporal composites from masked observations"
+       }
+      ]
+     },
+     {
+      "name": "geospatial-data-discovery",
+      "reasons": [
+       "Dataset: STAC item; retain catalog, asset and acquisition provenance +8.000000"
+      ],
+      "score": 8.0,
+      "sections": [
+       {
+        "excerpt": "Before downloading or integrating any spatial dataset, verify: 1. **Area of Interest (AOI):** Does the bounding box or polygon strictly cover the study area? 2. **Temporal Window:** What are the acquisition date ranges, baseline years, or repeat cycle frequencies? 3. **Spatial Resolution / Scale:** Ground Sample Distance (e.g. 10m Sentinel vs 30m Landsat vs sub-meter aerial) or vector scale ratio (1:10k vs 1:110m). 4. **Coordinate Reference System (CRS):** Is the native CRS g…",
+        "id": "10-point-geospatial-evaluation-checklist",
+        "score": 0,
+        "source": "SKILL.md#10-point-geospatial-evaluation-checklist",
+        "title": "10-Point Geospatial Evaluation Checklist"
+       },
+       {
+        "excerpt": "- **OpenStreetMap (OSM) / Geofabrik:** Global crowd-sourced vector data (roads, POIs, land use). License: ODbL. - **Overture Maps Foundation:** Cloud-native GeoParquet releases of buildings, places, transportation, and base layers. License: CDLA-Permissive-2.0 / ODbL. - **USGS EarthExplorer / Landsat:** 30m multispectral global archive (Landsat 8/9). Public Domain. - **Copernicus Open Access / Sentinel Hub:** 10m multispectral (Sentinel-2), SAR (Sentinel-1). Open access with …",
+        "id": "recommended-authoritative-data-sources",
+        "score": 0,
+        "source": "SKILL.md#recommended-authoritative-data-sources",
+        "title": "Recommended Authoritative Data Sources"
+       }
+      ]
+     }
+    ]
+   },
+   "prompt": "Prepare this input",
+   "slug": "prepare-stac"
+  }
+ ]
+}

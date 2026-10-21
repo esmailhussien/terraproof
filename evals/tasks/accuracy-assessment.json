@@ -1,0 +1,45 @@
+{
+  "skill": "accuracy-assessment",
+  "tasks": [
+    {
+      "id": "accuracy-stratified-area-olofsson-example",
+      "prompt": "Here is my forest change map and the reference labels for a stratified random sample. Report the accuracy and the deforestation area.",
+      "inputs": "A four-class change map (deforestation, forest gain, stable forest, stable non-forest) in an equal-area 30 m grid with mapped pixel counts 200,000 / 150,000 / 3,200,000 / 6,450,000, and a stratified random sample by map class whose map-by-reference counts are [[66,0,5,4],[0,55,8,12],[1,0,153,11],[2,1,9,313]] (Olofsson et al. 2014, Table 8). Independent expected values computed with the stratified estimator.",
+      "acceptance": [
+        "Report the error matrix in proportion of area (p_ij = W_i n_ij / n_i.), not only raw counts.",
+        "Overall accuracy 0.947 +/- 0.018; deforestation user's accuracy 0.88 +/- 0.07 and producer's accuracy 0.75 +/- 0.21 (95% CI), each within 0.005.",
+        "Deforestation area 21,158 ha +/- 6,158 ha (95% CI) within 5 ha, reported next to, and distinguished from, the mapped 18,000 ha.",
+        "Do not report kappa as a substitute; state the CI is a large-sample normal approximation.",
+        "Run python -m terraproof check change_map.tif --operation area and the Phase 4 accuracy checks on the sample and the corrected estimates; expected_checks applies to these (crs.metric_operation confirms a projected metre CRS, not equal-area by itself)."
+      ],
+      "expected_checks": { "accuracy.sample_design": "pass", "accuracy.estimates": "pass", "raster.nodata_declared": "pass", "crs.metric_operation": "pass" },
+      "pitfall": "Mapped pixel counts are reported as class areas and accuracies are computed from raw stratified counts without area weights."
+    },
+    {
+      "id": "accuracy-training-points-missing-stratum",
+      "prompt": "Use my training points to compute the map's accuracy and class areas quickly.",
+      "inputs": "A classified map with five classes including a rare wetland class, the polygon/point training set used to fit the classifier (no wetland points in the held-back portion), and the map's mapped class areas. A probability-sample frame (the map) is available.",
+      "acceptance": [
+        "Refuse to treat training or convenience points as an accuracy sample; explain that inclusion probabilities are unknown and estimates are biased.",
+        "Report that the supplied points do not cover every map class (wetland) and have no stratum weights; expected_checks applies to the supplied point set as an intentional input preflight with the Phase 4 accuracy.sample_design check.",
+        "Propose a stratified random design by map class with a stated allocation and minimum per stratum, a seed and a response-design protocol.",
+        "Run python -m terraproof check training_points.gpkg; geometry checks apply to the supplied points."
+      ],
+      "expected_checks": { "accuracy.sample_design": "fail", "geometry.valid": "pass", "geometry.non_empty": "pass" },
+      "pitfall": "Training data are reused for validation and a missing rare class is silently reported with no area or accuracy uncertainty."
+    },
+    {
+      "id": "accuracy-response-design-change-sample",
+      "prompt": "Prepare and label a validation sample for my 2018-2023 loss/gain/stable change map so we can report change areas.",
+      "inputs": "A change map (loss, gain, stable) in an equal-area CRS, very high resolution imagery for 2018 and 2023, a target standard error and anticipated user's accuracies, and an interpreter team. Seed reference imagery from 2020 only for part of the area and mixed pixels on edges.",
+      "acceptance": [
+        "Draw a stratified random sample from the final change map with a documented allocation giving the rare loss/gain strata enough units, record W_i from mapped areas and keep the seed.",
+        "Write a response design: spatial unit, reference sources covering both 2018 and 2023, labeling protocol for mixed units, agreement rule and interpreter confidence; flag units whose reference is not temporally coincident.",
+        "Deliver the sample as a valid point layer with one record per sample unit and a defined CRS, plus the strata areas table.",
+        "Run python -m terraproof check validation_sample.gpkg and the Phase 4 accuracy.sample_design check; expected_checks applies to the delivered sample."
+      ],
+      "expected_checks": { "geometry.valid": "pass", "geometry.type_consistent": "pass", "crs.defined": "pass", "scope.record_count": "pass", "accuracy.sample_design": "pass" },
+      "pitfall": "Reference labels come from imagery that does not cover both change dates, or the rare change strata receive too few units for usable estimates."
+    }
+  ]
+}

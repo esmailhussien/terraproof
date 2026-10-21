@@ -17,3 +17,6 @@ __pycache__/
 node_modules/
 dist/
 build/
+
+# Terraproof local caches (router embeddings, models)
+.terracache/

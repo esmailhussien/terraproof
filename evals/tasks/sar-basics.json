@@ -1,0 +1,44 @@
+{
+  "skill": "sar-basics",
+  "tasks": [
+    {
+      "id": "sar-db-linear-monthly-mean",
+      "prompt": "Average these Sentinel-1 VV backscatter images (already in dB) into one monthly mean image and give me the mean value over the field polygon.",
+      "inputs": "Three co-registered, terrain-corrected sigma0 VV rasters in dB from the same relative orbit on one grid, with declared nodata and layover/shadow nodata pixels, plus a field polygon. Include a control pixel with values -5 dB and -15 dB on two dates (linear mean -7.596 dB; naive dB mean -10 dB) and a pixel valid on only one date.",
+      "acceptance": [
+        "Convert dB to linear power (10 ** (dB / 10)), average in linear, convert back with 10 * log10; the control pixel gives -7.596 dB within 0.01 dB, not -10 dB.",
+        "Compute the polygon mean in linear power as well and report it in dB with the quantity and scale named (sigma0 VV, dB).",
+        "Keep nodata and layover/shadow pixels out of the mean and report the per-pixel count of contributing dates.",
+        "Run python -m terraproof check vv_monthly_mean_db.tif plus the Phase 4 sar.value_domain check declaring sigma0 in dB; expected_checks applies to the output, whose control values lie in a plausible dB domain."
+      ],
+      "expected_checks": { "sar.value_domain": "pass", "raster.nodata_declared": "pass", "crs.defined": "pass" },
+      "pitfall": "dB values are averaged directly, which computes a geometric mean and biases bright/dark mixtures."
+    },
+    {
+      "id": "sar-grd-gcp-only-preflight",
+      "prompt": "Compute the flooded area in hectares from this Sentinel-1 GRD measurement file and a -18 dB threshold.",
+      "inputs": "A Level-1 IW GRDH SAFE product (or its measurement GeoTIFF) with uncalibrated uint16 amplitude DN, calibration and noise annotation XML, and geolocation exposed only as GCPs (no CRS/geotransform). A DEM and a reference flood outline for the AOI. The requested threshold is taken from an unrelated study.",
+      "acceptance": [
+        "Report that the input is GCP-only ground-range geometry and not terrain corrected; do not compute areas on it, and do not assign a fake geotransform to make it pass.",
+        "Calibrate DN to sigma0 with the product LUT (DN^2 / A_sigma^2, bilinear LUT interpolation, noise handling recorded), then apply DEM-based terrain correction to a projected CRS before any area computation.",
+        "Derive the water threshold for this scene (e.g. from a bimodal histogram) and validate it against the reference outline instead of adopting -18 dB as universal; compute areas in an equal-area or suitable projected CRS.",
+        "Expected_checks applies to the supplied measurement GeoTIFF as an intentional input preflight with the Phase 4 sar.geocoded check."
+      ],
+      "expected_checks": { "sar.geocoded": "fail" },
+      "pitfall": "Areas are computed from an uncalibrated, non-geocoded GRD with a copied dB threshold applied to DN values."
+    },
+    {
+      "id": "sar-orbit-consistent-log-ratio",
+      "prompt": "Map flood onset by comparing a pre-event and post-event Sentinel-1 image from the STAC catalog.",
+      "inputs": "STAC Items for terrain-corrected gamma0 VV/VH in linear power: one pre-event date on relative orbit 15 ascending, post-event dates on relative orbit 15 ascending and on a descending orbit, layover/shadow masks and a reference flood sample. Include a calm reservoir (stable dark), a newly flooded field and wind-roughened open water.",
+      "acceptance": [
+        "Select pre/post images from the same relative orbit and orbit direction (sat:relative_orbit, sat:orbit_state), or document an incidence-angle normalisation if they differ.",
+        "Compute log10(post/pre) on linear power on one grid, masking layover/shadow and nodata; negative values indicate backscatter decrease.",
+        "Explain that calm water is dark but wind-roughened water can be bright, derive the change threshold locally, and validate the flood map with the reference sample.",
+        "Run python -m terraproof check pre_gamma0_vv.tif post_gamma0_vv.tif and python -m terraproof check post-item.json, plus the Phase 4 sar.value_domain (gamma0/sigma0 linear) and sar.geocoded checks; expected_checks applies to these inputs and Items."
+      ],
+      "expected_checks": { "sar.value_domain": "pass", "sar.geocoded": "pass", "raster.grid_alignment": "pass", "stac.provenance": "pass" },
+      "pitfall": "Ascending and descending acquisitions with different incidence angles are differenced, so geometry differences are mapped as flooding."
+    }
+  ]
+}

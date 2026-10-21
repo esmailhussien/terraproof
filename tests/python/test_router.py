@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import subprocess
 import sys
@@ -616,3 +617,172 @@ def test_dev_set_coverage_without_opening_any_other_evaluation_set():
     assert sum(item["lang"] == "ar" for item in items) >= 25
     assert sum(bool(item.get("datasets")) for item in items) >= 10
     assert {name for item in items for name in item["expected"]} == set(get_index().skills) - PROCESS_SKILLS
+
+
+# --- Candidate mode ----------------------------------------------------------
+
+
+SNAPSHOT = json.loads(
+    (Path(__file__).parent / "fixtures" / "router_head_snapshot.json").read_text(encoding="utf-8-sig"))
+
+
+def canonical(result):
+    return json.dumps(result, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+@pytest.mark.parametrize("record", SNAPSHOT["prompts"], ids=lambda record: record["slug"])
+def test_ranked_default_output_byte_identical_to_head(record):
+    """JSON output with default arguments matches the committed 1cac039 snapshot."""
+    result = find_guidance(record["prompt"], datasets=copy.deepcopy(record["datasets"]))
+    assert canonical(result) == canonical(record["output"])
+
+
+def test_candidates_contract_and_defaults():
+    result = find_guidance("Fix the broken parcels layer", mode="candidates")
+    assert len(result["skills"]) <= 8
+    assert all(skill["reasons"] for skill in result["skills"])
+    assert all(isinstance(skill.get("explanation"), str) and skill["explanation"]
+               for skill in result["skills"])
+    # Default top_k for candidates is 8, ranked remains 5.
+    wide = find_guidance("Fix the broken parcels layer", mode="candidates", top_k=16)
+    assert result["skills"] == wide["skills"][:8]
+
+
+def test_candidates_drop_relative_cutoff_but_keep_intents(controlled_index):
+    router, scores = controlled_index
+    scores.update({"raster-processing": 38.0, "gdal": 20.0, "geozarr": 19.999, "geomaster": 5.0})
+    ranked = router.find_guidance("rasterio raster sentinel", top_k=10)
+    assert names(ranked) == ["raster-processing", "gdal", "geomaster"]
+    candidates = router.find_guidance("rasterio raster sentinel", top_k=10, mode="candidates")
+    assert names(candidates) == ["raster-processing", "gdal", "geozarr", "geomaster"]
+    assert names(router.find_guidance("Tell me a joke about bananas", mode="candidates")) == []
+    assert names(router.find_guidance("fix a raster error", mode="candidates")) == []
+
+
+def test_candidates_lowered_metadata_floor_but_litmus_for_body_only():
+    # Metadata-adjacent wording can enter on the lowered floor...
+    assert "crs-and-units" in names(find_guidance("عازل بالمتر ميتر", datasets=[vector()], mode="candidates"))
+    # ...while dangling body-only matches stay out of a chart-only request.
+    result = find_guidance("Draw a line chart.", mode="candidates")
+    assert "geopandas" not in names(result)
+    assert "statistical-analysis" not in names(result)
+
+
+def test_invalid_mode_and_semantic_type(tmp_path):
+    with pytest.raises(ValueError):
+        find_guidance("NDVI", mode="auto")
+    with pytest.raises(ValueError):
+        find_guidance("NDVI", semantic="yes")
+    with pytest.raises(ValueError):
+        from terraproof.router.evaluate import evaluate_file
+        evaluate_file(str(tmp_path / "missing.jsonl"), mode="top")
+
+
+# --- Semantic retrieval (fake embedder; never downloads in CI) ----------------
+
+
+class FakeEmbedder:
+    """Hash-bag deterministic embedder; word overlap drives cosine similarity."""
+
+    DIM = 32
+
+    def _vector(self, text):
+        import math
+        from terraproof.router.text import tokenize
+        vector = [0.0] * self.DIM
+        for word in sorted(set(tokenize(text))):
+            digest = hashlib.sha256(word.encode("utf-8")).digest()
+            if digest[0] < 128:  # noisy words keep similarities realistic
+                vector[digest[1] % self.DIM] += 1.0
+        norm = math.sqrt(sum(value * value for value in vector)) or 1.0
+        return [value / norm for value in vector]
+
+    def embed(self, documents, batch_size=32):
+        return [self._vector(document) for document in documents]
+
+
+@pytest.fixture
+def fake_semantic(monkeypatch, tmp_path):
+    from terraproof.router import semantic
+    monkeypatch.setenv("TERRAPROOF_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setattr(semantic, "get_embedder", lambda: FakeEmbedder())
+    return semantic
+
+
+def test_semantic_fusion_scores_and_reasons(fake_semantic, monkeypatch):
+    import terraproof.router as module
+
+    module.SEMANTIC_MIN_SCORE = 0.0
+    module.SEMANTIC_TOP_N = 16
+    module.SEMANTIC_DELTA = 1.0
+    task = "store the multidimensional arrays as cloud native zarr"
+    plain = find_guidance(task, mode="candidates", semantic=False)
+    result = find_guidance(task, mode="candidates", semantic=True)
+    names_sem = names(result)
+    assert "geozarr" in names_sem
+    skill = next(s for s in result["skills"] if s["name"] == "geozarr")
+    assert any("Semantic: cosine=" in text for text in skill["reasons"])
+    assert all(round(value, 6) == value for value in (s["score"] for s in result["skills"]))
+    # Everything available lexically stays available with the model on.
+    assert {s["name"] for s in plain["skills"]} <= set(names_sem)
+
+
+def test_semantic_true_overrides_env_off(fake_semantic):
+    # semantic=False wins even when the environment asks for the model.
+    result = find_guidance("store the multidimensional arrays as zarr", semantic=False)
+    assert not any("Semantic: cosine=" in text for skill in result["skills"] for text in skill["reasons"])
+    assert "reasons" not in result
+
+
+def test_semantic_missing_extra_falls_back_and_warns(monkeypatch, tmp_path):
+    monkeypatch.setenv("TERRAPROOF_CACHE_DIR", str(tmp_path / "cache"))
+    # No model in a fresh cache; the real fastembed is not even importable here.
+    lexical = find_guidance("NDVI from Sentinel reflectance", semantic=False)
+    result = find_guidance("NDVI from Sentinel reflectance", semantic=True)
+    # The skill list and scores must match the lexical fallback; the warning is
+    # surfaced separately so the caller sees why semantic retrieval did not run.
+    assert canonical({k: v for k, v in result.items() if k != "reasons"}) == canonical(lexical)
+    warnings = sorted({text for skill in result["skills"] for text in skill["reasons"]
+                       if "semantic retrieval unavailable" in text} | set(result.get("reasons", [])))
+    assert warnings and "terraproof[semantic]" in warnings[0] and "--download-model" in warnings[0]
+
+
+def test_semantic_download_command(tmp_path, monkeypatch, capsys):
+    from terraproof.router.__main__ import main as router_main
+    assert router_main([]) == 1
+    called = {}
+
+    def fake_download(download):
+        called["download"] = download
+        return Path("/cached/model")
+
+    import terraproof.router.semantic as semantic
+    monkeypatch.setenv("TERRAPROOF_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setattr(semantic, "model_path", fake_download)
+    assert router_main(["--download-model"]) == 0
+    assert called == {"download": True}
+    assert "model ready at /cached/model" in capsys.readouterr().out
+
+
+def test_semantic_section_cache_key_follows_registry_content(fake_semantic, tmp_path):
+    from terraproof.router.index import Index, Section, get_index
+    from terraproof.router.semantic import content_key
+    index = get_index()
+    first = content_key(index)
+    modified = Index(dict(index.skills), index.sections, index.idf, index.average_length)
+    modified.skills["geozarr"] = dict(modified.skills["geozarr"], explanation="changed")
+    assert content_key(modified) != first
+    assert content_key(index) == first
+
+
+def test_semantic_real_model_only_when_cached(tmp_path):
+    """With the real model cached in the user cache, verify a scored result; else skip."""
+    pytest.importorskip("fastembed", reason="semantic extra not installed")
+    from terraproof.router import semantic
+    snapshots = list(semantic.cache_dir().glob("models/models--*/snapshots/*"))
+    if not snapshots:
+        pytest.skip("pinned semantic model not downloaded yet")
+    result = find_guidance("احسب مؤشر الغطاء النباتي من مرئية سنتينل 2", semantic=True)
+    skill = result["skills"][0]
+    assert any("Semantic: cosine=" in text for text in skill["reasons"])
+    assert skill["score"] > 0

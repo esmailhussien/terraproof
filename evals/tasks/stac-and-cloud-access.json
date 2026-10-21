@@ -1,0 +1,44 @@
+{
+  "skill": "stac-and-cloud-access",
+  "tasks": [
+    {
+      "id": "stac-pinned-search-manifest",
+      "prompt": "Find Sentinel-2 L2A scenes with under 20% cloud for my AOI in June 2024, and make sure we can reproduce the exact inputs next year.",
+      "inputs": "A STAC API endpoint (recorded responses for offline grading) that advertises Item Search and the Query extension but not Filter, an AOI polygon spanning two UTM tiles, Items with s2:processing_baseline but no processing:version, and a later catalog state in which one Item was reprocessed under a new baseline.",
+      "acceptance": [
+        "Use collections, one of bbox or intersects (not both), an RFC 3339 datetime interval and the Query extension after checking conformance; do not rely on an unadvertised filter.",
+        "Write a run record with API URL, search parameters, collection + item ids, datetimes, asset keys, unsigned hrefs, processing baseline, encoding metadata and software versions; timestamps and absolute paths stay outside the deterministic core.",
+        "Re-fetch by ids and detect that the reprocessed Item changed (baseline or hash) instead of silently using it.",
+        "Run python -m terraproof check source-item.json and the Phase 4 provenance.reproducible and rs.temporal_scope checks on the run record; expected_checks applies to the original pinned inputs."
+      ],
+      "expected_checks": { "stac.provenance": "pass", "provenance.reproducible": "pass", "rs.temporal_scope": "pass" },
+      "pitfall": "Only the search query is saved, so a later re-run silently returns different or reprocessed items."
+    },
+    {
+      "id": "stac-loader-double-decode",
+      "prompt": "Load red and NIR for these items with stackstac and convert to reflectance.",
+      "inputs": "Sentinel-2 L2A STAC Items whose assets declare raster:bands scale 0.0001, offset -0.1 and nodata 0 while the GeoTIFFs report identity scale/offset; original DN controls with independently decoded reflectance; a cloud-free control area.",
+      "acceptance": [
+        "Recognise that stackstac.stack defaults to rescale=True and already applies raster:bands scale/offset; do not decode again (or set rescale=False and decode once), and contrast with rasterio/odc-stac returning raw DN.",
+        "Control pixels match DN * 0.0001 - 0.1 within floating tolerance; DN 0 is nodata, not -0.1 reflectance.",
+        "Write the decoded output with identity scale/offset metadata and declared nodata.",
+        "Run python -m terraproof check sr_red.tif --expect reflectance and the Phase 4 rs.scale_applied_once check against the original DN; expected_checks applies to the corrected output."
+      ],
+      "expected_checks": { "rs.scale_applied_once": "pass", "rs.reflectance_range": "pass", "raster.nodata_declared": "pass" },
+      "pitfall": "Scale and offset are applied twice because the loader already decoded the data, giving tiny but plausible-looking values."
+    },
+    {
+      "id": "stac-signed-windowed-cog-subset",
+      "prompt": "Extract just my 10 km study area from these Planetary Computer COGs without downloading whole scenes, and save it for the team.",
+      "inputs": "Planetary Computer STAC Items requiring SAS signing (signed hrefs with expiry), an AOI in lon/lat, remote COGs with overviews, and a run-record template.",
+      "acceptance": [
+        "Sign at read time (modifier=planetary_computer.sign_inplace or sign) and read only the AOI window via HTTP range requests (/vsicurl/ or rasterio windows) after transforming the AOI to the asset CRS.",
+        "Keep the window transform and CRS in the output and write it as a COG with declared nodata.",
+        "The run record and any report contain unsigned hrefs only; no SAS token or credential appears in files or logs.",
+        "Run python -m terraproof check aoi_subset.tif; expected_checks applies to the delivered subset."
+      ],
+      "expected_checks": { "crs.defined": "pass", "raster.nodata_declared": "pass", "raster.cog_layout": "pass" },
+      "pitfall": "Whole scenes are downloaded through the HTTP driver, or expiring signed URLs with tokens are stored in the manifest and shared."
+    }
+  ]
+}
