@@ -36,38 +36,26 @@
     },
     "architectureRefactoring": {
       "triggers": ["architecture", "refactor architecture", "modularize", "system design", "domain boundaries"],
-      "injectSkills": ["codebase-architecture", "writing-plans"]
+      "injectSkills": ["writing-plans"]
     },
     "trivialEdit": {
       "triggers": ["button label", "typo", "color change", "text change", "rename variable", "minor fix"],
-      "suppressProcess": ["brainstorming", "writing-plans", "systematic-debugging"],
-      "suppressRisk": ["security-review"]
+      "suppressProcess": ["brainstorming", "writing-plans", "systematic-debugging"]
     }
   },
-  "riskBoundaries": {
-    "securityReview": {
-      "triggers": [
-        "auth", "login", "authentication", "authorization", "token", "jwt",
-        "secret", "api key", "password", "credential", "payment", "stripe",
-        "private data", "pii", "rls", "row level security", "vulnerability",
-        "injection", "sql injection", "xss", "csrf", "cve", "file upload",
-        "external api key", "bearer"
-      ],
-      "injectRisk": ["security-review"]
-    }
-  },
+  "riskBoundaries": {},
   "verificationRules": {
     "frontend": {
       "triggers": ["frontend", "ui", "ux", "browser", "react", "maplibre", "component", "page", "dashboard"],
-      "injectVerification": ["browser-testing", "verification"]
+      "injectVerification": ["verification"]
     },
     "backendApiDb": {
       "triggers": ["api", "database", "postgres", "supabase", "postgis", "backend", "endpoint", "webhook", "rest"],
-      "injectVerification": ["integration-testing", "verification"]
+      "injectVerification": ["verification"]
     },
     "algorithmMath": {
       "triggers": ["algorithm", "function", "utility", "calculation", "statistic", "graph", "formula", "parser"],
-      "injectVerification": ["unit-testing", "verification"]
+      "injectVerification": ["verification"]
     },
     "generalDefault": {
       "injectVerification": ["verification"]

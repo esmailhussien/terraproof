@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.0] — Unreleased
+
+### Changed
+- Renamed the project to **Terraproof**: evidence-graded skills, tools, and checks for mapping and remote-sensing AI agents (see [`Terraproof_v1_PLAN.md`](Terraproof_v1_PLAN.md)). The package is now `terraproof` v0.2.0, the CLI is `terraproof` (`bin/terraproof.js`), and the CLI banner, help, and generated manifest or bundle text say Terraproof. The GitHub repository is renamed to `esmailhussien/terraproof`, and the license and package author are now "Terraproof Contributors".
+- `apply` manifest no longer claims that Codex, Antigravity, Claude Code, or Cursor load `.agents/skills/` automatically; it says the skills must be referenced from the agent's instruction file.
+- Registry narrowed to 15 skills across process, GIS, remote-sensing, and spatial-analysis work.
+- Preset collections reduced to 3: `gis`, `data-analysis`, `production`.
+- `verification` skill frontmatter `name` changed from `verification-before-completion` to `verification` to match its directory.
+- Router test suite trimmed to 28 scenarios (14 core, 14 real-world), all passing.
+- CLI argument parsing is strict: unknown options, options missing a value, `--format` other than `json` or `table`, unknown `--collection`, and unknown `--include` or `--exclude` skills exit with status 1 and a message. Unknown commands, extra positional arguments, and options passed to `validate` are rejected too.
+- `--yes` / `-y` removed from the CLI (there was no confirmation prompt, so it is now an unknown option).
+- Routing data: `data-analysis` collection description no longer mentions network analysis; removed skill names are dropped from `routing/rules.json` (`intentRules`, `riskBoundaries`, `verificationRules`). Routing results are unchanged.
+
+### Fixed
+- The published package failed to run: `npx agentlayer` ended with `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING` because raw `.ts` router sources shipped inside `node_modules`. The router is now compiled to `dist/router/*.js` by `npm run build` (run automatically by `prepack`), and the CLI runs on Node 20 or newer. The package root is found by walking up from the module to the directory holding `package.json` and `routing/registry.json`.
+
+### Added
+- Experimental Python core (Phase 1, `pyproject.toml`, `src/terraproof/`): `python -m terraproof inspect` (vector, raster, and local STAC Item inspection, read-only, no network) and `python -m terraproof check` (checks for CRS and units, geometry, record counts, raster integrity, remote-sensing value ranges, and STAC provenance). Each run yields an evidence grade (Decision-grade, Review required, Advisory only) in a JSON or Markdown report; the Markdown report has English and Arabic (`--lang ar`) output. Exit codes: 0, 2, 3 for the grades and 1 for usage errors or unreadable inputs. Tests in `tests/python/` generate fixtures at test time.
+- CI job `python` runs `pytest -q tests/python` on Ubuntu and Windows with Python 3.11 and 3.13.
+- `tests/router/cli.test.ts`: CLI argument validation tests, wired into `npm run test:router`.
+- `npm run test:package` (`tests/package/smoke.mjs`): packs the package, installs the tarball into a fresh project, and checks `--version`, `route --format json`, `validate`, and unknown-collection rejection.
+- CI job `package-smoke` runs the package smoke test on Ubuntu, Windows, and macOS with Node 20, 22, and 24.
+
+### Removed
+- Off-scope skills: `frontend-design`, `react-best-practices`, `codebase-architecture`, `supabase`, `supabase-postgres-best-practices`, `security-review`, `api-discovery`, `api-integration`, `ai-sdk`, `unit-testing`, `integration-testing`, `browser-testing`, `test-driven-development`, `exploratory-data-analysis`.
+- Collections: `web-app`, `api-integration`, `supabase-app`, `ai-app`.
+- Upstream fixtures for removed skills under `tests/upstream/`, and `third_party/` folders no longer used by any remaining skill (`arjunprabhulal-agent-skills`, `vercel-agent-skills`, `vercel-open-agents`, `mblode-agent-skills`, `supabase-agent-skills`, `github-awesome-copilot`, `vercel-ai`).
+- Router scenarios that only exercised removed domains (20 core, 16 real-world).
+
+### Attribution
+- Attribution for removed material is kept in `sources/SOURCES.md` under "Removed in 0.2.0" (source repository, commit SHA, and license).
+
+---
+
 ## [0.1.0] — 2026-08-26
 
 ### Added

@@ -1,6 +1,6 @@
-# AgentLayer Smart Router
+# Terraproof Smart Router
 
-Deterministic, offline, high-precision skill router for [AgentLayer](https://github.com/esmailhussien/AgentLayer).
+Deterministic, offline, high-precision skill router for [Terraproof](https://github.com/esmailhussien/terraproof).
 
 ---
 
@@ -21,7 +21,7 @@ Deterministic, offline, high-precision skill router for [AgentLayer](https://git
 node router/index.ts route "Build a React dashboard displaying live weather data on an interactive map"
 
 # Dry run inspection
-node router/index.ts route "Fix intermittent Supabase auth bug" --dry-run
+node router/index.ts route "Fix intermittent 401 error when loading map tiles" --dry-run
 
 # Include or exclude specific skills
 node router/index.ts route "Process raster data" --include gdal --exclude geomaster
@@ -45,7 +45,7 @@ import { route, validateRegistry } from "./router/index.ts";
 
 const result = route("Build a React dashboard with MapLibre", {
   dryRun: true,
-  include: ["frontend-design"]
+  include: ["gdal"]
 });
 
 console.log(result.skills);
@@ -69,4 +69,7 @@ Executes:
 2. Natural language task classification tests
 3. Conflicts and manual override regression tests
 4. Preset collection resolution tests
-5. 22+ Scenario regression tests with positive and negative assertions
+5. CLI argument validation tests (unknown options, missing values, invalid format, unknown collection or skill)
+6. Apply & bundle integration tests
+7. 14 core scenario regression tests
+8. 14 real-world scenario regression tests, with positive and negative assertions

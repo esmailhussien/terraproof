@@ -1,6 +1,6 @@
-# AgentLayer — Agent Guidelines
+# Terraproof — Agent Guidelines
 
-These guidelines apply to AI coding agents modifying or extending the AgentLayer repository.
+These guidelines apply to AI coding agents modifying or extending the Terraproof repository.
 
 ---
 

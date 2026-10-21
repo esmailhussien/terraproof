@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    AgentLayer Repository Integrity & Frontmatter Validator (PowerShell native).
+    Terraproof Repository Integrity & Frontmatter Validator (PowerShell native).
 #>
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -8,7 +8,7 @@ $errors = [System.Collections.Generic.List[string]]::new()
 $warnings = [System.Collections.Generic.List[string]]::new()
 
 Write-Host ("=" * 60) -ForegroundColor Cyan
-Write-Host "AgentLayer Repository Integrity & Verification Suite (PowerShell)" -ForegroundColor Cyan
+Write-Host "Terraproof Repository Integrity & Verification Suite (PowerShell)" -ForegroundColor Cyan
 Write-Host "Repository Root: $repoRoot" -ForegroundColor Cyan
 Write-Host ("=" * 60) -ForegroundColor Cyan
 
@@ -61,7 +61,9 @@ if (-not (Test-Path $skillsDir)) {
 
 # 2. Validate markdown links
 Write-Host "[2/3] Validating markdown links and references..."
-$mdFiles = Get-ChildItem -Path $repoRoot -Recurse -Filter *.md | Where-Object { $_.FullName -notmatch '\\\.git\\' }
+# Skip VCS data, virtualenvs, dependencies, and build output (same directories as validate_repo.py)
+$skippedDirPattern = '\\(\.git|\.venv|venv|node_modules|dist|build|\.pytest_cache)\\'
+$mdFiles = Get-ChildItem -Path $repoRoot -Recurse -Filter *.md | Where-Object { $_.FullName.Substring($repoRoot.Length) -notmatch $skippedDirPattern }
 $linkPattern = '\[([^\]]+)\]\(([^)]+)\)'
 
 foreach ($file in $mdFiles) {

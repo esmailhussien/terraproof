@@ -5,69 +5,34 @@
       "id": "rw-01",
       "prompt": "Fix a typo in the homepage footer copyright text.",
       "mustInclude": ["verification"],
-      "mustExclude": ["brainstorming", "writing-plans", "security-review", "gdal"],
+      "mustExclude": ["brainstorming", "writing-plans", "gdal"],
       "maxSkills": 2
     },
     {
       "id": "rw-02",
       "prompt": "Debug why our Express auth token verification intermittently returns 403 forbidden.",
-      "mustInclude": ["systematic-debugging", "security-review", "integration-testing", "verification"],
+      "mustInclude": ["systematic-debugging", "verification"],
       "mustExclude": ["brainstorming", "gdal", "geopandas"],
       "maxSkills": 7
-    },
-    {
-      "id": "rw-03",
-      "prompt": "Build a responsive mobile navigation drawer with smooth open/close animations in React.",
-      "mustInclude": ["brainstorming", "writing-plans", "frontend-design", "react-best-practices", "browser-testing", "verification"],
-      "mustExclude": ["gdal", "geozarr", "security-review"],
-      "maxSkills": 7
-    },
-    {
-      "id": "rw-04",
-      "prompt": "Optimize re-renders in a heavy React table component displaying 5,000 items.",
-      "mustInclude": ["react-best-practices", "verification"],
-      "mustExclude": ["gdal", "geozarr", "geomaster"],
-      "maxSkills": 6
-    },
-    {
-      "id": "rw-05",
-      "prompt": "Build a multi-tenant Supabase database schema with Row Level Security policies per organization.",
-      "mustInclude": ["brainstorming", "writing-plans", "supabase", "supabase-postgres-best-practices", "security-review", "integration-testing", "verification"],
-      "mustExclude": ["gdal", "networkx"],
-      "maxSkills": 8
-    },
-    {
-      "id": "rw-06",
-      "prompt": "Optimize PostgreSQL slow queries by analyzing query execution plans and adding partial B-tree indexes.",
-      "mustInclude": ["supabase-postgres-best-practices", "verification", "integration-testing"],
-      "mustExclude": ["gdal", "geospatial-frontend"],
-      "maxSkills": 5
-    },
-    {
-      "id": "rw-07",
-      "prompt": "Perform a comprehensive security audit for JWT session hijacking and CSRF vulnerabilities.",
-      "mustInclude": ["security-review", "verification"],
-      "mustExclude": ["geopandas", "gdal", "geozarr"],
-      "maxSkills": 5
     },
     {
       "id": "rw-08",
       "prompt": "Merge 20 Shapefiles and calculate total protected land polygon area by state with GeoPandas.",
       "mustInclude": ["geopandas", "verification"],
-      "mustExclude": ["geospatial-frontend", "react-best-practices", "gdal"],
+      "mustExclude": ["geospatial-frontend", "gdal"],
       "maxSkills": 5
     },
     {
       "id": "rw-09",
       "prompt": "Batch reproject 100 GeoTIFF elevation files to EPSG:4326 and generate Cloud-Optimized GeoTIFFs (COGs) using GDAL.",
       "mustInclude": ["gdal", "verification"],
-      "mustExclude": ["geopandas", "react-best-practices", "brainstorming"],
+      "mustExclude": ["geopandas", "brainstorming"],
       "maxSkills": 4
     },
     {
       "id": "rw-10",
       "prompt": "Design a PostGIS database table storing GPS tracking points with spatial partitioning and GiST index.",
-      "mustInclude": ["brainstorming", "writing-plans", "design-postgis-tables", "supabase-postgres-best-practices", "verification", "integration-testing"],
+      "mustInclude": ["brainstorming", "writing-plans", "design-postgis-tables", "verification"],
       "mustExclude": ["geospatial-frontend", "networkx"],
       "maxSkills": 7
     },
@@ -75,140 +40,63 @@
       "id": "rw-11",
       "prompt": "Download Sentinel-2 satellite tiles from AWS STAC catalog and compute NDVI index to detect forest loss.",
       "mustInclude": ["geomaster", "geospatial-data-discovery", "verification"],
-      "mustExclude": ["react-best-practices", "geospatial-frontend"],
+      "mustExclude": ["geospatial-frontend"],
       "maxSkills": 5
     },
     {
       "id": "rw-12",
       "prompt": "Build an interactive MapLibre web map displaying real-time wildfire perimeter polygons.",
-      "mustInclude": ["brainstorming", "writing-plans", "geospatial-frontend", "frontend-design", "browser-testing", "verification"],
+      "mustInclude": ["brainstorming", "writing-plans", "geospatial-frontend", "verification"],
       "mustExclude": ["gdal", "geozarr", "networkx"],
       "maxSkills": 7
     },
     {
-      "id": "rw-13",
-      "prompt": "Profile an e-commerce transactions CSV for missing values, skewness, and fraudulent charge anomalies.",
-      "mustInclude": ["exploratory-data-analysis", "verification", "unit-testing"],
-      "mustExclude": ["gdal", "geospatial-frontend", "react-best-practices"],
-      "maxSkills": 5
-    },
-    {
       "id": "rw-14",
       "prompt": "Run a two-way ANOVA and calculate Cohen's d effect sizes comparing treatment cohorts.",
-      "mustInclude": ["statistical-analysis", "verification", "unit-testing"],
+      "mustInclude": ["statistical-analysis", "verification"],
       "mustExclude": ["gdal", "geospatial-frontend"],
       "maxSkills": 5
-    },
-    {
-      "id": "rw-15",
-      "prompt": "Search and verify free public Geocoding APIs with generous monthly request quotas.",
-      "mustInclude": ["api-discovery", "verification"],
-      "mustExclude": ["gdal", "geozarr"],
-      "maxSkills": 4
-    },
-    {
-      "id": "rw-16",
-      "prompt": "Build a resilient REST API client wrapper with exponential backoff and rate limit handling.",
-      "mustInclude": ["brainstorming", "writing-plans", "api-integration", "security-review", "integration-testing", "verification"],
-      "mustExclude": ["gdal", "networkx"],
-      "maxSkills": 7
-    },
-    {
-      "id": "rw-17",
-      "prompt": "Build a streaming customer support AI chatbot in React using Vercel AI SDK useChat.",
-      "mustInclude": ["brainstorming", "writing-plans", "ai-sdk", "react-best-practices", "frontend-design", "browser-testing", "verification"],
-      "mustExclude": ["gdal", "geopandas", "networkx"],
-      "maxSkills": 8
-    },
-    {
-      "id": "rw-18",
-      "prompt": "Extract structured product catalog entities into a validated JSON schema using an LLM.",
-      "mustInclude": ["ai-sdk", "unit-testing", "verification"],
-      "mustExclude": ["gdal", "geospatial-frontend"],
-      "maxSkills": 5
-    },
-    {
-      "id": "rw-19",
-      "prompt": "Build a RAG system that embeds uploaded customer documentation and answers queries.",
-      "mustInclude": ["brainstorming", "writing-plans", "ai-sdk", "security-review", "integration-testing", "verification"],
-      "mustExclude": ["gdal", "geospatial-frontend"],
-      "maxSkills": 7
-    },
-    {
-      "id": "rw-20",
-      "prompt": "Build an AI agent with tool calling that retrieves live stock prices from an external API.",
-      "mustInclude": ["brainstorming", "writing-plans", "ai-sdk", "api-integration", "security-review", "integration-testing", "verification"],
-      "mustExclude": ["gdal", "geozarr"],
-      "maxSkills": 8
     },
     {
       "id": "rw-21",
       "prompt": "Build a React map application that uses an AI assistant to summarize demographic statistics for selected regions.",
-      "mustInclude": ["brainstorming", "writing-plans", "geospatial-frontend", "react-best-practices", "ai-sdk", "browser-testing", "verification"],
+      "mustInclude": ["brainstorming", "writing-plans", "geospatial-frontend", "verification"],
       "mustExclude": ["gdal", "geozarr"],
       "maxSkills": 8
     },
     {
       "id": "rw-22",
       "prompt": "Integrate an external weather API to fetch forecasts and overlay precipitation contours on MapLibre.",
-      "mustInclude": ["brainstorming", "writing-plans", "api-integration", "geospatial-frontend", "browser-testing", "integration-testing", "verification"],
+      "mustInclude": ["brainstorming", "writing-plans", "geospatial-frontend", "verification"],
       "mustExclude": ["networkx", "geozarr"],
       "maxSkills": 9
     },
     {
-      "id": "rw-23",
-      "prompt": "Build an AI assistant that queries our PostgreSQL database schema with parameterized queries.",
-      "mustInclude": ["brainstorming", "writing-plans", "ai-sdk", "supabase-postgres-best-practices", "security-review", "integration-testing", "verification"],
-      "mustExclude": ["gdal", "networkx"],
-      "maxSkills": 8
-    },
-    {
       "id": "rw-24",
       "prompt": "Analyze road network graph topology and compute betweenness centrality for emergency vehicle routing.",
-      "mustInclude": ["networkx", "verification", "unit-testing"],
-      "mustExclude": ["geospatial-frontend", "react-best-practices"],
+      "mustInclude": ["networkx", "verification"],
+      "mustExclude": ["geospatial-frontend"],
       "maxSkills": 5
     },
     {
       "id": "rw-25",
       "prompt": "Validate our cloud-native GeoParquet partition schemas before public AWS S3 bucket release.",
       "mustInclude": ["geoparquet-validation", "verification"],
-      "mustExclude": ["react-best-practices", "geospatial-frontend"],
+      "mustExclude": ["geospatial-frontend"],
       "maxSkills": 5
     },
     {
       "id": "rw-26",
       "prompt": "Generate a publication-ready 4-panel Seaborn chart with accessible colorblind palette for Nature journal submission.",
-      "mustInclude": ["scientific-visualization", "verification", "unit-testing"],
+      "mustInclude": ["scientific-visualization", "verification"],
       "mustExclude": ["gdal", "geospatial-frontend"],
       "maxSkills": 5
-    },
-    {
-      "id": "rw-27",
-      "prompt": "Refactor monolithic Node backend services into decoupled modules with explicit domain boundaries.",
-      "mustInclude": ["brainstorming", "writing-plans", "codebase-architecture", "verification"],
-      "mustExclude": ["gdal", "geospatial-frontend"],
-      "maxSkills": 6
-    },
-    {
-      "id": "rw-28",
-      "prompt": "Write isolated unit tests for our payment fee calculation engine and test boundary conditions.",
-      "mustInclude": ["unit-testing", "verification", "security-review"],
-      "mustExclude": ["browser-testing", "geospatial-frontend"],
-      "maxSkills": 5
-    },
-    {
-      "id": "rw-29",
-      "prompt": "Implement end-to-end Cypress user authentication and checkout journey tests.",
-      "mustInclude": ["browser-testing", "verification", "security-review"],
-      "mustExclude": ["gdal", "geozarr", "networkx"],
-      "maxSkills": 6
     },
     {
       "id": "rw-30",
       "prompt": "Process multi-dimensional climate model simulation grids stored in Zarr format using xarray.",
       "mustInclude": ["geozarr", "verification"],
-      "mustExclude": ["geospatial-frontend", "react-best-practices"],
+      "mustExclude": ["geospatial-frontend"],
       "maxSkills": 4
     }
   ]

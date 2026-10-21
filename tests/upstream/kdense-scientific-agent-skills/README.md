@@ -1,4 +1,4 @@
-﻿# Upstream Evaluation Suite: K-Dense Scientific Agent Skills
+# Upstream Evaluation Suite: K-Dense Scientific Agent Skills
 
 These test files are vendored from `K-Dense-AI/scientific-agent-skills` to evaluate the accuracy, reproducibility, and CLI tooling behavior of the imported scientific/data skills.
 
@@ -17,6 +17,5 @@ These test files are vendored from `K-Dense-AI/scientific-agent-skills` to evalu
 ## Vendored Test Suites
 
 1. `geopandas/`: Verifies GeoPandas scripts and static rule checks.
-2. `exploratory-data-analysis/`: Verifies EDA script profiling and static constraints.
-3. `statistical-analysis/`: Tests statistical assumption checking and test selection logic.
-4. `scientific-visualization/`: Tests publication export, palette auditing, and styling scripts.
+2. `statistical-analysis/`: Tests statistical assumption checking and test selection logic.
+3. `scientific-visualization/`: Tests publication export, palette auditing, and styling scripts.

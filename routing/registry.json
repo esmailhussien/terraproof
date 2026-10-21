@@ -35,39 +35,6 @@
       "requires": [],
       "conflicts": []
     },
-    "codebase-architecture": {
-      "name": "codebase-architecture",
-      "path": "skills/codebase-architecture",
-      "layer": "domain",
-      "domains": ["architecture", "backend", "frontend"],
-      "capabilities": ["system-design", "domain-boundaries", "refactoring-architecture"],
-      "triggers": ["architecture", "codebase structure", "domain boundaries", "restructure", "deepening", "modularization", "decoupled modules", "refactor monolithic", "refactor architecture"],
-      "recommended": ["writing-plans", "verification"],
-      "requires": [],
-      "conflicts": []
-    },
-    "frontend-design": {
-      "name": "frontend-design",
-      "path": "skills/frontend-design",
-      "layer": "implementation",
-      "domains": ["frontend", "design"],
-      "capabilities": ["ui-design", "visual-hierarchy", "typography", "styling", "design-tokens"],
-      "triggers": ["frontend", "ui", "ux", "design", "style", "css", "layout", "aesthetic", "theme", "dark mode", "responsive", "dashboard"],
-      "recommended": ["react-best-practices"],
-      "requires": [],
-      "conflicts": []
-    },
-    "react-best-practices": {
-      "name": "react-best-practices",
-      "path": "skills/react-best-practices",
-      "layer": "implementation",
-      "domains": ["frontend"],
-      "capabilities": ["react-performance", "component-composition", "nextjs-optimization", "state-management"],
-      "triggers": ["react", "next.js", "nextjs", "jsx", "tsx", "component", "hooks", "useeffect", "usestate", "server component"],
-      "recommended": ["frontend-design", "browser-testing"],
-      "requires": [],
-      "conflicts": []
-    },
     "geospatial-frontend": {
       "name": "geospatial-frontend",
       "path": "skills/geospatial-frontend",
@@ -75,29 +42,7 @@
       "domains": ["frontend", "geospatial"],
       "capabilities": ["web-map", "maplibre", "duckdb-wasm", "deckgl", "spatial-ui"],
       "triggers": ["map", "web map", "maplibre", "deck.gl", "interactive map", "map dashboard", "spatial ui", "cartography web"],
-      "recommended": ["frontend-design", "react-best-practices"],
-      "requires": [],
-      "conflicts": []
-    },
-    "supabase": {
-      "name": "supabase",
-      "path": "skills/supabase",
-      "layer": "implementation",
-      "domains": ["database", "backend"],
-      "capabilities": ["supabase-auth", "supabase-storage", "supabase-realtime", "supabase-functions"],
-      "triggers": ["supabase", "supabase client", "supabase auth", "supabase storage", "supabase realtime", "supabase edge functions"],
-      "recommended": ["supabase-postgres-best-practices", "security-review"],
-      "requires": [],
-      "conflicts": []
-    },
-    "supabase-postgres-best-practices": {
-      "name": "supabase-postgres-best-practices",
-      "path": "skills/supabase-postgres-best-practices",
-      "layer": "implementation",
-      "domains": ["database"],
-      "capabilities": ["postgres-schema", "query-optimization", "indexing", "rls-policies", "connection-pooling"],
-      "triggers": ["postgres", "postgresql", "sql", "database schema", "rls", "row level security", "query performance", "migration", "indexes"],
-      "recommended": ["security-review"],
+      "recommended": [],
       "requires": [],
       "conflicts": []
     },
@@ -108,7 +53,7 @@
       "domains": ["database", "geospatial"],
       "capabilities": ["postgis-schema", "spatial-indexing", "geometry-types", "spatial-sql"],
       "triggers": ["postgis", "spatial database", "geometry column", "geography", "gist index", "spatial sql", "st_contains", "st_intersects", "st_dwithin"],
-      "recommended": ["supabase-postgres-best-practices"],
+      "recommended": [],
       "requires": [],
       "conflicts": []
     },
@@ -178,17 +123,6 @@
       "requires": [],
       "conflicts": []
     },
-    "exploratory-data-analysis": {
-      "name": "exploratory-data-analysis",
-      "path": "skills/exploratory-data-analysis",
-      "layer": "domain",
-      "domains": ["data"],
-      "capabilities": ["tabular-profiling", "missing-data-audit", "distribution-analysis", "outlier-detection"],
-      "triggers": ["eda", "exploratory data analysis", "profile csv", "missing values", "distributions", "anomalies", "data cleaning", "dataset summary"],
-      "recommended": ["verification"],
-      "requires": [],
-      "conflicts": []
-    },
     "statistical-analysis": {
       "name": "statistical-analysis",
       "path": "skills/statistical-analysis",
@@ -218,94 +152,6 @@
       "domains": ["data"],
       "capabilities": ["graph-algorithms", "centrality", "community-detection", "network-topology", "shortest-path"],
       "triggers": ["networkx", "graph analysis", "network graph", "centrality", "community detection", "shortest path graph", "nodes edges", "network topology"],
-      "recommended": ["verification"],
-      "requires": [],
-      "conflicts": []
-    },
-    "api-discovery": {
-      "name": "api-discovery",
-      "path": "skills/api-discovery",
-      "layer": "domain",
-      "domains": ["api"],
-      "capabilities": ["public-api-discovery", "api-quota-audit", "endpoint-verification"],
-      "triggers": ["find api", "search api", "free api", "public api", "weather api", "geocoding api", "api catalog", "recommend api"],
-      "recommended": ["api-integration"],
-      "requires": [],
-      "conflicts": []
-    },
-    "api-integration": {
-      "name": "api-integration",
-      "path": "skills/api-integration",
-      "layer": "implementation",
-      "domains": ["api", "backend"],
-      "capabilities": ["http-client", "exponential-backoff", "rate-limiting", "schema-validation", "idempotency"],
-      "triggers": ["integrate api", "api client", "rest api", "fetch wrapper", "http client", "rate limit", "exponential backoff", "webhook", "openapi", "api as a tool", "uses a weather api", "weather api as a tool", "external api", "external weather api"],
-      "recommended": ["integration-testing", "security-review"],
-      "requires": [],
-      "conflicts": []
-    },
-    "security-review": {
-      "name": "security-review",
-      "path": "skills/security-review",
-      "layer": "risk",
-      "domains": ["security"],
-      "capabilities": ["vulnerability-scan", "secret-detection", "injection-audit", "access-control-audit"],
-      "triggers": ["security", "vulnerability", "auth", "token", "secrets", "api key", "sql injection", "xss", "cve", "audit security", "private data", "payments"],
-      "recommended": ["verification"],
-      "requires": [],
-      "conflicts": []
-    },
-    "unit-testing": {
-      "name": "unit-testing",
-      "path": "skills/unit-testing",
-      "layer": "verification",
-      "domains": ["qa", "testing"],
-      "capabilities": ["unit-tests", "test-isolation", "edge-cases", "mocking"],
-      "triggers": ["unit test", "test function", "unit tests", "pytest unit", "jest unit", "isolated test"],
-      "recommended": ["verification"],
-      "requires": [],
-      "conflicts": []
-    },
-    "integration-testing": {
-      "name": "integration-testing",
-      "path": "skills/integration-testing",
-      "layer": "verification",
-      "domains": ["qa", "testing"],
-      "capabilities": ["boundary-testing", "database-tests", "api-integration-tests"],
-      "triggers": ["integration test", "api test", "db test", "boundary test", "external service test", "integration tests"],
-      "recommended": ["verification"],
-      "requires": [],
-      "conflicts": []
-    },
-    "browser-testing": {
-      "name": "browser-testing",
-      "path": "skills/browser-testing",
-      "layer": "verification",
-      "domains": ["qa", "testing", "frontend"],
-      "capabilities": ["e2e-testing", "playwright", "cypress", "browser-automation"],
-      "triggers": ["browser test", "e2e", "playwright", "cypress", "end to end", "ui test", "user journey"],
-      "recommended": ["verification"],
-      "requires": [],
-      "conflicts": []
-    },
-    "test-driven-development": {
-      "name": "test-driven-development",
-      "path": "skills/test-driven-development",
-      "layer": "verification",
-      "domains": ["qa", "testing", "process"],
-      "capabilities": ["tdd-cycle", "red-green-refactor", "test-first"],
-      "triggers": ["tdd", "test driven development", "red green refactor", "write test first"],
-      "recommended": ["unit-testing", "verification"],
-      "requires": [],
-      "conflicts": []
-    },
-    "ai-sdk": {
-      "name": "ai-sdk",
-      "path": "skills/ai-sdk",
-      "layer": "implementation",
-      "domains": ["ai", "frontend", "backend"],
-      "capabilities": ["chat", "streaming", "structured-output", "tool-calling", "rag", "embeddings", "ai-ui", "ai-agents"],
-      "triggers": ["ai", "ai sdk", "vercel ai", "llm", "chatbot", "chat completions", "streaming ai", "structured output", "tool calling", "rag", "embeddings", "vector search", "generatetext", "streamtext", "usechat", "ai assistant"],
       "recommended": ["verification"],
       "requires": [],
       "conflicts": []

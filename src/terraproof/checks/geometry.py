@@ -1,0 +1,76 @@
+"""Geometry checks: geometry.valid, geometry.non_empty, geometry.type_consistent."""
+
+from __future__ import annotations
+
+from terraproof.checks.base import FAIL, PASS, WARN, result
+
+# Multi-part and single-part types count as one family, so Polygon + MultiPolygon is consistent.
+GEOMETRY_FAMILY = {
+    "Point": "point",
+    "MultiPoint": "point",
+    "LineString": "line",
+    "LinearRing": "line",
+    "MultiLineString": "line",
+    "Polygon": "polygon",
+    "MultiPolygon": "polygon",
+    "GeometryCollection": "collection",
+}
+
+
+def check_geometry(dataset: dict) -> list:
+    path = dataset["path"]
+    geometry = dataset["geometry"]
+    results = []
+
+    invalid = geometry["invalid_count"]
+    if invalid:
+        results.append(
+            result(
+                "geometry.valid",
+                FAIL,
+                f"{invalid} invalid geometries in {path}; first feature indices (0-based): "
+                f"{geometry['invalid_indices']}.",
+                input=path,
+                invalid_count=invalid,
+                first_invalid_indices=geometry["invalid_indices"],
+            )
+        )
+    else:
+        results.append(result("geometry.valid", PASS, f"All geometries in {path} are valid.", input=path))
+
+    null_count, empty_count = geometry["null_count"], geometry["empty_count"]
+    if null_count or empty_count:
+        results.append(
+            result(
+                "geometry.non_empty",
+                WARN,
+                f"{path} has {null_count} null and {empty_count} empty geometries.",
+                input=path,
+                null_count=null_count,
+                empty_count=empty_count,
+                null_indices=geometry["null_indices"],
+                empty_indices=geometry["empty_indices"],
+            )
+        )
+    else:
+        results.append(result("geometry.non_empty", PASS, f"No null or empty geometries in {path}.", input=path))
+
+    counts = dataset["geometry_type_counts"]
+    families = sorted({GEOMETRY_FAMILY.get(name, name) for name in counts})
+    if len(families) > 1:
+        results.append(
+            result(
+                "geometry.type_consistent",
+                WARN,
+                f"{path} mixes geometry families: {', '.join(families)}.",
+                input=path,
+                geometry_type_counts=counts,
+                families=families,
+            )
+        )
+    else:
+        results.append(
+            result("geometry.type_consistent", PASS, f"{path} has one geometry family.", input=path,
+                   geometry_type_counts=counts)
+        )
+    return results

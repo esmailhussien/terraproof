@@ -1,12 +1,12 @@
-# AgentLayer Behavioral Tests
+# Terraproof Behavioral Tests
 
-This directory will contain behavioral test scenarios used to evaluate whether AgentLayer instructions and skills improve AI coding-agent behavior, precision, and adherence to engineering best practices.
+This directory will contain behavioral test scenarios used to evaluate whether Terraproof instructions and skills improve AI coding-agent behavior, precision, and adherence to engineering best practices.
 
 ---
 
 ## Evaluation Concept
 
-Each scenario will compare agent responses with and without specific AgentLayer skills loaded.
+Each scenario will compare agent responses with and without specific Terraproof skills loaded.
 
 ### Example Scenario
 
@@ -26,7 +26,7 @@ apply a targeted fix, and verify it?
 
 ## Automated Repository Validation Suite
 
-AgentLayer includes automated integrity validators that check skill frontmatter, path resolution, routing references, and link validity.
+Terraproof includes automated integrity validators that check skill frontmatter, path resolution, routing references, and link validity.
 
 ### Running Locally
 

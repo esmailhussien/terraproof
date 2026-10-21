@@ -1,4 +1,4 @@
-name: CI - Repository Integrity & Skill Validation
+name: CI - Terraproof Integrity, Router & Package Smoke Tests
 
 on:
   push:
@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Validate Skills, Links & Metadata
+    name: Validate Skills, Links, Router & Types
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -24,10 +24,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Set up Node.js 22
+      - name: Set up Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Install dev dependencies
         run: npm install
@@ -35,14 +35,60 @@ jobs:
       - name: TypeScript type check
         run: npx tsc --noEmit
 
-      - name: Run AgentLayer Integrity Validator
+      - name: Run Terraproof Integrity Validator
         run: |
           python tests/validate_repo.py
 
       - name: Run Smart Router Validation & Scenario Suite
         run: |
-          node tests/router/run.ts
+          npm run test:router
 
       - name: Verify npm package tarball
         run: |
           npm pack --dry-run 2>&1 | head -50
+
+  package-smoke:
+    name: Package smoke (${{ matrix.os }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [20, 22, 24]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Pack, install, and run the package
+        run: npm run test:package
+
+  python:
+    name: Python core (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11", "3.13"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install terraproof with dev extras
+        run: python -m pip install -e ".[dev]"
+
+      - name: Run Python tests
+        run: python -m pytest -q tests/python

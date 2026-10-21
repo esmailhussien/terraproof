@@ -1,6 +1,6 @@
-# AgentLayer Smart Router — Architectural Design
+# Terraproof Smart Router — Architectural Design
 
-The **AgentLayer Smart Skill Router** is a deterministic, fast, offline, and inspectable resolution engine that maps natural language task descriptions into minimal, high-precision compositions of AgentLayer skills.
+The **Terraproof Smart Skill Router** is a deterministic, fast, offline, and inspectable resolution engine that maps natural language task descriptions into minimal, high-precision compositions of Terraproof skills.
 
 ---
 
@@ -54,10 +54,10 @@ Every production skill has exactly one primary layer:
 | Layer | Purpose | Core Skills |
 |---|---|---|
 | **1. Process** | Engineering discipline, exploration, and structured breakdown | `brainstorming`, `writing-plans`, `systematic-debugging` |
-| **2. Domain** | Scientific, mathematical, and data domain knowledge | `gdal`, `geopandas`, `geomaster`, `geozarr`, `geoparquet-validation`, `geospatial-data-discovery`, `exploratory-data-analysis`, `statistical-analysis`, `scientific-visualization`, `networkx`, `api-discovery`, `codebase-architecture` |
-| **3. Implementation** | Frameworks, UI libraries, database clients, and backend patterns | `frontend-design`, `react-best-practices`, `geospatial-frontend`, `supabase`, `supabase-postgres-best-practices`, `design-postgis-tables`, `api-integration` |
-| **4. Risk** | Security, vulnerability detection, and authorization audits | `security-review` |
-| **5. Verification** | Quality assurance, test automation, and truthfulness validation | `unit-testing`, `integration-testing`, `browser-testing`, `test-driven-development`, `verification` |
+| **2. Domain** | Geospatial, remote-sensing, and data domain knowledge | `gdal`, `geopandas`, `geomaster`, `geozarr`, `geoparquet-validation`, `geospatial-data-discovery`, `statistical-analysis`, `scientific-visualization`, `networkx` |
+| **3. Implementation** | Mapping frameworks and spatial database design | `geospatial-frontend`, `design-postgis-tables` |
+| **4. Risk** | Security, vulnerability detection, and authorization audits | *(no skills in v0.2.0)* |
+| **5. Verification** | Truthfulness and completion validation | `verification` |
 
 ---
 
@@ -65,7 +65,7 @@ Every production skill has exactly one primary layer:
 
 Candidate skills are scored deterministically based on rule weights:
 
-- **Technology Exact Match (+5)**: Prompt explicitly names technology (e.g. `react`, `postgis`, `gdal`, `supabase`, `networkx`).
+- **Technology Exact Match (+5)**: Prompt explicitly names technology (e.g. `postgis`, `gdal`, `networkx`).
 - **Capability Match (+4)**: Prompt matches a specific engineering capability (e.g. `web-map`, `cog-conversion`, `spatial-join`, `hypothesis-testing`).
 - **Domain Relevance (+3)**: Broad domain category alignment (e.g. `geospatial`, `data`, `frontend`, `database`, `api`).
 - **Strong Trigger (+3)**: Exact multi-word or distinct trigger phrase match.
@@ -84,16 +84,8 @@ Candidate skills are scored deterministically based on rule weights:
    - Injects `brainstorming` and `writing-plans`.
 2. **Bug Fixing & Diagnostics (`fix`, `bug`, `error`, `401`, `500`)**:
    - Injects `systematic-debugging`. Suppresses heavy speculative planning.
-3. **Architecture Restructuring (`architecture`, `domain boundaries`)**:
-   - Injects `codebase-architecture` and `writing-plans`.
-4. **Trivial Edits (`button label`, `typo`, `color change`)**:
-   - Suppresses process and risk layers. Retains only necessary minimal verification.
-5. **Security Boundaries (`auth`, `token`, `secret`, `jwt`, `rls`, `injection`)**:
-   - Injects `security-review`.
-6. **Frontend / Browser Flow (`react`, `ui`, `maplibre`, `dashboard`)**:
-   - Injects `browser-testing`.
-7. **Backend / API / Database Boundary (`api`, `postgres`, `supabase`, `rest`)**:
-   - Injects `integration-testing`.
+3. **Trivial Edits (`button label`, `typo`, `color change`)**:
+   - Suppresses process layers. Retains only necessary minimal verification.
 
 ---
 
@@ -101,27 +93,27 @@ Candidate skills are scored deterministically based on rule weights:
 
 ### Basic Route
 ```bash
-npx agentlayer route "Build a React dashboard displaying live weather data on a map"
+npx terraproof route "Build a React dashboard displaying live weather data on a map"
 ```
 
 ### Dry Run (Inspect without modifying project)
 ```bash
-npx agentlayer route "Fix Supabase authentication 401 bug" --dry-run
+npx terraproof route "Fix intermittent 401 error when loading map tiles" --dry-run
 ```
 
 ### Manual Inclusions and Exclusions
 ```bash
-npx agentlayer route "Process GeoTIFF into COG" --include gdal --exclude geomaster
+npx terraproof route "Process GeoTIFF into COG" --include gdal --exclude geomaster
 ```
 
 ### Seeding from Preset Collections
 ```bash
-npx agentlayer route "Custom GIS workflow" --collection gis
+npx terraproof route "Custom GIS workflow" --collection gis
 ```
 
 ### JSON Output
 ```bash
-npx agentlayer route "Design PostGIS schema" --format json
+npx terraproof route "Design PostGIS schema" --format json
 ```
 
 ---
@@ -130,7 +122,7 @@ npx agentlayer route "Design PostGIS schema" --format json
 
 - **`routing/DOMAIN_ROUTING.md`**: Human-readable composition guidance and canonical architectural patterns.
 - **`routing/registry.json`**: Machine-readable metadata and relationship graph for all production skills.
-- **`routing/collections.json`**: Preset skill bundles (`web-app`, `gis`, `data-analysis`, `api-integration`, `supabase-app`, `production`).
+- **`routing/collections.json`**: Preset skill bundles (`gis`, `data-analysis`, `production`).
 - **`routing/rules.json`**: Scoring weights, intent heuristics, risk boundaries, and layer prioritization.
 - **`router/`**: High-performance, deterministic TypeScript resolution engine and CLI runner.
 

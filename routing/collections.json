@@ -2,18 +2,6 @@
   "$schema": "./collections.schema.json",
   "version": "1.0.0",
   "collections": {
-    "web-app": {
-      "name": "web-app",
-      "description": "Modern frontend and web application development stack",
-      "base": [
-        "brainstorming",
-        "writing-plans",
-        "frontend-design",
-        "react-best-practices",
-        "browser-testing",
-        "verification"
-      ]
-    },
     "gis": {
       "name": "gis",
       "description": "General geospatial engineering, spatial data analysis, and mapping",
@@ -27,58 +15,20 @@
     },
     "data-analysis": {
       "name": "data-analysis",
-      "description": "Exploratory data analysis, statistical modeling, and scientific visualization",
+      "description": "Statistical modeling and scientific visualization",
       "base": [
-        "exploratory-data-analysis",
         "statistical-analysis",
         "scientific-visualization",
         "verification"
       ]
     },
-    "api-integration": {
-      "name": "api-integration",
-      "description": "Public API discovery and resilient HTTP/REST integration engineering",
-      "base": [
-        "api-discovery",
-        "api-integration",
-        "security-review",
-        "integration-testing",
-        "verification"
-      ]
-    },
-    "supabase-app": {
-      "name": "supabase-app",
-      "description": "Full-stack Supabase application with Postgres best practices and auth",
-      "base": [
-        "supabase",
-        "supabase-postgres-best-practices",
-        "security-review",
-        "integration-testing",
-        "verification"
-      ]
-    },
     "production": {
       "name": "production",
-      "description": "Core software engineering discipline, systematic debugging, security, and verification",
+      "description": "Core software engineering discipline, systematic debugging, and verification",
       "base": [
         "brainstorming",
         "writing-plans",
         "systematic-debugging",
-        "security-review",
-        "unit-testing",
-        "integration-testing",
-        "verification"
-      ]
-    },
-    "ai-app": {
-      "name": "ai-app",
-      "description": "AI-powered application with streaming, structured output, and tool calling",
-      "base": [
-        "brainstorming",
-        "writing-plans",
-        "ai-sdk",
-        "security-review",
-        "integration-testing",
         "verification"
       ]
     }

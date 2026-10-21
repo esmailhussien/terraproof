@@ -2,12 +2,6 @@
   "version": "1.0.0",
   "scenarios": [
     {
-      "id": "scenario-01",
-      "prompt": "Login randomly returns 401 after page refresh in our Supabase auth flow.",
-      "mustInclude": ["systematic-debugging", "integration-testing", "verification", "security-review"],
-      "mustExclude": ["brainstorming", "gdal", "geopandas", "networkx"]
-    },
-    {
       "id": "scenario-02",
       "prompt": "Convert this GeoTIFF to EPSG:3857 and create a Cloud-Optimized GeoTIFF (COG).",
       "mustInclude": ["gdal", "verification"],
@@ -22,188 +16,74 @@
     {
       "id": "scenario-04",
       "prompt": "Design a PostGIS schema with GiST spatial indexes for utility networks.",
-      "mustInclude": ["design-postgis-tables", "supabase-postgres-best-practices", "verification"],
+      "mustInclude": ["design-postgis-tables", "verification"],
       "mustExclude": ["geospatial-frontend", "networkx", "gdal"]
     },
     {
       "id": "scenario-05",
       "prompt": "Build an interactive React map dashboard displaying live fleet assets.",
-      "mustInclude": ["brainstorming", "writing-plans", "frontend-design", "geospatial-frontend", "react-best-practices", "browser-testing", "verification"],
+      "mustInclude": ["brainstorming", "writing-plans", "geospatial-frontend", "verification"],
       "mustExclude": ["systematic-debugging", "gdal", "networkx"]
-    },
-    {
-      "id": "scenario-06",
-      "prompt": "Find a free public weather API and integrate it with exponential backoff and rate limit handling.",
-      "mustInclude": ["api-discovery", "api-integration", "integration-testing", "verification"],
-      "mustExclude": ["gdal", "geozarr", "geopandas"]
-    },
-    {
-      "id": "scenario-07",
-      "prompt": "Analyze this CSV dataset for missing values, distributions, and anomalies.",
-      "mustInclude": ["exploratory-data-analysis", "verification"],
-      "mustExclude": ["gdal", "geospatial-frontend", "react-best-practices", "brainstorming"]
     },
     {
       "id": "scenario-08",
       "prompt": "Test whether these two patient groups differ significantly using ANOVA and compute effect size.",
       "mustInclude": ["statistical-analysis", "verification"],
-      "mustExclude": ["geopandas", "gdal", "geospatial-frontend", "react-best-practices"]
+      "mustExclude": ["geopandas", "gdal", "geospatial-frontend"]
     },
     {
       "id": "scenario-09",
       "prompt": "Calculate betweenness centrality and detect communities in this network graph using NetworkX.",
       "mustInclude": ["networkx", "verification"],
-      "mustExclude": ["gdal", "geospatial-frontend", "react-best-practices"]
+      "mustExclude": ["gdal", "geospatial-frontend"]
     },
     {
       "id": "scenario-10",
       "prompt": "Change the Save button label to Submit.",
       "mustInclude": ["verification"],
-      "mustExclude": ["brainstorming", "writing-plans", "systematic-debugging", "security-review", "gdal"]
+      "mustExclude": ["brainstorming", "writing-plans", "systematic-debugging", "gdal"]
     },
     {
       "id": "scenario-11",
       "prompt": "Validate our GeoParquet file metadata and distribution partition structure.",
       "mustInclude": ["geoparquet-validation", "verification"],
-      "mustExclude": ["geospatial-frontend", "react-best-practices", "networkx"]
+      "mustExclude": ["geospatial-frontend", "networkx"]
     },
     {
       "id": "scenario-12",
       "prompt": "Process multi-dimensional climate grids using GeoZarr and xarray.",
       "mustInclude": ["geozarr", "verification"],
-      "mustExclude": ["geospatial-frontend", "react-best-practices", "frontend-design"]
+      "mustExclude": ["geospatial-frontend"]
     },
     {
       "id": "scenario-13",
       "prompt": "Search STAC catalogs to download Sentinel-2 satellite imagery for our study area.",
       "mustInclude": ["geospatial-data-discovery", "geomaster", "verification"],
-      "mustExclude": ["react-best-practices", "geospatial-frontend"]
+      "mustExclude": ["geospatial-frontend"]
     },
     {
       "id": "scenario-14",
       "prompt": "Generate a publication-ready multi-panel scientific figure with colorblind-safe palettes in Matplotlib.",
       "mustInclude": ["scientific-visualization", "verification"],
-      "mustExclude": ["gdal", "geospatial-frontend", "react-best-practices"]
-    },
-    {
-      "id": "scenario-15",
-      "prompt": "Audit codebase for SQL injection vulnerabilities and exposed API secret keys.",
-      "mustInclude": ["security-review", "verification"],
-      "mustExclude": ["geopandas", "gdal", "geospatial-frontend", "networkx"]
-    },
-    {
-      "id": "scenario-16",
-      "prompt": "Optimize PostgreSQL query performance and configure connection pooling for high read throughput.",
-      "mustInclude": ["supabase-postgres-best-practices", "verification"],
-      "mustExclude": ["gdal", "geospatial-frontend", "networkx"]
-    },
-    {
-      "id": "scenario-17",
-      "prompt": "Refactor TypeScript codebase architecture to enforce clean domain boundaries.",
-      "mustInclude": ["codebase-architecture", "writing-plans", "verification"],
-      "mustExclude": ["gdal", "geospatial-frontend", "networkx"]
-    },
-    {
-      "id": "scenario-18",
-      "prompt": "Build a responsive dark mode marketing page with sleek visual design tokens.",
-      "mustInclude": ["brainstorming", "writing-plans", "frontend-design", "browser-testing", "verification"],
-      "mustExclude": ["gdal", "geozarr", "networkx", "design-postgis-tables"]
-    },
-    {
-      "id": "scenario-19",
-      "prompt": "Write isolated unit tests for our currency conversion math function.",
-      "mustInclude": ["unit-testing", "verification"],
-      "mustExclude": ["browser-testing", "geospatial-frontend", "gdal"]
+      "mustExclude": ["gdal", "geospatial-frontend"]
     },
     {
       "id": "scenario-20",
       "prompt": "Perform satellite remote sensing NDVI calculation and classify vegetation changes.",
       "mustInclude": ["geomaster", "verification"],
-      "mustExclude": ["react-best-practices", "geospatial-frontend"]
-    },
-    {
-      "id": "scenario-21",
-      "prompt": "Build a full-stack Supabase application with user authentication, file storage, and Row Level Security.",
-      "mustInclude": ["brainstorming", "writing-plans", "supabase", "supabase-postgres-best-practices", "security-review", "integration-testing", "verification"],
-      "mustExclude": ["gdal", "networkx", "geozarr"]
-    },
-    {
-      "id": "scenario-22",
-      "prompt": "Implement end-to-end browser user journey tests with Playwright.",
-      "mustInclude": ["browser-testing", "verification"],
-      "mustExclude": ["gdal", "geozarr", "networkx"]
-    },
-    {
-      "id": "scenario-23",
-      "prompt": "Build a streaming AI chatbot in React with conversation history.",
-      "mustInclude": ["brainstorming", "writing-plans", "ai-sdk", "frontend-design", "react-best-practices", "browser-testing", "verification"],
-      "mustExclude": ["gdal", "geopandas", "networkx"]
-    },
-    {
-      "id": "scenario-24",
-      "prompt": "Extract invoice fields into a validated JSON schema using an LLM.",
-      "mustInclude": ["ai-sdk", "unit-testing", "verification"],
-      "mustExclude": ["gdal", "geopandas", "geospatial-frontend"]
-    },
-    {
-      "id": "scenario-25",
-      "prompt": "Build document search with embeddings and RAG over uploaded PDFs.",
-      "mustInclude": ["brainstorming", "writing-plans", "ai-sdk", "security-review", "integration-testing", "verification"],
-      "mustExclude": ["gdal", "geopandas", "geospatial-frontend"]
-    },
-    {
-      "id": "scenario-26",
-      "prompt": "Build an AI agent with tool calling that asks for approval before destructive actions.",
-      "mustInclude": ["brainstorming", "writing-plans", "ai-sdk", "security-review", "integration-testing", "verification"],
-      "mustExclude": ["gdal", "geozarr", "networkx"]
-    },
-    {
-      "id": "scenario-27",
-      "prompt": "Build an AI assistant that uses a weather API as a tool.",
-      "mustInclude": ["ai-sdk", "api-integration", "security-review", "integration-testing", "verification"],
-      "mustExclude": ["gdal", "geozarr", "networkx"]
+      "mustExclude": ["geospatial-frontend"]
     },
     {
       "id": "scenario-28",
       "prompt": "Build a map assistant that answers questions about selected GeoJSON features.",
-      "mustInclude": ["brainstorming", "writing-plans", "ai-sdk", "geospatial-frontend", "geopandas", "browser-testing", "verification"],
+      "mustInclude": ["brainstorming", "writing-plans", "geospatial-frontend", "geopandas", "verification"],
       "mustExclude": ["gdal", "geozarr"]
     },
     {
       "id": "scenario-29",
       "prompt": "Rename the AI Settings page heading.",
       "mustInclude": ["verification"],
-      "mustExclude": ["ai-sdk", "brainstorming", "writing-plans", "security-review"]
-    },
-    {
-      "id": "scenario-30",
-      "prompt": "Generate text using Vercel AI SDK generateText with fallback providers.",
-      "mustInclude": ["ai-sdk", "unit-testing", "verification"],
-      "mustExclude": ["gdal", "networkx", "geospatial-frontend"]
-    },
-    {
-      "id": "scenario-31",
-      "prompt": "Build an AI chatbot that queries Postgres database with RLS policies.",
-      "mustInclude": ["brainstorming", "writing-plans", "ai-sdk", "supabase-postgres-best-practices", "security-review", "integration-testing", "verification"],
-      "mustExclude": ["gdal", "networkx"]
-    },
-    {
-      "id": "scenario-32",
-      "prompt": "Implement React useChat streaming UI component with optimistic updates.",
-      "mustInclude": ["ai-sdk", "react-best-practices", "frontend-design", "browser-testing", "verification"],
-      "mustExclude": ["gdal", "geozarr", "networkx"]
-    },
-    {
-      "id": "scenario-33",
-      "prompt": "Use TDD red-green-refactor to implement a new user registration service with test-first methodology.",
-      "mustInclude": ["test-driven-development", "verification"],
-      "mustExclude": ["gdal", "geozarr", "networkx", "geopandas"]
-    },
-    {
-      "id": "scenario-34",
-      "prompt": "Refactor an existing React visual board application with AI-powered thinking features and improve its architecture and frontend.",
-      "mustInclude": ["brainstorming", "writing-plans", "react-best-practices", "frontend-design", "codebase-architecture", "ai-sdk", "verification", "browser-testing"],
-      "mustExclude": ["gdal", "geozarr", "geopandas", "networkx"]
+      "mustExclude": ["brainstorming", "writing-plans"]
     }
   ]
 }

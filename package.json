@@ -1,39 +1,42 @@
 {
-  "name": "agentlayer",
-  "version": "0.1.0",
-  "description": "Curated, agent-independent engineering instructions and skills with deterministic smart routing",
+  "name": "terraproof",
+  "version": "0.2.0",
+  "description": "evidence-graded skills, tools, and checks for mapping and remote-sensing AI agents. By Geova.",
   "type": "module",
-  "main": "router/index.ts",
+  "main": "./dist/router/index.js",
   "exports": {
-    ".": "./router/index.ts",
-    "./router": "./router/index.ts",
+    ".": "./dist/router/index.js",
+    "./router": "./dist/router/index.js",
     "./routing": "./routing/registry.json"
   },
   "bin": {
-    "agentlayer": "./bin/agentlayer.js"
+    "terraproof": "./bin/terraproof.js"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "npm run build",
     "route": "node router/index.ts route",
     "validate": "node router/index.ts validate",
     "test:router": "node tests/router/run.ts",
     "test:validate": "python tests/validate_repo.py",
+    "test:package": "node tests/package/smoke.mjs",
     "test": "node tests/router/run.ts",
     "typecheck": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/esmailhussien/AgentLayer.git"
+    "url": "https://github.com/esmailhussien/terraproof.git"
   },
-  "homepage": "https://github.com/esmailhussien/AgentLayer#readme",
+  "homepage": "https://github.com/esmailhussien/terraproof#readme",
   "bugs": {
-    "url": "https://github.com/esmailhussien/AgentLayer/issues"
+    "url": "https://github.com/esmailhussien/terraproof/issues"
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=20"
   },
   "files": [
     "bin",
-    "router",
+    "dist",
     "routing",
     "skills",
     "instructions",
@@ -47,17 +50,16 @@
     "agent",
     "skills",
     "router",
-    "engineering",
-    "curation",
     "geospatial",
     "gis",
-    "data-science",
-    "security"
+    "remote-sensing",
+    "earth-observation",
+    "mapping"
   ],
-  "author": "AgentLayer Team",
+  "author": "Terraproof Contributors",
   "license": "MIT",
   "devDependencies": {
-    "typescript": "^5.5.0",
+    "typescript": "^5.7.0",
     "@types/node": "^22.0.0"
   }
 }

@@ -1,54 +1,57 @@
-# AgentLayer v0.1 Release Checklist
+# Terraproof v0.2.0 Release Checklist
 
-This checklist defines the mandatory verification and release steps for publishing AgentLayer v0.1.0 to npm and GitHub.
+This checklist defines the mandatory verification and release steps for publishing Terraproof v0.2.0 to npm and GitHub.
 
 ---
 
 ## 1. Pre-Release Verification
 
 - [x] **Skill Inventory Integrity**:
-  - All 29 production skills validated against disk paths in `routing/registry.json`.
-  - Zero broken references in `routing/collections.json` (7 preset collections).
-  - Validated via `python scripts/validate_repo.py` and `node bin/agentlayer.js validate`.
+  - All 15 registered skills validated against disk paths in `routing/registry.json`.
+  - Zero broken references in `routing/collections.json` (3 preset collections).
+  - Validated via `python tests/validate_repo.py` and `node bin/terraproof.js validate`.
 - [x] **Smart Router Test Suite**:
-  - Core Scenario Suite (34 scenarios in `tests/router/scenarios.json`): 100% pass rate.
-  - Real-World Benchmark Suite (30 scenarios in `tests/router/real-world-scenarios.json`): 100% pass rate.
+  - Core Scenario Suite (14 scenarios in `tests/router/scenarios.json`): 100% pass rate.
+  - Real-World Benchmark Suite (14 scenarios in `tests/router/real-world-scenarios.json`): 100% pass rate.
   - Determinism check: 100% identical composition and scores across consecutive runs.
-  - Overall accuracy: 64/64 scenarios (100.0%).
+  - CLI argument validation tests (`tests/router/cli.test.ts`).
+  - Overall accuracy: 28/28 scenarios (100.0%).
 - [x] **License & Provenance Compliance**:
   - Every vendored skill includes `UPSTREAM.md` with source repository, commit SHA, and license terms.
   - Third-party licenses and notices maintained in `third_party/`.
   - Upstream source map and licensing catalog maintained in `sources/SOURCES.md`.
-- [x] **GitHub Actions CI**:
-  - Automated CI workflow in `.github/workflows/ci.yml` running validation and the complete router test suite on pull requests and pushes to `main`.
+- [ ] **GitHub Actions CI**:
+  - `.github/workflows/ci.yml` runs repository validation and the router suite (Node 24), and the `package-smoke` matrix (Ubuntu, Windows, macOS × Node 20, 22, 24). Confirm a green run on the release commit.
 
 ---
 
 ## 2. Packaging & Tarball Verification
 
 - [x] **`package.json` Package Shape**:
-  - `name`: `agentlayer`
-  - `version`: `0.1.0`
-  - `bin`: `{"agentlayer": "./bin/agentlayer.js"}`
-  - `files`: explicitly restricted to `bin/`, `router/`, `routing/`, `skills/`, `instructions/`, `third_party/`, `sources/`, `README.md`, `LICENSE`.
-- [x] **Tarball Inspection**:
-  - Validated via `npm pack --dry-run` and clean extraction in isolated test sandbox.
-  - Tarball size: ~560 kB (unpacked: 1.8 MB across 330 files).
-  - No temporary files, test runners, or OS artifacts packaged.
-- [x] **Executable Entry Point**:
-  - Tested `agentlayer validate` and `agentlayer route "<prompt>"` in standalone directory.
+  - `name`: `terraproof`
+  - `version`: `0.2.0`
+  - `bin`: `{"terraproof": "./bin/terraproof.js"}`
+  - `main` and `exports`: `./dist/router/index.js` (compiled router)
+  - `engines.node`: `>=20`
+  - `files`: explicitly restricted to `bin/`, `dist/`, `routing/`, `skills/`, `instructions/`, `third_party/`, `sources/`, `README.md`, `LICENSE`.
+- [x] **Build**:
+  - `npm run build` compiles `router/` to `dist/router/` (`tsconfig.build.json`). `prepack` runs the build before `npm pack` and `npm publish`.
+- [x] **Installed Package Smoke Test**:
+  - `npm run test:package` packs the repository, installs the tarball into a fresh project, and runs `--version`, `route --format json`, `validate`, and unknown-collection rejection.
+- [ ] **Tarball Size**:
+  - Re-measure with `npm pack` before release (v0.1.0 was about 560 kB across 330 files). Confirm no test files, temporary files, or OS artifacts are packaged.
 
 ---
 
 ## 3. Package Name & Registry Strategy
 
 > [!IMPORTANT]
-> The unscoped npm package name `agentlayer` is currently registered on npm by a third party.
+> The unscoped npm package name `terraproof` has not been checked or claimed from this repository yet.
 >
-> **Recommended Publishing Strategy:**
-> - Publish as a scoped package: `@<owner>/agentlayer` (e.g. `@esmailhussien/agentlayer` or `@agentlayer/cli`).
-> - To publish under a scope:
->   1. Set `"name": "@<owner>/agentlayer"` in `package.json`.
+> **Before publishing:**
+> - Check availability with `npm view terraproof` (a 404 means the name is free).
+> - If it is taken, publish a scoped package instead: `@<owner>/terraproof`.
+>   1. Set `"name": "@<owner>/terraproof"` in `package.json`.
 >   2. Run `npm publish --access public`.
 
 ---
@@ -57,21 +60,21 @@ This checklist defines the mandatory verification and release steps for publishi
 
 1. **Tag the Release**:
    ```bash
-   git tag -a v0.1.0 -m "AgentLayer v0.1.0 — Universal AI & Domain Skills with Deterministic Smart Router"
-   git push origin v0.1.0
+   git tag -a v0.2.0 -m "Terraproof v0.2.0 — evidence-graded skills, tools, and checks for mapping and remote-sensing AI agents"
+   git push origin v0.2.0
    ```
-2. **Publish to NPM (Scoped)**:
+2. **Publish to NPM**:
    ```bash
    npm publish --access public
    ```
 3. **Create GitHub Release**:
-   - Title: `AgentLayer v0.1.0`
-   - Attach tarball `agentlayer-0.1.0.tgz` generated via `npm pack`.
-   - Include release notes highlighting 29 curated skills, 7 collections, and the Smart Router engine.
+   - Title: `Terraproof v0.2.0`
+   - Attach tarball `terraproof-0.2.0.tgz` generated via `npm pack`.
+   - Include release notes highlighting the rename, the compiled package fix, strict CLI validation, and the CI package smoke test.
 
 ---
 
 ## 5. Post-Release Smoke Testing
 
-- [ ] Run `npx @<owner>/agentlayer validate` in a blank directory.
-- [ ] Run `npx @<owner>/agentlayer route "Build an interactive map in React with AI chatbot"` to verify global routing.
+- [ ] Run `npx terraproof --version` in a blank directory (or `npx @<owner>/terraproof --version` if scoped).
+- [ ] Run `npx terraproof route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL"` to verify global routing.

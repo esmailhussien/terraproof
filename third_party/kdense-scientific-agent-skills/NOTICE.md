@@ -10,7 +10,6 @@ The imported material is licensed under the MIT License (with `networkx` under B
 Vendored components:
 - `skills/geopandas/`
 - `skills/geomaster/`
-- `skills/exploratory-data-analysis/`
 - `skills/statistical-analysis/`
 - `skills/scientific-visualization/`
 - `skills/networkx/`

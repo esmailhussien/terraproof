@@ -10,7 +10,24 @@ export { applySkills, bundleSkills, type ApplyResult };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const workspaceRoot = path.resolve(__dirname, "..");
+
+// Walk up to the package root. From source this file lives in router/ (root is one level up);
+// from the compiled build it lives in dist/router/ (root is two levels up).
+function findPackageRoot(startDir: string): string {
+  let dir = startDir;
+  for (;;) {
+    if (fs.existsSync(path.join(dir, "package.json")) && fs.existsSync(path.join(dir, "routing", "registry.json"))) {
+      return dir;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      throw new Error(`Terraproof package root not found above ${startDir}`);
+    }
+    dir = parent;
+  }
+}
+
+const workspaceRoot = findPackageRoot(__dirname);
 
 export function loadRoutingData(baseDir = workspaceRoot): {
   registry: RegistryData;
@@ -40,7 +57,7 @@ export function printRouteResult(result: RouteResult, format: "table" | "json" =
   }
 
   console.log("\n================================================================================");
-  console.log("                      AgentLayer Smart Skill Router");
+  console.log("                      Terraproof Smart Skill Router");
   console.log("================================================================================");
   console.log(`Task Prompt : "${result.prompt}"`);
   console.log(`Confidence  : ${(result.confidence * 100).toFixed(0)}%`);
@@ -85,23 +102,125 @@ export function printRouteResult(result: RouteResult, format: "table" | "json" =
   console.log("\n================================================================================\n");
 }
 
+export interface ParsedCliArgs {
+  command: "route" | "apply" | "bundle";
+  prompt: string;
+  options: RouteOptions;
+  format: "table" | "json";
+  doApply: boolean;
+  doBundle: boolean;
+  targetDir: string;
+  outFile?: string;
+}
+
+const FLAG_OPTIONS = ["--dry-run", "--apply", "-a", "--bundle", "-b"];
+const VALUE_OPTIONS = ["--target", "--out", "--include", "--exclude", "--collection", "--format"];
+
+// Pure argument parser: args are the raw CLI arguments with the command first.
+// Returns the parsed options, or { error } describing the first invalid input.
+export function parseCliArgs(
+  args: string[],
+  registry: RegistryData,
+  collections: CollectionsData
+): ParsedCliArgs | { error: string } {
+  const command = args[0];
+  if (command !== "route" && command !== "apply" && command !== "bundle") {
+    return { error: `Unknown command '${command}'. Expected route, apply, bundle, or validate.` };
+  }
+
+  const prompt = args[1];
+  if (!prompt || prompt.startsWith("-")) {
+    return { error: "Please provide a task description string." };
+  }
+
+  const include: string[] = [];
+  const exclude: string[] = [];
+  const parsed: ParsedCliArgs = {
+    command,
+    prompt,
+    options: { include, exclude, dryRun: false },
+    format: "table",
+    doApply: command === "apply",
+    doBundle: command === "bundle",
+    targetDir: ".agents/skills"
+  };
+
+  for (let i = 2; i < args.length; i++) {
+    const arg = args[i];
+
+    if (FLAG_OPTIONS.includes(arg)) {
+      if (arg === "--dry-run") {
+        parsed.options.dryRun = true;
+      } else if (arg === "--apply" || arg === "-a") {
+        parsed.doApply = true;
+      } else {
+        parsed.doBundle = true;
+      }
+      continue;
+    }
+
+    if (VALUE_OPTIONS.includes(arg)) {
+      const value = args[i + 1];
+      if (!value || value.startsWith("-")) {
+        return { error: `Option ${arg} requires a value.` };
+      }
+      i++;
+
+      if (arg === "--target") {
+        parsed.targetDir = value;
+      } else if (arg === "--out") {
+        parsed.outFile = value;
+      } else if (arg === "--include" || arg === "--exclude") {
+        if (!Object.hasOwn(registry.skills, value)) {
+          return { error: `Unknown skill '${value}' for ${arg}. Registered skills are listed in routing/registry.json.` };
+        }
+        if (arg === "--include") {
+          include.push(value);
+        } else {
+          exclude.push(value);
+        }
+      } else if (arg === "--collection") {
+        if (!Object.hasOwn(collections.collections, value)) {
+          const available = Object.keys(collections.collections).join(", ");
+          return { error: `Unknown collection '${value}'. Available collections: ${available}.` };
+        }
+        parsed.options.collection = value;
+      } else {
+        if (value !== "json" && value !== "table") {
+          return { error: `Invalid --format '${value}'. Use json or table.` };
+        }
+        parsed.format = value;
+      }
+      continue;
+    }
+
+    if (arg.startsWith("-")) {
+      return { error: `Unknown option '${arg}'.` };
+    }
+    return { error: `Unexpected argument '${arg}'. Put the task description in quotes, then options.` };
+  }
+
+  return parsed;
+}
+
 export function runCli(args = process.argv.slice(2)): void {
   if (args.includes("--version") || args.includes("-v")) {
     const pkgPath = path.join(workspaceRoot, "package.json");
     const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-    console.log(`agentlayer v${pkg.version}`);
+    console.log(`terraproof v${pkg.version}`);
     process.exit(0);
   }
 
   if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
     console.log(`
-AgentLayer Smart Router & Skills CLI
+Terraproof Smart Router & Skills CLI
 
 Usage:
-  node router/index.ts route "<task description>" [options]
-  node router/index.ts apply "<task description>" [options]
-  node router/index.ts bundle "<task description>" [options]
-  npx agentlayer route "<task description>" [options]
+  terraproof route "<task>" [options]
+  terraproof apply "<task>" [options]
+  terraproof bundle "<task>" [options]
+  terraproof validate
+  node router/index.ts route "<task>" [options]   (from a source checkout)
 
 Commands:
   route "<prompt>"       Calculate optimal skill composition for a task
@@ -117,17 +236,16 @@ Options:
   --dry-run              Display recommendation without modifying project
   --include <skill>      Force inclusion of a specific skill (can repeat)
   --exclude <skill>      Force exclusion of a specific skill (can repeat)
-  --collection <name>    Seed from a preset collection (web-app, gis, etc.)
+  --collection <name>    Seed from a preset collection (gis, data-analysis, production)
   --format <json|table>  Output format (default: table)
-  --yes, -y              Skip interactive confirmation
   --version, -v          Show version number
   --help, -h             Show this help message
 
 Examples:
-  node router/index.ts route "Build a React dashboard with weather map"
-  node router/index.ts apply "Build a React dashboard with weather map"
-  node router/index.ts bundle "Refactor codebase architecture" --out context.md
-  node router/index.ts route "Fix Supabase auth 401 bug" --dry-run
+  terraproof route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL"
+  terraproof apply "Design a PostGIS schema for GPS tracks"
+  terraproof bundle "Compute NDVI change for 2020-2024" --out context.md
+  node router/index.ts route "Compute NDVI change for 2020-2024" --dry-run
 `);
     process.exit(0);
   }
@@ -135,7 +253,11 @@ Examples:
   const command = args[0];
 
   if (command === "validate") {
-    console.log("Validating AgentLayer skill registry...");
+    if (args.length > 1) {
+      console.error(`Error: 'validate' takes no options (unexpected '${args[1]}').`);
+      process.exit(1);
+    }
+    console.log("Validating Terraproof skill registry...");
     const report = validateRegistry(workspaceRoot);
     if (report.valid) {
       console.log(`✓ Registry validation passed: ${report.skillsCount} skills, ${report.collectionsCount} collections.`);
@@ -149,80 +271,47 @@ Examples:
     }
   }
 
-  if (command === "route" || command === "apply" || command === "bundle") {
-    const prompt = args[1];
-    if (!prompt || prompt.startsWith("--")) {
-      console.error("Error: Please provide a task description string.");
-      process.exit(1);
+  const { registry, collections } = loadRoutingData(workspaceRoot);
+  const parsed = parseCliArgs(args, registry, collections);
+  if ("error" in parsed) {
+    console.error(`Error: ${parsed.error}`);
+    process.exit(1);
+  }
+
+  const result = route(parsed.prompt, parsed.options);
+
+  if (parsed.doBundle) {
+    const bundle = bundleSkills(result, workspaceRoot, true);
+    if (parsed.outFile) {
+      fs.writeFileSync(path.resolve(process.cwd(), parsed.outFile), bundle, "utf-8");
+      console.log(`✓ Composed bundle written to: ${parsed.outFile} (${result.skills.length} skills, ${bundle.length} bytes)`);
+    } else {
+      console.log(bundle);
     }
+    return;
+  }
 
-    const options: RouteOptions = {
-      include: [],
-      exclude: [],
-      dryRun: false
-    };
+  printRouteResult(result, parsed.format);
 
-    let format: "table" | "json" = "table";
-    let doApply = command === "apply";
-    let doBundle = command === "bundle";
-    let targetDir = ".agents/skills";
-    let outFile: string | undefined;
-
-    for (let i = 2; i < args.length; i++) {
-      if (args[i] === "--dry-run") {
-        options.dryRun = true;
-      } else if (args[i] === "--apply" || args[i] === "-a") {
-        doApply = true;
-      } else if (args[i] === "--bundle" || args[i] === "-b") {
-        doBundle = true;
-      } else if (args[i] === "--target" && args[i + 1]) {
-        targetDir = args[++i];
-      } else if (args[i] === "--out" && args[i + 1]) {
-        outFile = args[++i];
-      } else if (args[i] === "--include" && args[i + 1]) {
-        options.include?.push(args[++i]);
-      } else if (args[i] === "--exclude" && args[i + 1]) {
-        options.exclude?.push(args[++i]);
-      } else if (args[i] === "--collection" && args[i + 1]) {
-        options.collection = args[++i];
-      } else if (args[i] === "--format" && args[i + 1]) {
-        format = args[++i] as "table" | "json";
+  if (parsed.doApply && !parsed.options.dryRun) {
+    console.log(`\nApplying ${result.skills.length} skill(s) to '${parsed.targetDir}'...`);
+    const applyRes = applySkills(result, parsed.targetDir, process.cwd(), workspaceRoot);
+    if (applyRes.errors.length > 0) {
+      console.error(`⚠️  Some skills had errors during install:`);
+      for (const err of applyRes.errors) {
+        console.error(`  - ${err}`);
       }
     }
-
-    const result = route(prompt, options);
-
-    if (doBundle) {
-      const bundle = bundleSkills(result, workspaceRoot, true);
-      if (outFile) {
-        fs.writeFileSync(path.resolve(process.cwd(), outFile), bundle, "utf-8");
-        console.log(`✓ Composed bundle written to: ${outFile} (${result.skills.length} skills, ${bundle.length} bytes)`);
-      } else {
-        console.log(bundle);
-      }
-      return;
+    console.log(`✓ Installed ${applyRes.appliedSkills.length} skill(s) to '${applyRes.targetDir}'.`);
+    if (applyRes.instructionsCopied) {
+      console.log(`✓ Copied universal engineering instructions.`);
     }
-
-    printRouteResult(result, format);
-
-    if (doApply && !options.dryRun) {
-      console.log(`\nApplying ${result.skills.length} skill(s) to '${targetDir}'...`);
-      const applyRes = applySkills(result, targetDir, process.cwd(), workspaceRoot);
-      if (applyRes.errors.length > 0) {
-        console.error(`⚠️  Some skills had errors during install:`);
-        for (const err of applyRes.errors) {
-          console.error(`  - ${err}`);
-        }
-      }
-      console.log(`✓ Installed ${applyRes.appliedSkills.length} skill(s) to '${applyRes.targetDir}'.`);
-      if (applyRes.instructionsCopied) {
-        console.log(`✓ Copied universal engineering instructions.`);
-      }
-      if (applyRes.manifestWritten) {
-        console.log(`✓ Generated skills manifest (AGENTS.md).`);
-      }
-      console.log(`\nYour AI coding agent will now automatically follow these skills.`);
+    if (applyRes.manifestWritten) {
+      console.log(`✓ Generated skills manifest (AGENTS.md).`);
     }
+    console.log(
+      `\nNothing loads these skills automatically. Reference '${applyRes.targetDir}' from your agent's instruction file (for example, a root AGENTS.md).`
+    );
   }
 }
 

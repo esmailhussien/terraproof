@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AgentLayer Repository Integrity & Frontmatter Validator.
+Terraproof Repository Integrity & Frontmatter Validator.
 Zero-dependency validator designed for local testing and CI workflows.
 """
 
@@ -12,6 +12,9 @@ from typing import List, Tuple
 
 # Base repository root directory
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+# Directories whose markdown is not repository content (VCS data, virtualenvs, dependencies, build output).
+SKIPPED_DIR_NAMES = frozenset({".git", ".venv", "venv", "node_modules", "dist", "build", ".pytest_cache"})
 
 
 def extract_frontmatter(content: str) -> Tuple[dict, str]:
@@ -84,7 +87,10 @@ def validate_skills(errors: List[str], warnings: List[str]):
 
 def validate_markdown_links(errors: List[str], warnings: List[str]):
     """Validate relative markdown links across all .md files in the repository."""
-    md_files = [f for f in REPO_ROOT.rglob("*.md") if ".git" not in f.parts]
+    md_files = [
+        f for f in REPO_ROOT.rglob("*.md")
+        if not SKIPPED_DIR_NAMES.intersection(f.relative_to(REPO_ROOT).parts[:-1])
+    ]
 
     # Regex matching markdown links [text](target)
     link_pattern = re.compile(r'\[([^\]]+)\]\(([^)]+)\)')
@@ -140,7 +146,7 @@ def validate_domain_routing(errors: List[str], warnings: List[str]):
         if not inst_path.exists():
             errors.append(f"DOMAIN_ROUTING.md references missing instruction: '{ref}'")
 
-    # Check referenced skills (e.g. skills/exploratory-data-analysis)
+    # Check referenced skills (e.g. skills/gdal)
     skill_refs = re.findall(r'skills/([\w-]+)', content)
     for skill in set(skill_refs):
         skill_dir = REPO_ROOT / "skills" / skill
@@ -150,7 +156,7 @@ def validate_domain_routing(errors: List[str], warnings: List[str]):
 
 def main():
     print("=" * 60)
-    print("AgentLayer Repository Integrity & Verification Suite")
+    print("Terraproof Repository Integrity & Verification Suite")
     print(f"Repository Root: {REPO_ROOT}")
     print("=" * 60)
 

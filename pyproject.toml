@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "terraproof"
+version = "0.2.0"
+description = "Evidence-graded skills, tools, and checks for mapping and remote-sensing AI agents. By Geova."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "Terraproof Contributors" }]
+keywords = ["gis", "geospatial", "remote-sensing", "agents", "validation", "crs", "raster", "vector"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Scientific/Engineering :: GIS",
+  "Development Status :: 3 - Alpha",
+]
+dependencies = [
+  "pyproj",
+  "shapely>=2",
+  "numpy",
+  "pyogrio",
+  "rasterio",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.urls]
+Homepage = "https://github.com/esmailhussien/terraproof"
+Repository = "https://github.com/esmailhussien/terraproof"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]
+# Python on some Windows setups cannot write to the user temp directory, so
+# pytest's tmp_path root is kept inside the (git-ignored) pytest cache instead.
+addopts = "--basetemp=.pytest_cache/basetemp"

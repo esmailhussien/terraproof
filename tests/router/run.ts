@@ -2,6 +2,7 @@ import { validateRegistry } from "../../router/validate.ts";
 import { testClassification } from "./classification.test.ts";
 import { testConflictsAndOverrides } from "./conflicts.test.ts";
 import { testCollections } from "./collections.test.ts";
+import { testCliArgs } from "./cli.test.ts";
 import { testApplyAndBundle } from "./apply.test.ts";
 import { runScenarioTests } from "./resolution.test.ts";
 import * as path from "path";
@@ -12,13 +13,13 @@ const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, "..", "..");
 
 console.log("\n================================================================================");
-console.log("                   AgentLayer Smart Router Test Suite");
+console.log("                   Terraproof Smart Router Test Suite");
 console.log("================================================================================\n");
 
 let allPassed = true;
 
 // 1. Registry Validation
-console.log("[1/7] Validating Registry & Skill Paths...");
+console.log("[1/8] Validating Registry & Skill Paths...");
 const regReport = validateRegistry(workspaceRoot);
 if (regReport.valid) {
   console.log(`  ✓ Registry valid (${regReport.skillsCount} skills, ${regReport.collectionsCount} collections)`);
@@ -33,7 +34,7 @@ if (regReport.valid) {
 }
 
 // 2. Classification Tests
-console.log("\n[2/7] Running Task Classification Tests...");
+console.log("\n[2/8] Running Task Classification Tests...");
 const classRes = testClassification();
 if (classRes.passed) {
   console.log(`  ✓ ${classRes.message}`);
@@ -43,7 +44,7 @@ if (classRes.passed) {
 }
 
 // 3. Conflicts & Overrides Tests
-console.log("\n[3/7] Running Conflicts & Overrides Tests...");
+console.log("\n[3/8] Running Conflicts & Overrides Tests...");
 const confRes = testConflictsAndOverrides();
 if (confRes.passed) {
   console.log(`  ✓ ${confRes.message}`);
@@ -53,7 +54,7 @@ if (confRes.passed) {
 }
 
 // 4. Collections Tests
-console.log("\n[4/7] Running Preset Collections Tests...");
+console.log("\n[4/8] Running Preset Collections Tests...");
 const collRes = testCollections();
 if (collRes.passed) {
   console.log(`  ✓ ${collRes.message}`);
@@ -62,8 +63,18 @@ if (collRes.passed) {
   allPassed = false;
 }
 
-// 5. Apply & Bundle Integration Tests
-console.log("\n[5/7] Running Apply & Bundle Integration Tests...");
+// 5. CLI Argument Validation Tests
+console.log("\n[5/8] Running CLI Argument Validation Tests...");
+const cliRes = testCliArgs();
+if (cliRes.passed) {
+  console.log(`  ✓ ${cliRes.message}`);
+} else {
+  console.error(`  ✗ ${cliRes.message}`);
+  allPassed = false;
+}
+
+// 6. Apply & Bundle Integration Tests
+console.log("\n[6/8] Running Apply & Bundle Integration Tests...");
 const applyRes = testApplyAndBundle();
 if (applyRes.passed) {
   console.log(`  ✓ ${applyRes.message}`);
@@ -72,8 +83,8 @@ if (applyRes.passed) {
   allPassed = false;
 }
 
-// 6. Core Scenario Suite
-console.log("\n[6/7] Running Core Scenario Suite (34 Scenarios)...");
+// 7. Core Scenario Suite
+console.log("\n[7/8] Running Core Scenario Suite (14 Scenarios)...");
 const coreReport = runScenarioTests(path.join(__dirname, "scenarios.json"));
 
 for (const sc of coreReport.results) {
@@ -95,8 +106,8 @@ for (const sc of coreReport.results) {
   }
 }
 
-// 7. Real-World Scenario Suite
-console.log("\n[7/7] Running Real-World Benchmark Suite (30 Scenarios)...");
+// 8. Real-World Scenario Suite
+console.log("\n[8/8] Running Real-World Benchmark Suite (14 Scenarios)...");
 const rwReport = runScenarioTests(path.join(__dirname, "real-world-scenarios.json"));
 
 for (const sc of rwReport.results) {
