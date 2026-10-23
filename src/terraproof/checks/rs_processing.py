@@ -60,6 +60,14 @@ def _grid_problems(reference: dict, other: dict) -> list[str]:
         problems.append(f"CRS of {other['path']} differs from {reference['path']}")
     ref_transform = reference["transform"]
     other_transform = other["transform"]
+    if (reference.get("width"), reference.get("height")) != (other.get("width"), other.get("height")):
+        problems.append("raster shapes differ")
+    if any(not math.isfinite(v) for v in (*ref_transform, *other_transform)):
+        return problems + ["non-finite transform"]
+    if any(t[i] != 0 for t in (ref_transform, other_transform) for i in (1, 3)):
+        return problems + ["rotated or sheared grids are unsupported"]
+    if any(abs(a - b) > GRID_TOLERANCE for a, b in zip(ref_transform, other_transform)):
+        problems.append("pixel-wise comparison requires identical transforms")
     pixel_x, pixel_y = ref_transform[0], ref_transform[4]
     if pixel_x == 0 or pixel_y == 0:
         problems.append("a raster has no pixel size")
@@ -91,7 +99,10 @@ def _raw_window(path: str) -> tuple[np.ndarray, np.ndarray]:
 def _match_fraction(observed: np.ndarray, expected: np.ndarray) -> float:
     if observed.size == 0:
         return 0.0
-    within = np.abs(observed - expected) <= RTOL * np.abs(expected) + ATOL
+    with np.errstate(over="ignore", invalid="ignore"):
+        within = np.isfinite(observed) & np.isfinite(expected) & (
+            np.abs(observed - expected) <= RTOL * np.abs(expected) + ATOL
+        )
     return float(np.count_nonzero(within) / observed.size)
 
 
@@ -163,17 +174,17 @@ def check_scale_applied_once(
         scale, offset = ENCODINGS[encoding]["scale"], ENCODINGS[encoding]["offset"]
         scale_source = f"encoding '{encoding}'"
     else:
-        band = reference_input["bands"][0]
-        scale = band["scale"] if scale is None else scale
-        offset = band["offset"] if offset is None else offset
+        band = (reference_input.get("bands") or [{}])[0]
+        scale = band.get("scale") if scale is None else scale
+        offset = band.get("offset") if offset is None else offset
         scale_source = "input raster metadata"
 
-    if not math.isfinite(scale) or not math.isfinite(offset):
+    if not all(isinstance(v, (int, float)) and math.isfinite(v) for v in (scale, offset)):
         return [
             result(
                 "rs.scale_applied_once",
-                FAIL,
-                f"Calibration from {scale_source} is not finite (scale={scale}, offset={offset}); "
+                NOT_RUN,
+                f"Calibration from {scale_source} is missing or not finite (scale={scale}, offset={offset}); "
                 "the decoded expectation cannot be computed.",
                 output=output["path"],
                 reference_input=reference_input["path"],
@@ -186,6 +197,20 @@ def check_scale_applied_once(
     try:
         dn, dn_valid = _raw_window(reference_input["path"])
         out, out_valid = _raw_window(output["path"])
+        # Nodata preservation is exhaustive (including pixels off the numeric stride).
+        # Read bounded windows; extra output masks from QA are deliberately allowed.
+        lost_nodata = 0
+        with rasterio.open(reference_input["path"]) as src, rasterio.open(output["path"]) as dst:
+            if src.shape != dst.shape or dn.shape != out.shape:
+                raise ValueError("input and output shapes differ")
+            for row in range(0, src.height, 256):
+                for col in range(0, src.width, 256):
+                    window = rasterio.windows.Window(col, row, min(256, src.width - col), min(256, src.height - row))
+                    raw = src.read(1, window=window, masked=True)
+                    decoded = dst.read(1, window=window, masked=True)
+                    source_invalid = np.ma.getmaskarray(raw) | ~np.isfinite(np.ma.getdata(raw))
+                    output_valid = ~np.ma.getmaskarray(decoded) & np.isfinite(np.ma.getdata(decoded))
+                    lost_nodata += int(np.count_nonzero(source_invalid & output_valid))
     except (ValueError, rasterio.errors.RasterioIOError) as error:
         return [
             result(
@@ -196,6 +221,14 @@ def check_scale_applied_once(
                 reference_input=reference_input["path"],
             )
         ]
+
+    if lost_nodata:
+        return [result(
+            "rs.scale_applied_once", FAIL,
+            "Source nodata became valid output pixels; calibration must preserve the source mask.",
+            output=output["path"], reference_input=reference_input["path"],
+            unmasked_source_nodata_pixels=lost_nodata, mask_scope="all band-1 pixels",
+        )]
 
     keep = dn_valid & out_valid & np.isfinite(dn) & np.isfinite(out)
     sampled = int(np.count_nonzero(keep))
@@ -223,8 +256,15 @@ def check_scale_applied_once(
         ]
 
     dn_k, out_k = dn[keep], out[keep]
-    once = dn_k * scale + offset
-    twice = once * scale + offset
+    with np.errstate(over="ignore", invalid="ignore"):
+        once = dn_k * scale + offset
+        twice = once * scale + offset
+    if not np.all(np.isfinite(once)):
+        return [result(
+            "rs.scale_applied_once", NOT_RUN,
+            "Calibration produces non-finite expectations; no numeric comparison is possible.",
+            **evidence,
+        )]
     matched_once = _match_fraction(out_k, once)
     matched_twice = _match_fraction(out_k, twice)
     matched_raw = _match_fraction(out_k, dn_k)

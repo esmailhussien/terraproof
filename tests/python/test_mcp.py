@@ -35,6 +35,54 @@ def call(name: str, arguments: dict | None = None):
     return anyio.run(_call)
 
 
+@pytest.mark.parametrize("defect", ["double", "offset", "nodata"])
+def test_optical_blindspot_cli_mcp_parity(make_raster, capsys, defect):
+    raw = np.full((16, 16), 2500, dtype="uint16")
+    raw[0, 1] = 0
+    decoded = raw.astype("float32") * 0.0001 - 0.1
+    if defect == "double":
+        decoded = decoded * 0.0001 - 0.1
+    elif defect == "offset":
+        decoded = raw.astype("float32") * 0.0001
+    if defect != "nodata":
+        decoded[0, 1] = -9999.0
+    dn = make_raster("parity_dn.tif", raw, nodata=0)
+    out = make_raster("parity_out.tif", decoded, nodata=-9999.0)
+    assert main(["check", out, "--reference-input", dn, "--encoding", "s2-l2a"]) == 3
+    cli = json.loads(capsys.readouterr().out)
+    payload = call("run_checks", {"paths": [out], "reference_input": dn, "encoding": "s2-l2a"}).structured_content
+    cli_check = next(c for c in cli["checks"] if c["id"] == "rs.scale_applied_once")
+    mcp_check = next(c for c in payload["report"]["checks"] if c["id"] == "rs.scale_applied_once")
+    assert cli_check == mcp_check
+    assert cli_check["status"] == "fail"
+
+
+@pytest.mark.parametrize("defect", ["created", "credentials", "structure"])
+def test_manifest_blindspot_cli_mcp_parity(make_raster, tmp_path, capsys, defect):
+    from terraproof.provenance._core import _hash_core
+
+    path = make_raster("manifest_parity.tif", np.full((16, 16), 0.2, dtype="float32"), nodata=-9999.0)
+    manifest_path = tmp_path / "parity.manifest.json"
+    _write_manifest(manifest_path, [path], [path])
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if defect == "created":
+        manifest["core"]["created"] = "2024-01-01"
+    elif defect == "credentials":
+        manifest["core"]["parameters"]["nested"] = [{"href": "https://example.invalid/a?sig=PRIVATE"}]
+    else:
+        manifest["core"]["files"] = [None]
+    manifest["core_sha256"] = _hash_core(manifest["core"])
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    assert main(["check", path, "--manifest", str(manifest_path)]) == 3
+    cli = json.loads(capsys.readouterr().out)
+    payload = call("run_checks", {"paths": [path], "manifest": str(manifest_path)}).structured_content
+    cli_check = next(c for c in cli["checks"] if c["id"] == "provenance.reproducible")
+    mcp_check = next(c for c in payload["report"]["checks"] if c["id"] == "provenance.reproducible")
+    assert cli_check == mcp_check
+    assert cli_check["status"] == "fail"
+    assert "PRIVATE" not in json.dumps(cli_check)
+
+
 def test_tool_list_names_and_guidance():
     async def _list():
         async with Client(mcp, raise_exceptions=True) as client:

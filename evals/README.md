@@ -36,6 +36,7 @@ Write the JSON report to a file, run one task, or keep the generated fixtures:
   invalid status, wrong task count).
 - `--only` is a diagnostic filter; it does not constitute a full pass.
 - `--keep` leaves the temporary fixture tree in place and prints its path to stderr.
+- Generated fixtures use `.terracache/` under the current working directory, so an installed wheel never needs to write beside its packaged assets.
 
 The report is deterministic: no timestamps, no absolute paths. Fixture paths inside check
 messages are replaced with `<fixtures>`, so two runs produce byte-identical JSON (the tests
@@ -213,9 +214,51 @@ count is a run result, not a documentation claim.
 
 ## Current measured state
 
-The full run is the source of truth for task, control, blind-spot, and exercised-check counts.
-It also reports the separate seven-case preflight control group. The harness does not claim
-hosted-CI execution, real agent-host verification, or performance on held-out routing sets.
+The local checkpoint baseline had 27/27 passing tasks, 38 wrong controls, 15 checker
+rejections, 23 oracle-only blind spots, zero false passes and 29 exercised check IDs.
+After the focused provenance/optical fixes: **27/27 tasks, the same 38 wrong controls,
+21 checker rejections, 17 oracle-only blind spots, zero false passes, 29 check IDs**.
+The separate preflight group still rejects all seven seeded failures.
+
+Six controls now fail production checks (the independent numeric oracles remain independent):
+
+- `stac-pinned-search-manifest`: `timestamp-inside-core` and `signed-href-leak` fail `provenance.reproducible`.
+- `stac-signed-windowed-cog-subset`: `signed-href-stored` fails `provenance.reproducible` after the recipe supplies a manifest covering the unchanged signed JSON record.
+- `satellite-landsat-qa-once`: `double-decoded-loader` fails `rs.scale_applied_once` with the original DN reference and `landsat-c2-l2` encoding.
+- `satellite-s2-baseline-offset-mask`: `offset-skipped` fails `rs.scale_applied_once` with the original DN reference and `s2-l2a` encoding.
+- `stac-loader-double-decode`: `zero-dn-decoded` fails `rs.scale_applied_once` because source nodata becomes valid output, including off-stride pixels.
+
+No task specs or expected statuses were weakened or changed. Recipe processing calls use
+public `run_checks` with inspected `reference_input` data and the stated `encoding`.
+Without the raw reference/calibration, the range screen alone cannot reject offset or double
+decoding; without a manifest covering the JSON run record, raster checks cannot detect its
+signed href. Nodata preservation checks all band-1 pixels in bounded windows; numerical
+calibration still samples a fixed stride. Additional output masking (for example QA) is allowed.
+Unsupported differing shapes/transforms, rotated/sheared grids and missing/non-finite calibration
+return `not-run`, not evidence of correct processing. The existing numeric reader still reads
+the full first band before stride sampling; this work does not claim to fix that memory limit.
+
+Manifest schema 0.1 has exactly five core keys: `files`, `stac_items`, `tool_versions`,
+`parameters`, `root_rule`; run creation time belongs in `context`, while acquisition/search
+time fields within parameters remain valid. The writer **rejects**, rather than strips,
+credential-bearing URLs in STAC hrefs, nested parameters and command arguments before returning
+a manifest. Record a stable unsigned URL (non-secret query fields are preserved); signing is
+an ephemeral read-time operation. Verification rejects credential-bearing URLs in the manifest
+and all recorded local `.json` documents, including standalone run records. Errors do not echo
+credential values. Detection covers URL userinfo, SAS signatures/tokens, AWS/Google signed query
+fields and common token/API-key fields; it is not a general secret scanner for arbitrary text,
+opaque encodings, non-JSON files or unrecognized credential conventions.
+
+Prioritized remaining oracle-only controls (17 total; none is claimed closed):
+
+- Optical/time-series: `cloudy-dates-included`, `index-of-medians-composite`, `all-invalid-zero-filled`, `spring-to-summer-difference`: require observation-stack/count/composite-rule or phenology-reference checks, not one-output range screens.
+- Spectral indices: `reversed-dnbr-sign`, `nbr-wrong-swir-band`, `unscaled-dn-ratio`, `gao-moisture-mislabeled`: require named formula, band identity and calibrated source comparisons.
+- SAR: `naive-db-average`, `descending-post-event`: require power-domain aggregation and orbit metadata comparisons.
+- Raster/STAC: `lossy-jpeg-cog`, `unsigned-wraparound`, `whole-scene-download`: require compression fidelity, pre-cast reference values and requested-window coverage contracts.
+- CRS/vector: `swapped-axis-order`, `foot-radius-unit-confusion`, `dissolve-away-identities`, `clockwise-geojson-winding`: require coordinate/control-point, distance-unit, identity/topology and export-winding checks.
+
+The full run remains the source of truth for counts. The harness does not claim hosted-CI
+execution, real agent-host verification, or performance on held-out routing sets.
 
 ## Adding a task
 

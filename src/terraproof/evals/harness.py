@@ -26,7 +26,7 @@ from terraproof.checks.base import FAIL, NOT_RUN, WARN, PASS as CHECK_PASS
 from terraproof.preflight import run_preflight
 from terraproof.evidence.grade import ADVISORY, DECISION, REVIEW, grade_for
 from terraproof.evals.oracles import Oracle
-from terraproof.evals.specs import SpecError, TaskSpec, catalog_check_ids, load_specs, repo_root
+from terraproof.evals.specs import SpecError, TaskSpec, catalog_check_ids, load_specs
 
 SCHEMA = "terraproof.evals/0.1"
 CORRECT = "correct"
@@ -425,9 +425,9 @@ def run_benchmark(
     if work_root is not None:
         base = Path(work_root)
     else:
-        # Generated fixtures are disposable and belong in the repository's
-        # ignored cache, not beside tracked files. Each run gets a fresh root.
-        local_tmp = repo_root() / ".terracache" / "evals"
+        # Keep generated fixtures in the working project's cache; installed
+        # package assets may be read-only. Each run gets a fresh owned root.
+        local_tmp = Path.cwd() / ".terracache" / "evals"
         local_tmp.mkdir(parents=True, exist_ok=True)
         base = Path(tempfile.mkdtemp(prefix="terraproof-evals-", dir=local_tmp))
     base.mkdir(parents=True, exist_ok=True)

@@ -40,8 +40,10 @@ class TaskSpec:
 
 
 def repo_root() -> Path:
-    """The checkout root that holds `evals/` and `routing/` (src/terraproof/evals/specs.py -> 4 up)."""
-    return Path(__file__).resolve().parents[3]
+    """Locate the task and check catalogs in a checkout or an installed wheel."""
+    from terraproof._common import assets_root
+
+    return assets_root()
 
 
 def default_spec_dir() -> Path:

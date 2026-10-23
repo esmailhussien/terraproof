@@ -224,7 +224,7 @@ def stac_pinned_search(root: Path):
     wrong_control = wrong(
         "timestamp-inside-core",
         "The creation timestamp is moved inside the hashed core (with a recomputed core hash), so the "
-        "manifest still verifies but the same run no longer reproduces.",
+        "same run no longer reproduces; the schema verifier now rejects this extra core key.",
         shifted_steps,
         wrong_oracle,
     )
@@ -277,8 +277,8 @@ def stac_pinned_search(root: Path):
         wrong_control,
         wrong(
             "signed-href-leak",
-            "The run record stores an asset href with a SAS token; the manifest verifies because the "
-            "file hashes match.",
+            "The run record stores an asset href with a SAS token; file hashes match but provenance "
+            "verification rejects the credential-bearing recorded JSON.",
             token_steps,
             token_oracle,
         ),
@@ -417,7 +417,7 @@ def stac_loader_double_decode(root: Path):
             "DN 0 is carried through the decode as a valid -0.1 reflectance pixel instead of nodata.",
             zero_steps,
             zero_oracle,
-            notes="The pixel-wise comparison skips input-nodata pixels, so only the oracle sees this.",
+            notes="rs.scale_applied_once exhaustively checks source-mask preservation, including off-stride nodata.",
         ),
     ]
     return recipe(
@@ -489,7 +489,11 @@ def stac_windowed_cog(root: Path):
         ),
         encoding="utf-8",
     )
-    steps = [check_step("check aoi_subset.tif", [str(aoi_subset)])]
+    steps = [
+        check_step("check aoi_subset.tif", [str(aoi_subset)]),
+        manifest_step("verify subset and unsigned run record", root, inputs=[source],
+                      outputs=[str(aoi_subset), str(record)], manifest_name="subset.manifest.json"),
+    ]
     expected_bounds = _expected_window(aoi, origin, resolution)
     transform = read_transform(aoi_subset)
     actual_bounds = _bounds_from_transform(transform, subset_values.shape)
@@ -575,7 +579,11 @@ def stac_windowed_cog(root: Path):
         ),
         encoding="utf-8",
     )
-    token_steps = [check_step("check aoi_subset.tif", [str(aoi_subset)])]
+    token_steps = [
+        check_step("check aoi_subset.tif", [str(aoi_subset)]),
+        manifest_step("verify subset and signed run record", root, inputs=[source],
+                      outputs=[str(aoi_subset), str(signed_record)], manifest_name="signed_subset.manifest.json"),
+    ]
     token_oracle = Oracle("a stored SAS token is a leak even when the COG checks pass")
     token_oracle.require(
         "no signed-URL parameters appear in the run record",

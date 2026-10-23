@@ -1,0 +1,7 @@
+graft skills
+graft routing
+graft instructions
+graft sources
+graft third_party
+recursive-include evals/tasks *.json
+global-exclude __pycache__ *.py[cod]

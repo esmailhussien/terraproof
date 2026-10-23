@@ -178,15 +178,17 @@ licences or calibration. Raster outputs get `crs.defined`, `crs.consistent`,
 `raster.nodata_declared`, `raster.grid_alignment`, `raster.cog_layout`, and
 `rs.reflectance_range` with `--expect reflectance` (only after decoding).
 
-Being added in Phase 4: `provenance.reproducible` (re-hashes manifest
-inputs/outputs; warns on tool-version drift, fails on content drift),
-`rs.temporal_scope` (item/input datetimes inside a declared time range) and
-`rs.scale_applied_once` (output ≈ DN × scale + offset; catches missing or double
-decoding). CLI options are not final.
+Use `--manifest run.json --require-provenance` for `provenance.reproducible`
+(re-hashes manifest inputs/outputs; warns on tool-version drift, fails on content
+drift). Add `--time-range START END` for `rs.temporal_scope` on source Items.
+For `rs.scale_applied_once`, compare a decoded raster with its raw source using
+`--reference-input RAW.tif --encoding s2-l2a` or `landsat-c2-l2`; the sampled
+output is compared with DN × scale + offset under that declared encoding.
 
 **Not checked automatically:** whether the search returned the right items,
-whether pinned items still exist upstream, licence compliance, signed-URL leakage
-and transfer costs.
+whether pinned items still exist upstream, licence compliance and transfer
+costs. Manifest credential guards reject known secret-bearing paths/URLs, but
+do not audit every application log or prevent all signed-URL leakage.
 
 ## Sources
 

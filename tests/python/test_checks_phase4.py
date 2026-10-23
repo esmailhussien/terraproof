@@ -320,6 +320,64 @@ def test_scale_applied_once_without_an_input_raster_is_not_run(make_raster, eval
     assert grade == ADVISORY
 
 
+@pytest.mark.parametrize("leak", [False, True])
+def test_source_nodata_off_stride_and_extra_qa_mask(make_raster, evaluate, leak):
+    from terraproof.inspect import inspect_dataset
+
+    raw = np.full((16, 16), 2500, dtype="uint16")
+    raw[0, 1] = 0  # deliberately not on the numeric stride
+    decoded = raw.astype("float32") * 0.0001 - 0.1
+    if not leak:
+        decoded[0, 1] = -9999.0
+    decoded[8, 8] = -9999.0  # additional QA masking is legitimate
+    dn = make_raster("mask_dn.tif", raw, nodata=0)
+    out = make_raster("mask_out.tif", decoded, nodata=-9999.0)
+    results, _ = evaluate([out], reference_input=inspect_dataset(dn), encoding="s2-l2a")
+    check = one(results, "rs.scale_applied_once")
+    assert check.status == ("fail" if leak else "pass")
+    if leak:
+        assert check.evidence["unmasked_source_nodata_pixels"] == 1
+
+
+@pytest.mark.parametrize("calibration", [None, float("nan"), float("inf")])
+def test_missing_or_nonfinite_calibration_is_not_run(make_raster, evaluate, calibration):
+    from terraproof.inspect import inspect_dataset
+
+    dn = make_raster("invalid_calibration_dn.tif", dn_grid(), nodata=65535)
+    out = make_raster("invalid_calibration_out.tif", dn_grid().astype("float32"), nodata=-9999.0)
+    reference = inspect_dataset(dn)
+    reference["bands"][0]["scale"] = calibration
+    assert one(evaluate([out], reference_input=reference)[0], "rs.scale_applied_once").status == "not-run"
+
+
+def test_calibration_overflow_cannot_false_pass(make_raster, evaluate):
+    from terraproof.inspect import inspect_dataset
+
+    dn = make_raster("overflow_dn.tif", dn_grid(), nodata=65535)
+    out = make_raster("overflow_out.tif", np.full((SIDE, SIDE), 0.2, dtype="float32"), nodata=-9999.0)
+    reference = inspect_dataset(dn)
+    reference["bands"][0].update(scale=1e308, offset=0.0)
+    check = one(evaluate([out], reference_input=reference)[0], "rs.scale_applied_once")
+    assert check.status == "not-run"
+    assert "non-finite expectations" in check.message
+
+
+@pytest.mark.parametrize("problem", ["shape", "rotation", "whole_pixel_shift"])
+def test_incompatible_pixel_pairs_are_not_run(make_raster, evaluate, problem):
+    from terraproof.inspect import inspect_dataset
+
+    dn = make_raster("incompatible_dn.tif", dn_grid(), nodata=65535)
+    out = make_raster("incompatible_out.tif", dn_grid().astype("float32"), nodata=-9999.0)
+    reference = inspect_dataset(dn)
+    if problem == "shape":
+        reference["width"] -= 1
+    elif problem == "rotation":
+        reference["transform"][1] = 0.5
+    else:
+        reference["transform"][2] += 10
+    assert one(evaluate([out], reference_input=reference, encoding="s2-l2a")[0], "rs.scale_applied_once").status == "not-run"
+
+
 # --- rs.cloud_mask_applied ---
 
 

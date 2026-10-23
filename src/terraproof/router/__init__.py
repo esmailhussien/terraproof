@@ -7,7 +7,8 @@ import re
 from collections import defaultdict
 
 from .index import PROCESS_SKILLS, get_index
-from .signals import data_signals, dataset_summary, process_skills
+from .intent import intent_text
+from .signals import data_signals, dataset_summary, non_domain_request, process_skills
 from .text import expand_query, normalize, tokenize
 
 __all__ = ["find_guidance"]
@@ -167,21 +168,25 @@ def find_guidance(
 
     profiles = _profiles(datasets, data_paths)
     query, terms, expansion_reasons = expand_query(task)
-    process = process_skills(task)
+    scoped_task = intent_text(task)
+    scoped_query, terms, expansion_reasons = expand_query(scoped_task)
+    process = process_skills(scoped_task)
     index = get_index()
     grouped: dict[str, list] = defaultdict(list)
     for section in index.sections:
         if section.skill not in PROCESS_SKILLS:
             score, reasons = index.score(section, terms)
             grouped[section.skill].append((score, section, reasons))
-    signals, guarded = data_signals(profiles, terms, query["normalized"])
-    matching_text = " " + normalize(query["normalized"] + " " + " ".join(query["expanded_terms"])) + " "
+    signals, guarded = data_signals(profiles, terms, scoped_query["normalized"])
+    if not profiles and (not scoped_task or non_domain_request(scoped_query["normalized"], terms)):
+        guarded.update(set(index.skills) - PROCESS_SKILLS)
+    matching_text = " " + normalize(scoped_query["normalized"] + " " + " ".join(scoped_query["expanded_terms"])) + " "
 
     semantic_on = _semantic_enabled(semantic)
     sem_scores: dict[tuple[str, str], float] = {}
     semantic_warning: str | None = None
     if semantic_on:
-        sem_scores, semantic_warning = _semantic_scores(index, task)
+        sem_scores, semantic_warning = _semantic_scores(index, scoped_task)
 
     # Build the semantic candidate pool once.
     semantic_pool: set[str] = set()

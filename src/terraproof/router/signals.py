@@ -23,11 +23,11 @@ _SOURCING_VERB = re.compile(
     r"\b(?:find\w*|search\w*|look for|browse\w*|quer\w*|acquir\w*|fetch\w*|download\w*|sourc\w*|pull)\b"
     r"|\bwhere\b.{0,60}\b(?:get|obtain|access)\b"
     r"|\b(?:is|are) there\b.{0,60}\b(?:open|public|available|datasets?)\b"
-    r"|(?:ابحث|دور علي|لاقي|نزل|تحميل|هات|جيب|احمل|منين|فين.{0,30}(?:بيانات|داتا|صور)|هل (?:توجد|هناك))")
+    r"|(?:ابحث|دور علي|لاقي|نزل|تحميل|هات|جيب|احمل|منين|مصدر|فين.{0,30}(?:بيانات|داتا|صور)|هل (?:توجد|هناك))")
 _SOURCING_OBJECT = re.compile(
     r"\b(?:catalog|catalogue|stac|openstreetmap|osm|overture|shapefiles?|geojson|geopackage|dem|"
     r"scenes?|imagery|images?|photos?|satellite|landsat|sentinel|data|datasets?|footprints)\b"
-    r"|(?:كتالوج|مصادر|مشاهد|مرئيه|مرئيات|صور|داتا|بيانات)")
+    r"|(?:كتالوج|مصادر|مشاهد|مرئيه|مرئيات|صور|داتا|بيانات|ارتفاعات|بصمات المباني)")
 _PROCESSING_WORDS = frozenset(tokenize(
     "mask decode reflectance cloud shadow scl harmonize composite calibrate process compute "
     "calculate statistics zonal index indices ndvi ndwi mndwi nbr dnbr evi savi classify "
@@ -80,8 +80,8 @@ _ACCURACY_TEXT = re.compile(
     r"|(?:مصفوفه.{0,12}التباس|دقه الخريط[هه]|معايره طبقيه|عينات مرجعيه|دقه التصنيف)")
 _CLOUD_ACCESS_TEXT = re.compile(
     r"\b(?:stac|pystac|vsicurl|planetary computer|requester[\s_-]*pays|windowed "
-    r"reads?|signed (?:asset )?urls?|http range requests?|rest api)\b"
-    r"|(?:رابط موقع|قراءة نافذ|استعلام كتالوج|حاسوب الكوكب)")
+    r"reads?|signed (?:asset )?urls?|http range requests?)\b"
+    r"|(?:رابط موقع|روابط موقعه|قراءه (?:نافذ|النوافذ)|استعلام كتالوج|حاسوب الكوكب)")
 
 # Web technologies or map-specific interaction, not a bare map/chart/dashboard.
 _WEB_TECH = re.compile(r"\b(?:maplibre|mapbox|leaflet|deck gl|deckgl|spatial ui)\b")
@@ -94,6 +94,26 @@ _GRAPH_WORDS = frozenset(tokenize(
     "network networkx centrality nodes edges topology route routing betweenness closeness connectivity"))
 _GRAPH_TEXT = re.compile(r"\b(?:shortest paths?|community detection|graph analysis|network graph)\b")
 _NEGATED_INTENT = re.compile(r"\b(?:no|not|without|never|مش|بدون|ليس|لا)(?:\s+(?:a|an|any|the))?\s*$")
+
+# Homonyms in ordinary software/copy requests must not gain domain intent from
+# BM25 prose. Explicit domain tools/objects still win for mixed requests.
+_NON_DOMAIN_CONTEXT = re.compile(
+    r"\b(?:api|rest|express|fastapi|postgresql|javascript|react|css|dockerfile|"
+    r"login|password|shopping|invoice|birthday|recipe|detective|fictional|logo|"
+    r"library loans|unit tests|array map|network request|chat application|tcp|dns|tls|websocket)\b|"
+    r"(?:كلمه السر|تسجيل الدخول|كلمه المرور|سله المشتريات|شعار|فاتوره|وصفه|قصه|مكتبه)")
+_DOMAIN_ANCHORS = frozenset(tokenize(
+    "geospatial spatial gis postgis gdal gdalinfo gdalwarp gdal_translate gdalbuildvrt gdaladdo "
+    "geopandas geodataframe geoparquet geozarr zarr raster rasterio geotiff cog vector polygon "
+    "geometry shapefile geojson geopackage crs epsg projection terrain elevation dem lidar "
+    "watershed hydrology satellite landsat sentinel sar radar backscatter stac ndvi ndwi "
+    "mndwi nbr dnbr spectral reflectance maplibre mapbox leaflet deckgl networkx centrality "
+    "betweenness anova regression hypothesis statistical matplotlib seaborn cartography"))
+
+
+def non_domain_request(text: str, terms: list[str]) -> bool:
+    """Reject a known non-domain task, unless it also names a domain capability."""
+    return bool(_NON_DOMAIN_CONTEXT.search(text) and not (_DOMAIN_ANCHORS & set(terms)))
 
 # Symptom-style wording that points to a skill even when exact triggers are absent.
 _VECTOR_QUALITY_WORDS = frozenset(tokenize("validity valid invalid repair records rows duplicate geometry"))
@@ -132,7 +152,11 @@ def data_signals(profiles: list[dict], terms: list[str], text: str = "") -> tupl
     processing = bool(_PROCESSING_WORDS & term_set or _PROCESSING_TEXT.search(text))
     graph = bool(_GRAPH_WORDS & term_set or _GRAPH_TEXT.search(text))
     preprocessing = bool(_PREPROCESS_WORDS & term_set or _PREPROCESS_TEXT.search(text))
-    index_wording = bool(_INDEX_WORDS & term_set or _INDEX_TEXT.search(text))
+    spectral_context = bool((_SATELLITE_WORDS - {"spectral"}) & term_set
+                            or re.search(r"spectral (?:index|indices)|مؤشرات? طيفي", text)
+                            or any(ds["kind"] in {"raster", "stac"} for ds in profiles))
+    index_wording = bool(_NAMED_INDEX_WORDS & term_set or (
+        (_INDEX_WORDS & term_set or _INDEX_TEXT.search(text)) and spectral_context))
     if _NON_SPECTRAL_INDEX.search(text) and not (_NAMED_INDEX_WORDS & term_set or _INDEX_TEXT.search(text)):
         index_wording = False
     if (sourcing or (_ANALYSIS_WORDS & term_set and not index_wording)) and not _PREPROCESS_ACTION.search(text):
@@ -232,13 +256,33 @@ def data_signals(profiles: list[dict], terms: list[str], text: str = "") -> tupl
     # domain wording (English tokens, Arabic expansions or regex phrases) can
     # keep them selectable. Data evidence may affirm SAR intent specifically.
     sar_intent = bool(_SAR_WORDS & term_set or _SAR_TEXT.search(text))
-    time_series_intent = bool(_TIME_SERIES_WORDS & term_set or _TIME_SERIES_TEXT.search(text))
-    accuracy_intent = bool(_ACCURACY_WORDS & term_set or _ACCURACY_TEXT.search(text))
+    time_series_intent = bool((_TIME_SERIES_WORDS - {"chang"}) & term_set or _TIME_SERIES_TEXT.search(text)
+        or (re.search(r"\b(?:monthly|annual|months|years|seasons)\b", text)
+            and re.search(r"\b(?:composit\w*|ndvi|vegetation|imagery|observations?)\b", text)))
+    accuracy_intent = bool(_ACCURACY_TEXT.search(text)
+                           or {"confusion", "matrix"} <= term_set
+                           or ("accuracy" in term_set and {"map", "classification", "classif", "referenc", "overall"} & term_set)
+                           or (re.search(r"\b(?:probability|reference|stratified)\b.{0,30}\b(?:sampl\w*|validation)\b", text)
+                               and re.search(r"\b(?:map|land cover|forest|class\w*)\b", text)))
     cloud_intent = bool(_CLOUD_ACCESS_TEXT.search(text) or "stac" in str(
-        " ".join(str(ds.get("collection", "")) for ds in stac)).lower())
+        " ".join(str(ds.get("collection", "")) for ds in stac)).lower()
+        or ({"cloud", "cog", "asset"} & term_set and {"range", "window"} & term_set))
+    for affirmative, name in ((time_series_intent, "time-series-and-change"),
+                              (accuracy_intent, "accuracy-assessment"),
+                              (cloud_intent, "stac-and-cloud-access")):
+        if affirmative:
+            wording(name, 6.0, "explicit workflow capability intent")
+    if re.search(r"\b(?:gdalinfo|gdalwarp|gdal_translate|gdalbuildvrt|gdaladdo)\b", text):
+        wording("gdal", 8.0, "named GDAL command")
+    if re.search(r"\b(?:leaflet|mapbox)\b", text):
+        wording("geospatial-frontend", 6.0, "named web-map engine")
+    if "raster" in term_set and {"align", "alignment", "resampl", "grid"} & term_set:
+        wording("raster-processing", 4.0, "raster grid alignment or resampling intent")
     if stac and any(re.search(r"sentinel[\s_-]*1", str(ds.get("collection", "")), re.I) for ds in stac):
         sar_intent = True
         wording("sar-basics", 8.0, "Sentinel-1 STAC collection; SAR calibration and terrain correction wording")
+    if sar_intent and not re.search(r"\b(?:landsat|sentinel[\s_-]*2|reflectance|optical|scl|qa_?pixel)\b|انعكاس|بصري", text):
+        guard("satellite-preprocessing", "SAR preparation is not optical reflectance or cloud/QA preprocessing")
     if not sar_intent:
         guard("sar-basics", "no SAR, backscatter, speckle or Sentinel-1 wording")
     if not accuracy_intent:

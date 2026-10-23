@@ -34,7 +34,7 @@ def assets_root() -> Path:
     The current working directory is never used: the assets belong to the installed
     package, not to whichever project happens to be open.
     """
-    package = Path(__file__).resolve().parents[1]
+    package = Path(__file__).resolve().parent
     candidates = [package, package / "data", package / "_data", package / "resources",
                   Path(sys.prefix) / "share" / "terraproof", *package.parents]
     for candidate in candidates:

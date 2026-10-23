@@ -83,6 +83,7 @@ periods. A medoid or best-observation composite keeps real spectra from a single
 date ([satellite preprocessing](../satellite-preprocessing/SKILL.md)). The code below computes both, with counts:
 
 ```python
+import numpy as np
 import xarray as xr
 
 def ndvi(red, nir):
@@ -91,7 +92,7 @@ def ndvi(red, nir):
 
 def monthly_products(red, nir, min_obs=3):
     """red, nir: decoded, masked reflectance (NaN = invalid), dims (time, y, x)."""
-    valid = red.notnull() & nir.notnull()
+    valid = np.isfinite(red) & np.isfinite(nir) & ((red + nir) != 0)
     red, nir = red.where(valid), nir.where(valid)
     count = valid.resample(time="1MS").sum()
     median_of_ndvi = ndvi(red, nir).resample(time="1MS").median()
@@ -105,7 +106,10 @@ def monthly_products(red, nir, min_obs=3):
     })
 ```
 
-On the three dates above this returns 0.765 and 0.714 with `valid_count` 3. For
+Both products use the same observations: finite red/NIR pairs with a nonzero
+NDVI denominator. Undefined per-date NDVI never increases `valid_count` or
+satisfies `min_obs`. On the three dates above this returns 0.765 and 0.714 with
+`valid_count` 3. For
 Dask-backed arrays, test chunking along `time` before relying on median
 reductions; write outputs with explicit nodata
 ([raster processing](../raster-processing/SKILL.md)).
@@ -129,6 +133,8 @@ changes, illumination and view geometry, and (SAR) moisture and incidence angle.
 Bi-temporal differencing (e.g. ΔNDVI, dNBR) or SAR log ratios
 (`log10(date2/date1)` on linear power) is simple and transparent
 ([spectral indices](../spectral-indices/SKILL.md), [SAR basics](../sar-basics/SKILL.md)).
+The corresponding difference in dB is ten times that log ratio; declare the
+units before selecting a threshold.
 
 - Use the intersection of both dates' valid masks.
 - No universal threshold exists; derive and document it for the study area
@@ -183,11 +189,15 @@ python -m terraproof check source-item.json
 differences), `rs.reflectance_range` (decoded reflectance composites) and
 `stac.provenance` apply today.
 
-Being added in Phase 4: `rs.temporal_scope` (item/input datetimes inside the
-declared time range), `rs.cloud_mask_applied` (pixels flagged cloud/shadow in an
-aligned SCL/QA raster are nodata in the output), `rs.scale_applied_once`,
-`provenance.reproducible`, and for change validation `accuracy.sample_design`
-and `accuracy.estimates`. CLI options are not final.
+For source Items, add `--time-range START END` to run `rs.temporal_scope`.
+For individual decoded observations, `--qa QA.tif --qa-kind s2-scl` runs
+`rs.cloud_mask_applied`; use `landsat-qa-pixel` for Landsat. Compare a decoded
+observation to its raw source with `--reference-input RAW.tif --encoding s2-l2a`
+or `landsat-c2-l2` for `rs.scale_applied_once`. These sampled pixel comparisons
+do not validate a composite against a single acquisition's QA or raw DN.
+`--manifest run.json --require-provenance` runs `provenance.reproducible`.
+For change-map reference samples and estimates, follow the current CLI example
+in [accuracy assessment](../accuracy-assessment/SKILL.md#verify-with-terraproof).
 
 **Not checked automatically:** composite method and its consistency across
 periods, valid-count thresholds, phenological comparability, change thresholds,

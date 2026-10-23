@@ -1,9 +1,13 @@
 # Stratified estimator: formulas and tested code
 
 Reference for [accuracy assessment](../SKILL.md). Applies when the sampling strata
-are the map classes and units were selected by stratified random sampling (simple
-random and systematic designs are special cases) [S1, S2]. For strata that differ
-from the map classes use Stehman (2014) instead [S3].
+are the map classes and units were selected by stratified random sampling [S1,
+S2]. Equal-probability simple random or random-start systematic samples can use
+the point estimates as poststratified estimators. For systematic sampling the
+variance formulas are approximations, typically overestimating uncertainty;
+document that limitation [S1, sections 2.1.3 and 4.3–4.4]. The formulas assume
+pixel units with hard map/reference labels, not polygon units or mixed labels.
+For strata that differ from the map classes use Stehman (2014) instead [S3].
 
 ## Notation
 

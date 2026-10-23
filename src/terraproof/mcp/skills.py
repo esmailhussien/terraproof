@@ -15,7 +15,8 @@ from terraproof._common import assets_root
 
 # Section ids and skill names come from the registry, never from a filesystem lookup,
 # but they still must not be able to name a path.
-IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+# Generated heading anchors may contain Unicode letters/numbers (for example σ⁰).
+IDENTIFIER = re.compile(r"[^\W_][\w.-]*")
 
 
 class SectionError(ValueError):
@@ -92,7 +93,7 @@ def load_section(skill: str, section_id: str) -> dict:
     resolve outside `skills/<skill>/`.
     """
     for label, value in (("skill", skill), ("section", section_id)):
-        if not isinstance(value, str) or not IDENTIFIER.match(value):
+        if not isinstance(value, str) or not IDENTIFIER.fullmatch(value):
             raise SectionError(f"invalid {label} name: {value!r}")
     skills = registry()
     if skill not in skills:

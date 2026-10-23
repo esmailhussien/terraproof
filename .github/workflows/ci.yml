@@ -98,3 +98,20 @@ jobs:
 
       - name: Run executable deterministic evals
         run: python -m terraproof.evals run
+
+      - name: Build Python wheel
+        run: python -m pip wheel . --no-deps --wheel-dir .terracache/wheels
+
+      - name: Verify built wheel outside the checkout
+        run: python tests/package/python_smoke.py .terracache/wheels
+
+      - name: Validate release CLI and actual MCP stdio transport
+        run: python tests/release_validation.py --out .terracache/release-validation.json
+
+      - name: Upload independent release validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-validation-${{ matrix.os }}-python-${{ matrix.python }}
+          path: .terracache/release-validation.json
+          if-no-files-found: warn

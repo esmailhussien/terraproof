@@ -1,6 +1,6 @@
 # Terraproof — Phase 4 Plan: Remote-sensing depth & reproducibility
 
-> Status: **implemented scope listed below; release gates remain open**. This checkout contains the Phase4 code paths, four registrations, CLI/MCP parity, router candidate mode, and executable local eval controls. It does not claim the independent v3/held-out routing gate, hosted CI, real agent-host verification, or independent expert review.
+> Status: **implemented scope and local release acceptance complete under the user's sole-agent review exception**. This includes real native Codex tool use after runtime recovery. GitHub Actions must verify the published checkpoint. Independent held-out generalization and independent expert review are not claimed.
 
 ## 1. Why this phase
 
@@ -10,7 +10,31 @@ Today Terraproof can tell an agent that a *result looks plausible* (CRS, geometr
 
 Implemented in this checkout: preflight rules and schema, provenance write/verify integration, processing-level checks, four skill manifests and registrations, deterministic candidate routing with optional offline semantic fallback, and the 27-task executable harness plus seven-rule synthetic preflight control group.
 
-Deferred or unverified: a newly written independent routing v3 set and any held-out performance claim, hosted CI execution across the full matrix, verification in real agent hosts, and independent expert review of the four skill contents. The local eval harness measures deterministic checks and independent oracles only; it is not agent-lift evidence. These gates remain exit criteria, not completed work.
+Evidence limits: independent held-out routing performance and independent expert review are not claimed. The user-approved internal review and fresh internal measurement are scoped below. The deterministic eval harness does not measure agent lift. Real native Codex tool use has now passed separately; hosted CI is checked on the published checkpoint.
+
+User-approved review exception (2026-10-23): the user declined additional
+reviewers and accepted this agent's internal content review ("انت كفاية").
+The four skill contents were reviewed internally, with corrections to NDVI
+observation counts, SAR change units, systematic-sample uncertainty and current
+CLI examples. This satisfies the content-review step under that explicit
+exception; it is not an independent expert review. It does not waive the routing
+performance targets, successful real-host tool use or hosted CI. Historical v3
+and v4 routing acceptance failed. A new frozen internal audit also missed the
+unchanged thresholds: EN recall 0.95 with 12.5 forbidden selections per 100; AR
+recall 0.8125 with 3.75 forbidden selections per 100. This same-agent audit is
+not independent acceptance; see [its protocol](evals/routing/INTERNAL_20261023_PROTOCOL.md).
+
+Subsequent completion request: that exposed internal set is now development
+coverage. After scope/Arabic fixes, a separate frozen 100-item same-agent audit
+met the unchanged per-language targets (EN recall 1.0, AR 0.98; forbidden rates
+4/100 and 2/100). See [release audit](evals/routing/RELEASE_20261023_PROTOCOL.md).
+This is explicitly internal evidence under the requested sole-agent process,
+not an independent heldout pass. The full local Python suite passed 1037 tests.
+After a supported runtime restart and a fresh app-bundled Python environment,
+native Codex passed actual call/result checks for both allowed read-only MCP
+tools and successful turn completion. No file-security labels or ownership were
+changed, and the trace gate remains strict. Hosted CI is verified after the
+checkpoint push. Current detail is in [the release checklist](RELEASE_CHECKLIST.md).
 
 ## 2. Goals
 

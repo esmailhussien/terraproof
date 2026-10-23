@@ -17,6 +17,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Executable deterministic eval harness for 27 task specs with independent oracles and a separate seven-case preflight control group.
 - Router candidate mode with deterministic default cap 8 and optional offline semantic retrieval that falls back to lexical scoring.
 
+### Fixed
+
+- Python routing now distinguishes ordinary software/copy homonyms from explicit domain work, preserves inspected-dataset evidence for mixed tasks, and recognizes additional Arabic workflow phrases, named GDAL commands and web-map engines. The exposed 160-item internal audit is registered as development coverage without relabelling; a separate frozen 100-item same-agent release audit meets the original per-language numerical targets. Independent/generalisation limits remain explicitly reported.
+
+- Corrected the time-series NDVI example so undefined observations cannot satisfy the minimum count; made SAR log-ratio/dB units explicit, qualified systematic-sample variance formulas, and updated the four Phase4 skills to the implemented CLI options.
+
+- Python wheels now include the existing skills, routing/check catalogs, evaluation task specs, instructions and upstream attribution/license assets. Runtime asset lookup works outside the source checkout, and eval fixtures use the working project's cache instead of writing beside installed assets. CI builds and smoke-tests the wheel in the Python matrix.
+- The Python build helper is importable from the `src` package layout, so isolated editable installs, wheel builds and sdist rebuilds use the same asset-packaging path.
+- Native Codex release validation keeps its required host transport, approves only the two allowed read-only MCP tools per invocation, and retains the existing strict call/result and process-cleanup gates.
+- Registered Unicode section anchors, including the SAR calibration heading containing `β⁰`, `σ⁰` and `γ⁰`, load through the skill API; path separators and control characters remain rejected.
+- Registered the 40 bilingual intent development cases in the public Python scenarios, with a coverage/label consistency regression. Repository link validation ignores generated `.terracache` fixtures while still checking source documents.
+- Provenance schema 0.1 now rejects malformed manifests and extra hashed-core fields (including creation timestamps with recomputed hashes) as check failures. Credential-bearing URLs in STAC metadata, nested parameters and command arguments are rejected by the writer without echoing secrets; verification also checks recorded local JSON run records. Use stable unsigned hrefs; ordinary acquisition/search time parameters remain allowed.
+- `rs.scale_applied_once` checks source-nodata preservation over all first-band pixels in bounded windows, permits extra QA masking, and reports incompatible grids/shapes/rotation/shear or unavailable calibration as `not-run`. Numeric calibration remains stride-sampled, with the existing full-band numeric read unchanged.
+- Optical/STAC eval recipes supply raw reference/calibration and recorded JSON manifests where needed. Same 27 tasks and 38 wrong controls: checker rejections increased from 15 to 21, oracle-only blind spots decreased from 23 to 17, with zero false passes and 29 exercised IDs. Production API and CLI/MCP parity regressions cover the six targeted controls; task specs and independent numeric oracles are unchanged.
+
 ### Known limits
 
 - Eval reports measure deterministic checks and independent fixture oracles only; they do not measure agent lift, hosted CI, live MCP hosts, network/cloud behavior, or held-out routing performance. Oracle-only rejection is reported as a checker blind spot, not as checker rejection.

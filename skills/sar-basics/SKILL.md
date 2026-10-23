@@ -143,7 +143,9 @@ is high for volume scatterers such as vegetation [S7, S1].
   shadow and smooth surfaces such as dry sand are also dark [S7]. Validate.
 - **Change/flood:** the log ratio `log10(date2 / date1)` of calibrated,
   co-registered images shows the direction of change (negative = decrease)
-  [S7]. Compute ratios on linear values (equivalently, dB differences).
+  [S7]. Compute ratios on positive linear power. The dB difference is
+  `10 * log10(date2 / date1)`, ten times the plain log ratio; record the units
+  used by each change threshold.
   Validate change maps with [accuracy assessment](../accuracy-assessment/SKILL.md);
   temporal design is in [time series and change](../time-series-and-change/SKILL.md).
 
@@ -171,14 +173,14 @@ one grid), `raster.nodata_declared`, `raster.resampling`, `raster.cog_layout`, a
 to SAR backscatter.
 
 ```bash
-python -m terraproof check s1_vv_20240101_db.tif s1_vv_20240113_db.tif
+python -m terraproof check s1_vv_20240101_db.tif s1_vv_20240113_db.tif --sar-expect sigma0-db
 python -m terraproof check s1-item.json
 ```
 
-Being added in Phase 4: `sar.value_domain` (sampled values plausible for the
-declared scale, sigma0 in dB or linear; flags dB/linear confusion) and
-`sar.geocoded` (a real CRS/geotransform rather than GCP-only slant/ground-range
-geometry before spatial analysis). CLI options are not final.
+`--sar-expect sigma0-db` (or `sigma0-linear`) enables `sar.value_domain`
+(sampled values plausible for the declared scale) and `sar.geocoded`
+(CRS/geotransform rather than GCP-only geometry). Plausible values and a
+geotransform do not prove calibration or terrain correction.
 
 **Not checked automatically:** that the right LUT was used, noise removal,
 terrain-correction quality and DEM choice, speckle-filter suitability, orbit

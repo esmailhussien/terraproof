@@ -134,9 +134,23 @@ npx terraproof route "Design PostGIS schema" --format json
 
 The Python router keeps ranked mode's existing default cap of five and thresholds. `mode="candidates"` uses a deterministic default cap of eight, preserves the ranked choices, and fills remaining slots by relevance for optional host-side selection. Candidate output includes one-line skill explanations; it does not call a host model itself.
 
+Before Python retrieval, a deterministic bilingual clause pass scopes BM25, exact triggers, wording signals and optional semantics to requested work. Editorial clauses (translation, email/copy drafting, button-label edits) do not make their quoted technology names executable tasks. Negative operation directives end at punctuation or contrast/sequence boundaries; later affirmative work survives. A `no Python` constraint removes the runtime preference, not a legitimate database, infrastructure or map task. Descriptive negatives such as raw values being “not reflectance” remain diagnostic evidence. Quotes outside editorial clauses may be actual operands and are retained. The public query text, normalized text and Arabic expansion metadata still describe the original input; dataset profiles retain their independent evidence.
+
+Phase 4 guards distinguish SAR preparation from optical cloud/reflectance preprocessing, map-accuracy assessment from arbitrary sampling/numerical precision, temporal analysis from application edits, and cloud asset access from generic REST CRUD. Generic index wording requires a spectral/raster context; Arabic professional vocabulary uses curated whole-word forms and existing clitic normalization, not substring matches. Paired English/Arabic dev cases and `tests/python/test_router_intent.py` exercise these intent boundaries in both ranked and candidate modes. Every routing rule also requires a matching public scenario in the `pythonScenarios` section of `tests/router/scenarios.json` before freeze. The frozen 20-skill compatibility fixture is not regenerated for these changes. No held-out corpus or protocol informs the rules.
+
 Semantic retrieval is optional and offline-only (`pip install -e ".[semantic]"`). It uses the pinned local dependency/model when available, and missing dependencies, models, or inference errors fall back to lexical retrieval with a warning. No model download occurs during ordinary routing or tests.
 
 ## 9. Future Optional LLM Fallback (Design Only)
+
+The Python router now rejects text-only software/copy homonyms (for example an
+API route, a fictional plot or a logo palette) unless the affirmative request
+also names a domain capability. Inspected datasets remain positive evidence for
+mixed software/geospatial work. Named GDAL commands, additional web-map engines,
+explicit temporal/accuracy/cloud capabilities and curated Arabic workflow nouns
+have registered regressions. The 160 exposed internal-audit cases are development
+coverage; they are not reused as fresh acceptance. The subsequent
+[release audit](../evals/routing/RELEASE_20261023_PROTOCOL.md) records both its
+passing numeric thresholds and same-agent/sample-size limitations.
 
 In future iterations, if a task prompt has very low classification confidence (< 50%) or ambiguous natural language:
 

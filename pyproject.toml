@@ -41,6 +41,9 @@ Repository = "https://github.com/esmailhussien/terraproof"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.cmdclass]
+build_py = "terraproof._build.BuildPy"
+
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
 # Python on some Windows setups cannot write to the user temp directory, so

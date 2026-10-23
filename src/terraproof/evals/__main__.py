@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 
 from terraproof.evals.harness import run_benchmark, to_json
-from terraproof.evals.specs import SpecError, repo_root
+from terraproof.evals.specs import SpecError
 
 EXIT_USAGE = 2
 
@@ -47,7 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.keep:
-        cache = repo_root() / ".terracache" / "evals-kept"
+        cache = Path.cwd() / ".terracache" / "evals-kept"
         cache.mkdir(parents=True, exist_ok=True)
         work_root = Path(tempfile.mkdtemp(prefix="terraproof-evals-", dir=cache))
     else:

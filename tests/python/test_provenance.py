@@ -514,3 +514,190 @@ class TestCli:
         code, stdout, _ = self._run(["verify", str(manifest_path)])
         assert code == 3
         assert "escapes workspace" in stdout
+
+
+@pytest.mark.parametrize("mutate", [
+    lambda m: m["core"].update(created="2024-01-01T00:00:00Z"),
+    lambda m: m.update(core=[]),
+    lambda m: m["core"].update(files=[None]),
+    lambda m: m["core"].update(stac_items=[{"asset_hrefs": []}]),
+    lambda m: m["core"].update(parameters=[]),
+    lambda m: m.update(schema={"unexpected": "SECRET"}),
+    lambda m: m.update(context={"created": [], "command_line": {}}),
+])
+def test_malformed_manifest_fails_without_crashing(tmp_path, mutate):
+    data = tmp_path / "data.txt"
+    data.write_text("data", encoding="utf-8")
+    path = _write_manifest(tmp_path, [data], [data])
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    mutate(manifest)
+    _recompute_core_sha256(manifest)
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    assert verify_manifest(path).status == "fail"
+
+
+@pytest.mark.parametrize("url", [
+    "https://example.invalid/band.tif?sig=PRIVATE",
+    "https://example.invalid/band.tif?%74oken=PRIVATE",
+    "https://user:PRIVATE@example.invalid/band.tif",
+    "https://example.invalid/band.tif?X-Amz-Credential=PRIVATE",
+    "https://example.invalid/band.tif?X-Goog-Signature=PRIVATE",
+])
+def test_writer_rejects_nested_and_command_credentials(tmp_path, url):
+    data = tmp_path / "data.txt"
+    data.write_text("data", encoding="utf-8")
+    for kwargs in ({"parameters": {"nested": [{"href": url}]}},
+                   {"parameters": {url: "identity"}}, {"command_line": ["--href=" + url]}):
+        with pytest.raises(ValueError) as error:
+            write_manifest([data], [data], root=tmp_path, **kwargs)
+        assert "PRIVATE" not in str(error.value)
+
+
+def test_writer_path_error_does_not_echo_credentials(tmp_path):
+    data = tmp_path / "data.txt"
+    data.write_text("data", encoding="utf-8")
+    with pytest.raises(ValueError) as error:
+        write_manifest(["https://example.invalid/a?sig=PRIVATE"], [data], root=tmp_path)
+    assert "PRIVATE" not in str(error.value)
+
+
+def test_writer_rejects_signed_stac_href_and_accepts_unsigned_query(tmp_path):
+    data = tmp_path / "data.txt"
+    data.write_text("data", encoding="utf-8")
+    item = tmp_path / "item.json"
+    payload = {"type": "Feature", "stac_version": "1.0.0", "id": "pinned",
+               "properties": {"datetime": "2024-01-01T00:00:00Z"},
+               "assets": {"red": {"href": "https://example.invalid/a?sig=PRIVATE"}}}
+    item.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ValueError) as error:
+        write_manifest([data], [data], root=tmp_path, stac_items=[item])
+    assert "PRIVATE" not in str(error.value)
+    payload["assets"]["red"]["href"] = "https://example.invalid/a?band=red&version=2"
+    item.write_text(json.dumps(payload), encoding="utf-8")
+    manifest = write_manifest([data], [data], root=tmp_path, stac_items=[item])
+    assert manifest["core"]["stac_items"][0]["asset_hrefs"]["red"] == payload["assets"]["red"]["href"]
+
+
+def test_verifier_rejects_recorded_json_credentials_and_nested_tamper(tmp_path):
+    data = tmp_path / "data.txt"
+    data.write_text("data", encoding="utf-8")
+    record = tmp_path / "record.json"
+    record.write_text(json.dumps({"assets": [{"href": "https://example.invalid/a?sig=PRIVATE"}]}), encoding="utf-8")
+    path = _write_manifest(tmp_path, [data], [record])
+    check = verify_manifest(path)
+    assert check.status == "fail"
+    assert "PRIVATE" not in json.dumps(check.to_dict())
+    record.write_text("{}", encoding="utf-8")
+    path = _write_manifest(tmp_path, [data], [record], params={"datetime": "2024-01-01/2024-12-31"})
+    assert verify_manifest(path).status == "pass"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    manifest["core"]["parameters"]["nested"] = [{"href": "https://example.invalid/a?sig=PRIVATE"}]
+    _recompute_core_sha256(manifest)
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    check = verify_manifest(path)
+    assert check.status == "fail"
+    assert "PRIVATE" not in json.dumps(check.to_dict())
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"parameters": {"assets": ("https://example.invalid/a?token=TEST_ONLY",)}},
+    {"parameters": {"nested": ({"assets": (["https://example.invalid/a?token=TEST_ONLY"],)},)}},
+    {"parameters": {("https://example.invalid/a?token=TEST_ONLY",): "identity"}},
+    {"command_line": ("test", "https://example.invalid/a?token=TEST_ONLY")},
+])
+def test_writer_screens_all_json_sequence_shapes(tmp_path, kwargs):
+    data = tmp_path / "data.txt"
+    data.write_text("data", encoding="utf-8")
+    with pytest.raises(ValueError, match="credential-bearing URL prohibited") as error:
+        write_manifest([data], [data], root=tmp_path, **kwargs)
+    assert "TEST_ONLY" not in str(error.value)
+
+
+def test_safe_tuples_normalize_without_changing_core_hash(tmp_path):
+    from terraproof.provenance._core import _valid_structure
+
+    data = tmp_path / "data.txt"
+    data.write_text("data", encoding="utf-8")
+    params = {"assets": ({"href": "https://example.invalid/a?band=red"},), "time_range": ("2024-01-01", "2024-12-31")}
+    manifest = write_manifest([data], [data], parameters=params, root=tmp_path, command_line=("test",))
+    list_manifest = write_manifest([data], [data], parameters=json.loads(json.dumps(params)), root=tmp_path, command_line=["test"])
+    assert manifest["core_sha256"] == list_manifest["core_sha256"]
+    assert manifest["core"] == list_manifest["core"]
+    assert manifest["context"]["command_line"] == ["test"]
+    assert _valid_structure(manifest)
+    path = tmp_path / "tuples.manifest.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    assert verify_manifest(path).status == "pass"
+    assert isinstance(params["assets"], tuple)  # caller-owned values are not mutated
+
+
+@pytest.mark.parametrize("kwargs,message", [
+    ({"parameters": ["TEST_ONLY"]}, "parameters must be a JSON-compatible object"),
+    ({"parameters": {("safe",): "TEST_ONLY"}}, "parameters must be a finite canonical JSON-compatible object"),
+    ({"parameters": {"unsupported": {"TEST_ONLY"}}}, "parameters must be a finite canonical JSON-compatible object"),
+    ({"parameters": {"nonfinite": float("nan")}}, "parameters must be a finite canonical JSON-compatible object"),
+    ({"command_line": "TEST_ONLY"}, "command_line must be a list or tuple of strings"),
+    ({"command_line": ("test", {"invalid": "TEST_ONLY"})}, "command_line must be a list or tuple of strings"),
+])
+def test_writer_rejects_schema_incompatible_arguments(tmp_path, kwargs, message):
+    data = tmp_path / "data.txt"
+    data.write_text("data", encoding="utf-8")
+    with pytest.raises(ValueError) as error:
+        write_manifest([data], [data], root=tmp_path, **kwargs)
+    assert str(error.value) == message
+    assert "TEST_ONLY" not in str(error.value)
+
+
+@pytest.mark.parametrize("update", [
+    {"properties": ["TEST_ONLY"]},
+    {"assets": ["TEST_ONLY"]},
+    {"assets": {"red": "TEST_ONLY"}},
+    {"assets": {"red": {"href": ["TEST_ONLY"]}}},
+    {"id": ["TEST_ONLY"]},
+    {"collection": {"invalid": "TEST_ONLY"}},
+    {"href": ["TEST_ONLY"]},
+    {"properties": {"datetime": ["TEST_ONLY"]}},
+])
+def test_writer_rejects_malformed_stac_metadata_before_return(tmp_path, update):
+    data = tmp_path / "data.txt"
+    data.write_text("data", encoding="utf-8")
+    item = tmp_path / "item.json"
+    payload = {"type": "Feature", "stac_version": "1.0.0", "id": "pinned", "properties": {}, "assets": {}}
+    payload.update(update)
+    item.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ValueError) as error:
+        write_manifest([data], [data], root=tmp_path, stac_items=[item])
+    assert "STAC" in str(error.value)
+    assert "TEST_ONLY" not in str(error.value)
+
+
+def test_writer_rejects_cyclic_parameters_with_controlled_error(tmp_path):
+    data = tmp_path / "data.txt"
+    data.write_text("data", encoding="utf-8")
+    params = {"private": "TEST_ONLY"}
+    params["self"] = (params,)
+    with pytest.raises(ValueError, match="acyclic JSON-compatible values") as error:
+        write_manifest([data], [data], root=tmp_path, parameters=params)
+    assert "TEST_ONLY" not in str(error.value)
+
+
+@pytest.mark.parametrize("source", ["parameters", "stac"])
+def test_writer_rejects_non_utf8_strings_without_echoing_values(tmp_path, source):
+    data = tmp_path / "data.txt"
+    data.write_text("data", encoding="utf-8")
+    kwargs = {"parameters": {"private": "TEST_ONLY\ud800"}}
+    if source == "stac":
+        item = tmp_path / "item.json"
+        item.write_text(json.dumps({"type": "Feature", "stac_version": "1.0.0", "id": "TEST_ONLY\ud800"}), encoding="utf-8")
+        kwargs = {"stac_items": [item]}
+    with pytest.raises(ValueError) as error:
+        write_manifest([data], [data], root=tmp_path, **kwargs)
+    assert "JSON-compatible" in str(error.value)
+    assert "TEST_ONLY" not in str(error.value)
+
+
+@pytest.mark.parametrize("payload", ["[]", "null", "{", '{"schema": "wrong"}'])
+def test_invalid_json_or_top_level_fails(tmp_path, payload):
+    path = tmp_path / "invalid.json"
+    path.write_text(payload, encoding="utf-8")
+    assert verify_manifest(path).status == "fail"

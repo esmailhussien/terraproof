@@ -122,6 +122,9 @@ SE(A_k)   = A_tot * SE(p_·k)
 multiplied by pixel area). The 1.96 factor is the large-sample normal
 approximation used in the guidance [S2]; with very small strata or proportions
 near 0 or 1, state that the interval is approximate.
+For a random-start systematic sample, these variance formulas are approximate
+and typically overestimate uncertainty [S1]. They assume pixel units with hard
+map/reference labels; polygon units or mixed labels require other estimators.
 
 A stratum needs at least 2 sample units (division by `n_i· - 1`); a class with
 no reference sample has an estimated area of zero with an uninformative SE, which
@@ -181,11 +184,18 @@ and `scope.record_count` check the sample file. With `--operation area`,
 `crs.metric_operation` fails geographic/geocentric CRSs and passes projected
 metre/foot CRSs; it does not confirm an equal-area projection.
 
-Being added in Phase 4: `accuracy.sample_design` (reference sample covers every
-map class with a minimum count; stratum weights present when areas are reported)
-and `accuracy.estimates` (recomputes overall/user's/producer's accuracy with
-confidence intervals and area-adjusted class areas, and flags reports that state
-accuracy without them). Their CLI options are not final.
+```bash
+python -m terraproof check classified_map.tif --accuracy-samples samples.json --class-areas areas.json --min-per-class 50 --estimates-requested
+```
+
+`samples.json` contains reference records with `map_class`, `ref_class` and
+optional `stratum_weight`; `areas.json` maps each map class to its mapped area
+in consistent units. `accuracy.sample_design` checks class coverage, counts and
+declared weights. The default minimum of 50 per class is a configurable design
+convention, not a precision guarantee. `accuracy.estimates` computes the
+area-weighted matrix, accuracy estimates and approximate intervals, plus
+area-adjusted class areas. It does not compare an external published report's
+claims with those estimates.
 
 **Not checked automatically:** whether the sample was truly probability-based,
 whether reference labels are correct or temporally coincident, response-design

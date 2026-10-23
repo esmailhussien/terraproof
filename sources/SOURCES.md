@@ -226,6 +226,7 @@ This file tracks upstream repositories, specifications, and references evaluated
 - **Local Paths:** [skills/time-series-and-change/](../skills/time-series-and-change/), [skills/sar-basics/](../skills/sar-basics/), [skills/accuracy-assessment/](../skills/accuracy-assessment/), [skills/stac-and-cloud-access/](../skills/stac-and-cloud-access/) (each `SKILL.md`, `references/`, `UPSTREAM.md`); benchmark specs in [evals/tasks/](../evals/tasks/)
 - **Upstream:** none; no third-party text or code copied.
 - **Primary references:** ESA SentiWiki Sentinel-1 pages and ESA-EOPG-CSCOP-TN-0002 (radiometric calibration); STAC Item, Item Search, Query/Filter and extension specifications; GDAL, rasterio, pystac-client, odc-stac, stackstac, xarray and Planetary Computer SDK documentation/source; Olofsson et al. 2014 and 2013, Stehman 2014, Stehman & Czaplewski 1998, Stehman & Foody 2019, FAO 2016; Verbesselt et al. 2010, Zhu & Woodcock 2014, Kennedy et al. 2010, Zhu 2017, Singh 1989; Small 2011, Lee 1980; ASF HyP3 RTC product guide. The `mapaccuracy` R package (by H. Costa) was consulted only to cross-check formulas; none of its code is included.
+- **Internal review, 2026-10-23:** Olofsson et al. (2014), sections 2.1.3 and 4.3–4.4, support the systematic-sample variance caveat; the ASF guide supports the factor of ten between a plain log-power ratio and a dB difference. The NDVI example now counts only finite pairs with defined per-date NDVI. Corrections and CLI examples were authored locally; no upstream text or code was copied.
 
 ---
 

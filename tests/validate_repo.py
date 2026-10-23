@@ -14,7 +14,7 @@ from typing import List, Tuple
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # Directories whose markdown is not repository content (VCS data, virtualenvs, dependencies, build output).
-SKIPPED_DIR_NAMES = frozenset({".git", ".venv", "venv", "node_modules", "dist", "build", ".pytest_cache"})
+SKIPPED_DIR_NAMES = frozenset({".git", ".venv", "venv", "node_modules", "dist", "build", ".pytest_cache", ".terracache"})
 
 
 def extract_frontmatter(content: str) -> Tuple[dict, str]:

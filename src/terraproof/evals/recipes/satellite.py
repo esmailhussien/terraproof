@@ -155,6 +155,8 @@ def satellite_s2_baseline_offset(root: Path):
     no_offset_path = write_raster(root / "sr_red_no_offset.tif", no_offset, crs=UTM, nodata=FLOAT_NODATA, dtype="float32")
     wrong_steps = [
         check_step("check sr_red_no_offset.tif sr_nir.tif --expect reflectance", [no_offset_path, sr_nir], expect="reflectance"),
+        check_step("run_checks(no_offset, reference_input=red_dn, encoding='s2-l2a')", [no_offset_path],
+                   reference_input=inspect_dataset(dn_red), encoding="s2-l2a"),
     ]
     wrong_oracle = Oracle("the offset must be applied from the product baseline, not the acquisition date")
     wrong_values = read_raster(no_offset_path)
@@ -266,6 +268,8 @@ def satellite_landsat_qa(root: Path):
 
     steps = [
         check_step("check landsat_sr.tif --expect reflectance", [sr_path], expect="reflectance"),
+        check_step("run_checks(sr, reference_input=landsat_dn, encoding='landsat-c2-l2')", [sr_path],
+                   reference_input=inspect_dataset(dn_path), encoding="landsat-c2-l2"),
         check_step(
             "run_checks(['landsat_sr.tif'], qa_path='qa_pixel.tif', qa_kind='landsat-qa-pixel')",
             [sr_path],
@@ -346,7 +350,10 @@ def satellite_landsat_qa(root: Path):
     double = np.full(SHAPE, FLOAT_NODATA, dtype="float32")
     double[~masked] = landsat_decode(landsat_decode(dn[~masked]))
     double_path = write_raster(root / "landsat_sr_double.tif", double, crs=UTM, nodata=FLOAT_NODATA, dtype="float32")
-    wrong_steps = [check_step("check landsat_sr_double.tif --expect reflectance", [double_path], expect="reflectance")]
+    wrong_steps = [check_step(
+        "run_checks(double, expect='reflectance', reference_input=landsat_dn, encoding='landsat-c2-l2')",
+        [double_path], expect="reflectance", reference_input=inspect_dataset(dn_path), encoding="landsat-c2-l2",
+    )]
     wrong_oracle = Oracle("a loader that already decoded the raster must not be decoded twice")
     wrong_values = read_raster(double_path)
     wrong_oracle.close(
