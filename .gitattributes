@@ -3,3 +3,6 @@ evals/routing/heldout_v3.jsonl -text
 evals/routing/heldout_v4.jsonl -text whitespace=cr-at-eol
 evals/routing/internal_20261023.jsonl text eol=lf
 evals/routing/release_20261023.jsonl text eol=lf
+
+# Keep executable shebangs LF so the packed CLI runs on macOS and Linux.
+bin/* text eol=lf
