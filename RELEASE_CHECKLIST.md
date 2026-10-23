@@ -1,10 +1,10 @@
 # Terraproof Release Checklist — v0.4.0 (Phase 4)
 
-Section 1 records the current **unreleased v0.4.0 (Phase 4)** evidence and open gates. The Phase 4 checkpoint `06eb466` was pushed to `main` and hosted CI passed on it. Tagging and npm/PyPI publication have not been performed. Sections 2–5 are the release procedure for v0.4.0.
+Section 1 records the **v0.4.0 (Phase 4)** release evidence and the gates that remain open. v0.4.0 was released on 2026-10-23: tag `v0.4.0`, GitHub release *Terraproof v0.4.0*, and `terraproof@0.4.0` on npm as `latest`. It has not been published to PyPI. Sections 2–5 are the release procedure used for v0.4.0.
 
 ---
 
-## 1. Current Unreleased Phase 4 Verification
+## 1. v0.4.0 (Phase 4) Release Verification
 
 ### Pre-publication verification snapshot — 2026-10-23
 
@@ -280,5 +280,5 @@ Next release actions: tag and publish v0.4.0 (sections 4–5) when the user deci
 
 ## 5. Post-Release Smoke Testing
 
-- [ ] Run `npx terraproof --version` in a blank directory (or `npx @<owner>/terraproof --version` if scoped).
-- [ ] Run `npx terraproof route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL"` to verify global routing.
+- [x] Run `npx terraproof --version` in a blank directory (or `npx @<owner>/terraproof --version` if scoped). 2026-10-23, Windows: `npx terraproof@0.4.0 --version` printed `terraproof v0.4.0`; the published `bin/terraproof.js` contains no CR bytes.
+- [x] Run `npx terraproof route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL"` to verify global routing. 2026-10-23, Windows: exit 0, 4 skills selected at 90% confidence.
