@@ -25,7 +25,7 @@ node router/index.ts validate
 node router/index.ts route "Download Sentinel-2 imagery from a STAC catalog, compute NDVI, and map the change with MapLibre" --dry-run
 ```
 
-**Expected result:** `--version` prints `terraproof v0.2.0`, and `validate` reports the current generated registry and collections. The route prints the task, selected skills grouped by layer, and rationale. Exact scores and selections are input- and registry-dependent; dry-run output also lists dropped candidates. It does not create files or call a model.
+**Expected result:** `--version` prints `terraproof v0.4.0`, and `validate` reports the current generated registry and collections. The route prints the task, selected skills grouped by layer, and rationale. Exact scores and selections are input- and registry-dependent; dry-run output also lists dropped candidates. It does not create files or call a model.
 
 The walkthrough is illustrative, not a recorded execution. Exact selections and scores depend on the prompt, overrides, and registry revision. The commands that run offline were checked against this checkout. The download, NDVI, and MapLibre steps need network access and data, so they are illustrative only.
 
