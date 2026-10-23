@@ -234,7 +234,7 @@ Next release actions: tag and publish v0.4.0 (sections 4–5) when the user deci
 - [x] **`package.json` Package Shape**:
   - `name`: `terraproof`
   - `version`: `0.4.0`
-  - `bin`: `{"terraproof": "./bin/terraproof.js"}`
+  - `bin`: `{"terraproof": "bin/terraproof.js"}`
   - `main` and `exports`: `./dist/router/index.js` (compiled router)
   - `engines.node`: `>=20`
   - `files`: explicitly restricted to `bin/`, `dist/`, `routing/`, `skills/`, `instructions/`, `third_party/`, `sources/`, `README.md`, `LICENSE`.

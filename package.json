@@ -10,7 +10,7 @@
     "./routing": "./routing/registry.json"
   },
   "bin": {
-    "terraproof": "./bin/terraproof.js"
+    "terraproof": "bin/terraproof.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -27,7 +27,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/esmailhussien/terraproof.git"
+    "url": "git+https://github.com/esmailhussien/terraproof.git"
   },
   "homepage": "https://github.com/esmailhussien/terraproof#readme",
   "bugs": {
