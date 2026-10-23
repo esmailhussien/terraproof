@@ -1,6 +1,6 @@
-# Terraproof Release Checklist — v0.4.0 (Phase 4)
+# Terraproof Release Checklist — v0.4.1 (routing fixes) and v0.4.0 (Phase 4)
 
-Section 1 records the **v0.4.0 (Phase 4)** release evidence and the gates that remain open. v0.4.0 was released on 2026-10-23: tag `v0.4.0`, GitHub release *Terraproof v0.4.0*, and `terraproof@0.4.0` on npm as `latest`. It has not been published to PyPI. Sections 2–5 are the release procedure used for v0.4.0.
+Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 routing measurement that v0.4.1 ships, and the gates that remain open. v0.4.0 was released on 2026-10-23: tag `v0.4.0`, GitHub release *Terraproof v0.4.0*, and `terraproof@0.4.0` on npm as `latest`. v0.4.1 is prepared but not yet tagged or published. Neither version is published to PyPI. Sections 2–5 are the release procedure, now targeting v0.4.1.
 
 ---
 
@@ -213,7 +213,7 @@ Limits: v5 is agent-authored and not expert-adjudicated, and one pass on one 160
 
 **Review follow-up (commit `42f1dd9`), non-regression check only.** A code review of PR #5 found two regressions against `main`, both now fixed with scenarios that use the reviewer's exact prompts. First, a "do not", "don't" or "never" in the middle of a clause had stopped excluding skills. Second, the everyday veto had blocked location tasks such as nearest store per address or counts per district on a map. The review also found four smaller issues: overly broad strong anchors, mismatched exemptions between the two GDAL/OGR penalties, a per-call lexicon set, and over-eager plural bases. Those were fixed too. Python scenarios now total 295 and dev is 962 items at recall 1.0 with 0 forbidden. The full Python suite passed 1093 with 1 optional skip, TS 87/87 was deterministic, and the validator passed. v5 (SHA unchanged) was re-run once as a **non-regression check on an already-measured set, not as independent acceptance**: EN recall 0.9833 (positive-only 0.9778), 3 forbidden of 80; AR recall 0.9625 (positive-only 0.95), 2 forbidden of 80. The one-shot result above remains the only acceptance measurement, and it measured the earlier commit `22c3564`.
 
-- [x] **Mandatory intent scenario registration complete.** All 40 authored development cases are registered once under `pythonScenarios` in `tests/router/scenarios.json` (75 Python scenarios total). The contract regression checks IDs, prompts, expected skills and complete wildcard exclusions against the dev data and test cases. Both ranked/candidate intent tests and the full Python suite passed. This closes registration compliance only; the independent scientific routing gate remains failed/open.
+- [x] **Mandatory intent scenario registration complete.** All 40 authored development cases are registered once under `pythonScenarios` in `tests/router/scenarios.json` (75 Python scenarios total). The contract regression checks IDs, prompts, expected skills and complete wildcard exclusions against the dev data and test cases. Both ranked/candidate intent tests and the full Python suite passed. This closes registration compliance only; the independent scientific routing gate was closed separately by the v5 measurement above.
 - [x] **Workspace writes verified in this supported Codex Desktop execution.** Before edits, native Python opened the existing scenario file with `r+b` without writing bytes, rewrote an owned temporary file in `tests/router`, and confirmed unchanged scenario content. Actual registration writes then succeeded. Earlier ZadLoop workers had LOW primary tokens and error 5 write denials despite FullAccess reporting; those observations remain historical and their root cause is unconfirmed. The existing MXC preference was not changed again. No ACL/SACL, ownership or integrity-label repair was performed during this continuation. This result does not establish that the stopped historical worker was repaired or that every MXC operation works: temporary-file operations and in-memory MCP still required separate approved execution outside MXC for local checks. Historical evidence remains in local `.terracache/execution-context-comparison.json` and `.terracache/phase4-execution-context-feedback.md`.
 - [x] **Real-agent tool-use gate (Codex): passed** after runtime recovery, on supported app runtime 0.163.0-alpha.11.2 under the unchanged strict trace gate (see the current table and the runtime-recovery notes above). Earlier Codex 0.160.1 startup failures remain diagnostic history in `.terracache/host-startup-diagnosis.json`.
 - [ ] **Real-agent tool-use gate (Claude): not run.** Claude was unauthenticated; no Claude tool-use acceptance is claimed.
@@ -236,9 +236,10 @@ Limits: v5 is agent-authored and not expert-adjudicated, and one pass on one 160
 - Codex uses an installed native executable (including resolution of the inspected official npm layout), not an uncancellable shell/Node wrapper. Its isolated project/fixture is in a newly allocated OS temporary directory outside the checkout; no ancestral checkout MCP configuration is intended to be merged. It uses `--ignore-user-config --ignore-rules --strict-config --ephemeral --sandbox read-only --json --skip-git-repo-check`, explicit MCP command/args, and only `list_skills`/`inspect_dataset` in `enabled_tools`. Supported shell, unified execution, hooks, apps, browser, computer-use, image-generation, multi-agent, plugin, and workspace-dependency features are disabled. Untoggleable edit tools must be denied by the read-only sandbox; any observed non-MCP tool attempt fails the trace gate. A Windows kill-on-close job contains the suspended native process before it runs, or invocation is refused. The runner permits one invocation, no runner retries, and a 120-second timeout with owned process-tree cleanup. It requires current `Logged in using ChatGPT` status, with no API-paid fallback. **Codex has no USD-budget cap**; subscription authentication is not a claim of a dollar cap or a selected paid API. Successful started/completed MCP events must contain the generated fixture's real profile and skill results, followed by turn completion; malformed output, tool errors, timeout, or isolation failure cannot pass.
 - Claude retains its maximum USD1 / 120-second optional invocation with isolated local-server `--mcp-config`, `--strict-mcp-config`, `--no-session-persistence`, `--restricted`, disabled built-in tools/hooks/skills, an explicit Terraproof-only tool allowlist, and noninteractive permission denial. Windows shell wrappers are unavailable for model invocation; a native executable is required. Success requires actual successful `list_skills` and `inspect_dataset` tool-result trace events. Both runners retain only sanitized summary/tool status, not raw auth/model transcripts or credentials, and make no global agent configuration edits. Host inference necessarily contacts its configured service; these are CLI tool controls, not an OS-wide inference network block. If stronger isolation is required, do not invoke either runner without external assessment.
 - [x] Confirm green **current release commit** hosted CI. The Ubuntu/Windows × Python 3.11/3.13 matrix ran this driver after the Python and deterministic eval suites and uploaded its report; the package matrix passed on all three OSes × Node 20/22/24. Green on `06eb466` ([run 40012988399](https://github.com/esmailhussien/terraproof/actions/runs/40012988399)); re-confirm if the release commit differs.
-- [ ] Remaining release gates: independent scientific routing acceptance (v3/v4 failed above), Claude real-host tool use, and the 17 declared checker blind spots. Tiny synthetic vector fixtures do not exhaustively validate raster/optical/SAR workflows or scientific fitness.
+- [x] Independent routing acceptance: **passed on v5** in both languages from a single measurement of commit `22c3564` (EN recall 0.971, 3.75 forbidden per 100; AR recall 0.9625, 2.5 per 100; see above). The v3/v4 failures stay on record. v5 is agent-authored and not expert-adjudicated. Its post-review re-run on the v0.4.1 code is a non-regression check only, not a second acceptance.
+- [ ] Remaining release gates: Claude real-host tool use and the 17 declared checker blind spots. Tiny synthetic vector fixtures do not exhaustively validate raster/optical/SAR workflows or scientific fitness.
 
-Next release actions: tag and publish v0.4.0 (sections 4–5) when the user decides, stating the open routing and Claude limits in the release notes. Separately, obtain a genuinely new frozen independent routing acceptance set without exposing old failed items to tuning. The user-approved internal content review above replaces additional expert reviewers; it does not replace these acceptance gates. No automatic inference retry, credential inspection, provider/model fallback, or relaxed isolation is authorized by these checks.
+Next release actions: tag and publish v0.4.1 (sections 4–5) when the user decides, stating the remaining Claude and checker blind-spot limits and the agent-authored nature of v5 in the release notes. The user-approved internal content review above replaces additional expert reviewers; it does not replace these acceptance gates. No automatic inference retry, credential inspection, provider/model fallback, or relaxed isolation is authorized by these checks.
 
 ---
 
@@ -246,7 +247,7 @@ Next release actions: tag and publish v0.4.0 (sections 4–5) when the user deci
 
 - [x] **`package.json` Package Shape**:
   - `name`: `terraproof`
-  - `version`: `0.4.0`
+  - `version`: `0.4.1`
   - `bin`: `{"terraproof": "bin/terraproof.js"}`
   - `main` and `exports`: `./dist/router/index.js` (compiled router)
   - `engines.node`: `>=20`
@@ -277,17 +278,17 @@ Next release actions: tag and publish v0.4.0 (sections 4–5) when the user deci
 
 1. **Tag the Release**:
    ```bash
-   git tag -a v0.4.0 -m "Terraproof v0.4.0 — remote-sensing depth and reproducibility (Phase 4)"
-   git push origin v0.4.0
+   git tag -a v0.4.1 -m "Terraproof v0.4.1 — routing precision and Arabic recall fixes"
+   git push origin v0.4.1
    ```
-2. **Publish to NPM**:
+2. **Publish to NPM** (from a checkout where `bin/terraproof.js` has LF endings; npm asks for browser/2FA approval):
    ```bash
    npm publish --access public
    ```
 3. **Create GitHub Release**:
-   - Title: `Terraproof v0.4.0`
-   - Attach tarball `terraproof-0.4.0.tgz` generated via `npm pack`.
-   - Use the `0.4.0` CHANGELOG entry as release notes, and state the open independent routing and Claude real-host gates.
+   - Title: `Terraproof v0.4.1`
+   - Attach tarball `terraproof-0.4.1.tgz` generated via `npm pack`.
+   - Use only the `0.4.1` CHANGELOG entry as release notes, and state the remaining Claude real-host and checker blind-spot gates.
 
 ---
 
@@ -295,3 +296,5 @@ Next release actions: tag and publish v0.4.0 (sections 4–5) when the user deci
 
 - [x] Run `npx terraproof --version` in a blank directory (or `npx @<owner>/terraproof --version` if scoped). 2026-10-23, Windows: `npx terraproof@0.4.0 --version` printed `terraproof v0.4.0`; the published `bin/terraproof.js` contains no CR bytes.
 - [x] Run `npx terraproof route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL"` to verify global routing. 2026-10-23, Windows: exit 0, 4 skills selected at 90% confidence.
+- [ ] v0.4.1: `npx terraproof@0.4.1 --version` prints `terraproof v0.4.1` in a blank directory.
+- [ ] v0.4.1: `npx terraproof@0.4.1 route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL"` exits 0.
