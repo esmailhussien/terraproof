@@ -1,6 +1,6 @@
-# Terraproof Release Checklist — Current Phase 4 and Historical v0.2.0
+# Terraproof Release Checklist — v0.4.0 (Phase 4)
 
-Section 1 records the current **unreleased Phase 4** evidence and open gates. The user renewed the request to finish and publish on GitHub, with the earlier publication hold still relevant to unresolved acceptance gates. GitHub-only scope means commit/push and verification of Actions; npm/PyPI publication, tags and releases remain outside scope. Sections 2–5 retain the historical v0.2.0 procedure, not instructions to publish packages now.
+Section 1 records the current **unreleased v0.4.0 (Phase 4)** evidence and open gates. The Phase 4 checkpoint `06eb466` was pushed to `main` and hosted CI passed on it. Tagging and npm/PyPI publication have not been performed. Sections 2–5 are the release procedure for v0.4.0.
 
 ---
 
@@ -10,8 +10,8 @@ Section 1 records the current **unreleased Phase 4** evidence and open gates. Th
 
 The user requested completing Phase4 and publishing, working alone. The router
 fixes and local verification below are complete, including actual native Codex
-tool use after runtime recovery. GitHub Actions must verify the published
-checkpoint; this table records the pre-push cutoff.
+tool use after runtime recovery. This table records the pre-push local cutoff;
+the hosted matrix row was added after GitHub Actions passed on `06eb466`.
 
 | Check | Latest executed result |
 | --- | --- |
@@ -26,7 +26,7 @@ checkpoint; this table records the pre-push cutoff.
 | Source distribution | Rebuilt outside checkout; all 245 wheel-member hashes identical; routing corpora excluded |
 | CLI and official SDK stdio | **20/20** assertions on actual child processes, separate from real-agent inference |
 | Native Codex acceptance | **Passed** on supported app runtime 0.163.0-alpha.11.2: actual started/completed `list_skills` and `inspect_dataset` calls, validated result payloads, successful turn completion and exit 0 |
-| Hosted OS/Python/Node matrix | Pending a release-checkpoint push; older local Linux Node22 coverage is scoped below |
+| Hosted OS/Python/Node matrix | **Passed** on `06eb466` ([run 40012988399](https://github.com/esmailhussien/terraproof/actions/runs/40012988399)): all 14 jobs green — validation/router/types; Python core Ubuntu/Windows × 3.11/3.13 (pytest, evals, wheel smoke, release-validation driver); package smoke Ubuntu/Windows/macOS × Node 20/22/24 |
 
 The original thresholds are unchanged: recall at least 0.90 and no more than
 five forbidden selections per 100 **in each language**. The new
@@ -113,7 +113,7 @@ independent acceptance, live satellite/cloud validation or checker blind-spot
 closure. Reproduction/evidence: `.terracache/phase4-science-review.py` and
 `.terracache/phase4-internal-science-review.json`.
 
-**Still open:** independent scientific routing acceptance, the 17 declared checker blind spots, successful real-agent tool use, and the complete hosted OS/Python/Node matrix. Frozen v3/v4 bytes were hash-checked only and are unchanged; no failed items were inspected or reused, and no fresh independent acceptance is claimed. Push stays on hold.
+**Open at this snapshot:** independent scientific routing acceptance, the 17 declared checker blind spots, successful real-agent tool use, and the complete hosted OS/Python/Node matrix (the last two have since passed; see the current table). Frozen v3/v4 bytes were hash-checked only and are unchanged; no failed items were inspected or reused, and no fresh independent acceptance is claimed.
 
 **Post-review rerun:** full Python suite again passed 870 tests with 1
 optional-model skip and 2 expected warnings; router scenarios passed 87/87;
@@ -136,7 +136,7 @@ Post-review evidence (local/ignored): `.terracache/phase4-post-review-python.log
 `.terracache/phase4-post-review-package.log`, and
 `.terracache/phase4-post-review-artifacts.json`.
 
-**Fresh internal routing audit: FAILED / OPEN.** Following the user's request
+**First internal routing audit: FAILED (historical; superseded by the release audit in the current table).** Following the user's request
 to work alone, this agent authored and froze 160 new questions before one
 measurement, without reading old heldout items or per-item failures. This is
 same-agent internal evidence, not independent acceptance. EN recall was 0.95
@@ -144,8 +144,8 @@ with 10 forbidden selections/80 (12.5 per 100); AR recall was 0.8125 with 3/80
 (3.75 per 100). EN failed the unchanged forbidden-rate threshold and AR failed
 the unchanged recall threshold. No labels or routing code were changed after
 measurement. The [protocol and result](evals/routing/INTERNAL_20261023_PROTOCOL.md)
-record authorship, limitations and corpus hash. A perfect dev result therefore
-does not establish release readiness; the publication hold still applies.
+record authorship, limitations and corpus hash. This set was later exposed for
+development and is never presented as fresh acceptance again.
 
 
 - [x] **Skill Inventory Integrity**:
@@ -162,8 +162,8 @@ does not establish release readiness; the publication hold still applies.
   - Every vendored skill includes `UPSTREAM.md` with source repository, commit SHA, and license terms.
   - Third-party licenses and notices maintained in `third_party/`.
   - Upstream source map and licensing catalog maintained in `sources/SOURCES.md`.
-- [ ] **GitHub Actions CI**:
-  - `.github/workflows/ci.yml` runs repository validation and the router suite (Node 24), and the `package-smoke` matrix (Ubuntu, Windows, macOS × Node 20, 22, 24). Confirm a green run on the release commit.
+- [x] **GitHub Actions CI**:
+  - `.github/workflows/ci.yml` runs repository validation and the router suite (Node 24), the Python core matrix (Ubuntu, Windows × Python 3.11, 3.13), and the `package-smoke` matrix (Ubuntu, Windows, macOS × Node 20, 22, 24). Green on `06eb466` ([run 40012988399](https://github.com/esmailhussien/terraproof/actions/runs/40012988399)). Re-confirm on the final release commit if it differs.
 
 ### Coordinator-reported platform and scientific evidence
 
@@ -202,8 +202,8 @@ The same predeclared per-language gate requires recall >=0.9 and <=5 forbidden s
 
 - [x] **Mandatory intent scenario registration complete.** All 40 authored development cases are registered once under `pythonScenarios` in `tests/router/scenarios.json` (75 Python scenarios total). The contract regression checks IDs, prompts, expected skills and complete wildcard exclusions against the dev data and test cases. Both ranked/candidate intent tests and the full Python suite passed. This closes registration compliance only; the independent scientific routing gate remains failed/open.
 - [x] **Workspace writes verified in this supported Codex Desktop execution.** Before edits, native Python opened the existing scenario file with `r+b` without writing bytes, rewrote an owned temporary file in `tests/router`, and confirmed unchanged scenario content. Actual registration writes then succeeded. Earlier ZadLoop workers had LOW primary tokens and error 5 write denials despite FullAccess reporting; those observations remain historical and their root cause is unconfirmed. The existing MXC preference was not changed again. No ACL/SACL, ownership or integrity-label repair was performed during this continuation. This result does not establish that the stopped historical worker was repaired or that every MXC operation works: temporary-file operations and in-memory MCP still required separate approved execution outside MXC for local checks. Historical evidence remains in local `.terracache/execution-context-comparison.json` and `.terracache/phase4-execution-context-feedback.md`.
-- [ ] **Real-agent tool-use gate FAILED, not passed.** Coordinator-confirmed native Codex 0.160.1 authentication is now ChatGPT after the fail-closed parser fix ignores two known startup warnings. The earlier unavailable-auth result was a historical probe artifact, not the current known failure. The parent's bounded actual optional run after that fix again exited 1. Latest diagnostics record `process_started=true` and legacy `model_called=true`, which is not proof of inference: no thread/turn/tool events, no usage or positive output tokens, `successful_tools=[]`, label `unclassified`, and four nonempty stderr lines; raw streams were not persisted. The latest no-model help, versioned public-schema, and TOML Windows-path roundtrip audit found no confirmed driver defect and made no runtime code fix (only two unit cases were added). Help/schema success does not prove runtime initialization; `strict_features_command` being unsupported is not proof of the startup root cause. See host-startup diagnosis (`.terracache/host-startup-diagnosis.json`). Startup root cause remains unconfirmed, and MIC is not established as its cause. No further inference invocation is authorized until host startup is diagnosed and execution context fixed. CLI/SDK stdio's 20 passing assertions are separate. Claude remains unauthenticated and was not rerun. No model/provider fallback or loosened isolation was used; this documentation worker made no model calls.
-- [ ] Hosted CI remains unrun: GitHub-only push/CI authorization was followed by the user's explicit **HOLD until gates pass**. No commits, push, workflow dispatch, or remote action now. Ubuntu/Windows Python 3.11/3.13 and macOS/Node 20/24 remain unverified here; the local Linux Node 22 run must not be generalized to the complete existing matrix.
+- [x] **Real-agent tool-use gate (Codex): passed** after runtime recovery, on supported app runtime 0.163.0-alpha.11.2 under the unchanged strict trace gate (see the current table and the runtime-recovery notes above). Earlier Codex 0.160.1 startup failures remain diagnostic history in `.terracache/host-startup-diagnosis.json`.
+- [ ] **Real-agent tool-use gate (Claude): not run.** Claude was unauthenticated; no Claude tool-use acceptance is claimed.
 
 ### Independent executable release validation protocol
 
@@ -222,10 +222,10 @@ The same predeclared per-language gate requires recall >=0.9 and <=5 forbidden s
 - Default validation and unit tests never contact a model. Optional real-host validation is explicitly opt-in and parent-controlled: `python tests/release_validation.py --agent-host codex --out .terracache/release-validation-codex.json` or `python tests/release_validation.py --agent-host claude --out .terracache/release-validation-claude.json`. No provider/model is selected. Executable/version/required-control/auth probes must pass before any model invocation; unavailable or failed requested host validation fails its gate. Installer generation, SDK transport, installation, authentication alone, and model prose never count as successful real-host tool use.
 - Codex uses an installed native executable (including resolution of the inspected official npm layout), not an uncancellable shell/Node wrapper. Its isolated project/fixture is in a newly allocated OS temporary directory outside the checkout; no ancestral checkout MCP configuration is intended to be merged. It uses `--ignore-user-config --ignore-rules --strict-config --ephemeral --sandbox read-only --json --skip-git-repo-check`, explicit MCP command/args, and only `list_skills`/`inspect_dataset` in `enabled_tools`. Supported shell, unified execution, hooks, apps, browser, computer-use, image-generation, multi-agent, plugin, and workspace-dependency features are disabled. Untoggleable edit tools must be denied by the read-only sandbox; any observed non-MCP tool attempt fails the trace gate. A Windows kill-on-close job contains the suspended native process before it runs, or invocation is refused. The runner permits one invocation, no runner retries, and a 120-second timeout with owned process-tree cleanup. It requires current `Logged in using ChatGPT` status, with no API-paid fallback. **Codex has no USD-budget cap**; subscription authentication is not a claim of a dollar cap or a selected paid API. Successful started/completed MCP events must contain the generated fixture's real profile and skill results, followed by turn completion; malformed output, tool errors, timeout, or isolation failure cannot pass.
 - Claude retains its maximum USD1 / 120-second optional invocation with isolated local-server `--mcp-config`, `--strict-mcp-config`, `--no-session-persistence`, `--restricted`, disabled built-in tools/hooks/skills, an explicit Terraproof-only tool allowlist, and noninteractive permission denial. Windows shell wrappers are unavailable for model invocation; a native executable is required. Success requires actual successful `list_skills` and `inspect_dataset` tool-result trace events. Both runners retain only sanitized summary/tool status, not raw auth/model transcripts or credentials, and make no global agent configuration edits. Host inference necessarily contacts its configured service; these are CLI tool controls, not an OS-wide inference network block. If stronger isolation is required, do not invoke either runner without external assessment.
-- [ ] Confirm green **current release commit** hosted CI. The existing Ubuntu/Windows × Python 3.11/3.13 matrix runs this driver after the Python and deterministic eval suites and uploads its report. The existing package matrix remains unchanged. An unpublished local commit has not been validated remotely; do not dispatch an older remote HEAD and label it current.
-- [ ] Complete remaining built-artifact, full package/Node/OS matrix, real-host, and scientific release gates. The coordinator's completed Windows Python/eval and local Linux Node 22 runs above remain valid scoped evidence, not proof of the remaining matrix. Tiny synthetic vector fixtures do not exhaustively validate raster/optical/SAR workflows or scientific fitness. The driver itself does not implement Linux container validation; the separately completed coordinator Linux run must not be confused with default driver coverage. No dependency/model downloads, publication, remote changes, or global agent configuration edits are performed by this protocol.
+- [x] Confirm green **current release commit** hosted CI. The Ubuntu/Windows × Python 3.11/3.13 matrix ran this driver after the Python and deterministic eval suites and uploaded its report; the package matrix passed on all three OSes × Node 20/22/24. Green on `06eb466` ([run 40012988399](https://github.com/esmailhussien/terraproof/actions/runs/40012988399)); re-confirm if the release commit differs.
+- [ ] Remaining release gates: independent scientific routing acceptance (v3/v4 failed above), Claude real-host tool use, and the 17 declared checker blind spots. Tiny synthetic vector fixtures do not exhaustively validate raster/optical/SAR workflows or scientific fitness.
 
-Next release actions: obtain a genuinely new frozen routing acceptance set without exposing old failed items to tuning; separately diagnose and obtain bounded real-host acceptance under the existing controls. The user-approved internal content review above replaces additional expert reviewers; it does not replace these acceptance gates. Current scenario registration and this execution's workspace writes are verified, so the historical 0/40 write blocker is no longer the next local action. No automatic inference retry, credential inspection, provider/model fallback, or relaxed isolation is authorized by these checks. The supported app runtime passed a no-model version/help/feature-control preflight, which is not startup or tool-use evidence. Keep the push on **HOLD until gates pass**; no remote CI, commit, push, release or package publication was performed. **Neither Phase 4 nor release readiness is declared complete.**
+Next release actions: tag and publish v0.4.0 (sections 4–5) when the user decides, stating the open routing and Claude limits in the release notes. Separately, obtain a genuinely new frozen independent routing acceptance set without exposing old failed items to tuning. The user-approved internal content review above replaces additional expert reviewers; it does not replace these acceptance gates. No automatic inference retry, credential inspection, provider/model fallback, or relaxed isolation is authorized by these checks.
 
 ---
 
@@ -233,7 +233,7 @@ Next release actions: obtain a genuinely new frozen routing acceptance set witho
 
 - [x] **`package.json` Package Shape**:
   - `name`: `terraproof`
-  - `version`: `0.2.0`
+  - `version`: `0.4.0`
   - `bin`: `{"terraproof": "./bin/terraproof.js"}`
   - `main` and `exports`: `./dist/router/index.js` (compiled router)
   - `engines.node`: `>=20`
@@ -264,17 +264,17 @@ Next release actions: obtain a genuinely new frozen routing acceptance set witho
 
 1. **Tag the Release**:
    ```bash
-   git tag -a v0.2.0 -m "Terraproof v0.2.0 — evidence-graded skills, tools, and checks for mapping and remote-sensing AI agents"
-   git push origin v0.2.0
+   git tag -a v0.4.0 -m "Terraproof v0.4.0 — remote-sensing depth and reproducibility (Phase 4)"
+   git push origin v0.4.0
    ```
 2. **Publish to NPM**:
    ```bash
    npm publish --access public
    ```
 3. **Create GitHub Release**:
-   - Title: `Terraproof v0.2.0`
-   - Attach tarball `terraproof-0.2.0.tgz` generated via `npm pack`.
-   - Include release notes highlighting the rename, the compiled package fix, strict CLI validation, and the CI package smoke test.
+   - Title: `Terraproof v0.4.0`
+   - Attach tarball `terraproof-0.4.0.tgz` generated via `npm pack`.
+   - Use the `0.4.0` CHANGELOG entry as release notes, and state the open independent routing and Claude real-host gates.
 
 ---
 
