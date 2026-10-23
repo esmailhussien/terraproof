@@ -89,8 +89,7 @@ _VECTOR_DEFECT_TEXT = re.compile(
     r"clean (?:up )?(?:the )?(?:layer|geometr\w*))\b"
     r"|طولها صفر|بالعكس|(?:نضف|تنظيف) (?:ال)?طبق|شظايا|مضلعات? (?:\w+ ){0,3}(?:مكرر|فاضي|فارغ)")
 _CRS_SYMPTOM_TEXT = re.compile(
-    r"\b(?:layers?|data|datasets?|points?|polygons?)\b.{0,50}\b(?:do(?:es)?n'?t|do(?:es)? not|never) "
-    r"(?:line up|overlap|align|match up)\b|\bmisaligned layers?\b"
+    r"\b(?:do(?:es)?n ?t|do(?:es)? not|never) (?:line up|overlap|align|match up|coincide)\b|\bmisaligned layers?\b"
     r"|طبق.{0,30}(?:مش|مو|ليست|لا) (?:فوق بعض|متطابق|راكب)")
 # Statistical-figure wording that does not depend on the generic 'plot' trigger.
 _VIZ_TEXT = re.compile(
@@ -102,7 +101,11 @@ _HOMONYM_VETO = re.compile(
     r"spatial (?:reasoning|awareness)|aptitude tests?|levenshtein|edit distance|string distance|css grid|"
     r"grid layout|satellite (?:tv|dish)|tv package)\b"
     r"|\bin psychology\b|رسومات (?:ال)?(?:راستر|فيكتور)|تصميم (?:ال)?شعار|تفكير مكاني|اختبار قدرات|باقه دش|علم النفس")
-_VECTOR_LAYER = re.compile(r"\b(?:layers?|polygons?|districts?|boundar\w*|shapefiles?|geopackage)\b|طبق|مضلع|حدود")
+# Explicit vector analysis keeps GeoPandas despite a GDAL/OGR command in the same request.
+_VECTOR_ANALYSIS = re.compile(r"\b(?:geopandas|geodataframe|sjoin|spatial join|dissolve|attribute joins?)\b"
+                              r"|جيوبانداز|ربط مكاني")
+_VECTOR_LAYER = re.compile(r"\b(?:layers?|polygons?|districts?|boundar\w*|shapefiles?|geopackage)\b"
+                           r"|طبق|مضلع|حدود|(?<![ء-ي])(?:ال)?(?:حي|احياء|محافظ\w*)(?![ء-ي])")
 _SATELLITE_WORDS = frozenset(tokenize("satellite imagery sentinel landsat reflectance spectral"))
 _NON_SPECTRAL_INDEX = re.compile(r"\b(?:spatial|database|pandas|dataframe|gist) index\b|فهرس مكاني")
 
@@ -191,7 +194,8 @@ def non_domain_request(text: str, terms: list[str]) -> bool:
 # vocabulary; bare homonyms (network, map, projection, layer, satellite, index,
 # resolution, buffer, vector) are not.
 _STRONG_DOMAIN = re.compile(
-    r"\b(?:geo\w+|gis|qgis|arcgis|postgis|st_\w+|srid|gist|gdal\w*|ogr\w*|rasterio|shapely|fiona|pyproj|"
+    r"\b(?:geo(?:pandas|dataframe|series|parquet|zarr|json|tiffs?|package|cod\w*|referenc\w*|spatial\w*|"
+    r"graphic(?:al)?|server|database|desic|ids?|hash\w*|fenc\w*)|gis|qgis|arcgis|postgis|st_\w+|srid|gist|gdal\w*|ogr\w*|rasterio|shapely|fiona|pyproj|"
     r"xarray|rioxarray|zarr|netcdf|hdf5?|grib|rasters?|cog|cogs|cloud optimi[sz]ed|shapefiles?|shp|"
     r"gpkg|kml|kmz|crs|epsg|wgs ?84|nad ?83|utm|datum|srs|reproject\w*|projected|equal area|"
     r"map projections?|coordinate (?:reference )?systems?|latitude|longitude|lat lon|lon lat|"
@@ -200,12 +204,14 @@ _STRONG_DOMAIN = re.compile(
     r"satellites? (?:imagery|images?|scenes?|data|sensors?|missions?|products?|bands?|observations?)|"
     r"remote sensing|earth observation|imagery|multispectral|hyperspectral|reflectance|"
     r"spectral (?:index|indices|bands?|signatures?)|near infrared|nir|swir|red edge|(?:water|vegetation) index|ndvi|ndwi|mndwi|ndbi|nbr|dnbr|evi|savi|"
-    r"sentinel ?[1-3]|sentinel|landsat|modis|viirs|planetscope|worldview|copernicus|usgs|"
+    r"sentinel ?[1-3]|landsat|modis|viirs|planetscope|worldview|copernicus|usgs|"
     r"earth ?engine|stac|pystac\w*|stackstac|odc|planetary computer|vsicurl|"
     r"sar|insar|backscatter\w*|sigma0|gamma0|speckle|polarimetr\w*|lidar|point clouds?|"
-    r"dem|dsm|dtm|elevation|terrain|hillshade|watersheds?|hydrolog\w*|flow accumulation|"
+    r"dem|dsm|dtm|digital elevation|elevation models?|terrain (?:models?|analysis|correction)|hillshade|watersheds?|hydrolog\w*|flow accumulation|"
     r"land (?:cover|use)|lulc|nodata|resampl\w*|orthophoto\w*|orthomosaic\w*|aerial (?:imagery|photo\w*)|"
-    r"polygons?|polylines?|multipolygons?|parcels?|cadastr\w*|census tracts?|zonal|spatial\w*|"
+    r"polygons?|polylines?|multipolygons?|parcels?|cadastr\w*|census tracts?|zonal|spatially|spatial (?:join|index|analysis|data|database|quer|resolution|autocorrelation|"
+    r"statistic|interpolat|extent|referenc|distribut|pattern|weight|unit|cluster|model|scale|filter|predicate|"
+    r"operation|overlay|relationship)\w*|"
     r"geometr(?:y|ies) (?:column|validity|repair|types?)|invalid geometr\w*|make_valid|"
     r"openstreetmap|osm|overture|footprints?|road networks?|street networks?|river networks?|"
     r"isochrones?|catchments?|travel time|nearest facilit\w*|"
@@ -213,14 +219,14 @@ _STRONG_DOMAIN = re.compile(
     r"nodes? and edges|graph (?:analysis|algorithms?|theory)|"
     r"anova|t ?test|chi square|mann whitney|wilcoxon|kruskal|p values?|hypothesis tests?|"
     r"confidence intervals?|effect sizes?|statistical(?:ly)? (?:significan\w*|tests?|power|analysis|inference)|"
-    r"statistical|regression|kriging|variogram|interpolat\w*|moran\w*|autocorrelation|"
+    r"statistical|kriging|variogram|interpolat\w*|moran\w*|autocorrelation|"
     r"matplotlib|seaborn|plotly|colou?rbars?|colou?r ?maps?|viridis|colou?rblind\w*|"
     r"publication (?:figures?|maps?)|journal figures?|multi ?panel|"
     r"confusion matrix|error matrix|accuracy assessments?|stratified\w*|reference samples?|"
     r"change detection|time series|burn severity|flood mapping|cloud mask\w*|cloud cover|"
-    r"pixels?|bands? (?:math|ratio|stack)|tiles? (?:mosaic|grid)|mosaic\w*|composites?|compositing|temporal|"
-    r"vegetation|data ?cubes?|object storage|administrative boundar\w*|sample size|"
-    r"power analysis|scenes?|burn ratio|wildfires?|land surface temperature)\b")
+    r"bands? (?:math|ratio|stack)|tiles? (?:mosaic|grid)|mosaic\w*|composites?|compositing|"
+    r"vegetation (?:cover|health|index|indices|loss|change)|data ?cubes?|object storage|administrative boundar\w*|sample size|"
+    r"power analysis|burn ratio|wildfires?|land surface temperature)\b")
 # Arabic forms not covered by lexicon expansions; attached clitics are allowed.
 _STRONG_DOMAIN_AR = re.compile(
     r"(?<![ء-ي])(?:[وفبلك]{0,2}(?:ال)?)(?:خريط|خرائط|جغرافي|مكاني|احداثي|"
@@ -234,21 +240,35 @@ _WEAK_DOMAIN = re.compile(
     r"datasets?|boundar\w*|buildings?|overlaps?|gaps|cube|multi ?dimensional|observations?|seasons?|monthly|annual|"
     r"samples?|sampling|records|features|rivers?|lakes?|coastlines?|centre ?lines?|center ?lines?|"
     r"statistically|significan\w*|test whether|forests?|deforestation|roads?|streets?|villages?|"
-    r"neighbou?rhoods?|districts?|crops?|yields?|farms?|fields?|wells?)\b"
+    r"neighbou?rhoods?|districts?|crops?|yields?|farms?|fields?|wells?|scenes?|regression|pixels?|temporal|"
+    r"sentinel|elevation|terrain|vegetation|nearest|stores?|addresses?)\b"
     r"|(?<![\u0621-\u064a])(?:[وفبلك]{0,2}(?:ال)?)(?:بيانات|داتا|صور|حدود|طبق[هات]|مؤشر|شبك|مباني|معالم|"
     r"طرق|شوارع|قري|احياء|محافظ|مناطق|مزارع|محاصيل|حقول|انتاجي)")
 _EVERYDAY_CONTEXT = re.compile(
     r"\bmap out\b|\b(?:mind|site|hash|key|road) ?map\b|\b(?:email|letter|cover letter|resume|cv|essay|poem|story|"
     r"speech|wedding|birthday|recipe|cake|cook\w*|grocer\w*|gym|diet|workout|budget|spending|expenses?|"
-    r"salary|mortgage|loan|tax|invoice|excel|spreadsheet|marketing|sales|customers?|colleagues?|"
-    r"conference|interview|job|career|itinerary|trip|travel plan|vacation|holiday|hotel|"
-    r"homework|exam|lesson|student|kids?|child|calculus|derivatives?|algebra|equations?|neural|backpropagation|engineer|career|"
-    r"linkedin|instagram|tweet|post|newsletter|meeting|agenda|team building|onboarding|"
+    r"salary|mortgage|loan|tax|invoice|excel|spreadsheet|marketing|colleagues?|"
+    r"conference|interview|career|itinerary|trips?|travel plan|vacation|holiday|deploy\w*|checkout|website|"
+    r"homework|exam|lesson|kids?|child|calculus|derivatives?|algebra|equations?|neural|backpropagation|engineer|career|"
+    r"linkedin|instagram|tweet|newsletter|meeting|agenda|team building|onboarding|"
     r"react|javascript|css|html|docker|kubernetes|node js|tcp|dns|tls|vpn|wifi|router|osi|novel|book|"
     r"movie|film|character|psycholog\w*|paragraphs?|apps?|class|methods?|functions?|strings?|overflow|"
     r"attackers?|exploit\w*|vulnerabilit\w*|puzzles?)\b"
     r"|(?:رساله|خطاب|مقال|قصيد|قصه|روايه|فرح|وصفه|كيك|طبخ|ميزاني|مصاريف|مصروف|راتب|مرتب|قرض|اكسل|"
-    r"كلاس|داله|دوال|مخترق|اختراق|لغز|تسويق|مبيعات|عملاء|زملاء|مهني|عصبي|تعلم عميق|فائده|توفير|خصم|جنيه|ريال|دولار|مقابله|وظيفه|رحله|اجازه|امتحان|مذاكر|علم النفس|نفسي|لينكد)")
+    r"كلاس|داله|دوال|مخترق|اختراق|لغز|تسويق|زملاء|مهني|عصبي|تعلم عميق|فائده|توفير|خصم|جنيه|ريال|دولار|مقابله|اجازه|امتحان|مذاكر|علم النفس|نفسي|لينكد)")
+
+
+# Location-analysis combinations that stay domain work in a business or everyday
+# setting: counts per district, nearest store per address, values by region on a map.
+_SPATIAL_COMBO = re.compile(
+    r"\bnearest (?:\w+ ){0,2}(?:stores?|shops?|branch\w*|facilit\w*|hospitals?|clinics?|schools?|stations?|"
+    r"depots?|warehouses?)\b"
+    r"|\b(?:on|in|as) a map\b.{0,60}\b(?:per|by|each) (?:district|region|neighbou?rhood|zone|province|county|"
+    r"governorate|state|postcode|zip)"
+    r"|\b(?:per|by|each) (?:district|region|neighbou?rhood|zone|province|county|governorate|state|postcode|zip)"
+    r"\w*\b.{0,60}\b(?:on|in|as) a map\b"
+    r"|اقرب (?:فرع|محل|مستشفي|مدرس|محط|مخزن|عياد)"
+    r"|(?:لكل|حسب) (?:ال)?(?:حي|منطق|محافظ|مدين)\w*.{0,40}(?:علي|في) (?:ال)?خريط")
 
 
 def geospatial_request(text: str) -> bool:
@@ -259,6 +279,8 @@ def geospatial_request(text: str) -> bool:
             or _CLOUD_ACCESS_TEXT.search(text) or _SAR_TEXT.search(text)):
         return True
     weak = _WEAK_DOMAIN.search(text) or _STATISTICAL_TEXT.search(text) or _CONNECTIVITY_TEXT.search(text)
+    if weak and ((_VECTOR_PER_POLYGON.search(text) and _VECTOR_LAYER.search(text)) or _SPATIAL_COMBO.search(text)):
+        return True
     return bool(weak and not _EVERYDAY_CONTEXT.search(text))
 
 # Symptom-style wording that points to a skill even when exact triggers are absent.
@@ -394,6 +416,8 @@ def data_signals(profiles: list[dict], terms: list[str], text: str = "") -> tupl
         wording("statistical-analysis", 6.0, "statistical inference wording")
     elif _STATISTICAL_TEXT.search(text):
         wording("statistical-analysis", 6.0, "significance or group-difference test wording")
+    if not rasters and re.search(r"\bnearest\b.{0,40}\b(?:for|to) (?:each|every)\b|(?:لكل|كل) .{0,30}اقرب", text):
+        wording("geopandas", 5.0, "nearest feature for each record; a nearest-neighbour join")
     if not rasters and _VECTOR_PER_POLYGON.search(text) and _VECTOR_LAYER.search(text):
         wording("geopandas", 6.0, "count or summarise one vector layer per polygon of another")
     if (not graph and not sourcing and _NETWORK_WORDS & term_set
@@ -426,8 +450,7 @@ def data_signals(profiles: list[dict], terms: list[str], text: str = "") -> tupl
             wording(name, 6.0, "explicit workflow capability intent")
     if not rasters and not stac and not _GDAL_CONTEXT.search(text):
         guard("gdal", "no GDAL command, raster format or raster data wording")
-    if (_RASTER_CLI.search(text) and not vectors
-            and not re.search(r"\b(?:geopandas|geodataframe|sjoin|spatial join|dissolve|attributes?)\b|جيوبانداز", text)):
+    if _RASTER_CLI.search(text) and not vectors and not _VECTOR_ANALYSIS.search(text):
         wording("geopandas", -6.0, "raster command-line task; a cutline polygon is not a vector analysis")
     if re.search(r"\b(?:gdalinfo|gdalwarp|gdal_translate|gdalbuildvrt|gdaladdo|gdaldem|gdal_calc\w*|"
                  r"gdal_merge\w*|gdal_rasterize|ogr2ogr|ogrinfo)\b", text):
@@ -437,7 +460,7 @@ def data_signals(profiles: list[dict], terms: list[str], text: str = "") -> tupl
     if "raster-processing" not in guarded and {"dem", "elevation", "raster"} & term_set and {"gap", "hole", "nodata"} & term_set:
         wording("raster-processing", 4.0, "fill or preserve raster gaps and nodata")
     named_gdal = re.search(r"\b(?:gdal\w+|ogr2ogr|ogrinfo)\b", text)
-    if named_gdal and not vectors and not re.search(r"\b(?:geopandas|geodataframe)\b|جيوبانداز", text):
+    if named_gdal and not vectors and not _VECTOR_ANALYSIS.search(text):
         wording("geopandas", -6.0, "named GDAL/OGR command; a format conversion is not a GeoPandas analysis")
     if _affirmed(_WEB_MAP, text) and not _WEB_TECH.search(text):
         wording("geospatial-frontend", 5.0, "interactive or browser web-map wording")
