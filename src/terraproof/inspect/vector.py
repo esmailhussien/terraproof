@@ -39,6 +39,24 @@ def _bounds(total_bounds) -> list[float] | None:
     return values
 
 
+def _right_hand_rule_breaks(geom_objects: np.ndarray, missing: np.ndarray) -> np.ndarray:
+    """Mark features whose polygon rings break the RFC 7946 right-hand rule.
+
+    RFC 7946 section 3.1.6: exterior rings are counterclockwise and holes are clockwise.
+    Orientation is read in the stored coordinate order, as the file was written.
+    """
+    flagged = np.zeros(len(geom_objects), dtype=bool)
+    for index, geom in enumerate(geom_objects):
+        if missing[index] or geom.is_empty or geom.geom_type not in ("Polygon", "MultiPolygon"):
+            continue
+        polygons = geom.geoms if geom.geom_type == "MultiPolygon" else [geom]
+        flagged[index] = any(
+            not shapely.is_ccw(polygon.exterior) or any(shapely.is_ccw(ring) for ring in polygon.interiors)
+            for polygon in polygons
+        )
+    return flagged
+
+
 def inspect_vector(path: str | os.PathLike, layer: str | None = None) -> dict:
     """Describe a vector layer: CRS, bounds, fields, geometry types, and geometry problems."""
     path = os.fspath(path)
@@ -69,6 +87,11 @@ def inspect_vector(path: str | os.PathLike, layer: str | None = None) -> dict:
             }
         )
 
+    winding = None
+    if info["driver"] == "GeoJSON":
+        breaks = _right_hand_rule_breaks(geom_objects, missing)
+        winding = {"right_hand_rule_break_count": int(breaks.sum()), "right_hand_rule_break_indices": _first_indices(breaks)}
+
     return {
         "kind": "vector",
         "path": path,
@@ -87,5 +110,6 @@ def inspect_vector(path: str | os.PathLike, layer: str | None = None) -> dict:
             "null_indices": _first_indices(missing),
             "empty_indices": _first_indices(empty),
             "invalid_indices": _first_indices(invalid),
+            "winding": winding,
         },
     }

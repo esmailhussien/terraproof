@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- `geometry.winding`: GeoJSON polygon rings must follow the RFC 7946 right-hand rule (counterclockwise exteriors, clockwise holes). It fails a non-conforming export, passes a conforming one, and does not run on other drivers. The vector inspection profile records `geometry.winding` for GeoJSON layers.
+
+### Changed
+
+- `raster.cog_layout` now warns when a GeoTIFF uses JPEG compression, which is always lossy and changes stored pixel values. That is fine for visual products but not for analysis values. Lossy LERC (`MAX_Z_ERROR`) and WebP settings are not detected.
+
+### Evaluation
+
+- Deterministic evals: **27/27 tasks, 0 false passes, 15 checker blind spots** (down from 17), 23 checks rejected (up from 21), 30 exercised check IDs. Newly rejected by the checks: `raster-cog-delivery` / `lossy-jpeg-cog` (`raster.cog_layout` warns) and `vector-join-scope-and-geojson` / `clockwise-geojson-winding` (`geometry.winding` fails). No task spec, oracle assertion or seeded wrong output was changed; only the recipes' descriptive notes were updated. CLI/MCP parity tests cover both controls.
+- The 15 remaining blind spots stay declared because the checker has no legitimate evidence for them in the invocation the spec defines. `RELEASE_CHECKLIST.md` and `evals/README.md` give the reason for each.
+
 ## [0.4.1] — 2026-10-24
 
 ### Fixed

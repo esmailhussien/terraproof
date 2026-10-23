@@ -1,4 +1,4 @@
-"""Geometry checks: geometry.valid, geometry.non_empty, geometry.type_consistent."""
+"""Geometry checks: geometry.valid, geometry.non_empty, geometry.type_consistent, geometry.winding."""
 
 from __future__ import annotations
 
@@ -73,4 +73,26 @@ def check_geometry(dataset: dict) -> list:
             result("geometry.type_consistent", PASS, f"{path} has one geometry family.", input=path,
                    geometry_type_counts=counts)
         )
+
+    # Only GeoJSON has a ring-orientation rule (RFC 7946); other drivers are not checked.
+    winding = geometry.get("winding")
+    if winding is not None:
+        breaks = winding["right_hand_rule_break_count"]
+        if breaks:
+            results.append(
+                result(
+                    "geometry.winding",
+                    FAIL,
+                    f"{breaks} features in {path} break the RFC 7946 right-hand rule (exterior rings counterclockwise, "
+                    f"holes clockwise); first feature indices (0-based): {winding['right_hand_rule_break_indices']}. "
+                    "Rewrite the rings, e.g. with GDAL's RFC7946=YES layer option.",
+                    input=path,
+                    right_hand_rule_break_count=breaks,
+                    first_break_indices=winding["right_hand_rule_break_indices"],
+                )
+            )
+        else:
+            results.append(
+                result("geometry.winding", PASS, f"Polygon rings in {path} follow the RFC 7946 right-hand rule.", input=path)
+            )
     return results
