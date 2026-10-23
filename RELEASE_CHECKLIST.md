@@ -242,19 +242,19 @@ Next release actions: tag and publish v0.4.0 (sections 4–5) when the user deci
   - `npm run build` compiles `router/` to `dist/router/` (`tsconfig.build.json`). `prepack` runs the build before `npm pack` and `npm publish`.
 - [x] **Installed Package Smoke Test**:
   - `npm run test:package` packs the repository, installs the tarball into a fresh project, and runs `--version`, `route --format json`, `validate`, and unknown-collection rejection.
-- [ ] **Tarball Size**:
-  - Re-measure with `npm pack` before release (v0.1.0 was about 560 kB across 330 files). Confirm no test files, temporary files, or OS artifacts are packaged.
+- [x] **Tarball Size**:
+  - `npm pack --dry-run` on `302250f` (2026-10-23): `terraproof@0.4.0` is 402.4 kB packed / 1.3 MB unpacked across 182 files (v0.1.0 was about 560 kB across 330 files). Contents are `skills/` (151 files), `routing/`, `dist/`, `third_party/`, `instructions/`, `sources/SOURCES.md`, `bin/`, `README.md`, `LICENSE` and `package.json`; no test, eval, `.terracache`, `__pycache__`, log, temporary or OS files are packaged.
 
 ---
 
 ## 3. Package Name & Registry Strategy
 
 > [!IMPORTANT]
-> The unscoped npm package name `terraproof` has not been checked or claimed from this repository yet.
+> The unscoped npm package name `terraproof` was free on 2026-10-23 (`npm view terraproof` returned 404) but is not claimed until the first publish.
 >
 > **Before publishing:**
-> - Check availability with `npm view terraproof` (a 404 means the name is free).
-> - If it is taken, publish a scoped package instead: `@<owner>/terraproof`.
+> - Re-check availability with `npm view terraproof` (a 404 means the name is still free).
+> - If it has been taken since, publish a scoped package instead: `@<owner>/terraproof`.
 >   1. Set `"name": "@<owner>/terraproof"` in `package.json`.
 >   2. Run `npm publish --access public`.
 
