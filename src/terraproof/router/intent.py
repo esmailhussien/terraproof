@@ -12,14 +12,18 @@ from .text import normalize_arabic
 
 _QUOTES = re.compile(r'"[^"\n]*"|“[^”\n]*”|«[^»\n]*»|(?<!\w)\'[^\'\n]+\'(?!\w)')
 _EDITORIAL = re.compile(
-    r"\b(?:rename|reword|proofread|translate|typo|button label|page heading|"
+    r"\b(?:rename|reword|proofread|typo|button label|page heading|"
+    r"translate (?:this|that|these|the|my|our|a|an)? ?(?:text|paragraph|sentence|email|letter|document|page|"
+    r"copy|message|label|button|word|phrase|caption|title|abstract)s?|"
+    r"translate\b.{0,60}\b(?:into|to) (?:arabic|english|french|spanish|german|italian|turkish|urdu|chinese)|"
+    r"translate (?=[\"“«'])|"
     r"(?:write|draft|rewrite|compose|edit)\s+(?:(?:a|an|the|short|brief|plain|text)\s+)*"
     r"(?:email|letter|message|document|memo|summary|paragraph|sentence|copy|announcement))\b"
     r"|(?:ترجم|صحح النص|راجع (?:دقه )?النص|صحح الاملاء|غير اسم|غير نص|تسميه الزر|عنوان الصفحه|"
     r"(?:اكتب|صغ|حرر|عد[لّ])\s+(?:لي\s+)?(?:رساله|بريد|مستند|ملخص|نص الزر|عنوان|فقره|جمله))", re.I)
 # Punctuation and contrast delimit scope. A plain 'and' is intentionally not a
 # boundary: 'do not download and process' excludes both operations.
-_BOUNDARY = re.compile(r"[;؛.!?؟\n]+|,(?=\s)|\b(?:but|instead|then|however)\b|\b(?:لكن|بل|ثم|وبعدين)\b", re.I)
+_BOUNDARY = re.compile(r"[;؛.!?؟\n]+|[,،](?=\s)|\b(?:but|instead|then|however)\b|\b(?:لكن|بل|ثم|وبعدين)\b", re.I)
 _NEGATIVE = re.compile(
     r"\b(?:do not|don't|never|without|no need to|not asking (?:you )?to|"
     r"not (?:to|using)|no|not|لا اريد|لا نريد|لا تقم ب|لا|بدون|دون|مش عايز|مش محتاج|ليس)\s+", re.I)
@@ -30,6 +34,8 @@ _OPERATION = re.compile(
     r"gis\b|python\b|geospatial\b|spatial\b|sar\b|stac\b|ndvi\b|"
     r"تستخدم|استخدم|تنفذ|تشغل|تشغيل|احسب|تحسب|حساب|حوسبه|معالج\w*|تحميل|تنزيل|تنزل|ابحث|بحث|تحليل|تصنيف|"
     r"قناع|ازاله|فك|تحويل|ترسم|ارسم|تبني|ابني|خريط\w*|خرائط|بايثون|نظم المعلومات الجغرافيه)", re.I)
+# A negated symptom verb describes a fault ('the layers do not overlap'), not a ban.
+_SYMPTOM = re.compile(r"^(?:overlap|line up|align|match|coincide)\b", re.I)
 _IMPLEMENTATION_ONLY = re.compile(r"^(?:python|بايثون)\b\s*", re.I)
 
 
@@ -61,7 +67,11 @@ def intent_text(task: str) -> str:
             continue
         for match in _NEGATIVE.finditer(unquoted):
             tail = unquoted[match.end():].lstrip()
-            directive = match.group().strip().lower() in {"do not", "don't", "never"}
+            # 'the layers do not overlap' describes a symptom and keeps its domain
+            # wording; every other do not/don't/never remains an exclusion.
+            opens_clause = unquoted[:match.start()].strip().lower() in {"", "please", "and", "but", "also"}
+            directive = (match.group().strip().lower() in {"do not", "don't", "never"}
+                         and (opens_clause or not _SYMPTOM.match(tail)))
             if directive or _OPERATION.match(tail):
                 # A runtime constraint is not a ban on the remaining task.
                 runtime = _IMPLEMENTATION_ONLY.match(tail)

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- Python routing no longer sends ordinary non-technical requests (writing, budgets, travel, general programming, maths concepts) to geospatial skills. A positive domain gate requires geospatial, remote-sensing or scientific-analysis wording; homonyms such as network, map, projection, layer and satellite count only without an everyday context, and phrases like "vector graphics" or "buffer overflow" are vetoed.
+- Arabic routing recognises sound plurals and duals, transliterated tool names (جيوبانداز، ليفليت، ستاك…), Gulf and Egyptian phrasing, and more workflow phrases. Symptom wording now reaches the right skill for CRS mismatches, geometry defects, network connectivity, significance tests, multi-year change, validation samples and partial cloud reads. A descriptive "do not" ("the layers do not overlap") no longer truncates the request.
+- GDAL is selected only with command, format or raster wording, and a strong wording penalty removes a skill that only matched a bare trigger.
+
+### Evaluation
+
+- New independent frozen set `evals/routing/heldout_v5.jsonl` (SHA-256 `5cc76cff…5ea891889`), written by a separate agent without access to the router or earlier sets and measured once: **EN recall 0.971, 3.75 forbidden per 100; AR recall 0.9625, 2.5 forbidden per 100; both pass** the per-language gate (recall ≥ 0.90, ≤ 5 forbidden per 100). It is agent-authored, not expert-adjudicated; earlier v3/v4 failures remain recorded in `RELEASE_CHECKLIST.md`.
+- Development routing set grew to 947 items (501 new, 200 of them negatives); 40 new Python routing scenarios.
+- Review follow-up: exclusions in the middle of a clause ("I don't want SAR", "never include Sentinel-1") apply again. The Arabic comma now separates clauses. Location tasks in a business setting (nearest store per address, counts per district on a map) are no longer vetoed, and broad words such as scene, regression, pixel, elevation and geo- names now need domain context. The dev set has 962 items, and 15 more scenarios cover each fixed case. A v5 re-run after these fixes (EN 0.983 / 3.75, AR 0.9625 / 2.5 forbidden per 100) is a non-regression check on an already-measured set, not a new independent result.
+
 ## [0.4.0] — 2026-10-23
 
 ### Added

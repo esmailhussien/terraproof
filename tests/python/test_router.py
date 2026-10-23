@@ -110,6 +110,14 @@ def test_arabic_matching_forms_and_noise():
     assert tokenize("buffers polygons resampling") == tokenize("buffer polygon resample")
 
 
+def test_arabic_plural_bases_need_a_lexicon_form():
+    from terraproof.router.text import _plural_bases
+    # Plurals reach a known lexicon word; singular nouns ending in the same
+    # letters (address, law, storage, improvement) gain no invented base.
+    assert "ارتفاع" in _plural_bases({"ارتفاعات"})
+    assert _plural_bases({"عنوان", "قانون", "تخزين", "تحسين", "ميزان"}) == set()
+
+
 @pytest.mark.parametrize("arabic,english", [
     ("نظام الإحداثيات", "crs"), ("عازل", "buffer"), ("بفر", "buffer"),
     ("قناع السحب", "mask"), ("انعكاس سطحي", "reflectance"),

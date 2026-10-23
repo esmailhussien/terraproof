@@ -1883,6 +1883,336 @@
       "prompt": "صمم REST API لاستعلام PostGIS مكاني عن مضلعات الأراضي",
       "mustInclude": ["design-postgis-tables"],
       "mustExclude": []
+    },
+    {
+      "id": "gate-nondomain-en",
+      "prompt": "Draft a project plan for redesigning our company onboarding process.",
+      "mustInclude": [],
+      "mustExclude": ["accuracy-assessment", "crs-and-units", "design-postgis-tables", "gdal", "geomaster", "geopandas", "geoparquet-validation", "geospatial-data-discovery", "geospatial-frontend", "geozarr", "networkx", "raster-processing", "sar-basics", "satellite-preprocessing", "scientific-visualization", "spectral-indices", "stac-and-cloud-access", "statistical-analysis", "time-series-and-change", "vector-quality"]
+    },
+    {
+      "id": "gate-nondomain-ar",
+      "prompt": "اعمل رسم بياني بالأعمدة لمصاريفي الشهرية في إكسل.",
+      "mustInclude": [],
+      "mustExclude": ["accuracy-assessment", "crs-and-units", "design-postgis-tables", "gdal", "geomaster", "geopandas", "geoparquet-validation", "geospatial-data-discovery", "geospatial-frontend", "geozarr", "networkx", "raster-processing", "sar-basics", "satellite-preprocessing", "scientific-visualization", "spectral-indices", "stac-and-cloud-access", "statistical-analysis", "time-series-and-change", "vector-quality"]
+    },
+    {
+      "id": "gate-homonym-network-en",
+      "prompt": "How should I network with colleagues at my first industry conference?",
+      "mustInclude": [],
+      "mustExclude": ["accuracy-assessment", "crs-and-units", "design-postgis-tables", "gdal", "geomaster", "geopandas", "geoparquet-validation", "geospatial-data-discovery", "geospatial-frontend", "geozarr", "networkx", "raster-processing", "sar-basics", "satellite-preprocessing", "scientific-visualization", "spectral-indices", "stac-and-cloud-access", "statistical-analysis", "time-series-and-change", "vector-quality"]
+    },
+    {
+      "id": "gate-homonym-network-ar",
+      "prompt": "كيف أبني شبكة علاقات مهنية قوية في مجال التسويق؟",
+      "mustInclude": [],
+      "mustExclude": ["accuracy-assessment", "crs-and-units", "design-postgis-tables", "gdal", "geomaster", "geopandas", "geoparquet-validation", "geospatial-data-discovery", "geospatial-frontend", "geozarr", "networkx", "raster-processing", "sar-basics", "satellite-preprocessing", "scientific-visualization", "spectral-indices", "stac-and-cloud-access", "statistical-analysis", "time-series-and-change", "vector-quality"]
+    },
+    {
+      "id": "gate-homonym-projection-ar",
+      "prompt": "اشرح لي مفهوم الإسقاط في علم النفس.",
+      "mustInclude": [],
+      "mustExclude": ["accuracy-assessment", "crs-and-units", "design-postgis-tables", "gdal", "geomaster", "geopandas", "geoparquet-validation", "geospatial-data-discovery", "geospatial-frontend", "geozarr", "networkx", "raster-processing", "sar-basics", "satellite-preprocessing", "scientific-visualization", "spectral-indices", "stac-and-cloud-access", "statistical-analysis", "time-series-and-change", "vector-quality"]
+    },
+    {
+      "id": "gate-homonym-satellite-office-en",
+      "prompt": "We're opening a satellite office in Lisbon; draft an announcement for staff.",
+      "mustInclude": [],
+      "mustExclude": ["accuracy-assessment", "crs-and-units", "design-postgis-tables", "gdal", "geomaster", "geopandas", "geoparquet-validation", "geospatial-data-discovery", "geospatial-frontend", "geozarr", "networkx", "raster-processing", "sar-basics", "satellite-preprocessing", "scientific-visualization", "spectral-indices", "stac-and-cloud-access", "statistical-analysis", "time-series-and-change", "vector-quality"]
+    },
+    {
+      "id": "gate-homonym-veto-raster-graphics-en",
+      "prompt": "Explain the difference between raster and vector graphics for designing a logo.",
+      "mustInclude": [],
+      "mustExclude": ["accuracy-assessment", "crs-and-units", "design-postgis-tables", "gdal", "geomaster", "geopandas", "geoparquet-validation", "geospatial-data-discovery", "geospatial-frontend", "geozarr", "networkx", "raster-processing", "sar-basics", "satellite-preprocessing", "scientific-visualization", "spectral-indices", "stac-and-cloud-access", "statistical-analysis", "time-series-and-change", "vector-quality"]
+    },
+    {
+      "id": "gate-homonym-veto-spatial-ar",
+      "prompt": "اديني لغز تفكير مكاني لاختبار قدرات وظيفي.",
+      "mustInclude": [],
+      "mustExclude": ["accuracy-assessment", "crs-and-units", "design-postgis-tables", "gdal", "geomaster", "geopandas", "geoparquet-validation", "geospatial-data-discovery", "geospatial-frontend", "geozarr", "networkx", "raster-processing", "sar-basics", "satellite-preprocessing", "scientific-visualization", "spectral-indices", "stac-and-cloud-access", "statistical-analysis", "time-series-and-change", "vector-quality"]
+    },
+    {
+      "id": "gate-homonym-compound-interest-ar",
+      "prompt": "احسب الفائدة المركبة على عشرة آلاف جنيه بنسبة خمسة في المية لعشر سنين.",
+      "mustInclude": [],
+      "mustExclude": ["accuracy-assessment", "crs-and-units", "design-postgis-tables", "gdal", "geomaster", "geopandas", "geoparquet-validation", "geospatial-data-discovery", "geospatial-frontend", "geozarr", "networkx", "raster-processing", "sar-basics", "satellite-preprocessing", "scientific-visualization", "spectral-indices", "stac-and-cloud-access", "statistical-analysis", "time-series-and-change", "vector-quality"]
+    },
+    {
+      "id": "gate-homonym-contract-ar",
+      "prompt": "إيه الأسئلة اللي أسألها لصاحب الشقة قبل ما أمضي العقد؟",
+      "mustInclude": [],
+      "mustExclude": ["accuracy-assessment", "crs-and-units", "design-postgis-tables", "gdal", "geomaster", "geopandas", "geoparquet-validation", "geospatial-data-discovery", "geospatial-frontend", "geozarr", "networkx", "raster-processing", "sar-basics", "satellite-preprocessing", "scientific-visualization", "spectral-indices", "stac-and-cloud-access", "statistical-analysis", "time-series-and-change", "vector-quality"]
+    },
+    {
+      "id": "gate-weak-anchor-domain-en",
+      "prompt": "Which road links, if closed, would cut off whole villages from the hospital?",
+      "mustInclude": ["networkx"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-statistical-text-ar",
+      "prompt": "قارن متوسط إنتاجية القمح بين ثلاث مناطق باختبار مناسب.",
+      "mustInclude": ["statistical-analysis"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-statistical-text-en",
+      "prompt": "Test whether average land surface temperature differs between parks and built-up blocks.",
+      "mustInclude": ["statistical-analysis"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-named-index-en",
+      "prompt": "Which bands do I use for a burn ratio after the wildfire, and how do I compute it?",
+      "mustInclude": ["spectral-indices"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-named-index-ar",
+      "prompt": "احسب مؤشر NDBI للمناطق العمرانية في الرياض.",
+      "mustInclude": ["spectral-indices"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-vector-per-polygon-en",
+      "prompt": "Load the schools layer and the districts layer and count schools per district in Python.",
+      "mustInclude": ["geopandas"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-vector-per-polygon-ar",
+      "prompt": "ادمج طبقة الأحياء مع جدول السكان حسب الكود واحسب الكثافة لكل حي.",
+      "mustInclude": ["geopandas"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-sourcing-public-source-en",
+      "prompt": "I need a public source of river centrelines for Bangladesh.",
+      "mustInclude": ["geospatial-data-discovery"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-sourcing-open-ar",
+      "prompt": "ما هي مجموعات بيانات الارتفاعات المفتوحة العالمية بدقة 30 متر وتراخيصها؟",
+      "mustInclude": ["geospatial-data-discovery"],
+      "mustExclude": ["networkx"]
+    },
+    {
+      "id": "gate-accuracy-validation-points-en",
+      "prompt": "How many validation points do I need per class to assess our land cover map?",
+      "mustInclude": ["accuracy-assessment"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-accuracy-sample-ar",
+      "prompt": "خريطة المحاصيل اتدربت على زيارات ميدانية، نصمم عينة تحقق مستقلة إزاي؟",
+      "mustInclude": ["accuracy-assessment"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-time-year-range-en",
+      "prompt": "Detect where forest was cleared between 2015 and 2023 using yearly Landsat composites.",
+      "mustInclude": ["time-series-and-change"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-time-before-after-ar",
+      "prompt": "قارن التشتت الخلفي لسنتينل 1 قبل وبعد الفيضان لتحديد المناطق اللي غرقت.",
+      "mustInclude": ["sar-basics", "time-series-and-change"],
+      "mustExclude": ["spectral-indices"]
+    },
+    {
+      "id": "gate-time-stack-en",
+      "prompt": "Find the year each mangrove pixel was lost from a Landsat stack.",
+      "mustInclude": ["time-series-and-change"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-cloud-s3-ar",
+      "prompt": "اقرأ جزء من ملف COG على S3 بدون تحميل الملف كامل.",
+      "mustInclude": ["stac-and-cloud-access"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-connectivity-ar",
+      "prompt": "حدد أهم الطرق في شبكة المدينة اللي لو انقطعت تعزل أحياء كاملة.",
+      "mustInclude": ["networkx"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-vector-defect-en",
+      "prompt": "Some road lines have zero length and others are stored backwards; clean the layer.",
+      "mustInclude": ["vector-quality"],
+      "mustExclude": ["raster-processing"]
+    },
+    {
+      "id": "gate-crs-symptom-en",
+      "prompt": "The two layers do not overlap in QGIS even though they cover the same city.",
+      "mustInclude": ["crs-and-units"],
+      "mustExclude": ["statistical-analysis"]
+    },
+    {
+      "id": "gate-crs-symptom-ar",
+      "prompt": "الطبقتين مش فوق بعض في QGIS مع إنهم لنفس المدينة.",
+      "mustInclude": ["crs-and-units"],
+      "mustExclude": ["statistical-analysis"]
+    },
+    {
+      "id": "gate-viz-boxplot-en",
+      "prompt": "Draw a boxplot of tree heights per forest type for the paper, with readable fonts.",
+      "mustInclude": ["scientific-visualization"],
+      "mustExclude": ["geozarr"]
+    },
+    {
+      "id": "gate-web-browser-map-en",
+      "prompt": "Build a browser map that lets field staff toggle between the satellite basemap and the parcel boundaries.",
+      "mustInclude": ["geospatial-frontend"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-web-openlayers-ar",
+      "prompt": "خلي طبقة الأراضي على خريطة OpenLayers تتظلل لما المستخدم يضغط على صف في الجدول.",
+      "mustInclude": ["geospatial-frontend"],
+      "mustExclude": ["satellite-preprocessing"]
+    },
+    {
+      "id": "gate-gdal-guard-en",
+      "prompt": "My buffer of 500 around each well came out tiny; the shapefile is in EPSG:4326.",
+      "mustInclude": ["crs-and-units"],
+      "mustExclude": ["gdal", "geospatial-frontend"]
+    },
+    {
+      "id": "gate-gdal-cli-geopandas-penalty-en",
+      "prompt": "Clip a big GeoTIFF to a cutline polygon from the command line and keep the compression.",
+      "mustInclude": ["gdal"],
+      "mustExclude": ["geopandas", "networkx"]
+    },
+    {
+      "id": "gate-ogr2ogr-demoted-trigger-en",
+      "prompt": "Translate the county shapefiles into a single GeoPackage with ogr2ogr, keeping the attribute types.",
+      "mustInclude": ["gdal"],
+      "mustExclude": ["geopandas"]
+    },
+    {
+      "id": "gate-preprocess-arabic-boundary-ar",
+      "prompt": "قيم لاندسات Collection 2 لازم أضربها في معامل ومعها إزاحة، وش القيم الصحيحة؟",
+      "mustInclude": ["satellite-preprocessing"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-arabic-plural-ar",
+      "prompt": "استخرج مجاري الأودية والأحواض من نموذج ارتفاعات رقمي للمنطقة.",
+      "mustInclude": ["geomaster"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-arabic-transliteration-ar",
+      "prompt": "هات كل الصيدليات اللي على بعد 2 كيلو من كل مستشفى باستخدام جيوبانداز.",
+      "mustInclude": ["geopandas"],
+      "mustExclude": ["satellite-preprocessing", "spectral-indices"]
+    },
+    {
+      "id": "gate-arabic-latlon-ar",
+      "prompt": "النقاط بتظهر في البحر بعد ما حملتها، شكلها خطوط الطول والعرض متبدلة.",
+      "mustInclude": ["crs-and-units"],
+      "mustExclude": []
+    },
+    {
+      "id": "gate-raster-gap-fill-ar",
+      "prompt": "املأ الفراغات الصغيرة في نموذج الارتفاعات قبل حساب الانحدار.",
+      "mustInclude": ["raster-processing"],
+      "mustExclude": []
+    },
+    {
+      "id": "review-negation-dont-want-sar-en",
+      "prompt": "I don't want SAR, just compute NDVI from Sentinel-2",
+      "mustInclude": ["spectral-indices"],
+      "mustExclude": ["sar-basics"]
+    },
+    {
+      "id": "review-negation-never-radar-en",
+      "prompt": "Clip the raster to the AOI and never include Sentinel-1 radar",
+      "mustInclude": ["gdal"],
+      "mustExclude": ["sar-basics"]
+    },
+    {
+      "id": "review-negation-dont-want-sar-ar",
+      "prompt": "مش عايز SAR، بس احسب NDVI من سنتينل 2",
+      "mustInclude": ["spectral-indices"],
+      "mustExclude": ["sar-basics"]
+    },
+    {
+      "id": "review-symptom-layers-overlap-en",
+      "prompt": "The parcels and the roads do not line up after loading them in QGIS.",
+      "mustInclude": ["crs-and-units"],
+      "mustExclude": []
+    },
+    {
+      "id": "review-nearest-store-en",
+      "prompt": "Find the nearest store for each customer address",
+      "mustInclude": ["geopandas"],
+      "mustExclude": []
+    },
+    {
+      "id": "review-nearest-branch-ar",
+      "prompt": "اربط كل عنوان عميل بأقرب فرع",
+      "mustInclude": ["geopandas"],
+      "mustExclude": []
+    },
+    {
+      "id": "review-count-per-district-map-en",
+      "prompt": "Count customers per district and show it on a map",
+      "mustInclude": ["geopandas"],
+      "mustExclude": []
+    },
+    {
+      "id": "review-count-per-district-map-ar",
+      "prompt": "اعرض عدد العملاء لكل حي على الخريطة",
+      "mustInclude": ["geopandas"],
+      "mustExclude": []
+    },
+    {
+      "id": "review-novel-scene-en",
+      "prompt": "Write the opening scene of my novel set in a desert",
+      "mustInclude": [],
+      "mustExclude": ["accuracy-assessment", "crs-and-units", "design-postgis-tables", "gdal", "geomaster", "geopandas", "geoparquet-validation", "geospatial-data-discovery", "geospatial-frontend", "geozarr", "networkx", "raster-processing", "sar-basics", "satellite-preprocessing", "scientific-visualization", "spectral-indices", "stac-and-cloud-access", "statistical-analysis", "time-series-and-change", "vector-quality"]
+    },
+    {
+      "id": "review-checkout-regression-en",
+      "prompt": "Fix the regression in our checkout page after the last deploy",
+      "mustInclude": [],
+      "mustExclude": ["accuracy-assessment", "crs-and-units", "design-postgis-tables", "gdal", "geomaster", "geopandas", "geoparquet-validation", "geospatial-data-discovery", "geospatial-frontend", "geozarr", "networkx", "raster-processing", "sar-basics", "satellite-preprocessing", "scientific-visualization", "spectral-indices", "stac-and-cloud-access", "statistical-analysis", "time-series-and-change", "vector-quality"]
+    },
+    {
+      "id": "review-geology-george-en",
+      "prompt": "Summarize the geology chapter of my textbook for George",
+      "mustInclude": [],
+      "mustExclude": ["accuracy-assessment", "crs-and-units", "design-postgis-tables", "gdal", "geomaster", "geopandas", "geoparquet-validation", "geospatial-data-discovery", "geospatial-frontend", "geozarr", "networkx", "raster-processing", "sar-basics", "satellite-preprocessing", "scientific-visualization", "spectral-indices", "stac-and-cloud-access", "statistical-analysis", "time-series-and-change", "vector-quality"]
+    },
+    {
+      "id": "review-ogr2ogr-spatial-join-en",
+      "prompt": "Use ogr2ogr to convert the shapefile, then do a spatial join of points to districts",
+      "mustInclude": ["gdal", "geopandas"],
+      "mustExclude": []
+    },
+    {
+      "id": "review-ogr2ogr-attribute-types-en",
+      "prompt": "Translate the county shapefiles into a single GeoPackage with ogr2ogr, keeping the attribute types.",
+      "mustInclude": ["gdal"],
+      "mustExclude": ["geopandas"]
+    },
+    {
+      "id": "review-plural-singular-noun-ar",
+      "prompt": "اكتب عنوان جذاب لمقال عن قانون العمل",
+      "mustInclude": [],
+      "mustExclude": ["accuracy-assessment", "crs-and-units", "design-postgis-tables", "gdal", "geomaster", "geopandas", "geoparquet-validation", "geospatial-data-discovery", "geospatial-frontend", "geozarr", "networkx", "raster-processing", "sar-basics", "satellite-preprocessing", "scientific-visualization", "spectral-indices", "stac-and-cloud-access", "statistical-analysis", "time-series-and-change", "vector-quality"]
+    },
+    {
+      "id": "review-terrain-weak-anchor-en",
+      "prompt": "Classify the terrain into landforms",
+      "mustInclude": ["geomaster"],
+      "mustExclude": []
     }
   ]
 }

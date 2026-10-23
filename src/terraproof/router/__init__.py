@@ -8,7 +8,7 @@ from collections import defaultdict
 
 from .index import PROCESS_SKILLS, get_index
 from .intent import intent_text
-from .signals import data_signals, dataset_summary, non_domain_request, process_skills
+from .signals import data_signals, dataset_summary, geospatial_request, non_domain_request, process_skills
 from .text import expand_query, normalize, tokenize
 
 __all__ = ["find_guidance"]
@@ -178,9 +178,10 @@ def find_guidance(
             score, reasons = index.score(section, terms)
             grouped[section.skill].append((score, section, reasons))
     signals, guarded = data_signals(profiles, terms, scoped_query["normalized"])
-    if not profiles and (not scoped_task or non_domain_request(scoped_query["normalized"], terms)):
-        guarded.update(set(index.skills) - PROCESS_SKILLS)
     matching_text = " " + normalize(scoped_query["normalized"] + " " + " ".join(scoped_query["expanded_terms"])) + " "
+    if not profiles and (not scoped_task or non_domain_request(scoped_query["normalized"], terms)
+                         or not geospatial_request(matching_text)):
+        guarded.update(set(index.skills) - PROCESS_SKILLS)
 
     semantic_on = _semantic_enabled(semantic)
     sem_scores: dict[tuple[str, str], float] = {}
@@ -211,6 +212,9 @@ def find_guidance(
     term_set = set(terms)
     entries = []
     supported = set()
+    # A strong wording penalty withdraws the relative-cutoff exemption a bare
+    # trigger would otherwise give (e.g. 'GeoPackage' in an ogr2ogr conversion).
+    demoted = set()
     eligible = set()
     ranked_eligible = set()
     for name, candidates in sorted(grouped.items()):
@@ -245,6 +249,8 @@ def find_guidance(
             reasons.append(reason)
             if value > 0:
                 supported.add(name)
+            elif value <= -6:
+                demoted.add(name)
 
         if semantic_on:
             score, reasons = _fuse_semantic(name, lexical_score, reasons, sem_scores, semantic_pool)
@@ -308,7 +314,8 @@ def find_guidance(
         skills = [skill for skill in entries if skill["name"] in ranked_eligible]
         if skills:
             relative_floor = RELATIVE_CUTOFF * skills[0]["score"]
-            skills = [skill for skill in skills if skill["score"] >= relative_floor or skill["name"] in supported]
+            skills = [skill for skill in skills if skill["score"] >= relative_floor
+                      or (skill["name"] in supported and skill["name"] not in demoted)]
         else:
             # Never resurrect guarded skills or incidental prose matches. Stable score/
             # name ordering makes the single-candidate fallback deterministic too.
@@ -328,7 +335,8 @@ def find_guidance(
         if skills:
             relative_floor = RELATIVE_CUTOFF * skills[0]["lexical_score"]
             skills = [skill for skill in skills
-                      if skill["lexical_score"] >= relative_floor or skill["name"] in supported]
+                      if skill["lexical_score"] >= relative_floor
+                      or (skill["name"] in supported and skill["name"] not in demoted)]
         else:
             skills = [skill for skill in lexical_entries if skill["name"] in supported
                       and skill["lexical_score"] >= FALLBACK_MIN_SCORE][:1]
