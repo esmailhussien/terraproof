@@ -1,0 +1,97 @@
+{
+  "name": "sar-basics",
+  "layer": "domain",
+  "domains": [
+    "geospatial"
+  ],
+  "capabilities": [
+    "sar-radiometric-calibration",
+    "sar-speckle-filtering",
+    "sar-terrain-correction"
+  ],
+  "triggers": [
+    "sentinel-1",
+    "sentinel 1",
+    "backscatter",
+    "sigma0",
+    "gamma0",
+    "beta0",
+    "decibel",
+    "grd",
+    "single look complex",
+    "slc",
+    "speckle",
+    "terrain correction",
+    "vv polarization",
+    "vh polarization",
+    "incidence angle"
+  ],
+  "recommended": [
+    "raster-processing",
+    "accuracy-assessment"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Works correctly with Sentinel-1 C-band SAR: identifying GRD versus SLC, calibrating DN to sigma0/gamma0/beta0 with the product LUTs, keeping linear power for arithmetic and dB for display, speckle filtering trade-offs, and terrain correction and geocoding before spatial analysis.",
+  "sections": [
+    {
+      "id": "identify-the-product-before-using-pixel-values",
+      "title": "Identify the product before using pixel values",
+      "source": "SKILL.md#identify-the-product-before-using-pixel-values"
+    },
+    {
+      "id": "calibrate-to-β⁰-σ⁰-or-γ⁰-with-the-product-luts",
+      "title": "Calibrate to β⁰, σ⁰ or γ⁰ with the product LUTs",
+      "source": "SKILL.md#calibrate-to-β⁰-σ⁰-or-γ⁰-with-the-product-luts"
+    },
+    {
+      "id": "keep-linear-power-for-arithmetic-db-for-display-and-thresholds",
+      "title": "Keep linear power for arithmetic, dB for display and thresholds",
+      "source": "SKILL.md#keep-linear-power-for-arithmetic-db-for-display-and-thresholds"
+    },
+    {
+      "id": "speckle-filtering-is-a-trade-off",
+      "title": "Speckle: filtering is a trade-off",
+      "source": "SKILL.md#speckle-filtering-is-a-trade-off"
+    },
+    {
+      "id": "terrain-correction-and-geocoding",
+      "title": "Terrain correction and geocoding",
+      "source": "SKILL.md#terrain-correction-and-geocoding"
+    },
+    {
+      "id": "polarisation-water-flood-and-change",
+      "title": "Polarisation, water, flood and change",
+      "source": "SKILL.md#polarisation-water-flood-and-change"
+    },
+    {
+      "id": "incidence-angle-and-acquisition-geometry",
+      "title": "Incidence angle and acquisition geometry",
+      "source": "SKILL.md#incidence-angle-and-acquisition-geometry"
+    },
+    {
+      "id": "verify-with-terraproof",
+      "title": "Verify with Terraproof",
+      "source": "SKILL.md#verify-with-terraproof"
+    },
+    {
+      "id": "sources",
+      "title": "Sources",
+      "source": "SKILL.md#sources"
+    },
+    {
+      "id": "calibration-lut",
+      "title": "Calibration LUT",
+      "source": "references/calibration-lut.md"
+    }
+  ],
+  "checks": [
+    "sar.value_domain",
+    "sar.geocoded",
+    "raster.grid_alignment",
+    "raster.nodata_declared",
+    "raster.resampling",
+    "crs.defined",
+    "stac.provenance"
+  ]
+}

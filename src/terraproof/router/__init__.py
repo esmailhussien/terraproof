@@ -207,6 +207,7 @@ def find_guidance(
     entries = []
     supported = set()
     eligible = set()
+    ranked_eligible = set()
     for name, candidates in sorted(grouped.items()):
         if name in guarded:
             continue
@@ -246,20 +247,40 @@ def find_guidance(
             score = lexical_score
 
         trigger_or_signal_supported = name in supported
+        is_supported = trigger_or_signal_supported or is_metadata_supported
         if mode == "candidates":
-            is_supported = trigger_or_signal_supported or is_metadata_supported
+            # Candidate membership is lexical even when semantic fusion is on:
+            # semantic retrieval may reorder/boost, but must not drop a lexical
+            # candidate from the host's recall-oriented set.
+            candidate_score = lexical_score
             # Guard domain skills that only match metadata/body text when the request
             # is clearly a debug/fix task; keep triggered/signalled skills available.
-            if not trigger_or_signal_supported and "systematic-debugging" in process:
+            debug_metadata_only = (
+                "systematic-debugging" in process
+                and not trigger_or_signal_supported
+                and not has_body
+            )
+            if debug_metadata_only:
                 cutoff = float("inf")
             else:
                 cutoff = CANDIDATE_FLOOR if is_supported else 12.0
                 if not is_supported and not has_body:
                     cutoff = float("inf")
-        else:
-            cutoff = MIN_SCORE if (trigger_or_signal_supported or is_metadata_supported) else 12.0
-        if score >= cutoff:
-            eligible.add(name)
+            if candidate_score >= cutoff:
+                eligible.add(name)
+        # The ranked selection is computed for both modes: candidates keep the
+        # ranked choices first (subset invariant) and fill remaining slots by
+        # relevance under the same cap.
+        ranked_score = lexical_score if mode == "candidates" else score
+        ranked_cutoff = MIN_SCORE if is_supported else 12.0
+        debug_metadata_guard = (
+            mode == "candidates"
+            and "systematic-debugging" in process
+            and not trigger_or_signal_supported
+            and not has_body
+        )
+        if ranked_score >= ranked_cutoff and (is_supported or has_body) and not debug_metadata_guard:
+            ranked_eligible.add(name)
         sections = _skill_sections(candidates, terms, sections_per_skill)
         skill_entry = {
             "name": name,
@@ -272,53 +293,43 @@ def find_guidance(
             skill_entry["explanation"] = metadata["explanation"]
         entries.append(skill_entry)
 
-    # Ranked mode applies the relative cutoff and the single-skill fallback.
+    # Candidate list construction: start with the ranked-kept selection (computed
+    # above from ranked_eligible: cutoffs + relative cutoff + fallback) so every
+    # ranked choice is preserved, then fill the remaining slots (down to the cap)
+    # with candidate-eligible entries by relevance — a broad host re-ranking set,
+    # never a precision ranker.
     entries.sort(key=lambda skill: (-skill["score"], skill["name"]))
-    skills = [skill for skill in entries if skill["name"] in eligible]
-    if skills and mode == "ranked":
-        relative_floor = RELATIVE_CUTOFF * skills[0]["score"]
-        skills = [skill for skill in skills if skill["score"] >= relative_floor or skill["name"] in supported]
-    elif not skills and mode == "ranked":
-        # Never resurrect guarded skills or incidental prose matches. Stable score/
-        # name ordering makes the single-candidate fallback deterministic too.
-        skills = [skill for skill in entries if skill["name"] in supported
-                  and skill["score"] >= FALLBACK_MIN_SCORE][:1]
+    if mode == "ranked":
+        skills = [skill for skill in entries if skill["name"] in ranked_eligible]
         if skills:
-            skills[0]["reasons"].append(
-                f"Selection: empty-result fallback; direct trigger or data/intent signal, "
-                f"score >= {FALLBACK_MIN_SCORE:g}; no skill met the normal cutoffs +0.000000"
-            )
-
-    # Semantic retrieval must not hide skills that were available lexically.
-    if semantic_on:
-        lexical_top = {
-            entry["name"]
-            for entry in sorted(
-                (e for e in entries if e["name"] in eligible),
-                key=lambda e: (-e["lexical_score"], e["name"]),
-            )[:top_k]
-        }
-        per_skill_sem: dict[str, float] = {}
-        for (skill_name, _), value in sem_scores.items():
-            per_skill_sem[skill_name] = max(per_skill_sem.get(skill_name, 0.0), value)
-        semantic_additions = {
-            name
-            for name, value in per_skill_sem.items()
-            if name not in lexical_top and value >= SEMANTIC_MIN_SCORE and name in semantic_pool
-        }
-        skills = [skill for skill in entries if skill["name"] in lexical_top or skill["name"] in semantic_additions]
-        skills.sort(key=lambda skill: (-skill["score"], skill["name"]))
-        # The semantic path should still fall back to a directly signalled skill when
-        # nothing else passes, just like the lexical path.
-        if not skills and mode == "ranked":
+            relative_floor = RELATIVE_CUTOFF * skills[0]["score"]
+            skills = [skill for skill in skills if skill["score"] >= relative_floor or skill["name"] in supported]
+        else:
+            # Never resurrect guarded skills or incidental prose matches. Stable score/
+            # name ordering makes the single-candidate fallback deterministic too.
             skills = [skill for skill in entries if skill["name"] in supported
-                      and skill["lexical_score"] >= FALLBACK_MIN_SCORE][:1]
+                      and skill["score"] >= FALLBACK_MIN_SCORE][:1]
             if skills:
                 skills[0]["reasons"].append(
                     f"Selection: empty-result fallback; direct trigger or data/intent signal, "
                     f"score >= {FALLBACK_MIN_SCORE:g}; no skill met the normal cutoffs +0.000000"
                 )
+        skills = skills[:top_k]
     else:
+        # Preserve the ranked choices as an ordered prefix, then fill the
+        # larger recall-oriented candidate cap by deterministic relevance.
+        lexical_entries = sorted(entries, key=lambda skill: (-skill["lexical_score"], skill["name"]))
+        skills = [skill for skill in lexical_entries if skill["name"] in ranked_eligible]
+        if skills:
+            relative_floor = RELATIVE_CUTOFF * skills[0]["lexical_score"]
+            skills = [skill for skill in skills
+                      if skill["lexical_score"] >= relative_floor or skill["name"] in supported]
+        else:
+            skills = [skill for skill in lexical_entries if skill["name"] in supported
+                      and skill["lexical_score"] >= FALLBACK_MIN_SCORE][:1]
+        included = {skill["name"] for skill in skills}
+        fill = [skill for skill in entries if skill["name"] in eligible and skill["name"] not in included]
+        skills = skills + sorted(fill, key=lambda skill: (-skill["score"], skill["name"]))
         skills = skills[:top_k]
 
     # Remove the internal bookkeeping field before returning.

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sys
 
+import numpy as np
 import pytest
 from shapely.geometry import Polygon
 
@@ -17,7 +18,7 @@ from mcp import Client  # noqa: E402
 from terraproof.cli import main  # noqa: E402
 from terraproof.mcp.server import mcp  # noqa: E402
 
-TOOL_NAMES = ["find_guidance", "inspect_dataset", "list_skills", "load_section", "run_checks"]
+TOOL_NAMES = ["find_guidance", "inspect_dataset", "list_skills", "load_section", "preflight", "run_checks"]
 
 
 def square(x: float, y: float, size: float = 10.0) -> Polygon:
@@ -152,3 +153,236 @@ def test_find_guidance_reports_a_missing_router(monkeypatch):
 
     assert result.is_error
     assert "router is unavailable" in result.content[0].text
+
+
+def test_find_guidance_candidates_mode_includes_explanations():
+    payload = call("find_guidance", {"task": "compute NDVI", "mode": "candidates"}).structured_content
+
+    assert any("explanation" in skill for skill in payload["skills"])
+
+
+def test_find_guidance_accepts_semantic_flag():
+    payload = call("find_guidance", {"task": "compute NDVI", "semantic": True}).structured_content
+
+    assert isinstance(payload["skills"], list)
+
+
+# --- Preflight tool ---
+
+
+def test_preflight_matches_cli_report(make_raster, tmp_path, capsys):
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(json.dumps({"operation": "area"}), encoding="utf-8")
+    raster = make_raster("x.tif", np.full((8, 8), 1.0, dtype="float32"), nodata=-9999.0)
+
+    assert main(["preflight", str(raster), "--plan", str(plan_path)]) == 0
+    cli_report = json.loads(capsys.readouterr().out)
+
+    payload = call("preflight", {"paths": [str(raster)], "plan": str(plan_path)}).structured_content
+
+    assert payload["grade"] == cli_report["grade"]
+    assert payload["report"] == cli_report
+
+
+def test_preflight_accepts_plan_dict(make_raster):
+    raster = make_raster("x.tif", np.full((8, 8), 1.0, dtype="float32"), nodata=-9999.0)
+
+    payload = call("preflight", {"paths": [str(raster)], "plan": {"operation": "area"}}).structured_content
+
+    assert payload["exit_code"] == 0
+    ids = {check["id"]: check["status"] for check in payload["report"]["checks"]}
+    assert ids["preflight.metric_crs"] == "pass"
+
+
+# --- Phase 4 run_checks options ---
+
+
+def test_run_checks_with_reference_input_and_encoding(make_raster):
+    dn = make_raster("dn.tif", np.full((64, 64), 1500, dtype="uint16"), nodata=65535)
+    out = make_raster("out.tif", np.full((64, 64), 0.05, dtype="float32"), nodata=-9999.0)
+
+    payload = call("run_checks", {
+        "paths": [str(out)],
+        "reference_input": str(dn),
+        "encoding": "s2-l2a",
+    }).structured_content
+
+    ids = {check["id"]: check["status"] for check in payload["report"]["checks"]}
+    assert ids.get("rs.scale_applied_once") == "pass"
+
+
+def test_run_checks_with_sar_expect(make_raster):
+    path = make_raster("sar.tif", np.full((64, 64), -8.0, dtype="float32"), nodata=-9999.0)
+
+    payload = call("run_checks", {"paths": [str(path)], "sar_expect": "sigma0-db"}).structured_content
+
+    ids = {check["id"]: check["status"] for check in payload["report"]["checks"]}
+    assert ids.get("sar.value_domain") == "pass"
+    assert ids.get("sar.geocoded") == "pass"
+
+
+def test_run_checks_with_qa_and_time_range_matches_cli(make_raster, make_stac_item, tmp_path, capsys):
+    import rasterio
+    out = make_raster("out.tif", np.full((64, 64), 0.25, dtype="float32"), nodata=-9999.0)
+    qa = tmp_path / "scl.tif"
+    with rasterio.open(
+        qa, "w", driver="GTiff", width=64, height=64, count=1, dtype="uint8", crs="EPSG:32636",
+        transform=rasterio.transform.from_origin(500000.0, 5000000.0, 10.0, 10.0), nodata=None,
+    ) as dst:
+        dst.write(np.full((64, 64), 9, dtype="uint8"), 1)
+    item = make_stac_item("item.json", {"datetime": "2025-06-15T00:00:00Z"})
+
+    assert main(["check", str(out), str(item), "--qa", str(qa), "--qa-kind", "s2-scl",
+                 "--time-range", "2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z"]) == 3
+    cli_report = json.loads(capsys.readouterr().out)
+
+    payload = call("run_checks", {
+        "paths": [str(out), str(item)],
+        "qa_path": str(qa),
+        "qa_kind": "s2-scl",
+        "time_range": ["2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z"],
+    }).structured_content
+
+    assert payload["grade"] == cli_report["grade"]
+    assert payload["report"] == cli_report
+
+
+def test_run_checks_with_accuracy_samples_and_class_areas_matches_cli(make_vector, tmp_path, capsys):
+    path = make_vector("dummy.gpkg", [square(500000, 5000000)])
+    samples = tmp_path / "samples.json"
+    samples.write_text(json.dumps([
+        {"map_class": "forest", "ref_class": "forest"},
+        {"map_class": "water", "ref_class": "water"},
+    ] * 30), encoding="utf-8")
+    areas = tmp_path / "areas.json"
+    areas.write_text(json.dumps({"forest": 1000.0, "water": 500.0}), encoding="utf-8")
+
+    main(["check", str(path), "--accuracy-samples", str(samples), "--class-areas", str(areas),
+          "--estimates-requested", "--min-per-class", "10"])
+    cli_report = json.loads(capsys.readouterr().out)
+
+    payload = call("run_checks", {
+        "paths": [str(path)],
+        "accuracy_samples": str(samples),
+        "class_areas": str(areas),
+        "estimates_requested": True,
+        "min_per_class": 10,
+    }).structured_content
+
+    assert payload["report"] == cli_report
+
+
+def test_run_checks_weighted_samples_dict_and_file_match(make_vector, tmp_path, capsys):
+    path = make_vector("dummy.gpkg", [square(500000, 5000000)])
+    rows = [
+        {"map_class": "forest", "ref_class": "forest", "stratum_weight": 2.0},
+        {"map_class": "water", "ref_class": "water", "stratum_weight": 1.0},
+    ] * 30
+    samples_file = tmp_path / "samples.json"
+    samples_file.write_text(json.dumps(rows), encoding="utf-8")
+    areas = tmp_path / "areas.json"
+    areas.write_text(json.dumps({"forest": 1000.0, "water": 500.0}), encoding="utf-8")
+
+    payload_dict = call("run_checks", {
+        "paths": [str(path)],
+        "accuracy_samples": {"records": rows},
+        "class_areas": str(areas),
+        "estimates_requested": True,
+        "min_per_class": 10,
+    }).structured_content
+    payload_file = call("run_checks", {
+        "paths": [str(path)],
+        "accuracy_samples": str(samples_file),
+        "class_areas": str(areas),
+        "estimates_requested": True,
+        "min_per_class": 10,
+    }).structured_content
+
+    assert payload_dict["grade"] == payload_file["grade"]
+    dict_checks = {c["id"]: c["status"] for c in payload_dict["report"]["checks"]}
+    file_checks = {c["id"]: c["status"] for c in payload_file["report"]["checks"]}
+    assert dict_checks.get("accuracy.sample_design") == file_checks.get("accuracy.sample_design")
+    assert dict_checks.get("accuracy.estimates") == file_checks.get("accuracy.estimates")
+
+
+# --- Manifest coverage in MCP ---
+
+
+def _write_manifest(manifest_path: Path, inputs: list[Path], outputs: list[Path]):
+    from terraproof.provenance import write_manifest
+    manifest = write_manifest(
+        inputs=[str(p) for p in inputs],
+        outputs=[str(p) for p in outputs],
+        parameters={},
+        stac_items=[],
+        root=None,
+        manifest_path=manifest_path,
+        command_line=["test"],
+    )
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def test_mcp_run_checks_with_good_manifest_passes(make_vector, tmp_path):
+    path = make_vector("clean.gpkg", [square(500000, 5000000)])
+    manifest_path = tmp_path / "run.manifest.json"
+    _write_manifest(manifest_path, [path], [path])
+
+    payload = call("run_checks", {"paths": [str(path)], "manifest": str(manifest_path), "operation": "area"}).structured_content
+
+    ids = {check["id"]: check["status"] for check in payload["report"]["checks"]}
+    assert ids.get("provenance.reproducible") == "pass"
+
+
+def test_mcp_run_checks_with_unrelated_manifest_fails(make_vector, tmp_path):
+    path = make_vector("clean.gpkg", [square(500000, 5000000)])
+    other = tmp_path / "other.txt"
+    other.write_text("other", encoding="utf-8")
+    manifest_path = tmp_path / "run.manifest.json"
+    _write_manifest(manifest_path, [other], [other])
+
+    payload = call("run_checks", {"paths": [str(path)], "manifest": str(manifest_path), "operation": "area"}).structured_content
+
+    ids = {check["id"]: check["status"] for check in payload["report"]["checks"]}
+    assert ids.get("provenance.reproducible") == "fail"
+    assert "does not cover" in json.dumps(payload["report"]).lower()
+
+
+def test_mcp_run_checks_with_partially_covered_manifest_fails(make_vector, make_raster, tmp_path):
+    path = make_vector("clean.gpkg", [square(500000, 5000000)])
+    ref = make_raster("ref.tif", np.full((8, 8), 1.0, dtype="float32"), nodata=-9999.0)
+    manifest_path = tmp_path / "run.manifest.json"
+    _write_manifest(manifest_path, [path], [path])
+
+    payload = call("run_checks", {
+        "paths": [str(path)],
+        "reference_input": str(ref),
+        "manifest": str(manifest_path),
+    }).structured_content
+
+    ids = {check["id"]: check["status"] for check in payload["report"]["checks"]}
+    assert ids.get("provenance.reproducible") == "fail"
+    assert "does not cover" in json.dumps(payload["report"]).lower()
+
+
+def test_mcp_run_checks_with_missing_manifest_fails(make_vector, tmp_path):
+    path = make_vector("clean.gpkg", [square(500000, 5000000)])
+    missing = tmp_path / "missing.manifest.json"
+
+    payload = call("run_checks", {"paths": [str(path)], "manifest": str(missing), "operation": "area"}).structured_content
+
+    ids = {check["id"]: check["status"] for check in payload["report"]["checks"]}
+    assert ids.get("provenance.reproducible") == "fail"
+
+
+def test_mcp_run_checks_with_tampered_manifest_fails(make_vector, tmp_path):
+    path = make_vector("clean.gpkg", [square(500000, 5000000)])
+    manifest_path = tmp_path / "run.manifest.json"
+    _write_manifest(manifest_path, [path], [path])
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["core"]["parameters"]["tamper"] = True
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    payload = call("run_checks", {"paths": [str(path)], "manifest": str(manifest_path), "operation": "area"}).structured_content
+
+    ids = {check["id"]: check["status"] for check in payload["report"]["checks"]}
+    assert ids.get("provenance.reproducible") == "fail"

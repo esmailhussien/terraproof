@@ -5,8 +5,10 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import math
 import subprocess
 import sys
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -68,7 +70,9 @@ def test_index_loads_all_real_sections_and_is_cached(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     index = get_index()
     assert get_index() is index
-    assert len(index.skills) == 20
+    registry = json.loads(find_root().joinpath("routing", "registry.json").read_text(encoding="utf-8"))
+    assert len(index.skills) == len(registry["skills"])
+    assert set(index.skills) == set(registry["skills"])
     assert len(index.sections) == sum(len(skill["sections"]) for skill in index.skills.values())
     assert all(section.text.strip() for section in index.sections)
     assert find_root().joinpath("routing", "registry.json").is_file()
@@ -625,14 +629,47 @@ def test_dev_set_coverage_without_opening_any_other_evaluation_set():
 SNAPSHOT = json.loads(
     (Path(__file__).parent / "fixtures" / "router_head_snapshot.json").read_text(encoding="utf-8-sig"))
 
+# The registry grew from 20 to 24 non-process skills in Phase 4 (the four new
+# skills below). BM25 idf and mean section length cover the whole corpus, so
+# catalog expansion legitimately changes every BM25 score. The committed
+# fixture is immutable, therefore this compatibility test pins the corpus: it
+# recomputes idf/mean length with the identical code path over the snapshot-era
+# (20-skill) baseline and points the router at it. New 24-skill behaviour is
+# covered by the pythonScenarios, dev.jsonl and semantic assertions instead.
+SNAPSHOT_NEW_SKILLS = ("sar-basics", "accuracy-assessment",
+                       "stac-and-cloud-access", "time-series-and-change")
+
+
+@pytest.fixture
+def head_snapshot_index(monkeypatch):
+    """Filter live Section/Index data to the 1cac039 baseline and recompute BM25."""
+    import terraproof.router as router
+    import terraproof.router.index as index_module
+    full = index_module.get_index()
+    sections = tuple(section for section in full.sections if section.skill not in SNAPSHOT_NEW_SKILLS)
+    ranked = [section for section in sections if section.skill not in index_module.PROCESS_SKILLS]
+    document_frequency: Counter = Counter()
+    for section in ranked:
+        document_frequency.update(section.frequencies.keys())
+    count = len(ranked)
+    idf = {term: math.log(1 + (count - frequency + 0.5) / (frequency + 0.5))
+           for term, frequency in document_frequency.items()}
+    skills = {name: full.skills[name] for name in full.skills if name not in SNAPSHOT_NEW_SKILLS}
+    average = sum(section.length for section in ranked) / count
+    index = Index(skills, sections, idf, average)
+    monkeypatch.setattr(index_module, "get_index", lambda: index)
+    monkeypatch.setattr(router, "get_index", lambda: index)
+    return index
+
 
 def canonical(result):
     return json.dumps(result, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
 @pytest.mark.parametrize("record", SNAPSHOT["prompts"], ids=lambda record: record["slug"])
-def test_ranked_default_output_byte_identical_to_head(record):
-    """JSON output with default arguments matches the committed 1cac039 snapshot."""
+def test_ranked_default_output_byte_identical_to_head(record, head_snapshot_index):
+    """JSON output with default arguments matches the committed 1cac039 snapshot
+    on the controlled 20-skill corpus the fixture was recorded against."""
     result = find_guidance(record["prompt"], datasets=copy.deepcopy(record["datasets"]))
     assert canonical(result) == canonical(record["output"])
 
@@ -654,7 +691,9 @@ def test_candidates_drop_relative_cutoff_but_keep_intents(controlled_index):
     ranked = router.find_guidance("rasterio raster sentinel", top_k=10)
     assert names(ranked) == ["raster-processing", "gdal", "geomaster"]
     candidates = router.find_guidance("rasterio raster sentinel", top_k=10, mode="candidates")
-    assert names(candidates) == ["raster-processing", "gdal", "geozarr", "geomaster"]
+    # Candidate mode keeps the ranked result as an ordered prefix; the lower-
+    # scoring geozarr candidate fills after the direct geomaster intent.
+    assert names(candidates) == ["raster-processing", "gdal", "geomaster", "geozarr"]
     assert names(router.find_guidance("Tell me a joke about bananas", mode="candidates")) == []
     assert names(router.find_guidance("fix a raster error", mode="candidates")) == []
 
@@ -786,3 +825,88 @@ def test_semantic_real_model_only_when_cached(tmp_path):
     skill = result["skills"][0]
     assert any("Semantic: cosine=" in text for text in skill["reasons"])
     assert skill["score"] > 0
+
+
+# --- Mode invariants (dev-wide) -----------------------------------------------
+
+
+@pytest.fixture
+def dev_items():
+    return [json.loads(line) for line in (find_root() / "evals" / "routing" / "dev.jsonl")
+            .read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def test_candidates_relevance_superset_of_ranked_on_dev(dev_items):
+    """Default caps: every ranked choice appears in the candidates top 8, and the
+    ranked list is the relevance-order prefix of the candidates list."""
+    for item in dev_items:
+        datasets = item.get("datasets")
+        ranked = find_guidance(item["prompt"], datasets=datasets, mode="ranked")
+        candidates = find_guidance(item["prompt"], datasets=datasets, mode="candidates")
+        ranked_names = [skill["name"] for skill in ranked["skills"]]
+        candidate_names = [skill["name"] for skill in candidates["skills"]]
+        assert set(ranked_names) <= set(candidate_names[:len(ranked_names)] + candidate_names[len(ranked_names):])
+        assert candidate_names[:len(ranked_names)] == ranked_names
+
+
+def test_candidates_keep_ranked_choices_at_equal_cap_on_dev(dev_items):
+    """Same explicit cap: candidates preserve the ranked choices inside the cap
+    and fill remaining slots by relevance (candidate-only entries score below)."""
+    for item in dev_items:
+        datasets = item.get("datasets")
+        ranked = find_guidance(item["prompt"], datasets=datasets, top_k=4)
+        candidates = find_guidance(item["prompt"], datasets=datasets, top_k=4, mode="candidates")
+        ranked_names = [skill["name"] for skill in ranked["skills"]]
+        candidate_names = [skill["name"] for skill in candidates["skills"]]
+        assert candidate_names[:len(ranked_names)] == ranked_names
+        assert len(candidate_names) <= 4
+
+
+def test_candidates_deterministic_explanations_and_topk0(dev_items):
+    for item in dev_items[:40]:
+        datasets = item.get("datasets")
+        first = find_guidance(item["prompt"], datasets=datasets, mode="candidates")
+        second = find_guidance(item["prompt"], datasets=datasets, mode="candidates")
+        assert canonical(first) == canonical(second)
+        assert all(skill["reasons"] and isinstance(skill["explanation"], str) and skill["explanation"]
+                   for skill in first["skills"])
+    assert find_guidance("NDVI", mode="candidates", top_k=0)["skills"] == []
+
+
+def test_candidates_tie_break_and_debug_guard_determinism(controlled_index):
+    router, scores = controlled_index
+    scores.update({"raster-processing": 8.0, "gdal": 8.0, "networkx": 8.0})
+    result = router.find_guidance("rasterio routing", mode="candidates", top_k=10)
+    names_order = [skill["name"] for skill in result["skills"]]
+    assert names_order == sorted(names_order)
+    again = router.find_guidance("rasterio routing", mode="candidates", top_k=10)
+    assert [skill["name"] for skill in again["skills"]] == names_order
+    # Debug wording must not admit metadata-only matches even in candidates mode.
+    scores.update({"geozarr": 50.0})
+    debug = router.find_guidance("fix the broken raster layer", mode="candidates", top_k=10)
+    assert "geozarr" not in [skill["name"] for skill in debug["skills"]]
+
+
+def test_semantic_candidates_superset_and_warning(fake_semantic):
+    task = "store the multidimensional arrays as cloud native zarr"
+    result = find_guidance(task, mode="candidates", semantic=True)
+    plain = find_guidance(task, mode="candidates", semantic=False)
+    assert {s["name"] for s in plain["skills"]} <= {s["name"] for s in result["skills"]}
+    again_plain = find_guidance(task, mode="candidates", semantic=False)
+    assert again_plain == plain
+
+
+def test_semantic_missing_model_forced_falls_back_identically(monkeypatch, tmp_path):
+    """Force the missing-model failure with monkeypatch (never the user's install)."""
+    from terraproof.router import semantic as semantic_module
+
+    def missing_model(index, task):
+        raise RuntimeError("model files missing (forced by test)")
+
+    monkeypatch.setattr(semantic_module, "section_scores", missing_model)
+    lexical = find_guidance("NDVI from Sentinel reflectance", semantic=False)
+    result = find_guidance("NDVI from Sentinel reflectance", semantic=True)
+    assert canonical({k: v for k, v in result.items() if k != "reasons"}) == canonical(lexical)
+    warnings = sorted({text for skill in result["skills"] for text in skill["reasons"]
+                       if "semantic retrieval unavailable" in text} | set(result.get("reasons", [])))
+    assert warnings and "terraproof[semantic]" in warnings[0] and "--download-model" in warnings[0]

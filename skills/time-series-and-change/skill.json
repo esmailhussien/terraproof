@@ -1,0 +1,116 @@
+{
+  "name": "time-series-and-change",
+  "layer": "domain",
+  "domains": [
+    "geospatial"
+  ],
+  "capabilities": [
+    "temporal-compositing",
+    "change-detection",
+    "gap-handling",
+    "breakpoint-detection"
+  ],
+  "triggers": [
+    "time series",
+    "time-series",
+    "median composite",
+    "change detection",
+    "change map",
+    "gap filling",
+    "breakpoint",
+    "landtrendr",
+    "ccdc",
+    "bfast",
+    "median of ndvi",
+    "ndvi of median",
+    "seasonal composite",
+    "post-classification comparison"
+  ],
+  "recommended": [
+    "satellite-preprocessing",
+    "accuracy-assessment"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Builds analysis-ready multi-date optical or SAR series (per-observation decoding, compositing, gap and valid-count handling, temporal alignment) and detects change with differencing, trend/breakpoint methods, and reference-validated estimates.",
+  "sections": [
+    {
+      "id": "define-the-change-question-first",
+      "title": "Define the change question first",
+      "source": "SKILL.md#define-the-change-question-first"
+    },
+    {
+      "id": "build-an-analysis-ready-time-series",
+      "title": "Build an analysis-ready time series",
+      "source": "SKILL.md#build-an-analysis-ready-time-series"
+    },
+    {
+      "id": "handle-gaps-without-inventing-data",
+      "title": "Handle gaps without inventing data",
+      "source": "SKILL.md#handle-gaps-without-inventing-data"
+    },
+    {
+      "id": "align-observations-in-time",
+      "title": "Align observations in time",
+      "source": "SKILL.md#align-observations-in-time"
+    },
+    {
+      "id": "composite-of-indices-is-not-index-of-composite",
+      "title": "Composite of indices is not index of composite",
+      "source": "SKILL.md#composite-of-indices-is-not-index-of-composite"
+    },
+    {
+      "id": "separate-seasonality-and-phenology-from-change",
+      "title": "Separate seasonality and phenology from change",
+      "source": "SKILL.md#separate-seasonality-and-phenology-from-change"
+    },
+    {
+      "id": "thresholded-differences",
+      "title": "Thresholded differences",
+      "source": "SKILL.md#thresholded-differences"
+    },
+    {
+      "id": "trend-and-breakpoint-methods",
+      "title": "Trend and breakpoint methods",
+      "source": "SKILL.md#trend-and-breakpoint-methods"
+    },
+    {
+      "id": "post-classification-comparison",
+      "title": "Post-classification comparison",
+      "source": "SKILL.md#post-classification-comparison"
+    },
+    {
+      "id": "validate-change-with-reference-data",
+      "title": "Validate change with reference data",
+      "source": "SKILL.md#validate-change-with-reference-data"
+    },
+    {
+      "id": "verify-with-terraproof",
+      "title": "Verify with Terraproof",
+      "source": "SKILL.md#verify-with-terraproof"
+    },
+    {
+      "id": "sources",
+      "title": "Sources",
+      "source": "SKILL.md#sources"
+    },
+    {
+      "id": "change-methods",
+      "title": "Change methods",
+      "source": "references/change-methods.md"
+    }
+  ],
+  "checks": [
+    "rs.temporal_scope",
+    "rs.cloud_mask_applied",
+    "rs.scale_applied_once",
+    "raster.grid_alignment",
+    "raster.nodata_declared",
+    "rs.index_range",
+    "rs.reflectance_range",
+    "stac.provenance",
+    "accuracy.sample_design",
+    "accuracy.estimates",
+    "provenance.reproducible"
+  ]
+}

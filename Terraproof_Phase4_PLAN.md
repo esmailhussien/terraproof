@@ -1,10 +1,16 @@
 # Terraproof — Phase 4 Plan: Remote-sensing depth & reproducibility
 
-> Status: **proposal**. Builds on Phases 0–3 (20 skills, 14 deterministic checks, evidence grades, Python router, MCP server, agent installers). Nothing here is implemented yet.
+> Status: **implemented scope listed below; release gates remain open**. This checkout contains the Phase4 code paths, four registrations, CLI/MCP parity, router candidate mode, and executable local eval controls. It does not claim the independent v3/held-out routing gate, hosted CI, real agent-host verification, or independent expert review.
 
 ## 1. Why this phase
 
 Today Terraproof can tell an agent that a *result looks plausible* (CRS, geometry, value ranges). It cannot yet tell whether the **processing itself** was done right, whether a run can be **reproduced**, or catch mistakes **before** compute is spent. Phase 4 closes those three gaps for the remote-sensing workflows that matter most: optical preprocessing, SAR, time series, and accuracy assessment.
+
+## Verification status and deferred gates
+
+Implemented in this checkout: preflight rules and schema, provenance write/verify integration, processing-level checks, four skill manifests and registrations, deterministic candidate routing with optional offline semantic fallback, and the 27-task executable harness plus seven-rule synthetic preflight control group.
+
+Deferred or unverified: a newly written independent routing v3 set and any held-out performance claim, hosted CI execution across the full matrix, verification in real agent hosts, and independent expert review of the four skill contents. The local eval harness measures deterministic checks and independent oracles only; it is not agent-lift evidence. These gates remain exit criteria, not completed work.
 
 ## 2. Goals
 
@@ -52,7 +58,7 @@ Every check ships with a seeded failing fixture and a passing fixture; none may 
 - `stac-and-cloud-access` — STAC search, item/asset provenance, lazy/windowed cloud reads, signed URLs.
 Each: sectioned `SKILL.md`, `skill.json` (sections + checks), 3+ eval task specs, independent expert review before merge, router registration + scenarios + dev items.
 
-### 3.5 Router: break the lexical ceiling
+### 3.5 Router: break the lexical ceiling (deferred measurement gate)
 Measured before Phase 4: on the fresh independent `heldout_v2` set the lexical router reaches recall@5 0.845 (EN 0.89, AR 0.80) with 18 forbidden picks; tightening precision cost recall. Two complementary changes:
 - **Candidates + host re-ranking.** `find_guidance` returns a recall-oriented candidate list (e.g. top 8 with reasons and one-line explanations); the MCP host model — which already understands the task semantically — chooses which sections to load. Measured as recall@8 of candidates plus a simulated selection step.
 - **Optional local semantic retrieval.** An optional extra (`[semantic]`) adds a small multilingual embedding model run locally (offline, deterministic, pinned version) and fuses its section scores with BM25. Off by default; the lexical path stays dependency-light.

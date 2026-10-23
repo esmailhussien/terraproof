@@ -84,6 +84,38 @@
     "accuracy.estimates": {
       "family": "accuracy",
       "description": "Confusion matrix, user's and area-weighted producer's accuracy, overall accuracy, and the stratified area-adjusted area of each reference class with 95% confidence intervals (Olofsson et al. 2014, eqs. 5-6 and 10-12); not-run when map-class areas are missing."
+    },
+    "provenance.reproducible": {
+      "family": "provenance",
+      "description": "A written run manifest verifies: recorded input/output files re-hash identically and recorded tool versions still match; warns on tool-version drift, fails on changed or missing files, an edited manifest core, or a recorded path outside the workspace."
+    },
+    "preflight.metric_crs": {
+      "family": "preflight",
+      "description": "Plan check: a declared distance, area, or buffer step runs in a projected horizontal CRS with metre or foot units, not in a geographic or geocentric CRS."
+    },
+    "preflight.alignment": {
+      "family": "preflight",
+      "description": "Plan check: inputs declared for combination or comparison share a CRS, pixel size, and pixel-grid origin, or the plan declares a reprojection/alignment step."
+    },
+    "preflight.categorical_resampling": {
+      "family": "preflight",
+      "description": "Plan check: a declared categorical layer (classification, mask, or QA band) is resampled with nearest neighbour or mode, not with a bilinear or cubic kernel."
+    },
+    "preflight.reflectance_decode": {
+      "family": "preflight",
+      "description": "Plan check: an 'expect reflectance' operation on integer raster inputs that carry a non-trivial scale or offset declares a decode step. Reads the plan and input encoding metadata only; it does not compare outputs or show how often a decode was actually applied."
+    },
+    "preflight.temporal_scope": {
+      "family": "preflight",
+      "description": "Plan check: the requested analysis time range contains the datetimes of the STAC items or inputs the plan selects."
+    },
+    "preflight.index_inputs": {
+      "family": "preflight",
+      "description": "Plan check: an 'expect index' operation on integer raster inputs that carry a non-trivial scale or offset declares a decode step, so the index would be computed on decoded values rather than raw DN. Reads the plan and input encoding metadata only; it does not verify that the bands a given index needs are present or that any formula was applied."
+    },
+    "preflight.output_units": {
+      "family": "preflight",
+      "description": "Plan check: the output CRS units match the measurement units the plan requests, so a metric result is not written in degrees or the reverse."
     }
   }
 }

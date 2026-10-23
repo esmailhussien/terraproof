@@ -35,7 +35,16 @@ LABELS = {
         "none": "none",
         "cols_checks": ("Check", "Status", "Input", "Message"),
         "cols_inputs": ("Role", "Path", "Kind", "SHA-256", "Bytes"),
-        "roles": {"input": "input", "compare-to": "compare-to"},
+        "roles": {
+            "input": "input",
+            "compare-to": "compare-to",
+            "reference-input": "reference-input",
+            "qa": "qa",
+            "accuracy-samples": "accuracy-samples",
+            "class-areas": "class-areas",
+            "manifest": "manifest",
+            "plan": "plan",
+        },
     },
     "ar": {
         "title": "تقرير أدلة Terraproof",
@@ -52,7 +61,16 @@ LABELS = {
         "none": "لا شيء",
         "cols_checks": ("الفحص", "الحالة", "المدخل", "الرسالة"),
         "cols_inputs": ("الدور", "المسار", "النوع", "SHA-256", "الحجم (بايت)"),
-        "roles": {"input": "مدخل", "compare-to": "مرجع المقارنة"},
+        "roles": {
+            "input": "مدخل",
+            "compare-to": "مرجع المقارنة",
+            "reference-input": "مدخل مرجعي",
+            "qa": "ضبط الجودة",
+            "accuracy-samples": "عينات الدقة",
+            "class-areas": "مساحات الفئات",
+            "manifest": "بيان المنشأ",
+            "plan": "خطة",
+        },
     },
 }
 

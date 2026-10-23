@@ -52,8 +52,8 @@ def test_inspect_prints_valid_json(make_vector, capsys):
     assert description["crs"]["epsg"] == 32636
 
 
-def test_help_exits_0_for_both_commands():
-    for argv in (["--help"], ["check", "--help"]):
+def test_help_exits_0_for_all_commands():
+    for argv in (["--help"], ["check", "--help"], ["preflight", "--help"], ["manifest", "--help"]):
         with pytest.raises(SystemExit) as excinfo:
             main(argv)
         assert excinfo.value.code == 0
@@ -68,7 +68,7 @@ def test_module_entry_point_help_runs():
     )
 
     assert completed.returncode == 0
-    assert "inspect" in completed.stdout and "check" in completed.stdout
+    assert "inspect" in completed.stdout and "check" in completed.stdout and "preflight" in completed.stdout
 
 
 def test_repeated_check_writes_byte_identical_files(make_vector, tmp_path):

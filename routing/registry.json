@@ -2,6 +2,110 @@
   "$schema": "./registry.schema.json",
   "version": "1.0.0",
   "skills": {
+    "accuracy-assessment": {
+      "name": "accuracy-assessment",
+      "path": "skills/accuracy-assessment",
+      "layer": "domain",
+      "domains": [
+        "geospatial"
+      ],
+      "capabilities": [
+        "map-accuracy-assessment",
+        "stratified-area-estimation",
+        "reference-sample-design"
+      ],
+      "triggers": [
+        "accuracy assessment",
+        "confusion matrix",
+        "user's accuracy",
+        "producer's accuracy",
+        "overall accuracy",
+        "area-adjusted",
+        "stratified sampling",
+        "stratified random sampling",
+        "probability sample",
+        "error matrix",
+        "map accuracy",
+        "map class area",
+        "reference sample"
+      ],
+      "recommended": [
+        "statistical-analysis",
+        "crs-and-units"
+      ],
+      "requires": [],
+      "conflicts": [],
+      "explanation": "Designs and analyzes a defensible accuracy assessment for a classified or change map: probability sampling stratified by map class, response design, area-proportion confusion matrices, overall/user's/producer's accuracy with confidence intervals, and stratified area-adjusted class areas.",
+      "sections": [
+        {
+          "id": "report-estimates-not-pixel-counts",
+          "title": "Report estimates, not pixel counts",
+          "source": "SKILL.md#report-estimates-not-pixel-counts"
+        },
+        {
+          "id": "sampling-design-stratified-random-by-map-class",
+          "title": "Sampling design: stratified random by map class",
+          "source": "SKILL.md#sampling-design-stratified-random-by-map-class"
+        },
+        {
+          "id": "response-design-how-reference-labels-are-decided",
+          "title": "Response design: how reference labels are decided",
+          "source": "SKILL.md#response-design-how-reference-labels-are-decided"
+        },
+        {
+          "id": "confusion-matrix-in-proportion-of-area",
+          "title": "Confusion matrix in proportion of area",
+          "source": "SKILL.md#confusion-matrix-in-proportion-of-area"
+        },
+        {
+          "id": "overall-users-and-producers-accuracy",
+          "title": "Overall, user's and producer's accuracy",
+          "source": "SKILL.md#overall-users-and-producers-accuracy"
+        },
+        {
+          "id": "area-adjusted-estimates-with-confidence-intervals",
+          "title": "Area-adjusted estimates with confidence intervals",
+          "source": "SKILL.md#area-adjusted-estimates-with-confidence-intervals"
+        },
+        {
+          "id": "compute-the-estimates",
+          "title": "Compute the estimates",
+          "source": "SKILL.md#compute-the-estimates"
+        },
+        {
+          "id": "report-checklist",
+          "title": "Report checklist",
+          "source": "SKILL.md#report-checklist"
+        },
+        {
+          "id": "verify-with-terraproof",
+          "title": "Verify with Terraproof",
+          "source": "SKILL.md#verify-with-terraproof"
+        },
+        {
+          "id": "sources",
+          "title": "Sources",
+          "source": "SKILL.md#sources"
+        },
+        {
+          "id": "stratified-estimator",
+          "title": "Stratified estimator",
+          "source": "references/stratified-estimator.md"
+        }
+      ],
+      "checks": [
+        "accuracy.sample_design",
+        "accuracy.estimates",
+        "crs.metric_operation",
+        "crs.defined",
+        "crs.consistent",
+        "raster.nodata_declared",
+        "geometry.valid",
+        "geometry.non_empty",
+        "geometry.type_consistent",
+        "scope.record_count"
+      ]
+    },
     "brainstorming": {
       "name": "brainstorming",
       "path": "skills/brainstorming",
@@ -1070,6 +1174,104 @@
         "crs.consistent"
       ]
     },
+    "sar-basics": {
+      "name": "sar-basics",
+      "path": "skills/sar-basics",
+      "layer": "domain",
+      "domains": [
+        "geospatial"
+      ],
+      "capabilities": [
+        "sar-radiometric-calibration",
+        "sar-speckle-filtering",
+        "sar-terrain-correction"
+      ],
+      "triggers": [
+        "sentinel-1",
+        "sentinel 1",
+        "backscatter",
+        "sigma0",
+        "gamma0",
+        "beta0",
+        "decibel",
+        "grd",
+        "single look complex",
+        "slc",
+        "speckle",
+        "terrain correction",
+        "vv polarization",
+        "vh polarization",
+        "incidence angle"
+      ],
+      "recommended": [
+        "raster-processing",
+        "accuracy-assessment"
+      ],
+      "requires": [],
+      "conflicts": [],
+      "explanation": "Works correctly with Sentinel-1 C-band SAR: identifying GRD versus SLC, calibrating DN to sigma0/gamma0/beta0 with the product LUTs, keeping linear power for arithmetic and dB for display, speckle filtering trade-offs, and terrain correction and geocoding before spatial analysis.",
+      "sections": [
+        {
+          "id": "identify-the-product-before-using-pixel-values",
+          "title": "Identify the product before using pixel values",
+          "source": "SKILL.md#identify-the-product-before-using-pixel-values"
+        },
+        {
+          "id": "calibrate-to-β⁰-σ⁰-or-γ⁰-with-the-product-luts",
+          "title": "Calibrate to β⁰, σ⁰ or γ⁰ with the product LUTs",
+          "source": "SKILL.md#calibrate-to-β⁰-σ⁰-or-γ⁰-with-the-product-luts"
+        },
+        {
+          "id": "keep-linear-power-for-arithmetic-db-for-display-and-thresholds",
+          "title": "Keep linear power for arithmetic, dB for display and thresholds",
+          "source": "SKILL.md#keep-linear-power-for-arithmetic-db-for-display-and-thresholds"
+        },
+        {
+          "id": "speckle-filtering-is-a-trade-off",
+          "title": "Speckle: filtering is a trade-off",
+          "source": "SKILL.md#speckle-filtering-is-a-trade-off"
+        },
+        {
+          "id": "terrain-correction-and-geocoding",
+          "title": "Terrain correction and geocoding",
+          "source": "SKILL.md#terrain-correction-and-geocoding"
+        },
+        {
+          "id": "polarisation-water-flood-and-change",
+          "title": "Polarisation, water, flood and change",
+          "source": "SKILL.md#polarisation-water-flood-and-change"
+        },
+        {
+          "id": "incidence-angle-and-acquisition-geometry",
+          "title": "Incidence angle and acquisition geometry",
+          "source": "SKILL.md#incidence-angle-and-acquisition-geometry"
+        },
+        {
+          "id": "verify-with-terraproof",
+          "title": "Verify with Terraproof",
+          "source": "SKILL.md#verify-with-terraproof"
+        },
+        {
+          "id": "sources",
+          "title": "Sources",
+          "source": "SKILL.md#sources"
+        },
+        {
+          "id": "calibration-lut",
+          "title": "Calibration LUT",
+          "source": "references/calibration-lut.md"
+        }
+      ],
+      "checks": [
+        "sar.value_domain",
+        "sar.geocoded",
+        "raster.grid_alignment",
+        "raster.nodata_declared",
+        "raster.resampling",
+        "crs.defined",
+        "stac.provenance"
+      ]
+    },
     "satellite-preprocessing": {
       "name": "satellite-preprocessing",
       "path": "skills/satellite-preprocessing",
@@ -1340,6 +1542,105 @@
         "raster.cog_layout"
       ]
     },
+    "stac-and-cloud-access": {
+      "name": "stac-and-cloud-access",
+      "path": "skills/stac-and-cloud-access",
+      "layer": "domain",
+      "domains": [
+        "geospatial"
+      ],
+      "capabilities": [
+        "stac-search",
+        "cloud-native-raster-access",
+        "provenance-recording"
+      ],
+      "triggers": [
+        "stac",
+        "stac api",
+        "pystac-client",
+        "planetary computer",
+        "signed asset url",
+        "requester-pays",
+        "/vsicurl/",
+        "vsicurl",
+        "http range request",
+        "windowed read",
+        "odc.stac",
+        "stackstac",
+        "processing:version"
+      ],
+      "recommended": [
+        "satellite-preprocessing",
+        "geospatial-data-discovery"
+      ],
+      "requires": [],
+      "conflicts": [],
+      "explanation": "Searches STAC APIs reproducibly (collections/bbox/datetime/query/filter, pinned item ids) and reads cloud-hosted rasters lazily over HTTP range requests (/vsicurl/, signed URLs, requester-pays buckets, windowed reads), recording asset and encoding provenance.",
+      "sections": [
+        {
+          "id": "search-with-explicit-reproducible-parameters",
+          "title": "Search with explicit, reproducible parameters",
+          "source": "SKILL.md#search-with-explicit-reproducible-parameters"
+        },
+        {
+          "id": "record-item-and-asset-provenance",
+          "title": "Record item and asset provenance",
+          "source": "SKILL.md#record-item-and-asset-provenance"
+        },
+        {
+          "id": "signed-urls-and-requester-pays-storage",
+          "title": "Signed URLs and requester-pays storage",
+          "source": "SKILL.md#signed-urls-and-requester-pays-storage"
+        },
+        {
+          "id": "read-cog-windows-with-http-range-requests",
+          "title": "Read COG windows with HTTP range requests",
+          "source": "SKILL.md#read-cog-windows-with-http-range-requests"
+        },
+        {
+          "id": "know-what-your-loader-decodes",
+          "title": "Know what your loader decodes",
+          "source": "SKILL.md#know-what-your-loader-decodes"
+        },
+        {
+          "id": "load-many-items-as-a-lazy-cube",
+          "title": "Load many items as a lazy cube",
+          "source": "SKILL.md#load-many-items-as-a-lazy-cube"
+        },
+        {
+          "id": "cache-and-pin-for-reproducibility",
+          "title": "Cache and pin for reproducibility",
+          "source": "SKILL.md#cache-and-pin-for-reproducibility"
+        },
+        {
+          "id": "verify-with-terraproof",
+          "title": "Verify with Terraproof",
+          "source": "SKILL.md#verify-with-terraproof"
+        },
+        {
+          "id": "sources",
+          "title": "Sources",
+          "source": "SKILL.md#sources"
+        },
+        {
+          "id": "run-manifest",
+          "title": "Run manifest",
+          "source": "references/run-manifest.md"
+        }
+      ],
+      "checks": [
+        "stac.provenance",
+        "provenance.reproducible",
+        "rs.temporal_scope",
+        "rs.scale_applied_once",
+        "raster.cog_layout",
+        "raster.grid_alignment",
+        "raster.nodata_declared",
+        "crs.defined",
+        "crs.consistent",
+        "rs.reflectance_range"
+      ]
+    },
     "statistical-analysis": {
       "name": "statistical-analysis",
       "path": "skills/statistical-analysis",
@@ -1556,6 +1857,123 @@
         }
       ],
       "checks": []
+    },
+    "time-series-and-change": {
+      "name": "time-series-and-change",
+      "path": "skills/time-series-and-change",
+      "layer": "domain",
+      "domains": [
+        "geospatial"
+      ],
+      "capabilities": [
+        "temporal-compositing",
+        "change-detection",
+        "gap-handling",
+        "breakpoint-detection"
+      ],
+      "triggers": [
+        "time series",
+        "time-series",
+        "median composite",
+        "change detection",
+        "change map",
+        "gap filling",
+        "breakpoint",
+        "landtrendr",
+        "ccdc",
+        "bfast",
+        "median of ndvi",
+        "ndvi of median",
+        "seasonal composite",
+        "post-classification comparison"
+      ],
+      "recommended": [
+        "satellite-preprocessing",
+        "accuracy-assessment"
+      ],
+      "requires": [],
+      "conflicts": [],
+      "explanation": "Builds analysis-ready multi-date optical or SAR series (per-observation decoding, compositing, gap and valid-count handling, temporal alignment) and detects change with differencing, trend/breakpoint methods, and reference-validated estimates.",
+      "sections": [
+        {
+          "id": "define-the-change-question-first",
+          "title": "Define the change question first",
+          "source": "SKILL.md#define-the-change-question-first"
+        },
+        {
+          "id": "build-an-analysis-ready-time-series",
+          "title": "Build an analysis-ready time series",
+          "source": "SKILL.md#build-an-analysis-ready-time-series"
+        },
+        {
+          "id": "handle-gaps-without-inventing-data",
+          "title": "Handle gaps without inventing data",
+          "source": "SKILL.md#handle-gaps-without-inventing-data"
+        },
+        {
+          "id": "align-observations-in-time",
+          "title": "Align observations in time",
+          "source": "SKILL.md#align-observations-in-time"
+        },
+        {
+          "id": "composite-of-indices-is-not-index-of-composite",
+          "title": "Composite of indices is not index of composite",
+          "source": "SKILL.md#composite-of-indices-is-not-index-of-composite"
+        },
+        {
+          "id": "separate-seasonality-and-phenology-from-change",
+          "title": "Separate seasonality and phenology from change",
+          "source": "SKILL.md#separate-seasonality-and-phenology-from-change"
+        },
+        {
+          "id": "thresholded-differences",
+          "title": "Thresholded differences",
+          "source": "SKILL.md#thresholded-differences"
+        },
+        {
+          "id": "trend-and-breakpoint-methods",
+          "title": "Trend and breakpoint methods",
+          "source": "SKILL.md#trend-and-breakpoint-methods"
+        },
+        {
+          "id": "post-classification-comparison",
+          "title": "Post-classification comparison",
+          "source": "SKILL.md#post-classification-comparison"
+        },
+        {
+          "id": "validate-change-with-reference-data",
+          "title": "Validate change with reference data",
+          "source": "SKILL.md#validate-change-with-reference-data"
+        },
+        {
+          "id": "verify-with-terraproof",
+          "title": "Verify with Terraproof",
+          "source": "SKILL.md#verify-with-terraproof"
+        },
+        {
+          "id": "sources",
+          "title": "Sources",
+          "source": "SKILL.md#sources"
+        },
+        {
+          "id": "change-methods",
+          "title": "Change methods",
+          "source": "references/change-methods.md"
+        }
+      ],
+      "checks": [
+        "rs.temporal_scope",
+        "rs.cloud_mask_applied",
+        "rs.scale_applied_once",
+        "raster.grid_alignment",
+        "raster.nodata_declared",
+        "rs.index_range",
+        "rs.reflectance_range",
+        "stac.provenance",
+        "accuracy.sample_design",
+        "accuracy.estimates",
+        "provenance.reproducible"
+      ]
     },
     "vector-quality": {
       "name": "vector-quality",

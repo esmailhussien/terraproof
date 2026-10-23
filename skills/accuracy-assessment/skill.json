@@ -1,0 +1,103 @@
+{
+  "name": "accuracy-assessment",
+  "layer": "domain",
+  "domains": [
+    "geospatial"
+  ],
+  "capabilities": [
+    "map-accuracy-assessment",
+    "stratified-area-estimation",
+    "reference-sample-design"
+  ],
+  "triggers": [
+    "accuracy assessment",
+    "confusion matrix",
+    "user's accuracy",
+    "producer's accuracy",
+    "overall accuracy",
+    "area-adjusted",
+    "stratified sampling",
+    "stratified random sampling",
+    "probability sample",
+    "error matrix",
+    "map accuracy",
+    "map class area",
+    "reference sample"
+  ],
+  "recommended": [
+    "statistical-analysis",
+    "crs-and-units"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Designs and analyzes a defensible accuracy assessment for a classified or change map: probability sampling stratified by map class, response design, area-proportion confusion matrices, overall/user's/producer's accuracy with confidence intervals, and stratified area-adjusted class areas.",
+  "sections": [
+    {
+      "id": "report-estimates-not-pixel-counts",
+      "title": "Report estimates, not pixel counts",
+      "source": "SKILL.md#report-estimates-not-pixel-counts"
+    },
+    {
+      "id": "sampling-design-stratified-random-by-map-class",
+      "title": "Sampling design: stratified random by map class",
+      "source": "SKILL.md#sampling-design-stratified-random-by-map-class"
+    },
+    {
+      "id": "response-design-how-reference-labels-are-decided",
+      "title": "Response design: how reference labels are decided",
+      "source": "SKILL.md#response-design-how-reference-labels-are-decided"
+    },
+    {
+      "id": "confusion-matrix-in-proportion-of-area",
+      "title": "Confusion matrix in proportion of area",
+      "source": "SKILL.md#confusion-matrix-in-proportion-of-area"
+    },
+    {
+      "id": "overall-users-and-producers-accuracy",
+      "title": "Overall, user's and producer's accuracy",
+      "source": "SKILL.md#overall-users-and-producers-accuracy"
+    },
+    {
+      "id": "area-adjusted-estimates-with-confidence-intervals",
+      "title": "Area-adjusted estimates with confidence intervals",
+      "source": "SKILL.md#area-adjusted-estimates-with-confidence-intervals"
+    },
+    {
+      "id": "compute-the-estimates",
+      "title": "Compute the estimates",
+      "source": "SKILL.md#compute-the-estimates"
+    },
+    {
+      "id": "report-checklist",
+      "title": "Report checklist",
+      "source": "SKILL.md#report-checklist"
+    },
+    {
+      "id": "verify-with-terraproof",
+      "title": "Verify with Terraproof",
+      "source": "SKILL.md#verify-with-terraproof"
+    },
+    {
+      "id": "sources",
+      "title": "Sources",
+      "source": "SKILL.md#sources"
+    },
+    {
+      "id": "stratified-estimator",
+      "title": "Stratified estimator",
+      "source": "references/stratified-estimator.md"
+    }
+  ],
+  "checks": [
+    "accuracy.sample_design",
+    "accuracy.estimates",
+    "crs.metric_operation",
+    "crs.defined",
+    "crs.consistent",
+    "raster.nodata_declared",
+    "geometry.valid",
+    "geometry.non_empty",
+    "geometry.type_consistent",
+    "scope.record_count"
+  ]
+}

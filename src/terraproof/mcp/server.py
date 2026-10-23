@@ -12,6 +12,7 @@ revisions; `FastMCP` was renamed to `MCPServer` in that release
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 from mcp.server import MCPServer
@@ -19,10 +20,13 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 from terraproof import __version__
 from terraproof._common import InputError, jsonable
+from terraproof._run_helpers import load_accuracy_samples, load_class_areas, verify_manifest_coverage
 from terraproof.checks import run_checks as _run_checks
+from terraproof.checks.base import FAIL, result
 from terraproof.evidence import EXIT_CODES, build_report, input_record, render_markdown, to_json
 from terraproof.inspect import inspect_dataset as _inspect_dataset
 from terraproof.mcp.skills import SectionError, list_skills as _list_skills, load_section as _load_section
+from terraproof.preflight import run_preflight as _run_preflight
 
 LANGUAGES = ("en", "ar")
 
@@ -31,7 +35,8 @@ INSTRUCTIONS = (
     "remote-sensing result is correct, call `run_checks` on the outputs and report the grade. "
     "Call `inspect_dataset` on unfamiliar inputs, `find_guidance` at the start of a task to "
     "retrieve the relevant skill sections, and `load_section` to read one of those sections in "
-    "full. All tools are read-only: they never modify your data."
+    "full. Use `preflight` to validate a declared plan against the real inputs before spending "
+    "compute. All tools are read-only: they never modify your data."
 )
 
 mcp = MCPServer(name="terraproof", version=__version__, instructions=INSTRUCTIONS)
@@ -72,6 +77,18 @@ def run_checks(
     resampling: str | None = None,
     categorical: bool = False,
     expect: str | None = None,
+    reference_input: str | None = None,
+    encoding: str | None = None,
+    qa_path: str | None = None,
+    qa_kind: str | None = None,
+    time_range: list[str] | None = None,
+    sar_expect: str | None = None,
+    accuracy_samples: dict | list | str | None = None,
+    class_areas: dict | str | None = None,
+    min_per_class: int | None = None,
+    estimates_requested: bool = False,
+    manifest: str | None = None,
+    require_provenance: bool = False,
     lang: str = "en",
 ) -> dict[str, Any]:
     """Run Terraproof's deterministic evidence checks and return the grade and report.
@@ -83,8 +100,12 @@ def run_checks(
     used for (buffer, distance, area, length); `compare_to` is an input to compare record
     counts with; `resampling` is the method declared for the rasters and `categorical` says
     they hold class codes; `expect` is the value range the bands should hold (reflectance or
-    index). `lang` selects the Markdown language (en or ar). Results match
-    `python -m terraproof check`.
+    index). Phase 4 options include `reference_input`/`encoding` for scale/offset checks,
+    `qa_path`/`qa_kind` for cloud-mask checks, `time_range` for temporal coverage,
+    `sar_expect` for SAR domain checks, and `accuracy_samples`/`class_areas` for accuracy
+    assessment. `manifest` verifies a run manifest and appends `provenance.reproducible`;
+    `require_provenance` prevents Decision-grade when no manifest is supplied. `lang`
+    selects the Markdown language (en or ar). Results match `python -m terraproof check`.
     """
     if not isinstance(paths, list) or not paths or not all(isinstance(path, str) for path in paths):
         raise ToolError("paths must be a non-empty list of file paths")
@@ -93,9 +114,26 @@ def run_checks(
     try:
         inspections = [_inspect_dataset(path) for path in paths]
         compare = _inspect_dataset(compare_to) if compare_to else None
+        reference = _inspect_dataset(reference_input) if reference_input else None
+
         inputs = [input_record(path, "input", dataset["kind"]) for path, dataset in zip(paths, inspections)]
         if compare is not None:
             inputs.append(input_record(compare_to, "compare-to", compare["kind"]))
+        if reference is not None:
+            inputs.append(input_record(reference_input, "reference-input", reference["kind"]))
+        if qa_path and Path(qa_path).is_file():
+            inputs.append(input_record(qa_path, "qa", "raster"))
+        if isinstance(accuracy_samples, str) and Path(accuracy_samples).is_file():
+            inputs.append(input_record(accuracy_samples, "accuracy-samples", "accuracy-samples"))
+        if isinstance(class_areas, str) and Path(class_areas).is_file():
+            inputs.append(input_record(class_areas, "class-areas", "class-areas"))
+        if manifest and Path(manifest).is_file():
+            inputs.append(input_record(manifest, "manifest", "manifest"))
+
+        samples = load_accuracy_samples(accuracy_samples) if accuracy_samples is not None else None
+        areas = load_class_areas(class_areas) if class_areas is not None else None
+        time_tuple = tuple(time_range) if time_range else None
+
         results = _run_checks(
             inspections,
             compare_to=compare,
@@ -103,7 +141,35 @@ def run_checks(
             resampling=resampling,
             categorical=categorical,
             expect=expect,
+            reference_input=reference,
+            encoding=encoding,
+            qa_path=qa_path,
+            qa_kind=qa_kind,
+            time_range=time_tuple,
+            sar_expect=sar_expect,
+            accuracy_samples=samples,
+            class_areas=areas,
+            min_per_class=min_per_class,
+            estimates_requested=estimates_requested,
         )
+
+        checked_paths = list(paths)
+        for path in (compare_to, reference_input, qa_path, accuracy_samples, class_areas):
+            if isinstance(path, str):
+                checked_paths.append(path)
+
+        if manifest:
+            manifest_check = verify_manifest_coverage(manifest, checked_paths)
+            results.append(manifest_check)
+        elif require_provenance:
+            results.append(
+                result(
+                    "provenance.reproducible",
+                    "fail",
+                    "Decision-grade requires a verified manifest, but none was supplied.",
+                    manifest=None,
+                )
+            )
     except Exception as exc:  # tool boundary: unreadable inputs are a message for the agent
         raise ToolError(f"cannot check {paths!r}: {exc}") from exc
 
@@ -113,8 +179,69 @@ def run_checks(
         "resampling": resampling,
         "categorical": categorical,
         "expect": expect,
+        "reference_input": reference_input,
+        "encoding": encoding,
+        "qa_path": qa_path,
+        "qa_kind": qa_kind,
+        "time_range": time_tuple,
+        "sar_expect": sar_expect,
+        "accuracy_samples": accuracy_samples,
+        "class_areas": class_areas,
+        "min_per_class": min_per_class,
+        "estimates_requested": estimates_requested,
+        "manifest": manifest,
+        "require_provenance": require_provenance,
     }
     report = build_report(inputs=inputs, results=results, parameters=parameters)
+    return {
+        "grade": report["grade"],
+        "exit_code": EXIT_CODES[report["grade"]],
+        "report": json.loads(to_json(report)),
+        "markdown": render_markdown(report, lang=lang),
+    }
+
+
+@mcp.tool()
+def preflight(
+    paths: list[str],
+    plan: dict | str,
+    lang: str = "en",
+) -> dict[str, Any]:
+    """Check a declared processing plan against real inputs before running it.
+
+    Pass the datasets the plan will use and either a plan dict or the path to a JSON plan
+    file. Returns the same evidence-graded report format as `run_checks`, with check ids
+    prefixed `preflight.*`. This is the MCP equivalent of
+    `python -m terraproof preflight PATH... --plan FILE`.
+    """
+    if not isinstance(paths, list) or not paths or not all(isinstance(path, str) for path in paths):
+        raise ToolError("paths must be a non-empty list of file paths")
+    if lang not in LANGUAGES:
+        raise ToolError(f"unsupported language: {lang!r}; use one of {', '.join(LANGUAGES)}")
+    try:
+        inspections = [_inspect_dataset(path) for path in paths]
+        if isinstance(plan, str):
+            plan_path = plan
+            with open(plan_path, encoding="utf-8") as handle:
+                plan_data = json.load(handle)
+            if not isinstance(plan_data, dict):
+                raise InputError(f"plan file must contain a JSON object: {plan_path}")
+        elif isinstance(plan, dict):
+            plan_path = "(supplied dict)"
+            plan_data = plan
+        else:
+            raise InputError("plan must be a dict or a file path")
+
+        inputs = [input_record(path, "input", dataset["kind"]) for path, dataset in zip(paths, inspections)]
+        if Path(plan_path).is_file():
+            inputs.append(input_record(plan_path, "plan", "plan"))
+
+        results = _run_preflight(inspections, plan_data)
+        parameters = {"plan": plan_path, "plan_content": plan_data}
+        report = build_report(inputs=inputs, results=results, parameters=parameters)
+    except Exception as exc:
+        raise ToolError(f"cannot run preflight: {exc}") from exc
+
     return {
         "grade": report["grade"],
         "exit_code": EXIT_CODES[report["grade"]],
@@ -155,17 +282,24 @@ def load_section(skill: str, section_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
-def find_guidance(task: str, data_paths: list[str] | None = None, top_k: int = 5) -> dict[str, Any]:
+def find_guidance(
+    task: str,
+    data_paths: list[str] | None = None,
+    top_k: int = 5,
+    mode: str = "ranked",
+    semantic: bool = False,
+) -> dict[str, Any]:
     """Rank the skill sections that fit a mapping or remote-sensing task.
 
     Call this at the start of a task, with the datasets you will work on, to get the few
     sections worth reading instead of the whole catalogue. `data_paths` are local datasets
-    that are inspected to steer retrieval; `top_k` caps the number of ranked skills. The
-    result also names the process skills (planning, verification) that apply. This is the
-    same retrieval `python -m terraproof route` performs.
+    that are inspected to steer retrieval; `top_k` caps the number of ranked skills. Use
+    `mode=candidates` for a recall-oriented list the host model can re-rank, and
+    `semantic=true` to enable the optional local semantic retrieval pass. This is the same
+    retrieval `python -m terraproof route` performs.
     """
     find_guidance_fn = _router()
     try:
-        return jsonable(find_guidance_fn(task, data_paths=list(data_paths or []), top_k=top_k))
+        return jsonable(find_guidance_fn(task, data_paths=list(data_paths or []), top_k=top_k, mode=mode, semantic=semantic))
     except Exception as exc:  # tool boundary: an empty task or unreadable dataset
         raise ToolError(f"cannot route {task!r}: {exc}") from exc

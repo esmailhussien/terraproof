@@ -246,6 +246,197 @@
       "prompt": "Compute EVI and SAVI time series from Sentinel-2 for the orchard parcels.",
       "mustInclude": ["spectral-indices", "verification"],
       "mustExclude": ["gdal", "geospatial-frontend"]
+    },
+    {
+      "id": "f2-timeseries-composite-valid-count",
+      "prompt": "Build a monthly median composite from Sentinel-2 scenes and store a valid-observation count per pixel.",
+      "mustInclude": ["time-series-and-change"],
+      "mustExclude": ["sar-basics", "accuracy-assessment", "stac-and-cloud-access"]
+    },
+    {
+      "id": "f2-timeseries-change-map",
+      "prompt": "Threshold the dNBR difference into a binary change map and report the changed area with its confidence interval.",
+      "mustInclude": ["time-series-and-change"],
+      "mustExclude": ["sar-basics", "stac-and-cloud-access"]
+    },
+    {
+      "id": "f2-timeseries-change-landtrendr",
+      "prompt": "Detect forest loss change detection between 2020 and 2024 with LandTrendr on a Landsat time series.",
+      "mustInclude": ["time-series-and-change"],
+      "mustExclude": ["sar-basics", "stac-and-cloud-access"]
+    },
+    {
+      "id": "f2-timeseries-breakpoint-ccdc",
+      "prompt": "Which change detection threshold should I use for the breakpoint year in the CCDC seasonal fit?",
+      "mustInclude": ["time-series-and-change"],
+      "mustExclude": ["sar-basics", "accuracy-assessment"]
+    },
+    {
+      "id": "f2-timeseries-gap-filling",
+      "prompt": "We have a time-series of NDVI rasters; gap filling is needed where clouds removed every scene.",
+      "mustInclude": ["time-series-and-change"],
+      "mustExclude": ["sar-basics", "stac-and-cloud-access"]
+    },
+    {
+      "id": "f2-timeseries-composite-of-indices",
+      "prompt": "Should I take the median of NDVI per date or the NDVI of median reflectance bands, and which one goes in the metadata?",
+      "mustInclude": ["time-series-and-change"],
+      "mustExclude": ["sar-basics"]
+    },
+    {
+      "id": "f2-timeseries-post-classification",
+      "prompt": "Do a post-classification comparison of the 2015 and 2020 land-cover maps.",
+      "mustInclude": ["time-series-and-change"],
+      "mustExclude": ["sar-basics", "stac-and-cloud-access"]
+    },
+    {
+      "id": "f2-timeseries-seasonal-composite",
+      "prompt": "Create a Landsat seasonal composite for each phenological window and compare the same season across years.",
+      "mustInclude": ["time-series-and-change"],
+      "mustExclude": ["sar-basics"]
+    },
+    {
+      "id": "f2-timeseries-bfast",
+      "prompt": "Stack the BFAST decomposition of the Landsat trajectory to find abrupt change.",
+      "mustInclude": ["time-series-and-change"],
+      "mustExclude": ["sar-basics", "stac-and-cloud-access"]
+    },
+    {
+      "id": "f2-sar-calibration-lut",
+      "prompt": "Calibrate Sentinel-1 GRD sigma0 backscatter from the calibration LUT and convert to dB.",
+      "mustInclude": ["sar-basics"],
+      "mustExclude": ["time-series-and-change", "accuracy-assessment", "stac-and-cloud-access"]
+    },
+    {
+      "id": "f2-sar-speckle-vv",
+      "prompt": "Apply a Lee speckle filter to the VV polarization Sentinel-1 scene before flood mapping.",
+      "mustInclude": ["sar-basics"],
+      "mustExclude": ["time-series-and-change", "stac-and-cloud-access"]
+    },
+    {
+      "id": "f2-sar-terrain-correction",
+      "prompt": "Do the terrain correction of the GRD with a DEM and geocode it to a projected CRS.",
+      "mustInclude": ["sar-basics"],
+      "mustExclude": ["time-series-and-change", "accuracy-assessment"]
+    },
+    {
+      "id": "f2-sar-polarisation-water",
+      "prompt": "Map open water from Sentinel-1 backscatter and compare the VV and VH polarization channels.",
+      "mustInclude": ["sar-basics"],
+      "mustExclude": ["time-series-and-change", "accuracy-assessment"]
+    },
+    {
+      "id": "f2-sar-incidence-angle",
+      "prompt": "This Sentinel-1 sigma0 scene spans incidence angles of 29 to 46 degrees; how should the incidence angle affect the gamma0 backscatter I derive?",
+      "mustInclude": ["sar-basics"],
+      "mustExclude": ["time-series-and-change", "stac-and-cloud-access"]
+    },
+    {
+      "id": "f2-sar-slc-vs-grd",
+      "prompt": "Our Sentinel 1 single look complex product keeps phase; decide SLC or GRD first.",
+      "mustInclude": ["sar-basics"],
+      "mustExclude": ["time-series-and-change"]
+    },
+    {
+      "id": "f2-sar-decibel-beta0",
+      "prompt": "The decibel versus linear power confusion is suspected in these beta0 values.",
+      "mustInclude": ["sar-basics"],
+      "mustExclude": ["time-series-and-change", "accuracy-assessment", "stac-and-cloud-access"]
+    },
+    {
+      "id": "f2-accuracy-confusion-matrix",
+      "prompt": "Report the overall accuracy and producer's accuracy for my land-cover map from a confusion matrix built on a probability sample.",
+      "mustInclude": ["accuracy-assessment"],
+      "mustExclude": ["sar-basics", "time-series-and-change", "stac-and-cloud-access"]
+    },
+    {
+      "id": "f2-accuracy-area-adjusted",
+      "prompt": "Report the area-adjusted forest area with 95% confidence intervals using stratified random sampling by map class.",
+      "mustInclude": ["accuracy-assessment"],
+      "mustExclude": ["sar-basics", "time-series-and-change"]
+    },
+    {
+      "id": "f2-accuracy-stratified-sampling",
+      "prompt": "How many samples per class does a stratified sampling design need before I can report map accuracy?",
+      "mustInclude": ["accuracy-assessment"],
+      "mustExclude": ["sar-basics", "stac-and-cloud-access"]
+    },
+    {
+      "id": "f2-accuracy-error-matrix-user",
+      "prompt": "Compute the user's accuracy and the error matrix for each map class from the reference sample.",
+      "mustInclude": ["accuracy-assessment"],
+      "mustExclude": ["sar-basics", "time-series-and-change"]
+    },
+    {
+      "id": "f2-accuracy-map-class-area",
+      "prompt": "We report the map class area as a pixel count; is that a valid accuracy assessment?",
+      "mustInclude": ["accuracy-assessment"],
+      "mustExclude": ["sar-basics", "stac-and-cloud-access"]
+    },
+    {
+      "id": "f2-stac-vsicurl-window",
+      "prompt": "Read only a window of a remote COG through /vsicurl/ range requests instead of downloading the whole file.",
+      "mustInclude": ["stac-and-cloud-access"],
+      "mustExclude": ["sar-basics", "time-series-and-change", "accuracy-assessment"]
+    },
+    {
+      "id": "f2-stac-signed-url",
+      "prompt": "Get a signed asset url from the Planetary Computer before reading the href, since the bucket needs a SAS token.",
+      "mustInclude": ["stac-and-cloud-access"],
+      "mustExclude": ["sar-basics", "time-series-and-change"]
+    },
+    {
+      "id": "f2-stac-pystac-search",
+      "prompt": "Use pystac-client to search the STAC API with bbox and datetime and pin the returned item ids.",
+      "mustInclude": ["stac-and-cloud-access"],
+      "mustExclude": ["sar-basics", "accuracy-assessment", "time-series-and-change"]
+    },
+    {
+      "id": "f2-stac-requester-pays",
+      "prompt": "Set the requester-pays flag for the Landsat bucket and open the asset with GDAL.",
+      "mustInclude": ["stac-and-cloud-access"],
+      "mustExclude": ["sar-basics", "accuracy-assessment"]
+    },
+    {
+      "id": "f2-stac-processing-version",
+      "prompt": "For each STAC item, record the processing:version and the raster asset scale/offset metadata in the run manifest.",
+      "mustInclude": ["stac-and-cloud-access"],
+      "mustExclude": ["sar-basics", "time-series-and-change"]
+    },
+    {
+      "id": "f2-stac-odc-lazy-cube",
+      "prompt": "Load the items with odc.stac as a lazy cube grouped by solar_day with chunks.",
+      "mustInclude": ["stac-and-cloud-access"],
+      "mustExclude": ["sar-basics", "accuracy-assessment", "time-series-and-change"]
+    },
+    {
+      "id": "f2-stac-stackstac-decode",
+      "prompt": "stackstac loads the satellite COG with rescale on; confirm the loader does not decode the DN twice.",
+      "mustInclude": ["stac-and-cloud-access"],
+      "mustExclude": ["sar-basics", "accuracy-assessment"]
+    },
+    {
+      "id": "f2-stac-windowed-read",
+      "prompt": "Do a windowed read of the COG over HTTP range requests with a bounding box window.",
+      "mustInclude": ["stac-and-cloud-access"],
+      "mustExclude": ["sar-basics", "time-series-and-change"]
+    },
+    {
+      "id": "f2-negative-index-without-time-series",
+      "prompt": "Fill cloud gaps in the NDVI stack with a minimum valid count of 3 per month.",
+      "mustExclude": ["sar-basics", "accuracy-assessment", "stac-and-cloud-access"]
+    },
+    {
+      "id": "f2-negative-optical-not-sar",
+      "prompt": "Decode the Sentinel-2 L2A surface reflectance scale and offset exactly once and apply the SCL cloud mask.",
+      "mustInclude": ["satellite-preprocessing"],
+      "mustExclude": ["sar-basics", "time-series-and-change", "accuracy-assessment", "stac-and-cloud-access"]
+    },
+    {
+      "id": "f2-negative-vector-stays-vector",
+      "prompt": "Run a 1 km buffer and spatial join between schools and highways in GeoPandas.",
+      "mustInclude": ["geopandas"],
+      "mustExclude": ["sar-basics", "time-series-and-change", "accuracy-assessment", "stac-and-cloud-access"]
     }
   ],
   "pythonScenarios": [
@@ -380,6 +571,88 @@
       "prompt": "Decode the scale and offset in my local imagery; do not search a catalog.",
       "mustInclude": ["satellite-preprocessing"],
       "mustExclude": ["geospatial-data-discovery", "spectral-indices"]
+    },
+    {
+      "id": "f1-sar-positive",
+      "prompt": "Calibrate Sentinel-1 GRD backscatter to sigma0.",
+      "mustInclude": ["sar-basics"],
+      "mustExclude": ["spectral-indices"]
+    },
+    {
+      "id": "f1-sar-arabic",
+      "prompt": "طبّق تصحيح هندسي وفلتر للضجيج على صور رادار",
+      "mustInclude": ["sar-basics"],
+      "mustExclude": ["time-series-and-change", "accuracy-assessment"]
+    },
+    {
+      "id": "f1-sar-stac-collection",
+      "prompt": "Prepare this input",
+      "datasets": [{"kind": "stac", "collection": "sentinel-1-grd"}],
+      "mustInclude": ["sar-basics"],
+      "mustExclude": ["spectral-indices", "time-series-and-change"]
+    },
+    {
+      "id": "f1-accuracy-positive",
+      "prompt": "Compute the confusion matrix and overall accuracy of the land cover map.",
+      "mustInclude": ["accuracy-assessment"],
+      "mustExclude": ["satellite-preprocessing"]
+    },
+    {
+      "id": "f1-accuracy-arabic",
+      "prompt": "احسب مصفوفة الالتباس ودقه الخريطه من العينات المرجعيه",
+      "mustInclude": ["accuracy-assessment"],
+      "mustExclude": ["geospatial-frontend"]
+    },
+    {
+      "id": "f1-accuracy-near-neighbour",
+      "prompt": "Use a random forest classifier for the Landsat land cover map.",
+      "mustInclude": ["geomaster"],
+      "mustExclude": ["accuracy-assessment", "time-series-and-change", "sar-basics"],
+      "maxSkills": 2
+    },
+    {
+      "id": "f1-timeseries-positive",
+      "prompt": "Change detection between two dates using a median composite.",
+      "mustInclude": ["time-series-and-change"],
+      "mustExclude": ["accuracy-assessment", "sar-basics"]
+    },
+    {
+      "id": "f1-timeseries-arabic",
+      "prompt": "حلل السلاسل الزمنية ورصد تغير الغطاء الأرضي",
+      "mustInclude": ["time-series-and-change"],
+      "mustExclude": ["sar-basics", "accuracy-assessment"]
+    },
+    {
+      "id": "f1-timeseries-near-neighbour",
+      "prompt": "Classify the Sentinel-2 imagery into land cover classes.",
+      "mustInclude": ["geomaster"],
+      "mustExclude": ["time-series-and-change", "accuracy-assessment", "sar-basics"]
+    },
+    {
+      "id": "f1-stac-cloud-positive",
+      "prompt": "Windowed reads over HTTP range requests with a signed asset url.",
+      "mustInclude": ["stac-and-cloud-access"],
+      "mustExclude": ["satellite-preprocessing"]
+    },
+    {
+      "id": "f1-stac-cloud-arabic",
+      "prompt": "قراءه نافذيه عبر رابط موقع",
+      "mustInclude": ["stac-and-cloud-access"],
+      "mustExclude": ["scientific-visualization"]
+    },
+    {
+      "id": "f1-stac-cloud-negative",
+      "prompt": "Download OpenStreetMap road network data for the city.",
+      "mustInclude": ["geospatial-data-discovery"],
+      "mustExclude": ["stac-and-cloud-access"]
+    },
+    {
+      "id": "f1-vector-quality-sum-aggregate",
+      "prompt": "Sum the parcel areas in hectares.",
+      "datasets": [{"kind": "vector", "crs": {"epsg": 4326, "is_geographic": true, "is_projected": false, "horizontal_kind": "geographic"}, "geometry_types": ["Polygon"], "feature_count": 20}],
+      "mustInclude": ["crs-and-units", "geopandas"],
+      "mustExclude": ["accuracy-assessment", "time-series-and-change"],
+      "maxSkills": 3
     }
   ]
 }

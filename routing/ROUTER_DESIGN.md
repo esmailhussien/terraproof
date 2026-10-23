@@ -54,7 +54,7 @@ Every production skill has exactly one primary layer:
 | Layer | Purpose | Core Skills |
 |---|---|---|
 | **1. Process** | Engineering discipline, exploration, and structured breakdown | `brainstorming`, `writing-plans`, `systematic-debugging` |
-| **2. Domain** | Geospatial, remote-sensing, and data domain knowledge | `gdal`, `geopandas`, `geomaster`, `geozarr`, `geoparquet-validation`, `geospatial-data-discovery`, `statistical-analysis`, `scientific-visualization`, `networkx`, `crs-and-units`, `vector-quality`, `raster-processing`, `satellite-preprocessing`, `spectral-indices` |
+| **2. Domain** | Geospatial, remote-sensing, and data domain knowledge | `gdal`, `geopandas`, `geomaster`, `geozarr`, `geoparquet-validation`, `geospatial-data-discovery`, `statistical-analysis`, `scientific-visualization`, `networkx`, `crs-and-units`, `vector-quality`, `raster-processing`, `satellite-preprocessing`, `spectral-indices`, `time-series-and-change`, `sar-basics`, `accuracy-assessment`, `stac-and-cloud-access` |
 | **3. Implementation** | Mapping frameworks and spatial database design | `geospatial-frontend`, `design-postgis-tables` |
 | **4. Risk** | Security, vulnerability detection, and authorization audits | *(no skills in v0.2.0)* |
 | **5. Verification** | Truthfulness and completion validation | `verification` |
@@ -122,15 +122,21 @@ npx terraproof route "Design PostGIS schema" --format json
 
 - **`routing/DOMAIN_ROUTING.md`**: Human-readable composition guidance and canonical architectural patterns.
 - **`skills/<name>/skill.json`**: Routing metadata for each skill, the source of truth. To add or change a skill, add or edit its manifest, run `npm run registry:build`, and add scenarios to `tests/router/scenarios.json`. Field reference: [`routing/SKILL_MANIFEST.md`](SKILL_MANIFEST.md).
-- **`routing/registry.json`**: Generated from the manifests by `npm run registry:build`. Do not edit it by hand; `npm run registry:check` verifies that it matches.
-- **`routing/checks.json`**: Check catalog listing the check ids that manifests may reference.
+- **`routing/registry.json`**: Generated from the manifests by `npm run registry:build`. Do not edit it by hand; `npm run registry:check` verifies that it matches. The generated registry currently holds 24 skills: the 20 pre-Phase-4 skills plus the Phase 4 additions `time-series-and-change`, `sar-basics`, `accuracy-assessment` and `stac-and-cloud-access`.
+- **`routing/checks.json`**: Check catalog listing the check ids that manifests may reference. It also carries the Phase 4 `provenance.reproducible` id and the `preflight.*` family; `tests/python/test_check_catalog.py` fails if the catalog and the emitting source disagree.
 - **`routing/collections.json`**: Preset skill bundles (`gis`, `data-analysis`, `production`, `remote-sensing`).
 - **`routing/rules.json`**: Scoring weights, intent heuristics, risk boundaries, and layer prioritization.
 - **`router/`**: High-performance, deterministic TypeScript resolution engine and CLI runner.
 
 ---
 
-## 8. Future Optional LLM Fallback (Design Only)
+## 8. Python candidate and optional semantic retrieval
+
+The Python router keeps ranked mode's existing default cap of five and thresholds. `mode="candidates"` uses a deterministic default cap of eight, preserves the ranked choices, and fills remaining slots by relevance for optional host-side selection. Candidate output includes one-line skill explanations; it does not call a host model itself.
+
+Semantic retrieval is optional and offline-only (`pip install -e ".[semantic]"`). It uses the pinned local dependency/model when available, and missing dependencies, models, or inference errors fall back to lexical retrieval with a warning. No model download occurs during ordinary routing or tests.
+
+## 9. Future Optional LLM Fallback (Design Only)
 
 In future iterations, if a task prompt has very low classification confidence (< 50%) or ambiguous natural language:
 

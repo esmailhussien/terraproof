@@ -1,4 +1,4 @@
-"""Command-line interface for dataset inspection, evidence checks, and skill routing."""
+"""Command-line interface for dataset inspection, evidence checks, preflight, manifests, and skill routing."""
 
 from __future__ import annotations
 
@@ -7,10 +7,13 @@ import json
 import sys
 from pathlib import Path
 
-from terraproof._common import jsonable
+from terraproof._common import InputError, jsonable
+from terraproof._run_helpers import load_accuracy_samples, load_class_areas, verify_manifest_coverage
 from terraproof.checks import run_checks
+from terraproof.checks.base import FAIL, result
 from terraproof.evidence import EXIT_CODES, build_report, input_record, render_markdown, to_json
 from terraproof.inspect import inspect_dataset
+from terraproof.preflight import run_preflight
 
 EXIT_USAGE = 1
 
@@ -45,16 +48,81 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument(
         "--expect", choices=["reflectance", "index"], help="expected value range of the raster bands"
     )
+    # Phase 4 processing-level check wiring.
+    check_parser.add_argument("--reference-input", metavar="PATH", help="raw DN raster to compare against an output")
+    check_parser.add_argument(
+        "--encoding", choices=["s2-l2a", "landsat-c2-l2"], help="known product encoding for scale/offset checks"
+    )
+    check_parser.add_argument("--qa", metavar="PATH", dest="qa_path", help="QA raster (SCL or Landsat QA_PIXEL)")
+    check_parser.add_argument(
+        "--qa-kind", choices=["s2-scl", "landsat-qa-pixel"], help="kind of QA raster supplied with --qa"
+    )
+    check_parser.add_argument("--time-range", nargs=2, metavar=("START", "END"), help="ISO 8601 bounds for STAC items")
+    check_parser.add_argument(
+        "--sar-expect", choices=["sigma0-db", "sigma0-linear"], help="declared SAR backscatter scale"
+    )
+    check_parser.add_argument(
+        "--accuracy-samples", metavar="JSON", help="JSON file of reference samples (map_class, ref_class, optional stratum_weight)"
+    )
+    check_parser.add_argument(
+        "--class-areas", metavar="JSON", help="JSON object mapping map class to area for area-adjusted estimates"
+    )
+    check_parser.add_argument("--min-per-class", type=int, metavar="N", help="minimum reference samples per map class")
+    check_parser.add_argument(
+        "--estimates-requested", action="store_true", help="request area-adjusted class-area estimates"
+    )
+    # Phase 4 provenance wiring.
+    check_parser.add_argument("--manifest", metavar="PATH", help="verify a run manifest and append provenance.reproducible")
+    check_parser.add_argument(
+        "--require-provenance", action="store_true", help="Decision-grade requires a verified manifest"
+    )
     check_parser.add_argument("--format", choices=["json", "md"], default="json", help="report format")
     check_parser.add_argument("--lang", choices=["en", "ar"], default="en", help="language of the Markdown report")
     check_parser.add_argument("--out", metavar="FILE", help="write the report to FILE instead of stdout")
+
+    preflight_parser = subparsers.add_parser(
+        "preflight",
+        help="check a declared plan against real inputs before running it",
+    )
+    preflight_parser.add_argument("paths", nargs="+", metavar="PATH", help="input datasets the plan will use")
+    preflight_parser.add_argument("--plan", required=True, metavar="FILE", help="JSON plan file")
+    preflight_parser.add_argument("--format", choices=["json", "md"], default="json", help="report format")
+    preflight_parser.add_argument("--lang", choices=["en", "ar"], default="en", help="language of the Markdown report")
+    preflight_parser.add_argument("--out", metavar="FILE", help="write the report to FILE instead of stdout")
 
     route_parser = subparsers.add_parser("route", help="retrieve skill sections using task and dataset metadata")
     route_parser.add_argument("task", metavar="TASK", help="English or Arabic task description")
     route_parser.add_argument("--data", nargs="+", action="extend", default=[], metavar="PATH", help="local datasets to inspect")
     route_parser.add_argument("--top-k", type=int, default=5, metavar="N", help="maximum ranked skills")
+    route_parser.add_argument("--mode", choices=["ranked", "candidates"], default="ranked", help="retrieval mode")
+    route_parser.add_argument("--semantic", action="store_true", help="enable the optional local semantic retrieval pass")
     route_parser.add_argument("--format", choices=["json", "md"], default="json", help="guidance format")
+
+    manifest_parser = subparsers.add_parser(
+        "manifest", help="write or verify deterministic run manifests"
+    )
+    manifest_parser.add_argument(
+        "args", nargs=argparse.REMAINDER, help="manifest subcommand and options (write or verify)"
+    )
+
     return parser
+
+
+def _load_json_plan(path: str) -> dict:
+    with open(path, encoding="utf-8") as handle:
+        plan = json.load(handle)
+    if not isinstance(plan, dict):
+        raise InputError(f"plan file must contain a JSON object: {path}")
+    return plan
+
+
+def _inspect_if_exists(path: str | None) -> dict | None:
+    return inspect_dataset(path) if path else None
+
+
+def _record_input(inputs: list, path: str | None, role: str, kind: str) -> None:
+    if path and Path(path).is_file():
+        inputs.append(input_record(path, role, kind))
 
 
 def _cmd_inspect(args: argparse.Namespace) -> int:
@@ -65,11 +133,20 @@ def _cmd_inspect(args: argparse.Namespace) -> int:
 
 def _cmd_check(args: argparse.Namespace) -> int:
     inspections = [inspect_dataset(path) for path in args.paths]
-    compare = inspect_dataset(args.compare_to) if args.compare_to else None
+    compare = _inspect_if_exists(args.compare_to)
+    reference_input = _inspect_if_exists(args.reference_input)
 
-    inputs = [input_record(path, "input", ds["kind"]) for path, ds in zip(args.paths, inspections)]
-    if compare is not None:
-        inputs.append(input_record(args.compare_to, "compare-to", compare["kind"]))
+    inputs: list[dict] = [input_record(path, "input", ds["kind"]) for path, ds in zip(args.paths, inspections)]
+    _record_input(inputs, args.compare_to, "compare-to", compare["kind"] if compare else "unknown")
+    _record_input(inputs, args.reference_input, "reference-input", reference_input["kind"] if reference_input else "unknown")
+    _record_input(inputs, args.qa_path, "qa", "raster")
+    _record_input(inputs, args.accuracy_samples, "accuracy-samples", "accuracy-samples")
+    _record_input(inputs, args.class_areas, "class-areas", "class-areas")
+    _record_input(inputs, args.manifest, "manifest", "manifest")
+
+    accuracy_samples = load_accuracy_samples(args.accuracy_samples) if args.accuracy_samples else None
+    class_areas = load_class_areas(args.class_areas) if args.class_areas else None
+    time_range = tuple(args.time_range) if args.time_range else None
 
     results = run_checks(
         inspections,
@@ -78,14 +155,74 @@ def _cmd_check(args: argparse.Namespace) -> int:
         resampling=args.resampling,
         categorical=args.categorical,
         expect=args.expect,
+        reference_input=reference_input,
+        encoding=args.encoding,
+        qa_path=args.qa_path,
+        qa_kind=args.qa_kind,
+        time_range=time_range,
+        sar_expect=args.sar_expect,
+        accuracy_samples=accuracy_samples,
+        class_areas=class_areas,
+        min_per_class=args.min_per_class,
+        estimates_requested=args.estimates_requested,
     )
+
+    checked_paths = list(args.paths)
+    for path in (args.compare_to, args.reference_input, args.qa_path, args.accuracy_samples, args.class_areas):
+        if path:
+            checked_paths.append(path)
+
+    if args.manifest:
+        manifest_check = verify_manifest_coverage(args.manifest, checked_paths)
+        results.append(manifest_check)
+    elif args.require_provenance:
+        results.append(
+            result(
+                "provenance.reproducible",
+                FAIL,
+                "Decision-grade requires a verified manifest, but none was supplied.",
+                manifest=None,
+            )
+        )
+
     parameters = {
         "operation": args.operation,
         "compare_to": args.compare_to,
         "resampling": args.resampling,
         "categorical": args.categorical,
         "expect": args.expect,
+        "reference_input": args.reference_input,
+        "encoding": args.encoding,
+        "qa_path": args.qa_path,
+        "qa_kind": args.qa_kind,
+        "time_range": time_range,
+        "sar_expect": args.sar_expect,
+        "accuracy_samples": args.accuracy_samples,
+        "class_areas": args.class_areas,
+        "min_per_class": args.min_per_class,
+        "estimates_requested": args.estimates_requested,
+        "manifest": args.manifest,
+        "require_provenance": args.require_provenance,
     }
+    report = build_report(inputs=inputs, results=results, parameters=parameters)
+    text = to_json(report) if args.format == "json" else render_markdown(report, lang=args.lang)
+
+    if args.out:
+        Path(args.out).write_text(text, encoding="utf-8", newline="\n")
+    else:
+        sys.stdout.write(text)
+    return EXIT_CODES[report["grade"]]
+
+
+def _cmd_preflight(args: argparse.Namespace) -> int:
+    inspections = [inspect_dataset(path) for path in args.paths]
+    plan = _load_json_plan(args.plan)
+
+    inputs = [input_record(path, "input", ds["kind"]) for path, ds in zip(args.paths, inspections)]
+    inputs.append(input_record(args.plan, "plan", "plan"))
+
+    results = run_preflight(inspections, plan)
+    parameters = {"plan": args.plan, "plan_content": plan}
     report = build_report(inputs=inputs, results=results, parameters=parameters)
     text = to_json(report) if args.format == "json" else render_markdown(report, lang=args.lang)
 
@@ -99,7 +236,13 @@ def _cmd_check(args: argparse.Namespace) -> int:
 def _cmd_route(args: argparse.Namespace) -> int:
     from terraproof.router import find_guidance, render_markdown as render_guidance
 
-    result = find_guidance(args.task, data_paths=args.data, top_k=args.top_k)
+    result = find_guidance(
+        args.task,
+        data_paths=args.data,
+        top_k=args.top_k,
+        mode=args.mode,
+        semantic=args.semantic,
+    )
     text = (json.dumps(result, sort_keys=True, indent=2, ensure_ascii=False) + "\n"
             if args.format == "json" else render_guidance(result))
     sys.stdout.write(text)
@@ -113,6 +256,11 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_inspect(args)
         if args.command == "route":
             return _cmd_route(args)
+        if args.command == "preflight":
+            return _cmd_preflight(args)
+        if args.command == "manifest":
+            from terraproof.provenance.__main__ import _run as _provenance_run
+            return _provenance_run(args.args)
         return _cmd_check(args)
     except Exception as exc:  # CLI boundary: unreadable or unsupported input is a usage-level failure
         print(f"terraproof: error: {exc}", file=sys.stderr)

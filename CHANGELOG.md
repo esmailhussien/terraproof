@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] — Unreleased
+
+### Added
+
+- Phase4 preflight plans and CLI/MCP parity for CRS/reprojection, grid alignment, categorical resampling, decode/encoding, temporal scope, index inputs, and measurement units.
+- Provenance manifest write/verify integration with coverage checks for primary, compare, reference, QA, sample, and area inputs, plus optional `--require-provenance`.
+- Four registered skills: `time-series-and-change`, `sar-basics`, `accuracy-assessment`, and `stac-and-cloud-access`.
+- Executable deterministic eval harness for 27 task specs with independent oracles and a separate seven-case preflight control group.
+- Router candidate mode with deterministic default cap 8 and optional offline semantic retrieval that falls back to lexical scoring.
+
+### Known limits
+
+- Eval reports measure deterministic checks and independent fixture oracles only; they do not measure agent lift, hosted CI, live MCP hosts, network/cloud behavior, or held-out routing performance. Oracle-only rejection is reported as a checker blind spot, not as checker rejection.
+
+---
+
 ## [0.3.0] — Unreleased
 
 ### Added

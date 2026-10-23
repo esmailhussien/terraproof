@@ -212,3 +212,30 @@
 {"id": "sym-ar-23", "prompt": "أ validate بيانات vector قبل التصدير لـ GeoJSON", "lang": "ar", "expected": ["vector-quality"], "must_not": ["geospatial-frontend"]}
 {"id": "sym-ar-24", "prompt": "عايز أحمل صور Sentinel-2 من كتالوج STAC", "lang": "ar", "datasets": [{"kind": "stac", "collection": "sentinel-2-l2a"}], "expected": ["geospatial-data-discovery", "satellite-preprocessing"], "must_not": ["spectral-indices"]}
 {"id": "sym-ar-25", "prompt": "حول الملف لـ COG باستخدام GDAL", "lang": "ar", "expected": ["gdal"], "must_not": ["satellite-preprocessing"]}
+{"id": "f1-sar-en-1", "prompt": "Calibrate Sentinel-1 GRD backscatter to sigma0 with the product LUT and keep linear power before any arithmetic.", "lang": "en", "expected": ["sar-basics"], "must_not": ["spectral-indices", "time-series-and-change"]}
+{"id": "f1-sar-en-2", "prompt": "Apply a speckle filter to a Sentinel-1 SLC scene and decide between the linear and decibel representation for slope effects.", "lang": "en", "expected": ["sar-basics"]}
+{"id": "f1-sar-en-3", "prompt": "Which polarization VV or VH and which incidence angle should I use for Sentinel-1 radar water mapping, and when is terrain correction needed?", "lang": "en", "expected": ["sar-basics"]}
+{"id": "f1-sar-ar-1", "prompt": "حوّل الباك سكاتر بتاع سنتينل 1 لقيم سيجما زيرو", "lang": "ar", "expected": ["sar-basics"]}
+{"id": "f1-sar-ar-2", "prompt": "طبّق تصحيح هندسي وفلتر للضجيج على صورة رادار", "lang": "ar", "expected": ["sar-basics"], "must_not": ["satellite-preprocessing"]}
+{"id": "f1-sar-ar-3", "prompt": "أيه استقطاب أحسن لرصد المياه من سنتينل 1؟", "lang": "ar", "expected": ["sar-basics"], "must_not": ["accuracy-assessment"]}
+{"id": "f1-acc-en-1", "prompt": "Design a stratified random sampling plan and compute the confusion matrix for the land cover map accuracy.", "lang": "en", "expected": ["accuracy-assessment"], "must_not": ["satellite-preprocessing"]}
+{"id": "f1-acc-en-2", "prompt": "Compute producer's and user's accuracy with confidence intervals from the reference samples.", "lang": "en", "expected": ["accuracy-assessment"]}
+{"id": "f1-acc-en-3", "prompt": "Estimate the area-adjusted class areas for the classified map with an error matrix.", "lang": "en", "expected": ["accuracy-assessment"], "must_not": ["geospatial-frontend"]}
+{"id": "f1-acc-ar-1", "prompt": "احسب مصفوفة الالتباس ودقة الخريطة من العينات المرجعية", "lang": "ar", "expected": ["accuracy-assessment"], "must_not": ["geospatial-frontend"]}
+{"id": "f1-acc-ar-2", "prompt": "اعمل خطة معاينة طبقية عشوائية واحسب الدقة الكلية للتصنيف", "lang": "ar", "expected": ["accuracy-assessment"]}
+{"id": "f1-acc-ar-3", "prompt": "أقدّر مساحات كل فئه بتصحيح المساحات من مصفوفة التباس", "lang": "ar", "expected": ["accuracy-assessment"], "must_not": ["sar-basics"]}
+{"id": "f1-ts-en-1", "prompt": "Detect the change in built-up cover between 2000 and 2020 from an annual Landsat time series.", "lang": "en", "expected": ["time-series-and-change"], "must_not": ["sar-basics", "accuracy-assessment"]}
+{"id": "f1-ts-en-2", "prompt": "Build a seasonal median composite of NDVI per date and fill the gaps in the series.", "lang": "en", "expected": ["time-series-and-change"]}
+{"id": "f1-ts-en-3", "prompt": "Analyze the NDVI trend over the growing season and find the breakpoint year with temporal alignment.", "lang": "en", "expected": ["time-series-and-change"], "must_not": ["geospatial-data-discovery"]}
+{"id": "f1-ts-ar-1", "prompt": "حلّل السلاسل الزمنية لرصد التغير في الغطاء الأرضي", "lang": "ar", "expected": ["time-series-and-change"], "must_not": ["sar-basics"]}
+{"id": "f1-ts-ar-2", "prompt": "اعمل تركيب زمني شهري وسد الفجوات في المؤشر", "lang": "ar", "expected": ["time-series-and-change"], "must_not": ["accuracy-assessment"]}
+{"id": "f1-ts-ar-3", "prompt": "رصد تغير العمران بين سنتين من خط زمني للمرئيات", "lang": "ar", "expected": ["time-series-and-change"]}
+{"id": "f1-stac-en-1", "prompt": "Search the STAC API for a collection over the delta and read the assets lazily with windowed reads and HTTP range requests.", "lang": "en", "expected": ["stac-and-cloud-access"]}
+{"id": "f1-stac-en-2", "prompt": "Read this requester-pays cloud asset with a signed URL, and record the pinned STAC item ids without storing credentials.", "lang": "en", "expected": ["stac-and-cloud-access"]}
+{"id": "f1-stac-en-3", "prompt": "Use pystac-client to query the catalog and record asset provenance while streaming the rasters over vsicurl.", "lang": "en", "expected": ["stac-and-cloud-access"], "must_not": ["geopandas"]}
+{"id": "f1-stac-ar-1", "prompt": "استعلم كتالوج STAC وهات مشاهد للمدينة مع بريد item ids ثابتة", "lang": "ar", "expected": ["stac-and-cloud-access"]}
+{"id": "f1-stac-ar-2", "prompt": "قراءة نافذية للمرئيات من خلال رابط موقّع", "lang": "ar", "expected": ["stac-and-cloud-access"], "must_not": ["scientific-visualization"]}
+{"id": "f1-stac-ar-3", "prompt": "هجيب داتا من Planetary Computer بالاستعلام الكتالوج STAC وبريد الطلب", "lang": "ar", "expected": ["stac-and-cloud-access"]}
+{"id": "f1-neg-en-1", "prompt": "Use a random forest for Landsat land cover classification.", "lang": "en", "expected": ["geomaster"], "must_not": ["accuracy-assessment", "time-series-and-change", "satellite-preprocessing", "spectral-indices"]}
+{"id": "f1-neg-en-2", "prompt": "Sum the parcel areas in hectares.", "lang": "en", "datasets": [{"kind": "vector", "crs": {"epsg": 4326, "is_geographic": true, "is_projected": false, "horizontal_kind": "geographic"}, "geometry_types": ["Polygon"], "feature_count": 20}], "expected": ["crs-and-units", "geopandas"], "must_not": ["accuracy-assessment", "time-series-and-change"]}
+{"id": "f1-neg-ar-1", "prompt": "اعمل تصنيف للمرئيه للغطاء الأرضي بالتصنيف العادي", "lang": "ar", "expected": ["geomaster"], "must_not": ["time-series-and-change", "accuracy-assessment", "sar-basics"]}

@@ -199,6 +199,41 @@ ARABIC_TERMS: dict[str, str] = {
     "أجيب": "get acquire",
     "ألاقي": "find search",
     "أحمل": "download",
+    # SAR (sentinel-1) wording.
+    "رادار": "radar sar backscatter",
+    "سنتينل 1": "sentinel 1 sar",
+    "باك سكاتر": "backscatter",
+    "الضجيج": "speckle noise",
+    "استقطاب": "polarization vv vh",
+    "تصحيح هندسي": "terrain correction",
+    "سقما زيرو": "sigma0",
+    "سيجما زيرو": "sigma0",
+    "مقياس ديسيبل": "decibel db",
+    # Accuracy assessment wording.
+    "مصفوفة الالتباس": "confusion matrix error matrix",
+    "مصفوفه التباس": "confusion matrix error matrix",
+    "دقه الخريطه": "map accuracy",
+    "دقه التصنيف": "map accuracy classification",
+    "معايره طبقيه": "stratified sampling",
+    "معايره طبقيه عشوائيه": "stratified random sampling",
+    "عينات مرجعيه": "reference samples",
+    "مساحات مضبطه": "area-adjusted class areas",
+    "دقه كليه": "overall accuracy",
+    # Time series and change detection.
+    "خط زمني": "time series",
+    "اتجاه عام": "trend analysis",
+    "رصد تغير": "change detection",
+    "كشف التغير": "change detection",
+    "تغيرات": "change",
+    "تركيب زمني": "temporal composite",
+    "سد الفجوات": "gap filling",
+    # STAC and cloud access.
+    "رابط موقع": "signed asset url",
+    "قراءة نافذية": "windowed read",
+    "استعلام الكتالوج": "stac search api",
+    "استعلام كتالوج": "stac search api",
+    "حاسوب الكوكب": "planetary computer",
+    "دفع الطلب": "requester pays",
 }
 
 ARABIC_NOISE = frozenset({

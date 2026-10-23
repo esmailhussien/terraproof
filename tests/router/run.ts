@@ -85,8 +85,8 @@ if (applyRes.passed) {
 }
 
 // 7. Core Scenario Suite
-console.log("\n[7/9] Running Core Scenario Suite (41 Scenarios)...");
 const coreReport = runScenarioTests(path.join(__dirname, "scenarios.json"));
+console.log(`\n[7/9] Running Core Scenario Suite (${coreReport.total} Scenarios)...`);
 
 for (const sc of coreReport.results) {
   if (sc.passed) {
@@ -108,8 +108,8 @@ for (const sc of coreReport.results) {
 }
 
 // 8. Real-World Scenario Suite
-console.log("\n[8/9] Running Real-World Benchmark Suite (14 Scenarios)...");
 const rwReport = runScenarioTests(path.join(__dirname, "real-world-scenarios.json"));
+console.log(`\n[8/9] Running Real-World Benchmark Suite (${rwReport.total} Scenarios)...`);
 
 for (const sc of rwReport.results) {
   if (sc.passed) {

@@ -43,6 +43,9 @@ jobs:
         run: |
           npm run test:router
 
+      - name: Verify generated registry freshness
+        run: npm run registry:check
+
       - name: Verify npm package tarball
         run: |
           npm pack --dry-run 2>&1 | head -50
@@ -92,3 +95,6 @@ jobs:
 
       - name: Run Python tests
         run: python -m pytest -q tests/python
+
+      - name: Run executable deterministic evals
+        run: python -m terraproof.evals run

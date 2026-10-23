@@ -31,7 +31,7 @@ _SOURCING_OBJECT = re.compile(
 _PROCESSING_WORDS = frozenset(tokenize(
     "mask decode reflectance cloud shadow scl harmonize composite calibrate process compute "
     "calculate statistics zonal index indices ndvi ndwi mndwi nbr dnbr evi savi classify "
-    "classification reproject resample clip join overlay centrality shortest path plot figure"))
+    "classifier classification reproject resample clip join overlay centrality shortest path plot figure"))
 _PROCESSING_TEXT = re.compile(r"قناع|سحب|فك|احسب|حساب|معالج|مؤشر|تصنيف|قص|ارسم|حلل")
 _VECTOR_OPERATIONS = frozenset(tokenize("join overlay buffer dissolve intersection reproject clip"))
 _IN_HAND = re.compile(
@@ -49,7 +49,7 @@ _PREPROCESS_TEXT = re.compile(
 _PREPROCESS_ACTION = re.compile(
     r"\b(?:decod\w*|mask\w*|harmoni[sz]\w*|calibrat(?:e|ion|ing)|composit(?:e|ing)|scl|qa_?pixel|boa_add_offset)\b"
     r"|قناع|فك|ازاله|شيل")
-_CLASSIFICATION_WORDS = frozenset(tokenize("classify classification"))
+_CLASSIFICATION_WORDS = frozenset(tokenize("classify classifier classification"))
 _ANALYSIS_WORDS = _CLASSIFICATION_WORDS | frozenset(tokenize(
     "statistics statistic statistical plot chart figure visualization"))
 _NAMED_INDEX_WORDS = frozenset(tokenize("ndvi ndwi mndwi nbr dnbr evi savi"))
@@ -57,6 +57,31 @@ _INDEX_WORDS = _NAMED_INDEX_WORDS | frozenset(tokenize("index indices"))
 _INDEX_TEXT = re.compile(r"مؤشر|\b(?:burn severity|spectral indices|vegetation index|water index)\b")
 _SATELLITE_WORDS = frozenset(tokenize("satellite imagery sentinel landsat reflectance spectral"))
 _NON_SPECTRAL_INDEX = re.compile(r"\b(?:spatial|database|pandas|dataframe|gist) index\b|فهرس مكاني")
+
+# Separate affirmative intent wording for the four Phase 4 skills. Each is
+# guarded off unless its own domain wording appears; incidental body matches
+# (e.g. "random forest" inside an accuracy section) must not select them.
+_SAR_WORDS = frozenset(tokenize(
+    "sar backscatter sigma0 gamma0 beta0 speckle decibel radar grd slc polarization"))
+_SAR_TEXT = re.compile(
+    r"\b(?:sentinel[\s_-]*1|terrain corrections?|single look complex|"
+    r"radiometric calibration|sigma nought|gamma nought|db values?)\b"
+    r"|(?:رادار|ضجيج|استقطاب|سنتينل 1|تصحيح هندسي|باكان? سكاتر)")
+_TIME_SERIES_WORDS = frozenset(tokenize("change temporal multitemporal breakpoint trend landtrendr ccdc bfast"))
+_TIME_SERIES_TEXT = re.compile(
+    r"\b(?:time[- ]?series|timeseries|change detection|change map|trend analysis|"
+    r"seasonal composite|median composite|per[- ]date|gap fill\w*|temporal alignment)\b"
+    r"|(?:سلاسل زمنيه|خط زمني|رصد التغير|كشف التغير|تغيرات|فترات زمنيه|اتجاه عام)")
+_ACCURACY_WORDS = frozenset(tokenize("accuracy stratified confusion matrix"))
+_ACCURACY_TEXT = re.compile(
+    r"\b(?:accuracy assessments?|confusion matrix|error matrix|stratified\s+(?:random\s+)?"
+    r"sampling|area[ -]adjusted|reference samples?|sample design|map accuracy|"
+    r"(?:user|producer|overall)'\s?s accuracy|validation samples?)\b"
+    r"|(?:مصفوفه.{0,12}التباس|دقه الخريط[هه]|معايره طبقيه|عينات مرجعيه|دقه التصنيف)")
+_CLOUD_ACCESS_TEXT = re.compile(
+    r"\b(?:stac|pystac|vsicurl|planetary computer|requester[\s_-]*pays|windowed "
+    r"reads?|signed (?:asset )?urls?|http range requests?|rest api)\b"
+    r"|(?:رابط موقع|قراءة نافذ|استعلام كتالوج|حاسوب الكوكب)")
 
 # Web technologies or map-specific interaction, not a bare map/chart/dashboard.
 _WEB_TECH = re.compile(r"\b(?:maplibre|mapbox|leaflet|deck gl|deckgl|spatial ui)\b")
@@ -202,6 +227,39 @@ def data_signals(profiles: list[dict], terms: list[str], text: str = "") -> tupl
     if (_GEOZARR_WORDS & term_set and ("multidimensional" in term_set or "cube" in term_set)
             and "geozarr" not in term_set and "zarr" not in term_set):
         wording("geozarr", 8.0, "multidimensional array or cloud storage wording")
+
+    # Affirmative intent guards for the four Phase 4 skills: only their own
+    # domain wording (English tokens, Arabic expansions or regex phrases) can
+    # keep them selectable. Data evidence may affirm SAR intent specifically.
+    sar_intent = bool(_SAR_WORDS & term_set or _SAR_TEXT.search(text))
+    time_series_intent = bool(_TIME_SERIES_WORDS & term_set or _TIME_SERIES_TEXT.search(text))
+    accuracy_intent = bool(_ACCURACY_WORDS & term_set or _ACCURACY_TEXT.search(text))
+    cloud_intent = bool(_CLOUD_ACCESS_TEXT.search(text) or "stac" in str(
+        " ".join(str(ds.get("collection", "")) for ds in stac)).lower())
+    if stac and any(re.search(r"sentinel[\s_-]*1", str(ds.get("collection", "")), re.I) for ds in stac):
+        sar_intent = True
+        wording("sar-basics", 8.0, "Sentinel-1 STAC collection; SAR calibration and terrain correction wording")
+    if not sar_intent:
+        guard("sar-basics", "no SAR, backscatter, speckle or Sentinel-1 wording")
+    if not accuracy_intent:
+        guard("accuracy-assessment", "no accuracy, sampling design or confusion-matrix wording")
+    if not time_series_intent:
+        guard("time-series-and-change", "no time-series, temporal or change-detection wording")
+    if not cloud_intent:
+        guard("stac-and-cloud-access", "no STAC search or cloud-access wording")
+
+    # "Sum the parcel areas in hectares" is a CRS/units question, not a
+    # geometry-quality concern; incidental body wording like "parcel area" in a
+    # topology section must not out-rank the CRS rule either. Narrow aggregate
+    # wording ("sum") only; count/total/area tasks keep the quality audit.
+    _quality_concern = bool((_VECTOR_QUALITY_WORDS & term_set)
+                            - {"polygon", "polygon vector"} - {"geometry", "geometri"})
+    if (metric and any((ds.get("crs") or {}).get("is_geographic")
+                       or (ds.get("crs") or {}).get("horizontal_kind") == "geographic"
+                       for ds in positional)
+            and not _quality_concern and not _PREPROCESS_ACTION.search(text)
+            and "sum" in term_set):
+        wording("vector-quality", -6.0, "aggregate sum wording; the parcel-area quality body match is incidental here")
     return signals, guarded
 
 

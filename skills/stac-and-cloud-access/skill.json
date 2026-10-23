@@ -1,0 +1,98 @@
+{
+  "name": "stac-and-cloud-access",
+  "layer": "domain",
+  "domains": [
+    "geospatial"
+  ],
+  "capabilities": [
+    "stac-search",
+    "cloud-native-raster-access",
+    "provenance-recording"
+  ],
+  "triggers": [
+    "stac",
+    "stac api",
+    "pystac-client",
+    "planetary computer",
+    "signed asset url",
+    "requester-pays",
+    "/vsicurl/",
+    "vsicurl",
+    "http range request",
+    "windowed read",
+    "odc.stac",
+    "stackstac",
+    "processing:version"
+  ],
+  "recommended": [
+    "satellite-preprocessing",
+    "geospatial-data-discovery"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "explanation": "Searches STAC APIs reproducibly (collections/bbox/datetime/query/filter, pinned item ids) and reads cloud-hosted rasters lazily over HTTP range requests (/vsicurl/, signed URLs, requester-pays buckets, windowed reads), recording asset and encoding provenance.",
+  "sections": [
+    {
+      "id": "search-with-explicit-reproducible-parameters",
+      "title": "Search with explicit, reproducible parameters",
+      "source": "SKILL.md#search-with-explicit-reproducible-parameters"
+    },
+    {
+      "id": "record-item-and-asset-provenance",
+      "title": "Record item and asset provenance",
+      "source": "SKILL.md#record-item-and-asset-provenance"
+    },
+    {
+      "id": "signed-urls-and-requester-pays-storage",
+      "title": "Signed URLs and requester-pays storage",
+      "source": "SKILL.md#signed-urls-and-requester-pays-storage"
+    },
+    {
+      "id": "read-cog-windows-with-http-range-requests",
+      "title": "Read COG windows with HTTP range requests",
+      "source": "SKILL.md#read-cog-windows-with-http-range-requests"
+    },
+    {
+      "id": "know-what-your-loader-decodes",
+      "title": "Know what your loader decodes",
+      "source": "SKILL.md#know-what-your-loader-decodes"
+    },
+    {
+      "id": "load-many-items-as-a-lazy-cube",
+      "title": "Load many items as a lazy cube",
+      "source": "SKILL.md#load-many-items-as-a-lazy-cube"
+    },
+    {
+      "id": "cache-and-pin-for-reproducibility",
+      "title": "Cache and pin for reproducibility",
+      "source": "SKILL.md#cache-and-pin-for-reproducibility"
+    },
+    {
+      "id": "verify-with-terraproof",
+      "title": "Verify with Terraproof",
+      "source": "SKILL.md#verify-with-terraproof"
+    },
+    {
+      "id": "sources",
+      "title": "Sources",
+      "source": "SKILL.md#sources"
+    },
+    {
+      "id": "run-manifest",
+      "title": "Run manifest",
+      "source": "references/run-manifest.md"
+    }
+  ],
+  "checks": [
+    "stac.provenance",
+    "provenance.reproducible",
+    "rs.temporal_scope",
+    "rs.scale_applied_once",
+    "raster.cog_layout",
+    "raster.grid_alignment",
+    "raster.nodata_declared",
+    "crs.defined",
+    "crs.consistent",
+    "rs.reflectance_range"
+  ]
+}
