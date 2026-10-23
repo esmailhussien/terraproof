@@ -12,7 +12,11 @@ from .text import normalize_arabic
 
 _QUOTES = re.compile(r'"[^"\n]*"|“[^”\n]*”|«[^»\n]*»|(?<!\w)\'[^\'\n]+\'(?!\w)')
 _EDITORIAL = re.compile(
-    r"\b(?:rename|reword|proofread|translate|typo|button label|page heading|"
+    r"\b(?:rename|reword|proofread|typo|button label|page heading|"
+    r"translate (?:this|that|these|the|my|our|a|an)? ?(?:text|paragraph|sentence|email|letter|document|page|"
+    r"copy|message|label|button|word|phrase|caption|title|abstract)s?|"
+    r"translate\b.{0,60}\b(?:into|to) (?:arabic|english|french|spanish|german|italian|turkish|urdu|chinese)|"
+    r"translate (?=[\"“«'])|"
     r"(?:write|draft|rewrite|compose|edit)\s+(?:(?:a|an|the|short|brief|plain|text)\s+)*"
     r"(?:email|letter|message|document|memo|summary|paragraph|sentence|copy|announcement))\b"
     r"|(?:ترجم|صحح النص|راجع (?:دقه )?النص|صحح الاملاء|غير اسم|غير نص|تسميه الزر|عنوان الصفحه|"
@@ -61,7 +65,10 @@ def intent_text(task: str) -> str:
             continue
         for match in _NEGATIVE.finditer(unquoted):
             tail = unquoted[match.end():].lstrip()
-            directive = match.group().strip().lower() in {"do not", "don't", "never"}
+            # 'do not' is a command only where it opens the clause; 'the layers do
+            # not overlap' describes a symptom and must keep its domain wording.
+            directive = (match.group().strip().lower() in {"do not", "don't", "never"}
+                         and unquoted[:match.start()].strip().lower() in {"", "please", "and", "but", "also"})
             if directive or _OPERATION.match(tail):
                 # A runtime constraint is not a ban on the remaining task.
                 runtime = _IMPLEMENTATION_ONLY.match(tail)

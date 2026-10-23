@@ -86,11 +86,27 @@ def _arabic_variants(word: str) -> set[str]:
     return forms
 
 
+def _plural_bases(forms: set[str]) -> set[str]:
+    """Sound plural and dual bases, used only when a word has no direct lexicon form."""
+    bases = set()
+    for form in forms:
+        for suffix in ("ات", "ين", "ون", "ان"):
+            if form.endswith(suffix) and len(form) > len(suffix) + 2:
+                bases.add(form[:-len(suffix)])
+                if suffix == "ات":
+                    bases.add(form[:-2] + "ه")
+    return bases
+
+
 def expand_query(task: str) -> tuple[dict, list[str], list[str]]:
     """Return API query metadata, retrieval tokens, and translation explanations."""
     normalized = normalize(task)
     words = normalized.split()
     variants = [_arabic_variants(word) if _ARABIC.search(word) else {word} for word in words]
+    # A word that is itself a lexicon entry keeps its own expansion only.
+    single_keys = {normalize(phrase) for phrase in ARABIC_TERMS if " " not in normalize(phrase)}
+    variants = [forms | _plural_bases(forms) if _ARABIC.search(word) and not forms & single_keys else forms
+                for word, forms in zip(words, variants)]
     expanded: list[str] = []
     reasons = []
     # Longest phrases first, then lexical order: overlapping terms are deduplicated.
