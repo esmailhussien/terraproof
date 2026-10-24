@@ -8,7 +8,9 @@ import tempfile
 from pathlib import Path
 
 from terraproof.evals.harness import run_benchmark, to_json
-from terraproof.evals.lift import SCRIPTED_BEHAVIOURS, LiftError, ReplayAdapter, ScriptedAdapter, calibrate, run_lift
+from terraproof.evals.lift import (
+    COHORTS, DEFAULT_COHORT, SCRIPTED_BEHAVIOURS, LiftError, ReplayAdapter, ScriptedAdapter, calibrate, run_lift,
+)
 from terraproof.evals.lift import to_json as lift_to_json
 from terraproof.evals.specs import SpecError
 
@@ -54,7 +56,9 @@ def build_parser() -> argparse.ArgumentParser:
     lift_parser.add_argument("--without-behaviour", choices=SCRIPTED_BEHAVIOURS, default="seeded",
                              help="scripted output in the without condition (default: seeded)")
     lift_parser.add_argument("--recordings", metavar="DIR", help="recorded outputs for --adapter replay")
-    lift_parser.add_argument("--task", action="append", metavar="TASK_ID", help="lift task id (repeatable)")
+    lift_parser.add_argument("--task", action="append", metavar="TASK_ID", help="lift task id (repeatable; not with --cohort)")
+    lift_parser.add_argument("--cohort", choices=sorted(COHORTS),
+                             help=f"task cohort (runs default to {DEFAULT_COHORT}; --calibrate-only defaults to every task)")
     lift_parser.add_argument("--runs", type=int, default=1, help="runs per condition and task (default 1)")
     lift_parser.add_argument("--agent", default="codex", help="installer agent format for the with condition")
     lift_parser.add_argument("--calibrate-only", action="store_true", help="run only the scoring calibration gate")
@@ -63,8 +67,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _lift(args) -> int:
+    if args.task and args.cohort:
+        print("terraproof.evals: error: --task and --cohort select tasks in different ways; give one of them",
+              file=sys.stderr)
+        return EXIT_USAGE
     if args.calibrate_only:
-        report = calibrate(args.task)
+        cohort_ids = [task.task_id for task in COHORTS[args.cohort]] if args.cohort else None
+        report = calibrate(args.task or cohort_ids)
         code = 0 if report["eligible"] else 1
     else:
         if args.adapter == "replay":
@@ -74,7 +83,8 @@ def _lift(args) -> int:
             adapter = ReplayAdapter(args.recordings)
         else:
             adapter = ScriptedAdapter({"with": args.with_behaviour, "without": args.without_behaviour})
-        report = run_lift(adapter, task_ids=args.task, runs=args.runs, agent=args.agent)
+        report = run_lift(adapter, task_ids=args.task, cohort=args.cohort or DEFAULT_COHORT, runs=args.runs,
+                          agent=args.agent)
         code = 0
         summary = report["summary"]
         print(

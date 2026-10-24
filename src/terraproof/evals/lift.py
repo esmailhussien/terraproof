@@ -89,7 +89,7 @@ class LiftTask:
 
 # Selected by probing every recipe: these are the tasks whose inputs exist as files and
 # whose correct-control oracle rejects each seeded-wrong deliverable once substituted.
-LIFT_TASKS: tuple[LiftTask, ...] = (
+ORIGINAL_LIFT_TASKS: tuple[LiftTask, ...] = (
     LiftTask(
         "indices-ndvi-physical-inputs",
         ("red_dn.tif", "nir_dn.tif"),
@@ -160,8 +160,9 @@ LIFT_TASKS: tuple[LiftTask, ...] = (
 
 
 
-# Additional cohort; the original nine contracts and task definitions are unchanged.
-LIFT_TASKS += (
+# The harder cohort (2026-10-24, authored independently). It is a separate experiment: a run selects
+# one cohort, and its results are never pooled with the original nine.
+HARDER_LIFT_TASKS: tuple[LiftTask, ...] = (
     LiftTask('landcover-summary-grid', ('source.tif', 'target_grid.tif', 'request.json'), (("result.tif", 'single-band uint8 GeoTIFF on target_grid.tif grid, nodata 255'),),
              (('result.tif', 'nearest.tif'), ('result.tif', 'coverage-ignored.tif'))),
     LiftTask('terrain-slope-map', ('elevation.tif', 'request.json'), (("result.tif", 'single-band float32 GeoTIFF on elevation.tif grid, nodata -9999'),),
@@ -175,6 +176,11 @@ LIFT_TASKS += (
     LiftTask('three-band-vegetation-index', ('bands.tif', 'request.json'), (("result.tif", 'single-band float32 GeoTIFF on bands.tif grid, nodata -9999'),),
              (('result.tif', 'stored-values.tif'), ('result.tif', 'one-band-calibration.tif'))),
 )
+
+LIFT_TASKS: tuple[LiftTask, ...] = ORIGINAL_LIFT_TASKS + HARDER_LIFT_TASKS
+COHORTS: dict[str, tuple[LiftTask, ...]] = {"original": ORIGINAL_LIFT_TASKS, "harder": HARDER_LIFT_TASKS}
+DEFAULT_COHORT = "original"
+
 
 # -- budget and adapters -----------------------------------------------------------------
 @dataclass(frozen=True)
@@ -609,9 +615,14 @@ def _specs() -> dict[str, TaskSpec]:
     return {spec.id: spec for spec in load_specs()}
 
 
-def _select(task_ids: list[str] | None) -> list[LiftTask]:
+def _select(task_ids: list[str] | None, cohort: str | None = None) -> list[LiftTask]:
+    """Explicit task ids win; otherwise one named cohort; with neither, every registered task."""
     if not task_ids:
-        return list(LIFT_TASKS)
+        if cohort is None:
+            return list(LIFT_TASKS)
+        if cohort not in COHORTS:
+            raise LiftError(f"unknown cohort {cohort!r}; choose from {sorted(COHORTS)}")
+        return list(COHORTS[cohort])
     seen = []
     for task_id in task_ids:
         task = lift_task(task_id)
@@ -679,8 +690,12 @@ def run_lift(
     allow_model_calls: bool = False,
     recordings_out: Path | str | None = None,
     preflight_only: bool = False,
+    cohort: str = DEFAULT_COHORT,
 ) -> dict:
     """Run the paired with/without experiment and return a deterministic JSON report.
+
+    Without explicit `task_ids` the run uses one cohort (default "original"), so the original nine
+    and the harder six are never mixed into one experiment by accident.
 
     Every run is preflighted first (host-independent project checks plus the adapter's own
     no-model checks); a failing preflight records `preflight_failed` and starts nothing.
@@ -688,7 +703,7 @@ def run_lift(
     """
     if runs < 1:
         raise LiftError("runs must be at least 1")
-    tasks = _select(task_ids)
+    tasks = _select(task_ids, cohort)
     specs = _specs()
     planned = planned_calls(len(tasks), runs)
     _check_budget(adapter, budget, planned, allow_model_calls, preflight_only)
@@ -793,7 +808,8 @@ def run_lift(
         "command": "python -m terraproof.evals lift",
         "adapter": {"name": adapter.name, "model_calls": adapter.model_calls},
         "agent_format": agent,
-        "design": {"conditions": list(CONDITIONS), "tasks": len(tasks), "runs_per_condition": runs,
+        "design": {"conditions": list(CONDITIONS), "cohort": None if task_ids else cohort, "tasks": len(tasks),
+                   "runs_per_condition": runs,
                    "planned_agent_runs": planned, "started_agent_runs": started, "preflight_only": preflight_only,
                    "order": "paired, back to back, first condition alternating by task and run",
                    "treatment": "python -m terraproof.install --task <spec prompt> --with-mcp"},
@@ -1036,7 +1052,7 @@ def to_json(report: dict) -> str:
 
 __all__ = [
     "ATTEMPT_CATEGORIES", "AgentRequest", "AgentResult", "Adapter", "NO_ATTEMPT", "PREFLIGHT_FAILED",
-    "PREFLIGHT_ONLY", "classify_attempt", "project_preflight", "Budget", "LIFT_TASKS", "LiftError", "LiftTask", "ReplayAdapter",
+    "PREFLIGHT_ONLY", "classify_attempt", "project_preflight", "Budget", "COHORTS", "DEFAULT_COHORT", "LIFT_TASKS", "LiftError", "LiftTask", "ReplayAdapter",
     "ScriptedAdapter", "SpecError", "brief", "calibrate", "exact_mcnemar", "mcnemar_mde", "planned_calls",
     "prepare_project", "run_lift", "schedule", "score_outputs", "sign_flip_p", "summarize", "to_json",
 ]

@@ -43,9 +43,16 @@ The initial extended run reports **33/33 tasks, zero false passes and 27 checker
 blind spots**: the existing 15 plus the new 12 seeded mistakes. No new production
 check is claimed, and no existing blind spot is reclassified as closed.
 
-The original Phase 5 results remain historical nine-task results. A future run
-must explicitly select its cohort and receive its own approval: at three repeats,
-these six tasks alone imply **36 agent invocations**, while all fifteen imply
-**90**. No model budget, approval gate, original result or treatment-isolation rule
-was relaxed. Do not interpret calibration as evidence of baseline difficulty,
+The original Phase 5 results remain historical nine-task results. The two task sets
+are separate cohorts and are never pooled: `run_lift` and both drivers select one
+cohort, `original` by default, and refuse `--task` together with `--cohort`. To run
+this set, pass `--cohort harder` and get its own approval. At three repeats that is
+**36 agent invocations**; the Claude total cap defaults to the planned runs times
+`--max-usd-per-run` (36 × $1 = $36 by default). Calibration and the offline probe
+tests still cover all fifteen tasks. No approval gate, original result or
+treatment-isolation rule was relaxed.
+
+```bash
+python tests/agent_lift.py --agent-host claude --runs 3 --cohort harder   # prints the plan only
+``` Do not interpret calibration as evidence of baseline difficulty,
 agent lift or generalization beyond this deliberately selected challenge set.

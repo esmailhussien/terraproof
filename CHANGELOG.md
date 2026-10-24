@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Six harder agent-lift tasks, authored independently by Codex (a different model family): `landcover-summary-grid`, `terrain-slope-map`, `population-grid-transfer`, `vegetation-change-rate`, `storm-total-rainfall` and `three-band-vegetation-index`. Each has a spec, recipe, independent scalar oracle reading every cell and mask of the delivered file, and two seeded wrong outputs (see `docs/HARDER_TASKS.md`). The benchmark grows to 33 tasks with 0 false passes and 27 checker blind spots (the 15 existing plus 12 new oracle-only seeds). Their difficulty is not yet measured.
+- Lift cohorts: `ORIGINAL_LIFT_TASKS` (the nine of the first run) and `HARDER_LIFT_TASKS` (the six above) are separate experiments. `run_lift`, `python -m terraproof.evals lift` and `tests/agent_lift.py` take `--cohort original|harder`, default `original`, and refuse `--task` together with `--cohort`; reports record the cohort. Calibration and the grader probe still cover all fifteen tasks.
+
+### Changed
+
+- `tests/agent_lift.py`: the Claude total USD cap now defaults to the planned runs × `--max-usd-per-run` instead of a fixed $54, so a cohort's budget always covers its planned runs.
+
 ## [0.5.1] — 2026-10-24
 
 ### Fixed

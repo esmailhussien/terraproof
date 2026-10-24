@@ -240,9 +240,9 @@ def test_driver_prints_a_plan_without_starting_any_host(capsys, monkeypatch):
     monkeypatch.setattr(driver, "run_lift", forbidden)
     assert driver.main(["--agent-host", "claude", "--runs", "3", "--max-usd-per-run", "1", "--max-usd-total", "40"]) == 0
     plan = json.loads(capsys.readouterr().out)
-    assert plan["planned_model_invocations"] == 6 * len(LIFT_TASKS)
+    assert plan["planned_model_invocations"] == 54  # default cohort: the original nine
     assert plan["total_usd_ceiling"] == 40
-    assert plan["command_to_approve"].endswith(f"--approve-model-calls {6 * len(LIFT_TASKS)}")
+    assert plan["command_to_approve"].endswith("--approve-model-calls 54")
     assert driver.main(["--agent-host", "codex", "--runs", "1", "--task", FAST[0]]) == 0
     plan = json.loads(capsys.readouterr().out)
     assert plan["planned_model_invocations"] == 2 and plan["total_usd_ceiling"] is None
@@ -611,7 +611,7 @@ def test_claude_executable_option_refuses_wrappers_and_is_in_the_approved_comman
                         "--max-usd-per-run", "1", "--max-usd-total", "54"]) == 0
     plan = json.loads(capsys.readouterr().out)
     assert f"--claude-executable {native}" in plan["command_to_approve"]
-    assert plan["planned_model_invocations"] == 6 * len(LIFT_TASKS) and plan["total_usd_ceiling"] == 54
+    assert plan["planned_model_invocations"] == 54 and plan["total_usd_ceiling"] == 54
 
 
 def test_ceiling_tasks_are_flagged_without_changing_the_primary_analysis(tmp_path):
@@ -810,3 +810,45 @@ def test_paths_neutral_rule_is_independent_of_the_checkout_location():
     assert not driver.paths_neutral("/tmp/paired-run-x/project", "/home/u/.venvs/TerraProof-py312/bin")
     assert not driver.paths_neutral("/tmp/paired-run-x/project", "/opt/geo/bin", "/home/runner/work/terraproof/python")
     assert driver.paths_neutral()
+
+
+def test_cohorts_partition_the_registry_and_runs_default_to_the_original_nine():
+    assert set(lift.COHORTS) == {"original", "harder"} and lift.DEFAULT_COHORT == "original"
+    original, harder = lift.COHORTS["original"], lift.COHORTS["harder"]
+    assert len(original) == 9 and len(harder) == 6
+    assert not {t.task_id for t in original} & {t.task_id for t in harder}
+    assert original + harder == LIFT_TASKS
+    assert lift._select(None, "original") == list(original)
+    assert lift._select(None, "harder") == list(harder)
+    assert lift._select(None) == list(LIFT_TASKS)  # calibration covers every task
+    assert [t.task_id for t in lift._select([harder[0].task_id], "original")] == [harder[0].task_id]
+    with pytest.raises(LiftError):
+        lift._select(None, "everything")
+
+
+def test_driver_derives_the_total_usd_cap_from_the_selected_cohort(capsys, monkeypatch):
+    def forbidden(*args, **kwargs):  # pragma: no cover - the plan must not start anything
+        raise AssertionError("a host must not be probed or started without approval")
+
+    monkeypatch.setattr(driver, "probe_claude", forbidden)
+    monkeypatch.setattr(driver, "run_lift", forbidden)
+    assert driver.main(["--agent-host", "claude", "--runs", "3"]) == 0
+    plan = json.loads(capsys.readouterr().out)
+    assert plan["cohort"] == "original" and len(plan["tasks"]) == 9
+    assert plan["planned_model_invocations"] == 54 and plan["total_usd_ceiling"] == 54
+    assert "--cohort original" in plan["command_to_approve"] and "--max-usd-total 54" in plan["command_to_approve"]
+    assert driver.main(["--agent-host", "claude", "--runs", "3", "--cohort", "harder", "--max-usd-per-run", "2"]) == 0
+    plan = json.loads(capsys.readouterr().out)
+    assert plan["cohort"] == "harder" and len(plan["tasks"]) == 6
+    assert plan["planned_model_invocations"] == 36 and plan["total_usd_ceiling"] == 72
+    assert plan["command_to_approve"].endswith("--max-usd-total 72 --timeout 900 --approve-model-calls 36")
+    assert driver.main(["--agent-host", "claude", "--runs", "1", "--task", FAST[0]]) == 0
+    plan = json.loads(capsys.readouterr().out)
+    assert plan["cohort"] is None and "--cohort" not in plan["command_to_approve"]
+    with pytest.raises(SystemExit):
+        driver.main(["--agent-host", "claude", "--cohort", "harder", "--task", FAST[0]])
+
+
+def test_offline_cli_refuses_task_with_cohort(capsys):
+    assert evals_main(["lift", "--cohort", "harder", "--task", FAST[0]]) == 2
+    assert "give one of them" in capsys.readouterr().err
