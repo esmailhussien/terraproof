@@ -510,3 +510,86 @@ def test_driver_preflight_only_starts_no_agent(tmp_path, monkeypatch):
     assert json.loads((tmp_path / "lift-preflight.json").read_text())["host"]["version"] == "codex-cli test"
     with pytest.raises(SystemExit):
         driver.main(["--agent-host", "codex", "--preflight-only", "--approve-model-calls", "18"])
+
+
+# -- pilot 2 follow-up: built-in resource tools, code-mode-only catalog, Claude MCP config --
+def _pilot2_events():
+    """The pilot 2 shape: two built-in resource calls on server "codex", 0 ms, then completion."""
+    events = [(0.0, {"type": "turn.started"})]
+    for index, tool in enumerate(("list_mcp_resources", "list_mcp_resource_templates")):
+        item = {"id": f"r{index}", "type": "mcp_tool_call", "server": "codex", "tool": tool,
+                "arguments": {"cursor": "SECRET"}}
+        events.append(_codex_item("item.started", 2.0, dict(item, status="in_progress")))
+        events.append(_codex_item("item.completed", 2.0, dict(item, status="completed")))
+    events.append((3.0, {"type": "turn.completed", "usage": {"input_tokens": 40373, "output_tokens": 314}}))
+    return events
+
+
+def test_pilot2_resource_calls_are_labelled_and_are_not_an_attempt():
+    result = driver.codex_trace(_pilot2_events(), WITHOUT, ())
+    assert result.calls == [
+        {"tool": "codex.list_mcp_resources", "category": "mcp:codex-resource", "status": "completed",
+         "exit_code": None, "duration_ms": 0},
+        {"tool": "codex.list_mcp_resource_templates", "category": "mcp:codex-resource", "status": "completed",
+         "exit_code": None, "duration_ms": 0},
+    ]
+    assert result.terraproof_tool_calls == 0 and result.turn["status"] == "completed"
+    assert lift.classify_attempt(result, {"ndvi.tif": False}) == lift.NO_ATTEMPT
+    assert "SECRET" not in json.dumps(result.__dict__)
+    # A third-party server that happens to reuse a Terraproof tool name is still not Terraproof.
+    spoof = [_codex_item("item.completed", 1.0, {"id": "s", "type": "mcp_tool_call", "server": "other",
+                                                 "tool": "run_checks", "status": "completed"}),
+             (2.0, {"type": "turn.completed"})]
+    assert driver.codex_trace(spoof, WITH, ()).calls[0]["category"] == "mcp:other"
+
+
+class Pilot2Adapter(lift.Adapter):
+    name = "pilot2-replay"
+
+    def run(self, request):
+        return driver.codex_trace(_pilot2_events(), request.condition, ())
+
+
+def test_pilot2_shape_fails_the_main_run_gate(tmp_path):
+    report = lift.run_lift(Pilot2Adapter(), task_ids=FAST[:1], work_root=tmp_path)
+    runs = {run["condition"]: run for run in report["tasks"][0]["runs"]}
+    assert {run["adapter_status"] for run in runs.values()} == {lift.NO_ATTEMPT}
+    assert {run["verdict"] for run in runs.values()} == {"missing"}
+    secondary = report["summary"]["secondary"]
+    for condition in (WITH, WITHOUT):
+        assert secondary[condition]["calls_by_category"] == {"mcp:codex-resource": 2}
+        assert "shell" not in secondary[condition]["calls_by_category"]
+        assert secondary[condition]["no_attempt"] == 1
+    assert secondary[WITH]["treatment_not_used"] == 1
+    assert report["summary"]["treatment_delivery"]["with_runs_using_terraproof"] == 0
+
+
+def test_codex_catalog_check_refuses_code_mode_only_models():
+    only = {"models": [{"slug": "a", "visibility": "list", "tool_mode": "code_mode_only", "shell_type": "unified_exec"},
+                       {"slug": "h", "visibility": "hide", "tool_mode": None, "shell_type": "unified_exec"}]}
+    assert driver.codex_model_tool_modes(only) == {"listed_models": 1, "tool_modes": ["code_mode_only"],
+                                                   "shell_types": ["unified_exec"],
+                                                   "direct_tool_model_available": False}
+    mixed = {"models": only["models"] + [{"slug": "d", "visibility": "list", "tool_mode": None,
+                                          "shell_type": "unified_exec"}]}
+    assert driver.codex_model_tool_modes(mixed)["direct_tool_model_available"] is True
+    assert driver.codex_model_tool_modes([])["direct_tool_model_available"] is False
+
+
+def test_claude_mcp_config_is_explicit_and_outside_the_project(tmp_path):
+    task = lift.lift_task(FAST[0])
+    reference = tmp_path / "reference"
+    lift._generate(task, reference)
+    adapter = driver.ClaudeHostAdapter("claude.exe")
+    for condition in (WITH, WITHOUT):
+        project = tmp_path / condition / "project"
+        lift.prepare_project(task, SPECS[task.task_id], reference, project, condition=condition, agent="claude")
+        request = lift.AgentRequest(task.task_id, condition, 0, project, "", 10, 1.0)
+        config = adapter._config(request)
+        assert project not in config.parents
+        servers = json.loads(config.read_text(encoding="utf-8"))["mcpServers"]
+        if condition == WITH:
+            installed = json.loads((project / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]["terraproof"]
+            assert servers == {"terraproof": installed}
+        else:
+            assert servers == {}

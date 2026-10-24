@@ -248,12 +248,19 @@ def codex_lift_command(executable: str, project: Path, state: Path, condition: s
     return command + codex_feature_args() + codex_config_args(state, condition, effort) + [PROMPT]
 
 
+# Codex's built-in MCP *resource* tools are reported as mcp_tool_call items on server "codex"
+# (core/src/tools/handlers/mcp_resource/*.rs, 0.163.0-alpha.11.2); they are not MCP servers.
+CODEX_RESOURCE_TOOLS = ("list_mcp_resources", "list_mcp_resource_templates", "read_mcp_resource")
+
+
 def _codex_label(item: dict) -> tuple[str, str]:
     kind = item.get("type")
     if kind == "mcp_tool_call":
         tool = item.get("tool")
         if item.get("server") == "terraproof" and tool in TOOLS:
             return f"terraproof.{tool}", f"mcp:{tool}"
+        if tool in CODEX_RESOURCE_TOOLS:
+            return f"codex.{tool}", "mcp:codex-resource"
         return "mcp", "mcp:other"
     if kind in CODEX_CATEGORIES:
         return kind, CODEX_CATEGORIES[kind]
@@ -336,7 +343,7 @@ def codex_trace(events, condition: str, seeded: tuple[str, ...], *, timed_out: b
         turn_status, reason = "completed", "no tool calls" if not public else "ok"
     else:
         turn_status, reason = "aborted", "stream ended without turn completion"
-    terraproof_calls = sum(1 for call in public if call["category"].startswith("mcp:") and call["category"] != "mcp:other")
+    terraproof_calls = sum(1 for call in public if call["tool"].startswith("terraproof."))
     return AgentResult(status="completed" if turn_status in {"completed", "sandbox-denial"} else
                        ("timeout" if timed_out else "failed"),
                        cost_usd=None, tool_calls=len(public), terraproof_tool_calls=terraproof_calls,
@@ -419,6 +426,16 @@ class CodexHostAdapter(Adapter):
         except ValueError:
             names, block = set(), False
             checks["prompt_rendered"] = False
+        models = subprocess.run([self.executable, "debug", "models"], cwd=request.project, env=env,
+                                capture_output=True, text=True, encoding="utf-8", errors="replace",
+                                timeout=60, check=False)
+        try:
+            catalog = codex_model_tool_modes(json.loads(models.stdout))
+        except ValueError:
+            catalog = {"direct_tool_model_available": False}
+        # A shell tool cannot be shown to exist before a turn; refuse rather than guess.
+        checks["codex_direct_tool_model_available"] = catalog["direct_tool_model_available"]
+        checks["codex_model_tool_modes"] = ",".join(catalog.get("tool_modes", [])) or "unknown"
         registry = {skill for skill in _registry_names()}
         if request.condition == WITH:
             entry = (servers or {}).get("terraproof") or {}
@@ -433,6 +450,22 @@ class CodexHostAdapter(Adapter):
             checks["no_terraproof_skills_visible"] = not (names & registry)
             checks["no_terraproof_instructions_visible"] = not block
         return checks
+
+
+def codex_model_tool_modes(catalog) -> dict:
+    """Fixed labels from `codex debug models`: listed slugs' tool modes and shell types.
+
+    Every listed model being `code_mode_only` means the model sees only the JavaScript
+    `exec`/`wait` entry points; whether a shell is reachable from there cannot be rendered
+    without a model turn, and pilots 1 and 2 used none.
+    """
+    models = catalog.get("models", []) if isinstance(catalog, dict) else []
+    listed = [model for model in models if isinstance(model, dict) and model.get("visibility") == "list"]
+    modes = sorted({str(model.get("tool_mode") or "direct") for model in listed})
+    shells = sorted({str(model.get("shell_type")) for model in listed})
+    direct = [model for model in listed if (model.get("tool_mode") or "direct") != "code_mode_only"]
+    return {"listed_models": len(listed), "tool_modes": modes, "shell_types": shells,
+            "direct_tool_model_available": bool(direct)}
 
 
 def _registry_names() -> list[str]:
@@ -545,8 +578,7 @@ def claude_trace(events, condition: str, seeded: tuple[str, ...], *, timed_out: 
     return AgentResult(status="completed" if ok and not refused else ("timeout" if timed_out else "failed"),
                        cost_usd=float(cost) if isinstance(cost, (int, float)) else None,
                        tool_calls=len(public),
-                       terraproof_tool_calls=sum(1 for c in public if c["category"].startswith("mcp:")
-                                                 and c["category"] != "mcp:other"),
+                       terraproof_tool_calls=sum(1 for c in public if c["tool"].startswith("terraproof.")),
                        skill_reads=skill_reads,
                        input_tokens=usage.get("input_tokens"), output_tokens=usage.get("output_tokens"),
                        contamination=sorted(labels), calls=public,
@@ -564,10 +596,17 @@ class ClaudeHostAdapter(Adapter):
         self.executable = executable
 
     def _config(self, request: AgentRequest) -> Path:
+        """An explicit --mcp-config outside the project.
+
+        Claude Code leaves a project `.mcp.json` server "pending approval" (`claude mcp list`),
+        so "with" passes a copy of exactly the installer-written entry instead.
+        """
+        servers = {}
         if request.condition == WITH:
-            return request.project / ".mcp.json"  # written by the Terraproof installer
-        config = request.project.parent / "empty.mcp.json"
-        config.write_text('{"mcpServers": {}}', encoding="utf-8")
+            installed = json.loads((request.project / ".mcp.json").read_text(encoding="utf-8"))
+            servers = {"terraproof": installed["mcpServers"]["terraproof"]}
+        config = request.project.parent / f"{request.condition}.mcp.json"
+        config.write_text(json.dumps({"mcpServers": servers}), encoding="utf-8")
         return config
 
     def run(self, request: AgentRequest) -> AgentResult:
@@ -587,9 +626,14 @@ class ClaudeHostAdapter(Adapter):
         task = lift_task(request.task_id)
         script = request.project.parent / "preflight_probe.py"
         script.write_text(PREFLIGHT_SCRIPT.format(name=task.inputs[0]), encoding="utf-8")
-        result = subprocess.run(["python", str(script)], cwd=request.project, env=host_env(), capture_output=True,
-                                text=True, encoding="utf-8", errors="replace", timeout=120, check=False)
-        checks = {check.replace("sandbox_", "unsandboxed_"): marker in result.stdout
+        env = host_env()
+        # Resolve `python` on the agent's PATH; Windows CreateProcess would use this process's PATH.
+        python = shutil.which("python", path=env["PATH"])
+        stdout = ""
+        if python:
+            stdout = subprocess.run([python, str(script)], cwd=request.project, env=env, capture_output=True,
+                                    text=True, encoding="utf-8", errors="replace", timeout=120, check=False).stdout
+        checks = {check.replace("sandbox_", "unsandboxed_"): marker in stdout
                   for check, marker in PREFLIGHT_MARKERS if check != "sandbox_shell"}
         config = self._config(request)
         if request.condition == WITH:

@@ -22,10 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A no-model preflight runs before every run. It probes the sandboxed shell, Python/rasterio, input reads and output writes, MCP registration and its six served tools, and checks that skills and AGENTS.md are visible only in "with". A failure starts no agent, and `--preflight-only` runs the preflight alone.
   - The trace now holds per-call tool label, category, status, exit code and duration, plus a turn status, reason and error-type labels. Codex `error` items no longer count as calls.
   - Runs that finish without a deliverable or any shell/edit call are reported as `no-attempt`, and "with" runs record `treatment_used`.
+- Pilot 2 follow-up:
+  - Codex built-in MCP resource tools (`list_mcp_resources`, `list_mcp_resource_templates`, `read_mcp_resource` on server `codex`) are labelled `mcp:codex-resource`, never as Terraproof calls or as attempts.
+  - The Codex preflight reads `codex debug models` and refuses to start while every listed model is `code_mode_only`, because shell exposure cannot be shown without a model turn.
+  - The Claude adapter passes an explicit MCP config copied from the installer entry, since project `.mcp.json` servers wait for approval in Claude Code.
+  - The Claude preflight resolves `python` on the agent's PATH.
 
 ### Evaluation
 
-- Pilot 1 (2 approved Codex 0.160.1 invocations) produced no `ndvi.tif` in either condition, with zero Terraproof use. It is diagnosed in `Terraproof_Phase5_PLAN.md` §13 as a harness failure, most likely from the disabled execution tools, and is excluded from any analysis. Agent lift is still **unmeasured**, and pilot 2 awaits user approval.
+- Pilot 1 (2 approved Codex 0.160.1 invocations) produced no `ndvi.tif` in either condition, with zero Terraproof use. It is diagnosed in `Terraproof_Phase5_PLAN.md` §13 as a harness failure, most likely from the disabled execution tools, and is excluded from any analysis. Pilot 2 (2 approved invocations on the Codex 0.163.0-alpha.11.2 app runtime) again made no shell call; its only calls were two built-in resource listings per condition (§14). Codex is blocked by preflight on this machine, and Claude Code pilot 3 (2 invocations, $4 ceiling) awaits user approval and login. Agent lift is still **unmeasured**.
 
 ## [0.4.1] — 2026-10-24
 

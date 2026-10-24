@@ -1,6 +1,6 @@
 # Terraproof — Phase 5 Plan: Agent-lift measurement
 
-> Status: **harness implemented and verified offline; one approved 2-invocation pilot ran and produced no gradable output (section 13).** The harness and driver were then fixed offline, with no model or agent call. Lift is still **unmeasured**. Each further real run needs the user's explicit approval of the command, call count and cost ceiling in section 9.
+> Status: **harness implemented and verified offline; two approved 2-invocation Codex pilots produced no gradable output (sections 13 and 14).** The harness and driver were fixed offline after each, with no model or agent call. Codex is now blocked by preflight on this machine, and the next pilot is proposed on Claude Code. Lift is still **unmeasured**. Each further real run needs the user's explicit approval of the command, call count and cost ceiling in section 9.
 
 ## 1. Why this phase
 
@@ -188,6 +188,18 @@ All statistics are deterministic and implemented in `terraproof.evals.lift`. The
    - **Cost ceiling:** Codex subscription usage has no USD cap, so the limit is 2 invocations × 900 s.
    - **Claude alternative:** `--agent-host claude --runs 1 --task indices-ndvi-physical-inputs --max-usd-per-run 1 --max-usd-total 2 --approve-model-calls 2`, with a **$2** ceiling.
    - **Main run gate:** the pilot must show `shell` calls in `calls_by_category` for both conditions, at least one "with" run with `treatment_used: true`, and no `no-attempt`.
+
+   **After pilot 2 (section 14), Codex is not used for lift runs on this machine.**
+   - Every model in Codex 0.163's catalog is `code_mode_only`, and no non-inference command can show that a shell is reachable.
+   - The Codex preflight therefore fails by construction (`codex_direct_tool_model_available: false`) and starts nothing.
+   - **Pilot 3 uses Claude Code.** It needs `claude auth login` first; otherwise the driver reports `unavailable` and makes no call. The no-model preflight passes in both conditions.
+
+   ```powershell
+   $env:PYTHONPATH="src"; C:\Users\mrsom\.venvs\terraproof-py312\Scripts\python tests\agent_lift.py --agent-host claude --runs 1 --task indices-ndvi-physical-inputs --max-usd-per-run 2 --max-usd-total 4 --timeout 900 --approve-model-calls 2 --out .terracache\agent-lift-pilot3.json
+   ```
+
+   - **Ceiling:** 2 invocations, **$4 total** ($2 per run via `--max-budget-usd`; the harness reserves both caps before starting the pair).
+   - **Why $2:** the per-run cap is $2 rather than the planned $1, so that a cap stop (labelled `error_max_budget_usd`) does not hide the result. The pilot's measured cost then sets the main-run caps.
 3. **Main run, 54 invocations** (9 tasks × 3 runs × 2 conditions), only after the pilot passes the gate above:
 
    ```powershell
@@ -213,7 +225,7 @@ All statistics are deterministic and implemented in `terraproof.evals.lift`. The
 
 ## 12. Decisions needed
 
-1. **Approve pilot 2** (section 9, step 2): Codex app runtime 0.163.0-alpha.11.2 proposed, 2 invocations, ceiling as stated.
+1. **Approve pilot 3 on Claude Code** (section 9, step 2): 2 invocations, $4 ceiling, after `claude auth login`. Codex pilots are not proposed while every catalog model is `code_mode_only` (section 14).
 2. **Runs per condition for the main run:** 3 (proposed, 54 invocations) or 5 (90 invocations, MDE ≈ 0.22 at ψ = 0.3).
 3. **Claude caps** if Claude is used: $1 per run / $54 total proposed, or higher after the pilot shows typical cost.
 
@@ -263,3 +275,60 @@ Calibration was eligible: the reference was accepted, and the seeded `ndvi_dn_ra
 6. **Classification.** Under the new rules, both pilot 1 runs would be `no-attempt` rather than `completed`, and the "with" run would be `treatment_used: false`. Unit tests replay this pilot 1 shape.
 
 Pilot 1 is a harness failure, not evidence about lift. Its two runs are excluded from any analysis.
+
+## 14. Pilot 2 findings (2026-10-24)
+
+**What ran.** An approved 2-invocation Codex pilot at commit `1172aff`:
+
+- `tests/agent_lift.py --agent-host codex --runs 1 --task indices-ndvi-physical-inputs --codex-executable C:\Users\mrsom\AppData\Local\OpenAI\Codex\bin\37f54d68e5533a51\codex.exe --timeout 900 --approve-model-calls 2 --out .terracache\agent-lift-pilot2.json`
+- Python 3.12.10 venv, `PYTHONPATH=src`, host `codex-cli 0.163.0-alpha.11.2`.
+- `--preflight-only` just before reported `preflight_failures: []`.
+- 00:53:00Z to 00:55:37Z (2 min 37 s for both runs). `started_agent_runs` 2, `spent_usd` 0.0.
+
+**Results.**
+
+| | without | with |
+|---|---|---|
+| adapter_status / verdict | no-attempt / missing | no-attempt / missing |
+| calls_by_category | `{"mcp:other": 2}` | `{"mcp:other": 2}` |
+| each call | `{"tool": "mcp", "category": "mcp:other", "status": "completed", "duration_ms": 0, "exit_code": null}` | same |
+| terraproof_tool_calls / skill_reads | 0 / 0 | 0 / 0, treatment_not_used 1 |
+| turn | completed / ok, error_items 0 | completed / ok |
+| input / output tokens | 40,373 / 314 | 74,197 / 388 |
+
+Gate: shell calls in 0 of 2 conditions, `treatment_used` 0, `no_attempt` 2. **Failed.**
+
+**Offline diagnosis.** No model or agent call was made. Sources: Codex source at tag `rust-v0.163.0-alpha.11.2`, `codex debug models`, `codex debug prompt-input`, `codex mcp list` and `claude mcp list`.
+
+1. **The two "mcp" items are Codex built-ins, not MCP servers.** `list_mcp_resources`, `list_mcp_resource_templates` and `read_mcp_resource` emit `McpToolCallBegin`/`End` with server `"codex"` when no server is named (`core/src/tools/handlers/mcp_resource/*.rs`). `exec` reports them as `mcp_tool_call` items.
+
+   In "without" the server table is empty, so no real MCP call was possible. Two 0 ms "completed" calls in each condition fit an agent that, lacking a file or shell tool, looked for `TASK.md` as an MCP resource.
+
+   **Fix:** they are now labelled `codex.<tool>` with category `mcp:codex-resource`, never counted as Terraproof or as an attempt. A third-party server reusing a Terraproof tool name is `mcp:other`.
+
+2. **Every model in the catalog is code-mode-only.** `codex debug models` (a catalog render, no inference) lists `tool_mode: "code_mode_only"` for every listed model, including the default `gpt-6.1-sol`, and `shell_type: "unified_exec"`.
+
+   `requested_tool_mode` takes the catalog's `tool_mode` over any feature flag (`core/src/tools/mod.rs`). In code-mode-only, the model sees only the JavaScript `exec`/`wait` entry points, and every other tool is a nested call. The `exec` wrapper itself is not emitted in exec JSONL (`event_processor_with_jsonl_output.rs` maps unknown items to `None`), so the trace sees only nested calls.
+
+3. **Why no shell call: the shell tool is environment-dependent and not observable before a turn.** `add_shell_tools` (`core/src/tools/spec_plan.rs`) adds `exec_command` only if all of these hold:
+   - the turn has a **Ready** execution environment, or `stable_environment_tools` is on;
+   - `shell_tool` is on;
+   - the model's `shell_type` is not disabled;
+   - no policy requires unified exec while it is off.
+
+   The argv now satisfies the static conditions: `shell_tool`/`unified_exec` stay at their defaults, no allow-list restricts tools (`enabled_tools` applies only to the Terraproof MCP server), and there is no `model_provider` override. `approval_policy="never"` and `workspace-write` do not remove tools, and `--ignore-user-config`/`--strict-config` only drop the user's config layer.
+
+   Whether the environment was Ready inside `exec` at tool-planning time, and which nested tools code mode offered, cannot be rendered without a model turn. `codex debug prompt-input` builds the session and tool router but prints only the message input, which showed a Ready PowerShell environment. No Codex command prints the tool list.
+
+   **The Phase 4 native acceptance is consistent with this:** it ran only MCP tools by design (`shell_tool` disabled) on the same runtime, and those calls work through code mode.
+
+4. **Conclusion: on this machine Codex `exec` cannot be relied on to expose a shell tool, and that cannot be checked offline.** Two approved pilots (0.160.1 and 0.163.0-alpha.11.2) produced no shell or file call in either condition.
+
+   Rather than proposing more Codex pilots, the Codex preflight now reads the catalog and fails (`codex_direct_tool_model_available: false`) while every listed model is `code_mode_only`. Codex lift runs therefore start nothing by construction.
+
+5. **The Claude Code path was hardened offline.**
+   - **MCP config:** Claude Code leaves an installer-written project `.mcp.json` server "Pending approval" (`claude mcp list`, no inference). "with" now passes an explicit `--mcp-config` copy of exactly that entry from outside the project, and "without" passes an empty one.
+   - **Python probe bug:** the Claude preflight found that `subprocess.run(["python", …])` on Windows resolves `python` from the driver's PATH rather than the agent's, which picked an interpreter without rasterio. The probe now resolves `python` on the agent's PATH and passes in both conditions: Python, rasterio, input read and output write, plus all six MCP tools served in "with".
+   - **Remaining limits:** Claude Code has no model-free sandbox runner or skill renderer, so skill visibility under `--restricted` is confirmed only by pilot 3's trace (`skill_reads`, `Skill` calls).
+
+Pilot 2 is a harness/host failure, not evidence about lift, and is excluded from any analysis.
