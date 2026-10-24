@@ -219,21 +219,39 @@ def raster_nodata_dtype_windowing(root: Path):
     difference_path = write_raster(root / "difference.tif", difference, crs=UTM, nodata=-9999.0, dtype="float32")
 
     steps = [check_step("check difference.tif", [difference_path])]
+    # Every observation below reads the delivered file, never the arrays used to build it.
+    delivered = read_raster(difference_path)
+    delivered_values = np.ma.getdata(delivered).astype("float64")
+    delivered_valid = ~np.ma.getmaskarray(delivered)
     oracle = Oracle("float difference: negative values, valid zeros and the intersected mask")
-    oracle.equal("output dtype is floating point", read_raster(difference_path).dtype.kind, "f")
-    oracle.equal("valid pixels equal the intersection of both input masks", int(np.count_nonzero(valid)), 254)
-    oracle.close("minimum difference", float(np.min(expected[valid])), float(np.min(expected[valid])), 0.0)
+    oracle.equal("output dtype is floating point", delivered.dtype.kind, "f")
+    oracle.equal("valid pixels equal the intersection of both input masks", int(np.count_nonzero(delivered_valid)), 254)
+    oracle.require(
+        "the output mask equals the intersection of both input masks",
+        bool(np.array_equal(delivered_valid, valid)),
+        int(np.count_nonzero(delivered_valid != valid)),
+        "0 mismatched mask pixels",
+    )
+    oracle.require(
+        "every valid output pixel equals first minus second",
+        bool(np.allclose(delivered_values[valid], expected[valid], atol=1e-6)),
+        int(np.count_nonzero(~np.isclose(delivered_values[valid], expected[valid], atol=1e-6))),
+        "0 wrong valid pixels",
+    )
+    oracle.close("minimum difference", float(np.min(delivered_values[valid])), float(np.min(expected[valid])), 1e-6)
     oracle.require(
         "negative differences are preserved",
-        float(np.min(expected[valid])) < 0,
-        float(np.min(expected[valid])),
+        float(np.min(delivered_values[valid])) < 0,
+        float(np.min(delivered_values[valid])),
         "< 0",
     )
-    oracle.close("the legitimate zero difference stays valid", float(difference[10, 10]), 0.0, 1e-9)
-    oracle.equal("input nodata is nodata in the output", float(np.ma.getdata(read_raster(difference_path))[3, 3]), -9999.0)
+    oracle.close("the legitimate zero difference stays valid", float(delivered_values[10, 10]), 0.0, 1e-9)
+    oracle.require("the legitimate zero difference is not masked", bool(delivered_valid[10, 10]),
+                   bool(delivered_valid[10, 10]), True)
+    oracle.equal("input nodata is nodata in the output", float(delivered_values[3, 3]), -9999.0)
     oracle.close(
         "control pixel difference",
-        float(difference[1, 1]),
+        float(delivered_values[1, 1]),
         float(expected[1, 1]),
         1e-9,
     )

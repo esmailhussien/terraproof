@@ -95,24 +95,36 @@ def _same_crs(first: dict, second: dict) -> bool:
 
 
 def check_grid_alignment(rasters: list[dict]) -> list:
-    """Compare every raster with the first one: CRS, pixel size, and pixel-grid origin."""
+    """Compare every raster with the first one: CRS, pixel size and orientation, and pixel-grid origin.
+
+    All four basis terms of the affine transform are compared, so a rotated or sheared grid never
+    passes as aligned with a north-up one. The origin offset is measured in the reference grid's own
+    pixel coordinates, which is also correct for matching rotated grids.
+    """
     reference = rasters[0]
-    ref_transform = reference["transform"]
-    pixel_x, pixel_y = ref_transform[0], ref_transform[4]
-    tolerance_x = GRID_TOLERANCE * abs(pixel_x)
-    tolerance_y = GRID_TOLERANCE * abs(pixel_y)
+    a, b, c, d, e, f = (float(value) for value in reference["transform"][:6])
+    determinant = a * e - b * d
+    scale = max(abs(a), abs(b), abs(d), abs(e))
+    tolerance = GRID_TOLERANCE * scale
     inputs = [r["path"] for r in rasters]
 
     problems = []
     for other in rasters[1:]:
-        other_transform = other["transform"]
+        oa, ob, oc, od, oe, of = (float(value) for value in other["transform"][:6])
         if not _same_crs(reference, other):
             problems.append(f"CRS of {other['path']} differs from {reference['path']}")
-        if abs(other_transform[0] - pixel_x) > tolerance_x or abs(other_transform[4] - pixel_y) > tolerance_y:
+        if abs(oa - a) > tolerance or abs(oe - e) > tolerance:
             problems.append(f"pixel size of {other['path']} differs from {reference['path']}")
-        offset_x = (other_transform[2] - ref_transform[2]) / pixel_x
-        offset_y = (other_transform[5] - ref_transform[5]) / pixel_y
-        if abs(offset_x - round(offset_x)) > GRID_TOLERANCE or abs(offset_y - round(offset_y)) > GRID_TOLERANCE:
+        if abs(ob - b) > tolerance or abs(od - d) > tolerance:
+            problems.append(f"rotation or shear of {other['path']} differs from {reference['path']}")
+        if determinant == 0:
+            problems.append(f"the transform of {reference['path']} is degenerate")
+            continue
+        # Inverse affine: the other grid's origin expressed in the reference grid's pixel coordinates.
+        dx, dy = oc - c, of - f
+        column = (e * dx - b * dy) / determinant
+        row = (-d * dx + a * dy) / determinant
+        if abs(column - round(column)) > GRID_TOLERANCE or abs(row - round(row)) > GRID_TOLERANCE:
             problems.append(f"pixel-grid origin of {other['path']} is offset from {reference['path']}")
 
     if problems:
@@ -129,7 +141,7 @@ def check_grid_alignment(rasters: list[dict]) -> list:
         result(
             "raster.grid_alignment",
             PASS,
-            f"All {len(rasters)} rasters share CRS, pixel size, and pixel-grid origin.",
+            f"All {len(rasters)} rasters share CRS, pixel size and orientation, and pixel-grid origin.",
             inputs=inputs,
             problems=[],
         )

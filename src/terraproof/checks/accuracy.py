@@ -85,7 +85,15 @@ def _normalise_areas(class_areas) -> tuple[dict[str, float], str | None]:
     if class_areas is None:
         return {}, None
     if isinstance(class_areas, dict):
-        areas = {str(name): float(value) for name, value in class_areas.items()}
+        try:
+            areas = {str(name): float(value) for name, value in class_areas.items()}
+        except (TypeError, ValueError):
+            return {}, f"class_areas values must be numbers, got {class_areas!r}"
+        invalid = sorted(name for name, value in areas.items() if not math.isfinite(value) or value < 0)
+        if invalid:
+            return {}, f"class areas must be finite and non-negative; invalid for {', '.join(invalid)}"
+        if areas and sum(areas.values()) <= 0:
+            return {}, "class areas must have a positive total"
         return areas, None
     try:
         value = float(class_areas)
@@ -143,6 +151,18 @@ def check_sample_design(
                 **evidence,
             )
         ]
+    unsampled = _unsampled_strata(areas, counts)
+    if unsampled:
+        return [
+            result(
+                "accuracy.sample_design",
+                FAIL,
+                f"{len(unsampled)} mapped classes with positive area have no reference samples in {path}: "
+                f"{', '.join(unsampled)}. A stratified design needs samples in every mapped stratum.",
+                **evidence,
+                unsampled_strata=unsampled,
+            )
+        ]
     if estimates_requested and not areas:
         return [
             result(
@@ -158,6 +178,11 @@ def check_sample_design(
     if estimates_requested and areas:
         message += f" Map-class areas were supplied for {len(areas)} classes."
     return [result("accuracy.sample_design", PASS, message, **evidence)]
+
+
+def _unsampled_strata(areas: dict[str, float], counts: Counter) -> list[str]:
+    """Mapped classes that cover area but have no reference sample."""
+    return sorted(name for name, area in areas.items() if area > 0 and counts.get(name, 0) == 0)
 
 
 def _confusion(records: list[dict]) -> tuple[dict[str, Counter], dict[str, int]]:
@@ -238,9 +263,9 @@ def compute_estimates(records: list[dict], areas: dict[str, float]) -> dict:
             user_accuracy[i] = float("nan")
     producer_accuracy = {}
     for j in reference_classes:
-        producer_accuracy[j] = (
-            p_ij[j][j] / column_total[j] if column_total[j] else float("nan")
-        )
+        # A reference class that is never mapped has no row, so its diagonal share is zero.
+        diagonal = p_ij[j][j] if j in p_ij else 0.0
+        producer_accuracy[j] = diagonal / column_total[j] if column_total[j] else float("nan")
     overall_accuracy = sum(producer_accuracy[j] * column_total[j] for j in reference_classes)
 
     # Sample (unweighted) accuracies, kept alongside so the area-adjusted values can be
@@ -359,6 +384,21 @@ def check_estimates(samples: dict, class_areas=None) -> list:
                 **base_evidence,
                 accuracies=accuracies,
                 classes_without_area=missing,
+            )
+        ]
+
+    unsampled = _unsampled_strata(areas, counts)
+    if unsampled:
+        return [
+            result(
+                "accuracy.estimates",
+                NOT_RUN,
+                f"Mapped classes {', '.join(unsampled)} cover area but have no reference samples, so no complete "
+                f"area-adjusted estimate can be made for {path}. Sample accuracies were computed (overall "
+                f"{accuracies['sample_overall_accuracy']:.4f}).",
+                **base_evidence,
+                accuracies=accuracies,
+                unsampled_strata=unsampled,
             )
         ]
 

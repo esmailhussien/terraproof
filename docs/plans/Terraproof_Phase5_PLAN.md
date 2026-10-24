@@ -108,11 +108,12 @@ All statistics are deterministic and implemented in `terraproof.evals.lift`. The
 
 | Runs per condition | Pairs | MDE at ψ = 0.2 | ψ = 0.3 | ψ = 0.5 |
 |---|---|---|---|---|
-| 1 | 9 | 0.37 | 0.45 | 0.58 |
-| **3 (default)** | **27** | **0.23** | **0.28** | **0.37** |
+| 1 | 9 | none | none | none |
+| **3 (default)** | **27** | **none** | **0.28** | **0.36** |
 | 5 | 45 | 0.18 | 0.22 | 0.29 |
 | 10 | 90 | 0.13 | 0.16 | 0.21 |
 
+  "none" means no difference reaches 80% power at that ψ: a paired difference cannot exceed the discordance (|P10 − P01| ≤ ψ). An earlier version searched up to √ψ and printed infeasible values (0.37/0.45/0.58 at 9 pairs, 0.23 at 27 pairs and ψ = 0.2); this was corrected after an independent review (2026-10-24).
   These are run-level numbers and are optimistic. At the task level, the exact sign-flip test with nine tasks reaches p < 0.05 only when at least 8 of 9 tasks improve (with similar magnitude) and none gets worse: for equal |d_t|, 8/9 gives p = 0.039 and 7/9 gives p = 0.18. **With nine tasks, only a large and consistent lift can be distinguished from chance.** A null result does not show that there is no lift. The report also prints the MDE at the observed discordance.
 - **Incomplete pairs** (budget stop, install failure) are excluded from paired statistics and counted in `incomplete_pairs`.
 - **Ceiling tasks (descriptive, pre-specified after pilot 3).**
@@ -436,7 +437,7 @@ The report is kept outside the repository: `D:\AgentLayer\.claude\worktrees\phas
 | mean task-level difference | **0.222222**, 95% CI [0.037037, 0.444444] (task-cluster bootstrap, 10,000 resamples, seed 20261024) |
 | **primary test: exact sign-flip p** | **0.125, not significant at α = 0.05** |
 | McNemar (secondary, anti-conservative) | both 21, with-only 6, without-only 0, neither 0; exact p = 0.03125 |
-| observed discordance / MDE at it | 0.222 / 0.243 |
+| observed discordance / MDE at it | 0.222 / none (corrected: the 0.243 first reported exceeds ψ and is infeasible; no difference reaches 80% power at 27 pairs and ψ = 0.222) |
 | "with" Terraproof use | 92 Terraproof MCP calls (`run_checks` 46, `inspect_dataset` 29, `find_guidance` 11, `load_section` 6), 92 shell calls, **0 skill reads** |
 
 | Task | with | without | note |
@@ -505,3 +506,10 @@ These are in this PR, offline-tested, and were not used in the main run:
 - **Skills unused:** "with" used Terraproof through MCP only. `skill_reads` was 0 across all 27 "with" runs, so skill delivery under `--restricted` remains unverified.
 - **Cost:** "with" cost about 1.6× "without" overall.
 - **Token counts:** `input_tokens` remains non-cached input only (section 15).
+
+## 17. Independent review and re-grading (2026-10-24)
+
+An independent review by Codex (a different model family; it disclosed earlier contributions to Phase 4) reported eight findings, all reproduced and fixed. Two concerned this harness: the `raster-nodata-dtype-windowing` oracle graded reference-side arrays instead of the delivered file, and `score_outputs` did not enforce the deliverable contract's grid. A third was the MDE search bound (section 5 table and section 16 corrected).
+
+- **Re-grading:** all 72 saved main-run deliverables were scored again with the fixed grader, offline. **0 verdicts changed.** The pre-specified result in section 16 stands (sign-flip p = 0.125, not significant; no lift claimed); only the MDE line changes, to none feasible at 27 pairs and ψ = 0.222.
+- **Still open:** a generic probe (zeros, +1 and row-flipped outputs per deliverable) found two more under-graded deliverables: `sr_nir.tif` in `satellite-s2-baseline-offset-mask` is not graded, and a row-flipped `composite_counts.tif` in `satellite-seasonal-harmonized-composite` is accepted. Every saved historical output for both files matches the reference pixel for pixel, so they did not affect the reported verdicts.

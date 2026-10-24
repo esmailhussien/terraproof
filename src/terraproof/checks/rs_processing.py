@@ -554,6 +554,9 @@ def check_temporal_scope(items: list[dict], time_range: tuple[str, str] | list |
             if low_error or high_error:
                 undated.append({"item": item["path"], "reason": low_error or high_error})
                 continue
+            if low > high:
+                undated.append({"item": item["path"], "reason": "start_datetime is after end_datetime"})
+                continue
         else:
             undated.append({"item": item["path"], "reason": "no datetime or start/end_datetime"})
             continue
