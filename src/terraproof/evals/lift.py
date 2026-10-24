@@ -656,6 +656,7 @@ def run_lift(
         digests = {task.task_id: {name: _digest(references[task.task_id] / name) for name in task.inputs}
                    for task in tasks}
         stopped = None
+        sequence = 0
         for run_index, task, pair in schedule(tasks, runs):
             pair_cost = 2 * budget.per_run_usd if budget.per_run_usd is not None else 0.0
             if stopped is None and budget.total_usd is not None and spent + pair_cost > budget.total_usd + 1e-9:
@@ -666,7 +667,9 @@ def run_lift(
                     record.update(adapter_status=NOT_RUN, verdict=NOT_RUN, accepted=False, reason=stopped)
                     records[task.task_id].append(record)
                     continue
-                run_dir = base / "runs" / task.task_id / f"run-{run_index}" / condition
+                # Opaque, sequential names: the agent's path reveals neither task nor condition.
+                sequence += 1
+                run_dir = base / "runs" / f"{sequence:03d}"
                 project = run_dir / "project"
                 installed = prepare_project(task, specs[task.task_id], references[task.task_id], project,
                                             condition=condition, agent=agent)
@@ -701,7 +704,11 @@ def run_lift(
                 score = score_outputs(task, specs[task.task_id], project / "outputs", run_dir / "scoring",
                                       digests[task.task_id])
                 if result.contamination:
-                    score.update(accepted=False, verdict=REJECTED if score["verdict"] == ACCEPTED else score["verdict"])
+                    # Contaminated runs never count as accepted; the underlying verdict is kept for
+                    # a separately labelled sensitivity analysis.
+                    score.update(accepted_before_contamination=score["accepted"],
+                                 contamination_forced_rejection=score["accepted"],
+                                 accepted=False, verdict=REJECTED if score["verdict"] == ACCEPTED else score["verdict"])
                 status = classify_attempt(result, score["deliverables_present"])
                 used = result.terraproof_tool_calls > 0 or result.skill_reads > 0
                 record.update(adapter_status=status, host_status=result.status,
@@ -820,7 +827,8 @@ def summarize(task_reports: list[dict]) -> dict:
     secondary = {condition: {"rejected_by_checks": 0, "rejected_by_oracle_only": 0, "missing_or_error": 0,
                              "contaminated": 0, "tool_calls": 0, "terraproof_tool_calls": 0, "skill_reads": 0,
                              "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0, "no_attempt": 0,
-                             "preflight_failed": 0, "treatment_not_used": 0, "calls_by_category": {}}
+                             "preflight_failed": 0, "treatment_not_used": 0, "calls_by_category": {},
+                             "forced_rejections": 0}
                  for condition in CONDITIONS}
     incomplete = 0
     for task in task_reports:
@@ -842,6 +850,7 @@ def summarize(task_reports: list[dict]) -> dict:
                 category = str(call.get("category"))
                 stats["calls_by_category"][category] = stats["calls_by_category"].get(category, 0) + 1
             stats["contaminated"] += bool(agent.get("contamination"))
+            stats["forced_rejections"] += _forced_rejection(run)
             for key in ("tool_calls", "terraproof_tool_calls", "skill_reads", "input_tokens", "output_tokens"):
                 stats[key] += int(agent.get(key) or 0)
             stats["cost_usd"] += float(agent.get("cost_usd") or 0.0)
@@ -896,6 +905,7 @@ def summarize(task_reports: list[dict]) -> dict:
         "secondary": {condition: {key: _round(value) if isinstance(value, float) else value
                                   for key, value in stats.items()}
                       for condition, stats in secondary.items()},
+        "sensitivity_contamination_ignored": _sensitivity(task_reports),
         "treatment_delivery": {
             "with_runs_started": sum(1 for task in task_reports for run in task["runs"]
                                      if run.get("treatment_used") is not None),
@@ -903,6 +913,55 @@ def summarize(task_reports: list[dict]) -> dict:
                                               if run.get("treatment_used") is True),
             "note": "intention-to-treat: runs that never used Terraproof still count in the primary metric",
         },
+    }
+
+
+def _forced_rejection(run: dict) -> bool:
+    """A run rejected only because of a contamination label (its checks and oracle accepted it)."""
+    if "contamination_forced_rejection" in run:
+        return bool(run["contamination_forced_rejection"])
+    # Reports written before this field existed: same rule from the recorded layers.
+    return bool(run.get("agent", {}).get("contamination")) and bool(run.get("checks_ok")) and bool(run.get("oracle_ok"))
+
+
+def _sensitivity(task_reports: list[dict]) -> dict | None:
+    """NOT pre-specified: the paired effect if contamination-forced rejections are scored by their
+    checks and oracle. Reported only when such rejections exist; never replaces the primary result."""
+    if not any(_forced_rejection(run) for task in task_reports for run in task["runs"]):
+        return None
+    b = c = both = neither = 0
+    differences = []
+    passed = {WITH: 0, WITHOUT: 0}
+    total = 0
+    for task in task_reports:
+        by_run: dict[int, dict[str, dict]] = {}
+        for run in task["runs"]:
+            by_run.setdefault(run["run"], {})[run["condition"]] = run
+        task_with = task_without = pairs = 0
+        for run in by_run.values():
+            if set(run) != set(CONDITIONS) or any(item["verdict"] == NOT_RUN for item in run.values()):
+                continue
+            outcome = {condition: bool(run[condition]["accepted"] or _forced_rejection(run[condition]))
+                       for condition in CONDITIONS}
+            pairs += 1
+            task_with += outcome[WITH]
+            task_without += outcome[WITHOUT]
+            b += outcome[WITH] and not outcome[WITHOUT]
+            c += outcome[WITHOUT] and not outcome[WITH]
+            both += outcome[WITH] and outcome[WITHOUT]
+            neither += not outcome[WITH] and not outcome[WITHOUT]
+        if pairs:
+            differences.append((task_with - task_without) / pairs)
+            passed[WITH] += task_with
+            passed[WITHOUT] += task_without
+            total += pairs
+    return {
+        "label": "not pre-specified: contamination-forced rejections scored by their checks and oracle",
+        "pass_rate": {condition: _round(passed[condition] / total) if total else None for condition in CONDITIONS},
+        "mean_task_difference": _round(sum(differences) / len(differences)) if differences else None,
+        "sign_flip_p": _round(sign_flip_p(differences)),
+        "mcnemar": {"with_only": b, "without_only": c, "both": both, "neither": neither,
+                    "exact_p": _round(exact_mcnemar(b, c))},
     }
 
 

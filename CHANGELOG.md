@@ -30,10 +30,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pilot 3 follow-up:
   - `--claude-executable` selects the native `claude.exe`; npm's `claude.cmd` wrapper is refused.
   - The lift summary reports each task's `baseline_pass_rate` and a descriptive `ceiling` flag, plus `ceiling_tasks` and `tasks_with_headroom`. The primary analysis is unchanged.
+- Main-run follow-up (isolation for future runs):
+  - Run projects use opaque `runs/NNN/project` paths under a neutral `paired-run-*` work directory.
+  - `--agent-python-without` supplies a dependency-only interpreter, and `PYTHONPATH` is dropped in "without". The preflight requires that interpreter, that it cannot import Terraproof, and that paths are neutral.
+  - Contamination now has sub-labels for real use (`import`, `module-or-cli`, `mcp`, `package-query`, `skill`, `mention`), separate from the path-only diagnostic `terraproof-path-text`.
+  - Forced rejections keep `accepted_before_contamination`, and the summary adds a labelled, not-pre-specified `sensitivity_contamination_ignored`.
 
 ### Evaluation
 
-- Pilot 1 (2 approved Codex 0.160.1 invocations) produced no `ndvi.tif` in either condition, with zero Terraproof use. It is diagnosed in `Terraproof_Phase5_PLAN.md` §13 as a harness failure, most likely from the disabled execution tools, and is excluded from any analysis. Pilot 2 (2 approved invocations on the Codex 0.163.0-alpha.11.2 app runtime) again made no shell call; its only calls were two built-in resource listings per condition (§14). Codex is blocked by preflight on this machine. Claude Code pilot 3 (2 approved invocations, $0.52 reported) passed the gate: both conditions produced an accepted, decision-grade `ndvi.tif`, and the "with" run used Terraproof (2 `inspect_dataset`, 2 `run_checks`, 1 skill read). This is the first end-to-end harness run. It shows a 0.0 difference on a ceiling task, not a lift estimate (§15). The 54-invocation main run awaits approval, and agent lift is still **unmeasured**.
+- Pilot 1 (2 approved Codex 0.160.1 invocations) produced no `ndvi.tif` in either condition, with zero Terraproof use. It is diagnosed in `Terraproof_Phase5_PLAN.md` §13 as a harness failure, most likely from the disabled execution tools, and is excluded from any analysis. Pilot 2 (2 approved invocations on the Codex 0.163.0-alpha.11.2 app runtime) again made no shell call; its only calls were two built-in resource listings per condition (§14). Codex is blocked by preflight on this machine. Claude Code pilot 3 (2 approved invocations, $0.52 reported) passed the gate: both conditions produced an accepted, decision-grade `ndvi.tif`, and the "with" run used Terraproof (2 `inspect_dataset`, 2 `run_checks`, 1 skill read). This is the first end-to-end harness run. It shows a 0.0 difference on a ceiling task, not a lift estimate (§15). Main run (54 approved Claude Code invocations, $8.71 reported):
+  - **Pre-specified result:** pass rate 1.0 with vs 0.778 without, mean task difference 0.222 (95% CI 0.037–0.444). **The primary exact sign-flip test gives p = 0.125, not significant, and no lift claim is made.** McNemar's secondary p = 0.031 is anti-conservative.
+  - **Ceiling:** five of nine tasks are at ceiling.
+  - **Contamination flags:** three of six "without" rejections came only from a `terraproof-in-without` flag that matched absolute `Read`-tool paths under the old `terraproof-lift-host-*` prefix. Whether those runs also used Terraproof for real cannot be determined from the sanitised trace.
+  - **Sensitivity (not pre-specified):** without 0.889, difference 0.111, sign-flip p = 1.0.
+  - **Robust exploratory finding:** Landsat QA, 3/3 with vs 0/3 without (§16).
 
 ## [0.4.1] — 2026-10-24
 

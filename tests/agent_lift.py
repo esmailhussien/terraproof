@@ -73,13 +73,44 @@ print("WRITE-OK", flush=True)
 """
 
 
+# Real Terraproof use in "without", each with a fixed reason sub-label. Main run 1 showed that a
+# bare "terraproof" match also fires on path text: Claude Code's Read/Write tools take absolute
+# paths, and the run projects then lived under %TEMP%\terraproof-lift-host-*.
+TERRAPROOF_USE = (
+    ("import", r"\b(?:import|from)\s+terraproof\b|import_module\(\s*['\"]terraproof|__import__\(\s*['\"]terraproof"),
+    ("module-or-cli", r"-m\s+terraproof\b|(?:^|[\s;&|\"'])terraproof(?:\.exe)?\s+(?:check|preflight|inspect|route|manifest|install)\b"),
+    ("mcp", r"mcp__terraproof|terraproof\.mcp\b"),
+    ("package-query", r"pip3?(?:\.exe)?\s+(?:show|list|install|download|freeze|uninstall)\b[^\n]*terraproof"
+                      r"|site-packages[\\/]+terraproof|terraproof[\w.-]*\.dist-info"),
+    ("skill", r"(?:skills|\.agents|\.claude)[\\/][^\s\"']*terraproof"),
+)
+# Path-like tokens: drive or rooted paths and any token joined to a path separator.
+PATH_TOKEN = r"(?:[A-Za-z]:)?(?:[\\/][^\s\"'<>|;,()]+)+|[^\s\"'<>|;,()]+[\\/][^\s\"'<>|;,()]*"
+
+
+def terraproof_use_labels(text: str) -> set[str]:
+    """Sub-labels for real Terraproof use; `mention` is a bare word left after removing paths."""
+    labels = {f"terraproof-in-without:{name}" for name, pattern in TERRAPROOF_USE
+              if re.search(pattern, text, re.IGNORECASE)}
+    if not labels and re.search(r"terraproof", re.sub(PATH_TOKEN, " ", text), re.IGNORECASE):
+        labels.add("terraproof-in-without:mention")
+    return labels
+
+
+def incidental_labels(text: str, condition: str) -> set[str]:
+    """Diagnostics only: "terraproof" that appears solely inside path text is not use."""
+    if condition == WITH or not re.search(r"terraproof", text, re.IGNORECASE) or terraproof_use_labels(text):
+        return set()
+    return {"terraproof-path-text"}
+
+
 def contamination_labels(text: str, condition: str, seeded: tuple[str, ...]) -> set[str]:
     """Fixed labels for forbidden access in one tool call; the text itself is never kept."""
     labels = {label for label, pattern in FORBIDDEN if re.search(pattern, text, re.IGNORECASE)}
     if any(name in text for name in seeded):
         labels.add("seeded-fixture-name")
-    if condition != WITH and re.search(r"terraproof", text, re.IGNORECASE):
-        labels.add("terraproof-in-without")
+    if condition != WITH:
+        labels |= terraproof_use_labels(text)
     return labels
 
 
@@ -149,12 +180,39 @@ def run_contained(command: list[str], cwd: Path, env: dict, timeout: float):
     return (None if timed_out else process.returncode), lines, "".join(errors), timed_out
 
 
-def host_env() -> dict:
-    """The task interpreter's directory first on PATH, so agents compute with numpy/rasterio."""
+def host_env(condition: str = WITH, agent_python: str | None = None) -> dict:
+    """The agent's interpreter directory first on PATH, so agents compute with numpy/rasterio.
+
+    "with" uses this driver's interpreter (Terraproof installed, as the MCP server runs it).
+    "without" uses `agent_python`, a dependency-only interpreter on a neutral path, and drops
+    PYTHONPATH so a checkout's `src` cannot make Terraproof importable again.
+    """
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", DISABLE_AUTOUPDATER="1",
                CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC="1", CLAUDE_CODE_DISABLE_AUTO_MEMORY="1")
-    env["PATH"] = str(Path(sys.executable).parent) + os.pathsep + env.get("PATH", "")
+    interpreter = sys.executable
+    if condition != WITH:
+        env.pop("PYTHONPATH", None)
+        interpreter = agent_python or sys.executable
+    env["PATH"] = str(Path(interpreter).parent) + os.pathsep + env.get("PATH", "")
     return env
+
+
+IMPORT_PROBE = "import importlib.util, sys; sys.exit(3 if importlib.util.find_spec('terraproof') else 0)"
+
+
+def without_isolation_checks(project: Path, agent_python: str | None, env: dict) -> dict:
+    """No-model checks that the "without" agent can neither import Terraproof nor see its name in paths."""
+    python = shutil.which("python", path=env["PATH"])
+    importable = True
+    if python:
+        probe = subprocess.run([python, "-c", IMPORT_PROBE], cwd=project, env=env, capture_output=True,
+                               timeout=60, check=False)
+        importable = probe.returncode != 0
+    first_path_entry = env["PATH"].split(os.pathsep)[0]
+    visible = (str(project.resolve()), first_path_entry, str(python or ""))
+    return {"without_agent_python_set": bool(agent_python),
+            "without_terraproof_not_importable": bool(python) and not importable,
+            "without_paths_neutral": not any("terraproof" in item.lower() for item in visible)}
 
 
 def _json_lines(lines) -> tuple[list[tuple[float, object]], int]:
@@ -272,6 +330,7 @@ def codex_trace(events, condition: str, seeded: tuple[str, ...], *, timed_out: b
     calls: dict[str, dict] = {}
     order: list[str] = []
     labels: set[str] = set()
+    incidental: set[str] = set()
     error_texts: list[str] = []
     error_items = 0
     completed = failed = invalid = False
@@ -327,6 +386,7 @@ def codex_trace(events, condition: str, seeded: tuple[str, ...], *, timed_out: b
         record = calls[identifier]
         skill_reads += record["category"] == "shell" and _is_skill_read(record["_text"])
         labels |= contamination_labels(record["_text"], condition, seeded)
+        incidental |= incidental_labels(record["_text"], condition)
         public.append({key: value for key, value in record.items() if not key.startswith("_")})
     error_types = sorted(set(validation.codex_diagnostics("\n".join(error_texts), [], 0)["labels"]) - {"unclassified"})
     if error_texts and not error_types:
@@ -348,7 +408,7 @@ def codex_trace(events, condition: str, seeded: tuple[str, ...], *, timed_out: b
                        ("timeout" if timed_out else "failed"),
                        cost_usd=None, tool_calls=len(public), terraproof_tool_calls=terraproof_calls,
                        skill_reads=skill_reads, input_tokens=input_tokens, output_tokens=output_tokens,
-                       contamination=sorted(labels), calls=public,
+                       contamination=sorted(labels), diagnostics=sorted(incidental), calls=public,
                        turn={"status": turn_status, "reason": reason, "error_types": error_types,
                              "error_items": error_items})
 
@@ -370,15 +430,17 @@ class CodexHostAdapter(Adapter):
     model_calls = True
     usd_capped = False
 
-    def __init__(self, executable: str, effort: str):
+    def __init__(self, executable: str, effort: str, agent_python_without: str | None = None):
         self.executable = executable
         self.effort = effort
+        self.agent_python_without = agent_python_without
 
     def run(self, request: AgentRequest) -> AgentResult:
         state = request.project.parent / "host-state"
         state.mkdir(exist_ok=True)
         command = codex_lift_command(self.executable, request.project, state, request.condition, self.effort)
-        code, lines, stderr, timed_out = run_contained(command, request.project, host_env(), request.timeout_seconds)
+        env = host_env(request.condition, self.agent_python_without)
+        code, lines, stderr, timed_out = run_contained(command, request.project, env, request.timeout_seconds)
         events, invalid = _json_lines(lines)
         result = codex_trace(events, request.condition, _seeded(request.task_id), timed_out=timed_out)
         if invalid:
@@ -388,7 +450,8 @@ class CodexHostAdapter(Adapter):
             result.status = "failed"
             result.turn["reason"] = "nonzero host exit"
         if result.status != "completed":
-            result.diagnostics = validation.codex_diagnostics(stderr, [event for _, event in events], invalid)["labels"]
+            result.diagnostics = sorted(set(result.diagnostics) | set(
+                validation.codex_diagnostics(stderr, [event for _, event in events], invalid)["labels"]))
         return result
 
     def preflight(self, request: AgentRequest) -> dict:
@@ -396,8 +459,10 @@ class CodexHostAdapter(Adapter):
         task = lift_task(request.task_id)
         state = request.project.parent / "host-state"
         state.mkdir(exist_ok=True)
-        env = host_env()
+        env = host_env(request.condition, self.agent_python_without)
         checks: dict = {}
+        if request.condition != WITH:
+            checks.update(without_isolation_checks(request.project, self.agent_python_without, env))
         script = request.project.parent / "preflight_probe.py"
         script.write_text(PREFLIGHT_SCRIPT.format(name=task.inputs[0]), encoding="utf-8")
         probe = [self.executable, "sandbox", "-P", ":workspace", "-C", str(request.project),
@@ -535,6 +600,7 @@ def claude_trace(events, condition: str, seeded: tuple[str, ...], *, timed_out: 
     calls: dict[str, dict] = {}
     order: list[str] = []
     labels: set[str] = set()
+    incidental: set[str] = set()
     skill_reads = 0
     refused = False
     for stamp, event in _timed(events):
@@ -552,6 +618,7 @@ def claude_trace(events, condition: str, seeded: tuple[str, ...], *, timed_out: 
                 text = json.dumps(block.get("input"), default=str)
                 skill_reads += name == "Skill" or _is_skill_read(text)
                 labels |= contamination_labels(name + " " + text, condition, seeded)
+                incidental |= incidental_labels(name + " " + text, condition)
                 calls[identifier] = {"tool": tool, "category": category, "status": "started", "exit_code": None,
                                      "duration_ms": None, "_start": stamp}
                 order.append(identifier)
@@ -581,7 +648,7 @@ def claude_trace(events, condition: str, seeded: tuple[str, ...], *, timed_out: 
                        terraproof_tool_calls=sum(1 for c in public if c["tool"].startswith("terraproof.")),
                        skill_reads=skill_reads,
                        input_tokens=usage.get("input_tokens"), output_tokens=usage.get("output_tokens"),
-                       contamination=sorted(labels), calls=public,
+                       contamination=sorted(labels), diagnostics=sorted(incidental), calls=public,
                        turn={"status": turn_status, "reason": reason,
                              "error_types": [subtype] if subtype in CLAUDE_RESULT_REASONS and subtype != "success" else [],
                              "error_items": 0})
@@ -592,8 +659,9 @@ class ClaudeHostAdapter(Adapter):
     model_calls = True
     usd_capped = True
 
-    def __init__(self, executable: str):
+    def __init__(self, executable: str, agent_python_without: str | None = None):
         self.executable = executable
+        self.agent_python_without = agent_python_without
 
     def _config(self, request: AgentRequest) -> Path:
         """An explicit --mcp-config outside the project.
@@ -605,14 +673,15 @@ class ClaudeHostAdapter(Adapter):
         if request.condition == WITH:
             installed = json.loads((request.project / ".mcp.json").read_text(encoding="utf-8"))
             servers = {"terraproof": installed["mcpServers"]["terraproof"]}
-        config = request.project.parent / f"{request.condition}.mcp.json"
+        config = request.project.parent / "host.mcp.json"  # neutral name: no condition in any path
         config.write_text(json.dumps({"mcpServers": servers}), encoding="utf-8")
         return config
 
     def run(self, request: AgentRequest) -> AgentResult:
         command = claude_lift_command(self.executable, request.project, self._config(request), request.condition,
                                       request.max_usd)
-        code, lines, _stderr, timed_out = run_contained(command, request.project, host_env(), request.timeout_seconds)
+        env = host_env(request.condition, self.agent_python_without)
+        code, lines, _stderr, timed_out = run_contained(command, request.project, env, request.timeout_seconds)
         events, invalid = _json_lines(lines)
         # A timeout reports no spend; the harness charges the full per-run cap.
         result = claude_trace(events, request.condition, _seeded(request.task_id), timed_out=timed_out)
@@ -626,7 +695,7 @@ class ClaudeHostAdapter(Adapter):
         task = lift_task(request.task_id)
         script = request.project.parent / "preflight_probe.py"
         script.write_text(PREFLIGHT_SCRIPT.format(name=task.inputs[0]), encoding="utf-8")
-        env = host_env()
+        env = host_env(request.condition, self.agent_python_without)
         # Resolve `python` on the agent's PATH; Windows CreateProcess would use this process's PATH.
         python = shutil.which("python", path=env["PATH"])
         stdout = ""
@@ -635,6 +704,8 @@ class ClaudeHostAdapter(Adapter):
                                     text=True, encoding="utf-8", errors="replace", timeout=120, check=False).stdout
         checks = {check.replace("sandbox_", "unsandboxed_"): marker in stdout
                   for check, marker in PREFLIGHT_MARKERS if check != "sandbox_shell"}
+        if request.condition != WITH:
+            checks.update(without_isolation_checks(request.project, self.agent_python_without, env))
         config = self._config(request)
         if request.condition == WITH:
             entry = json.loads(config.read_text(encoding="utf-8")).get("mcpServers", {}).get("terraproof", {})
@@ -681,6 +752,8 @@ def plan(args) -> dict:
         approve += ["--codex-executable", str(args.codex_executable)]
     if args.agent_host == "claude" and args.claude_executable:
         approve += ["--claude-executable", str(args.claude_executable)]
+    if args.agent_python_without:
+        approve += ["--agent-python-without", str(args.agent_python_without)]
     if args.agent_host == "claude":
         approve += ["--max-usd-per-run", f"{args.max_usd_per_run:g}", "--max-usd-total", f"{args.max_usd_total:g}"]
     approve += ["--timeout", f"{args.timeout:g}", "--approve-model-calls", str(calls)]
@@ -714,6 +787,9 @@ def main(argv=None) -> int:
                         help="native codex.exe to use (default: the PATH-resolved native binary)")
     parser.add_argument("--claude-executable", type=Path,
                         help="native claude.exe to use (default: PATH; the npm claude.cmd wrapper is refused)")
+    parser.add_argument("--agent-python-without", type=Path,
+                        help="dependency-only Python (numpy, rasterio, pyogrio, shapely, pyproj; no Terraproof) "
+                             "on a path without 'terraproof', first on PATH for the without agent; required by preflight")
     parser.add_argument("--preflight-only", action="store_true",
                         help="prepare every project and run the no-model host preflight; start no agent")
     parser.add_argument("--approve-model-calls", type=int, metavar="N",
@@ -737,20 +813,23 @@ def main(argv=None) -> int:
     if args.approve_model_calls is not None and args.approve_model_calls != summary["planned_model_invocations"]:
         parser.error(f"--approve-model-calls {args.approve_model_calls} does not equal the planned "
                      f"{summary['planned_model_invocations']} invocations; nothing was started")
+    agent_python = str(args.agent_python_without) if args.agent_python_without else None
     if args.agent_host == "codex":
         executable, reason, version = probe_codex(str(args.codex_executable) if args.codex_executable else None)
-        adapter = CodexHostAdapter(executable, args.codex_reasoning_effort) if executable else None
+        adapter = (CodexHostAdapter(executable, args.codex_reasoning_effort, agent_python) if executable
+                   else None)
         budget = Budget(max_runs=args.approve_model_calls, timeout_seconds=args.timeout)
     else:
         executable, reason, version = probe_claude(str(args.claude_executable) if args.claude_executable else None)
-        adapter = ClaudeHostAdapter(executable) if executable else None
+        adapter = ClaudeHostAdapter(executable, agent_python) if executable else None
         budget = Budget(max_runs=args.approve_model_calls, per_run_usd=args.max_usd_per_run,
                         total_usd=args.max_usd_total, timeout_seconds=args.timeout)
     if adapter is None:
         print(json.dumps({"status": "unavailable", "reason": reason, "model_called": False}, sort_keys=True))
         return 1
     # Outside the checkout: no ancestral AGENTS.md/CLAUDE.md/config, and no repository source to read.
-    work = Path(tempfile.mkdtemp(prefix="terraproof-lift-host-")).resolve()
+    # Neutral prefix: agents see absolute paths (Claude Code's Read/Write take them).
+    work = Path(tempfile.mkdtemp(prefix="paired-run-")).resolve()
     if ROOT.resolve() in work.parents:
         shutil.rmtree(work, ignore_errors=True)
         print(json.dumps({"status": "refused", "reason": "work directory inside the checkout"}))

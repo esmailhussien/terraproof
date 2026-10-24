@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import re
+import sys
 import json
 from pathlib import Path
 
@@ -287,7 +289,8 @@ def test_driver_traces_keep_counts_and_labels_only():
     assert "python" not in json.dumps(result.__dict__)
     leaked = driver.codex_trace(codex_events[:1] + [{"type": "turn.completed"}], WITHOUT, seeded)
     assert leaked.contamination == []
-    assert driver.contamination_labels("python -m terraproof check x", WITHOUT, seeded) == {"terraproof-in-without"}
+    assert driver.contamination_labels("python -m terraproof check x", WITHOUT, seeded) == {
+        "terraproof-in-without:module-or-cli"}
     assert driver.contamination_labels("dir ndvi_dn_ratio.tif", WITH, seeded) == {"seeded-fixture-name"}
     claude_events = [
         {"type": "assistant", "message": {"content": [
@@ -622,3 +625,174 @@ def test_ceiling_tasks_are_flagged_without_changing_the_primary_analysis(tmp_pat
                            work_root=tmp_path / "lifted")
     assert lifted["summary"]["per_task"][0]["ceiling"] is False
     assert lifted["summary"]["ceiling_tasks"] == [] and lifted["summary"]["tasks_with_headroom"] == 1
+
+
+# -- main run follow-up: path-text false positives, forced rejections, without isolation ------
+MAIN_RUN_READ = {"file_path": "C:\\Users\\u\\AppData\\Local\\Temp\\terraproof-lift-host-ab12\\runs\\"
+                              "sar-db-linear-monthly-mean\\run-1\\without\\project\\TASK.md"}
+
+
+def test_main_run_read_tool_path_is_path_text_not_contamination():
+    """Main run 1: every flagged without run, and only those, used Claude Code's Read tool,
+    whose absolute file_path then contained the old terraproof-lift-host-* project prefix."""
+    events = [
+        (0.0, {"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": "r", "name": "Read", "input": MAIN_RUN_READ},
+            {"type": "tool_use", "id": "b", "name": "Bash", "input": {"command": "python make_mean.py"}}]}}),
+        (1.0, {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "r"},
+                                                       {"type": "tool_result", "tool_use_id": "b"}]}}),
+        (2.0, {"type": "result", "subtype": "success", "is_error": False, "total_cost_usd": 0.1}),
+    ]
+    result = driver.claude_trace(events, WITHOUT, ())
+    assert result.contamination == [] and result.diagnostics == ["terraproof-path-text"]
+    assert "terraproof-lift-host" not in json.dumps(result.__dict__)
+    in_with = driver.claude_trace(events, WITH, ())
+    assert in_with.contamination == [] and in_with.diagnostics == []
+
+
+@pytest.mark.parametrize("text, labels", [
+    ("python -m terraproof check outputs/x.tif", ["terraproof-in-without:module-or-cli"]),
+    ("terraproof check outputs/x.tif", ["terraproof-in-without:module-or-cli"]),
+    ('python -c "import terraproof"', ["terraproof-in-without:import"]),
+    ("from terraproof.checks import run_checks", ["terraproof-in-without:import"]),
+    ("pip list | findstr terraproof", ["terraproof-in-without:package-query"]),
+    ("pip show terraproof", ["terraproof-in-without:package-query"]),
+    ("dir C:/venv/Lib/site-packages/terraproof", ["terraproof-in-without:package-query"]),
+    ("mcp__terraproof__run_checks", ["terraproof-in-without:mcp"]),
+    ("cat .claude/skills/terraproof-x/SKILL.md", ["terraproof-in-without:skill"]),
+    ("echo terraproof", ["terraproof-in-without:mention"]),
+    ("C:\\Users\\u\\.venvs\\terraproof-py312\\Scripts\\python.exe make.py", []),
+    ("cd /c/Temp/terraproof-lift-host-x/runs/001/project && python make.py", []),
+    ("python make.py", []),
+])
+def test_terraproof_use_sub_labels_distinguish_use_from_paths(text, labels):
+    assert sorted(driver.contamination_labels(text, WITHOUT, ())) == labels
+    assert driver.incidental_labels(text, WITHOUT) == ({"terraproof-path-text"} if not labels and "terraproof" in text
+                                                        else set())
+    assert driver.contamination_labels(text, WITH, ()) == set()
+
+
+def test_contamination_forced_rejection_keeps_the_underlying_verdict(tmp_path):
+    class Flagged(ScriptedAdapter):
+        def run(self, request):
+            result = super().run(request)
+            if request.condition == WITHOUT:
+                result.contamination = ["terraproof-in-without:import"]
+            return result
+
+    report = lift.run_lift(Flagged({WITH: "reference", WITHOUT: "reference"}), task_ids=FAST[:1], work_root=tmp_path)
+    runs = {run["condition"]: run for run in report["tasks"][0]["runs"]}
+    assert runs[WITHOUT]["accepted"] is False and runs[WITHOUT]["accepted_before_contamination"] is True
+    assert runs[WITHOUT]["contamination_forced_rejection"] is True
+    summary = report["summary"]
+    assert summary["pass_rate"] == {WITH: 1.0, WITHOUT: 0.0}  # the pre-specified rule is unchanged
+    assert summary["secondary"][WITHOUT]["forced_rejections"] == 1
+    sensitivity = summary["sensitivity_contamination_ignored"]
+    assert sensitivity["label"].startswith("not pre-specified")
+    assert sensitivity["pass_rate"] == {WITH: 1.0, WITHOUT: 1.0} and sensitivity["mean_task_difference"] == 0.0
+    clean = lift.run_lift(ScriptedAdapter({WITH: "reference", WITHOUT: "seeded"}), task_ids=FAST[:1],
+                          work_root=tmp_path / "clean")
+    assert clean["summary"]["sensitivity_contamination_ignored"] is None
+
+
+def _main_run_reports():
+    """Synthetic replay of main run 1's per-task shape (9 tasks x 3 pairs), labels only."""
+    shape = {  # task: (without accepted per run, without runs flagged although checks+oracle passed, flagged+oracle-rejected)
+        "ceiling-1": ({0, 1, 2}, set(), set()), "ceiling-2": ({0, 1, 2}, set(), set()),
+        "ceiling-3": ({0, 1, 2}, set(), set()), "ceiling-4": ({0, 1, 2}, set(), set()),
+        "ceiling-5": ({0, 1, 2}, set(), set()),
+        "landsat": (set(), set(), {0, 1, 2}),
+        "sar": ({0, 2}, {1}, set()), "s2": ({0, 2}, {1}, set()), "ts": ({0, 2}, {1}, set()),
+    }
+    reports = []
+    for task, (accepted, forced, oracle_rejected) in shape.items():
+        runs = []
+        for run in range(3):
+            runs.append({"run": run, "condition": WITH, "verdict": "accepted", "accepted": True, "caught_by": [],
+                         "adapter_status": "completed", "treatment_used": True, "checks_ok": True, "oracle_ok": True,
+                         "agent": {"contamination": [], "calls": []}})
+            flagged = run in forced or run in oracle_rejected
+            runs.append({"run": run, "condition": WITHOUT, "verdict": "accepted" if run in accepted else "rejected",
+                         "accepted": run in accepted, "caught_by": ["oracle"] if run in oracle_rejected else [],
+                         "adapter_status": "completed", "treatment_used": None, "checks_ok": True,
+                         "oracle_ok": run not in oracle_rejected,
+                         "agent": {"contamination": ["terraproof-in-without"] if flagged else [], "calls": []}})
+        reports.append({"id": task, "runs": runs})
+    return reports
+
+
+def test_main_run_shape_reproduces_primary_and_sensitivity_numbers():
+    summary = lift.summarize(_main_run_reports())
+    assert summary["pass_rate"] == {WITH: 1.0, WITHOUT: 0.777778}
+    assert summary["mean_task_difference"] == 0.222222 and summary["sign_flip_p"] == 0.125
+    assert summary["mcnemar"] == {"with_only": 6, "without_only": 0, "both": 21, "neither": 0, "exact_p": 0.03125}
+    assert len(summary["ceiling_tasks"]) == 5 and summary["tasks_with_headroom"] == 4
+    assert summary["secondary"][WITHOUT]["forced_rejections"] == 3  # inferred from checks_ok and oracle_ok
+    sensitivity = summary["sensitivity_contamination_ignored"]
+    assert sensitivity["pass_rate"] == {WITH: 1.0, WITHOUT: 0.888889}
+    assert sensitivity["mean_task_difference"] == 0.111111 and sensitivity["sign_flip_p"] == 1.0
+    assert sensitivity["mcnemar"] == {"with_only": 3, "without_only": 0, "both": 24, "neither": 0, "exact_p": 0.25}
+
+
+def test_run_directories_reveal_neither_task_nor_condition(tmp_path):
+    seen = []
+
+    class Recording(ScriptedAdapter):
+        def run(self, request):
+            seen.append(str(request.project))
+            return super().run(request)
+
+    lift.run_lift(Recording({WITH: "reference", WITHOUT: "reference"}), task_ids=FAST, work_root=tmp_path)
+    assert len(seen) == 4
+    for path in seen:
+        relative = Path(path).relative_to(tmp_path).as_posix()
+        assert re.fullmatch(r"runs/\d{3}/project", relative), relative
+        assert not any(word in relative for word in ("with", "ndvi", "stac", "decode"))
+
+
+def test_host_env_without_uses_the_agent_python_and_drops_pythonpath(monkeypatch, tmp_path):
+    monkeypatch.setenv("PYTHONPATH", "src")
+    agent_python = tmp_path / "neutral" / "python.exe"
+    without = driver.host_env(WITHOUT, str(agent_python))
+    assert "PYTHONPATH" not in without and without["PATH"].split(os.pathsep)[0] == str(agent_python.parent)
+    with_env = driver.host_env(WITH, str(agent_python))
+    assert with_env["PYTHONPATH"] == "src" and with_env["PATH"].split(os.pathsep)[0] == str(Path(sys.executable).parent)
+
+
+def _python_shim(directory: Path, *flags: str) -> Path:
+    directory.mkdir(parents=True)
+    if os.name == "nt":
+        shim = directory / "python.bat"
+        shim.write_text(f'@"{sys.executable}" {" ".join(flags)} %*\r\n', encoding="utf-8")
+    else:
+        shim = directory / "python"
+        shim.write_text(f'#!/bin/sh\nexec "{sys.executable}" {" ".join(flags)} "$@"\n', encoding="utf-8")
+        shim.chmod(0o755)
+    return shim
+
+
+def test_without_isolation_checks_detect_importable_terraproof_and_named_paths(tmp_path, monkeypatch):
+    monkeypatch.setenv("PYTHONPATH", str(Path(lift.__file__).resolve().parents[2]))
+    project = tmp_path / "runs" / "001" / "project"
+    project.mkdir(parents=True)
+    isolated = _python_shim(tmp_path / "isolated-bin", "-I", "-S")  # no site-packages, no PYTHONPATH
+    env = driver.host_env(WITHOUT, str(isolated))
+    assert driver.without_isolation_checks(project, str(isolated), env) == {
+        "without_agent_python_set": True, "without_terraproof_not_importable": True, "without_paths_neutral": True}
+    leaky = _python_shim(tmp_path / "leaky-bin")
+    env = driver.host_env(WITHOUT, str(leaky))
+    env["PYTHONPATH"] = str(Path(lift.__file__).resolve().parents[2])  # e.g. a checkout's src
+    assert driver.without_isolation_checks(project, str(leaky), env)["without_terraproof_not_importable"] is False
+    named = _python_shim(tmp_path / "terraproof-venv", "-I", "-S")
+    env = driver.host_env(WITHOUT, str(named))
+    assert driver.without_isolation_checks(project, str(named), env)["without_paths_neutral"] is False
+    assert driver.without_isolation_checks(project, None, driver.host_env(WITHOUT, str(isolated)))[
+        "without_agent_python_set"] is False
+
+
+def test_driver_carries_the_agent_python_into_the_approved_command(capsys, tmp_path):
+    agent_python = tmp_path / "geo-agent" / "python.exe"
+    assert driver.main(["--agent-host", "claude", "--runs", "1", "--task", FAST[0],
+                        "--agent-python-without", str(agent_python)]) == 0
+    plan = json.loads(capsys.readouterr().out)
+    assert f"--agent-python-without {agent_python}" in plan["command_to_approve"]

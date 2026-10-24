@@ -1,9 +1,9 @@
 # Terraproof — Phase 5 Plan: Agent-lift measurement
 
-> Status: **harness verified end to end on Claude Code (pilot 3, section 15); the main run is the open decision.**
-> - **Codex pilots:** two approved 2-invocation pilots produced no gradable output (sections 13 and 14), and Codex is blocked by preflight on this machine.
-> - **Pilot 3:** passed the gate on a single task, where both conditions succeeded. It is a harness check, not a lift estimate.
-> - **Lift is still unmeasured.** Each further real run needs the user's explicit approval of the command, call count and cost ceiling in section 9.
+> Status: **the approved 54-invocation main run on Claude Code is complete (section 16). The pre-specified primary test is not significant (sign-flip p = 0.125), and no lift claim is made.**
+> - **Isolation:** the "without" condition was imperfectly isolated (section 16). The harness now enforces neutral paths and a Terraproof-free interpreter for any future run.
+> - **Earlier pilots:** sections 13–15.
+> - **Next run:** none is proposed. Any further real run needs the user's explicit approval.
 
 ## 1. Why this phase
 
@@ -159,6 +159,19 @@ All statistics are deterministic and implemented in `terraproof.evals.lift`. The
     - The model-visible **tool list** cannot be rendered without a turn, so whether the shell tool is exposed is confirmed only by the next pilot's trace.
     - Claude Code has no model-free sandbox runner, so its Python/IO probe runs unsandboxed.
 - **Claude Code:** `--print --restricted --tools Bash,Read,Write,Edit,Glob,Grep,Skill --permission-mode dontAsk --permission-prompts none --strict-mcp-config` with an empty MCP config in `without` and the installer-written `.mcp.json` in `with`, plus `--no-session-persistence`, hooks disabled and `--max-budget-usd <per-run cap>`.
+- **"without" isolation (added after the main run, enforced by preflight):**
+  - **Neutral paths:** run projects live under `%TEMP%\paired-run-*\runs\NNN\project`, so no path names Terraproof, the task or the condition.
+  - **Terraproof-free interpreter:** the "without" agent's interpreter is `--agent-python-without`, a dependency-only Python on a neutral path, and `PYTHONPATH` is dropped. The preflight fails "without" unless that interpreter is set, cannot import `terraproof`, and the project and interpreter paths do not contain "terraproof".
+  - **"with" is unchanged:** it keeps the driver's interpreter, with Terraproof installed, as part of the treatment.
+  - **Creating the neutral venv** (once, by the user):
+
+    ```powershell
+    py -3.12 -m venv C:\Users\mrsom\.venvs\geo-agent-py312
+    C:\Users\mrsom\.venvs\geo-agent-py312\Scripts\python -m pip install numpy rasterio pyogrio shapely pyproj
+    ```
+- **Contamination labels** distinguish real use from incidental text:
+  - **Real use**, which forces rejection and keeps the underlying verdict in `accepted_before_contamination`: `terraproof-in-without:import`, `:module-or-cli`, `:mcp`, `:package-query`, `:skill` and `:mention`.
+  - **Incidental:** "terraproof" appearing only inside path text becomes the diagnostic `terraproof-path-text`, not contamination.
 - One invocation per run, no retries, per-run timeout (default 900 s), and the owned process tree is killed on every exit.
 - Only fixed labels and numbers leave the stream:
   - per tool call: a tool label from a fixed set, its category (`shell`, `file_edit`, `file_read`, `skill`, `mcp:<tool>`, `mcp:other`, `web`, `agent`, `other`), status (`started`/`completed`/`failed`/`declined`), exit code and duration;
@@ -234,9 +247,11 @@ All statistics are deterministic and implemented in `terraproof.evals.lift`. The
 
 ## 12. Decisions needed
 
-1. **The open decision: approve the main run on Claude Code.**
+No decision is open. The main run is complete (section 16), and no further run is proposed unless the user asks. The record below is kept for reference.
+
+1. **Main run on Claude Code: approved and run on 2026-10-24.**
    - **Size:** 54 invocations (9 tasks × 3 runs × 2 conditions).
-   - **Caps:** `--max-usd-per-run 1 --max-usd-total 54`, giving a $54 ceiling. About $14 is expected from pilot 3's cost (section 15).
+   - **Caps:** `--max-usd-per-run 1 --max-usd-total 54`, giving a $54 ceiling. About $14 was expected from pilot 3's cost, and $8.71 was actually spent.
    - **Command** (section 9, step 3):
 
    ```powershell
@@ -399,3 +414,94 @@ The report therefore now gives each task's `baseline_pass_rate` and a `ceiling` 
 **Known reporting limitation.** `input_tokens` of 10–16 almost certainly excludes cached input: Claude Code's `usage` reports cache reads and creation separately, and the driver keeps only `input_tokens`. Treat input-token counts as non-cached input only. Cost and output tokens are the usable cost signals.
 
 **Operational note.** On Windows, npm puts the `claude.cmd` wrapper first on PATH, and the driver refuses it because it cannot guarantee bounded process cleanup. Pass the native binary with the new `--claude-executable` option (same style as `--codex-executable`; non-`.exe` paths are refused on Windows), or put its directory first on PATH. The main-run command above passes it explicitly.
+
+## 16. Main run results (2026-10-24)
+
+**What ran.** The approved main run on Claude Code, at commit `4c23f5b`:
+
+- `tests/agent_lift.py --agent-host claude --runs 3 --claude-executable C:\Users\mrsom\AppData\Roaming\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe --max-usd-per-run 1 --max-usd-total 54 --timeout 900 --approve-model-calls 54 --out .terracache\agent-lift-main.json`
+- Venv `C:\Users\mrsom\.venvs\terraproof-py312`, `PYTHONPATH=src`. Host Claude Code 2.1.292, `authMethod` claude.ai.
+- `--preflight-only` just before reported `preflight_failures: []`.
+- 01:37:43Z to 02:16:32Z (38 min 49 s). `started_agent_runs` 54, status complete.
+- **Spend:** `spent_usd` 8.71437 ("with" 5.411912, "without" 3.302458, about $0.32 per pair), against a $54 cap. With claude.ai auth this is Claude Code's reported figure, not necessarily a separate charge.
+- **Completeness:** calibration 9/9 eligible. 27 complete pairs, 0 incomplete. `no_attempt` 0, `missing_or_error` 0, `treatment_not_used` 0.
+
+The report is kept outside the repository: `D:\AgentLayer\.claude\worktrees\phase5-main-run\.terracache\agent-lift-main.json`.
+
+### Pre-specified analysis (exactly as reported)
+
+| Quantity | Value |
+|---|---|
+| pass rate with / without | **1.0 (27/27) / 0.777778 (21/27)** |
+| mean task-level difference | **0.222222**, 95% CI [0.037037, 0.444444] (task-cluster bootstrap, 10,000 resamples, seed 20261024) |
+| **primary test: exact sign-flip p** | **0.125, not significant at α = 0.05** |
+| McNemar (secondary, anti-conservative) | both 21, with-only 6, without-only 0, neither 0; exact p = 0.03125 |
+| observed discordance / MDE at it | 0.222 / 0.243 |
+| "with" Terraproof use | 92 Terraproof MCP calls (`run_checks` 46, `inspect_dataset` 29, `find_guidance` 11, `load_section` 6), 92 shell calls, **0 skill reads** |
+
+| Task | with | without | note |
+|---|---|---|---|
+| indices-ndvi-physical-inputs | 3/3 | 3/3 | ceiling |
+| raster-cog-delivery | 3/3 | 3/3 | ceiling |
+| raster-nodata-dtype-windowing | 3/3 | 3/3 | ceiling |
+| satellite-seasonal-harmonized-composite | 3/3 | 3/3 | ceiling |
+| stac-loader-double-decode | 3/3 | 3/3 | ceiling |
+| satellite-landsat-qa-once | 3/3 | 0/3 | all three "without" runs rejected by the oracle |
+| sar-db-linear-monthly-mean | 3/3 | 2/3 | the "without" rejection is contamination-forced only |
+| satellite-s2-baseline-offset-mask | 3/3 | 2/3 | the "without" rejection is contamination-forced only |
+| ts-phenology-matched-difference | 3/3 | 2/3 | the "without" rejection is contamination-forced only |
+
+**The primary test is not significant, and no lift claim is made.**
+- **Ceiling:** five of nine tasks are at ceiling (`ceiling_tasks`), so only four tasks have headroom (`tasks_with_headroom` 4).
+- **Why the CI and McNemar don't override this:** the bootstrap CI excludes 0 and McNemar is below 0.05, but neither is the pre-specified test. McNemar treats runs within a task as independent, and the CI rests on a 9-task bootstrap.
+
+### Sensitivity analysis (NOT pre-specified)
+
+All six "without" rejections carry `contamination: ["terraproof-in-without"]`, and `run_lift` forces a contaminated run to rejected. They split into two groups:
+
+- **Rejected only because of the flag:** three runs had `checks_ok` and `oracle_ok` true (sar r1, s2 r1, ts r1).
+- **Rejected by the oracle anyway:** the three landsat runs failed "cloud pixel (8,8) is nodata", "shadow pixel (16,16) is nodata" and the `rs.cloud_mask_applied` assertion.
+
+If those three flags are false positives, scoring them by their checks and oracle gives:
+
+| Quantity | Sensitivity value |
+|---|---|
+| pass rate with / without | 1.0 / 0.888889 (24/27) |
+| mean task-level difference | 0.111111 (only landsat differs) |
+| exact sign-flip p | 1.0 (one nonzero task) |
+| McNemar | with-only 3, without-only 0; exact p = 0.25 |
+
+The harness now computes this automatically as `summary.sensitivity_contamination_ignored`, labelled "not pre-specified". Recomputing the stored report reproduces both the primary numbers and these figures exactly.
+
+**Either way there is no statistically supported lift.** The robust, task-specific observation is Landsat QA: 3/3 with Terraproof versus 0/3 without, where the "without" outputs left QA_PIXEL cloud and shadow pixels valid. In all three, Terraproof's own `rs.cloud_mask_applied` check also failed. It is outside that task's `expected_checks`, so it appears under `unexpected_failures` and not in `rejected_by_checks`, but it is exactly the error the "with" agents could check for. It is one task with three pairs, and it is reported as exploratory.
+
+### Why `terraproof-in-without` fired
+
+This was investigated offline from code and the sanitised report; no host was re-run.
+
+- **The rule at `4c23f5b`:** `contamination_labels` added the flag whenever a "without" tool call's input text matched `terraproof` case-insensitively.
+- **The trigger:** in the stored trace, every flagged "without" run, and only those, used Claude Code's `Read` tool. That is 6 of 6 flagged runs versus 0 of 21 unflagged runs (one flagged landsat run also used `Write`).
+- **Why `Read` fires:** `Read` and `Write` take an absolute `file_path`, and every run project then lived under `%TEMP%\terraproof-lift-host-*\runs\<task>\run-k\without\project\`. So any `Read` call matches `terraproof` by construction. A synthetic replay of that call shape reproduces the flag under the old rule and yields only the diagnostic `terraproof-path-text` under the new one.
+- **What cannot be ruled out:** the sanitised recordings keep labels, not text. It is therefore **undeterminable** whether any of these runs, or any other "without" run, also used Terraproof for real (`import terraproof`, `python -m terraproof`, `pip list`). The "without" agent's Python was the same Terraproof venv, so Terraproof was genuinely importable there.
+
+The "without" condition of this run was therefore not guaranteed to be Terraproof-free, in two ways:
+
+- the package was importable, and its name appeared in the venv path;
+- the run paths named the task and the condition (for example `satellite-landsat-qa-once`, `without`), which is a blinding leak common to both conditions.
+
+### Isolation fixes for any future run
+
+These are in this PR, offline-tested, and were not used in the main run:
+
+- **Opaque run directories:** `runs/NNN/project`, under a neutral `%TEMP%\paired-run-*` work directory, with a neutral `host.mcp.json` name.
+- **Terraproof-free "without" interpreter:** set with `--agent-python-without`, with `PYTHONPATH` dropped in "without".
+- **Preflight checks for "without":** `without_agent_python_set`, `without_terraproof_not_importable` and `without_paths_neutral`.
+- **Real use separated from path text:** contamination sub-labels as in section 7.
+- **Underlying verdict kept:** forced rejections record `accepted_before_contamination` and `contamination_forced_rejection`, so a sensitivity analysis never depends on inference.
+- **Replay tests:** they reproduce this run's shape and its primary and sensitivity numbers, and the `Read`-path false positive.
+
+### Other observations
+
+- **Skills unused:** "with" used Terraproof through MCP only. `skill_reads` was 0 across all 27 "with" runs, so skill delivery under `--restricted` remains unverified.
+- **Cost:** "with" cost about 1.6× "without" overall.
+- **Token counts:** `input_tokens` remains non-cached input only (section 15).
