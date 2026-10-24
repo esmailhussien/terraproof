@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Phase 5 agent-lift harness (`python -m terraproof.evals lift`, `terraproof.evals.lift`) with its plan in `Terraproof_Phase5_PLAN.md`. Nine artifact-producing benchmark tasks run in paired without/with projects. The "with" project gets Terraproof through its own installer: router-selected skills plus the MCP server. Agents see only the task prompt, the input files and a format-only deliverable contract.
+- The agent's deliverables are scored by substitution: they are copied into the existing recipe's correct-control slot, so the unmodified Phase 4 checks and independent oracles grade them. A calibration gate must pass first: inputs regenerate byte-identically, the reference is accepted, every seeded-wrong output and an echoed input are rejected, and a missing file is reported. All nine tasks pass it.
+- Deterministic paired statistics: the primary analysis is an exact task-level sign-flip test with a seeded task-cluster bootstrap CI; exact McNemar is a secondary analysis; a Connor (1987) minimum-detectable-effect estimate is included. Reports are stable JSON.
+- Offline `scripted` and `replay` adapters only; neither CI nor the tests call a model. The opt-in real-host driver `tests/agent_lift.py` (Codex or Claude Code) prints the plan and call count unless `--approve-model-calls N` matches it exactly. It reuses the release-validation isolation, auth probes and process-tree containment, and enforces per-run timeouts, a hard run count and Claude per-run/total USD caps. Traces are sanitised to counts and labels and include contamination labels.
+
+### Evaluation
+
+- No real agent run has been made, so agent lift is still **unmeasured**. The pilot (2 invocations) and the main run (54 invocations) await user approval.
+
 ## [0.4.1] — 2026-10-24
 
 ### Fixed
