@@ -210,3 +210,98 @@ def test_large_tiled_raster_without_overviews_warns_cog_layout(make_raster, eval
     assert "no internal overviews" in result.message
     assert "not tiled" not in result.message
     assert grade == REVIEW
+
+
+# --- raster.cog_layout: lossy JPEG compression is not an analysis-value delivery ---
+
+
+def _jpeg_tiff(path, data):
+    import rasterio
+    from rasterio.enums import Resampling
+    from rasterio.transform import from_origin
+
+    profile = dict(driver="GTiff", width=data.shape[1], height=data.shape[0], count=1, dtype="uint8",
+                   crs="EPSG:32636", transform=from_origin(500000, 5000000, 10, 10), nodata=0,
+                   tiled=True, blockxsize=128, blockysize=128, compress="JPEG")
+    with rasterio.open(path, "w", **profile) as dst:
+        dst.write(data, 1)
+        dst.build_overviews([2, 4], Resampling.average)
+    return str(path)
+
+
+def test_tiled_jpeg_raster_with_overviews_warns_cog_layout(tmp_path, evaluate):
+    rows, cols = np.indices((256, 256))
+    path = _jpeg_tiff(tmp_path / "lossy.tif", (40 + (rows // 8 + cols // 8) % 90).astype("uint8"))
+
+    results, grade = evaluate([path])
+
+    result = one(results, "raster.cog_layout")
+    assert result.status == "warn"
+    assert "lossy JPEG compression" in result.message
+    assert result.evidence["compression"].lower() == "jpeg"
+    assert grade == REVIEW
+
+
+def test_deflate_raster_does_not_warn_about_lossy_compression(make_raster, evaluate):
+    path = make_raster("deflate.tif", np.ones((64, 64), dtype="uint8"), overviews=False)
+
+    results, _ = evaluate([path])
+
+    result = one(results, "raster.cog_layout")
+    assert result.status == "pass"
+    assert "lossy" not in result.message
+
+
+# --- geometry.winding: GeoJSON polygon rings must follow the RFC 7946 right-hand rule ---
+
+
+def _polygon_feature(exterior, holes=()):
+    return {"type": "Feature", "properties": {}, "geometry": {"type": "Polygon", "coordinates": [exterior, *holes]}}
+
+
+CCW_EXTERIOR = [[30.0, 30.0], [30.1, 30.0], [30.1, 30.1], [30.0, 30.1], [30.0, 30.0]]
+CW_HOLE = [[30.02, 30.02], [30.02, 30.08], [30.08, 30.08], [30.08, 30.02], [30.02, 30.02]]
+
+
+def test_clockwise_geojson_exterior_fails_winding(make_geojson, evaluate):
+    document = {"type": "FeatureCollection", "features": [
+        _polygon_feature(CCW_EXTERIOR),
+        _polygon_feature(list(reversed(CCW_EXTERIOR))),
+    ]}
+    path = make_geojson("clockwise.geojson", document)
+
+    results, grade = evaluate([path])
+
+    result = one(results, "geometry.winding")
+    assert result.status == "fail"
+    assert result.evidence["first_break_indices"] == [1]
+    assert one(results, "geometry.valid").status == "pass"
+    assert grade == ADVISORY
+
+
+def test_counterclockwise_hole_fails_winding(make_geojson, evaluate):
+    document = {"type": "FeatureCollection", "features": [_polygon_feature(CCW_EXTERIOR, [list(reversed(CW_HOLE))])]}
+    path = make_geojson("ccw_hole.geojson", document)
+
+    results, _ = evaluate([path])
+
+    assert one(results, "geometry.winding").status == "fail"
+
+
+def test_right_hand_rule_geojson_passes_winding(make_geojson, evaluate):
+    document = {"type": "FeatureCollection", "features": [_polygon_feature(CCW_EXTERIOR, [CW_HOLE])]}
+    path = make_geojson("rfc7946.geojson", document)
+
+    results, grade = evaluate([path])
+
+    assert one(results, "geometry.winding").status == "pass"
+    assert grade == DECISION
+
+
+def test_winding_is_not_checked_outside_geojson(make_vector, evaluate):
+    clockwise = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
+    path = make_vector("clockwise.gpkg", [clockwise])
+
+    results, _ = evaluate([path])
+
+    assert [result for result in results if result.id == "geometry.winding"] == []

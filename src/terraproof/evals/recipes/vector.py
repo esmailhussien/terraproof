@@ -413,7 +413,7 @@ def vector_join_scope(root: Path):
         check_step("check legacy_join.gpkg --compare-to parcels.gpkg", [legacy], compare_to=parcels),
         check_step("check parcels_cw.geojson", [clockwise_export]),
     ]
-    cw_oracle = Oracle("RFC 7946 ring winding is not an implemented check")
+    cw_oracle = Oracle("RFC 7946 ring winding: exteriors counterclockwise")
     cw_oracle.require(
         "GeoJSON exteriors are counterclockwise",
         all(shapely.is_ccw(geom.exterior) for geom in cw_geoms),
@@ -423,10 +423,10 @@ def vector_join_scope(root: Path):
     wrong_controls.append(
         wrong(
             "clockwise-geojson-winding",
-            "A complete GeoJSON export with clockwise exteriors; the geometry checks still pass.",
+            "A complete GeoJSON export with clockwise exteriors; geometry.valid and geometry.non_empty still pass.",
             cw_steps,
             cw_oracle,
-            notes="The checker cannot see ring winding, so only the oracle rejects this artifact.",
+            notes="geometry.winding fails the export from its own ring orientation; the oracle independently rejects it.",
         )
     )
     return recipe(

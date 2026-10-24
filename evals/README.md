@@ -152,17 +152,17 @@ failure instead of relabelling the input to make it pass.
 
 The allowlist is derived at run time from `routing/checks.json` (the check catalog), not from
 a hard-coded list in this harness. Specs that name an id the catalog does not register are
-rejected. Twenty-two catalog ids are exercised by the 27 tasks:
+rejected. Twenty-three catalog ids are exercised by the 27 tasks:
 
 ```text
 accuracy.estimates          accuracy.sample_design        crs.consistent
 crs.defined                 crs.metric_operation          geometry.non_empty
-geometry.type_consistent    geometry.valid                provenance.reproducible
-raster.cog_layout           raster.grid_alignment         raster.nodata_declared
-raster.resampling           rs.cloud_mask_applied         rs.index_range
-rs.reflectance_range        rs.scale_applied_once         rs.temporal_scope
-sar.geocoded                sar.value_domain              scope.record_count
-stac.provenance
+geometry.type_consistent    geometry.valid                geometry.winding
+provenance.reproducible     raster.cog_layout             raster.grid_alignment
+raster.nodata_declared      raster.resampling             rs.cloud_mask_applied
+rs.index_range              rs.reflectance_range          rs.scale_applied_once
+rs.temporal_scope           sar.geocoded                  sar.value_domain
+scope.record_count          stac.provenance
 ```
 
 The seven registered `preflight.*` ids are exercised by a separate deterministic control group rather than task specs. The controls use synthetic inspection-profile dictionaries and call the public preflight API; they do not exercise dataset inspection or filesystem inspection:
@@ -218,15 +218,19 @@ The local checkpoint baseline had 27/27 passing tasks, 38 wrong controls, 15 che
 rejections, 23 oracle-only blind spots, zero false passes and 29 exercised check IDs.
 After the focused provenance/optical fixes: **27/27 tasks, the same 38 wrong controls,
 21 checker rejections, 17 oracle-only blind spots, zero false passes, 29 check IDs**.
+After the post-v0.4.1 compression and winding checks: **27/27 tasks, 38 wrong controls,
+23 checker rejections, 15 oracle-only blind spots, zero false passes, 30 check IDs**.
 The separate preflight group still rejects all seven seeded failures.
 
-Six controls now fail production checks (the independent numeric oracles remain independent):
+Eight controls now fail production checks (the independent numeric oracles remain independent):
 
 - `stac-pinned-search-manifest`: `timestamp-inside-core` and `signed-href-leak` fail `provenance.reproducible`.
 - `stac-signed-windowed-cog-subset`: `signed-href-stored` fails `provenance.reproducible` after the recipe supplies a manifest covering the unchanged signed JSON record.
 - `satellite-landsat-qa-once`: `double-decoded-loader` fails `rs.scale_applied_once` with the original DN reference and `landsat-c2-l2` encoding.
 - `satellite-s2-baseline-offset-mask`: `offset-skipped` fails `rs.scale_applied_once` with the original DN reference and `s2-l2a` encoding.
 - `stac-loader-double-decode`: `zero-dn-decoded` fails `rs.scale_applied_once` because source nodata becomes valid output, including off-stride pixels.
+- `raster-cog-delivery`: `lossy-jpeg-cog` warns on `raster.cog_layout` because the file is tagged with JPEG compression, which is always lossy in GeoTIFF. Lossy LERC and WebP settings are not detected.
+- `vector-join-scope-and-geojson`: `clockwise-geojson-winding` fails `geometry.winding` because the export's own rings break the RFC 7946 right-hand rule. The check runs only on GeoJSON.
 
 No task specs or expected statuses were weakened or changed. Recipe processing calls use
 public `run_checks` with inspected `reference_input` data and the stated `encoding`.
@@ -249,13 +253,13 @@ credential values. Detection covers URL userinfo, SAS signatures/tokens, AWS/Goo
 fields and common token/API-key fields; it is not a general secret scanner for arbitrary text,
 opaque encodings, non-JSON files or unrecognized credential conventions.
 
-Prioritized remaining oracle-only controls (17 total; none is claimed closed):
+Remaining oracle-only controls (15 total; none is claimed closed). In the invocation the spec defines, the checker has no legitimate evidence for any of them. The per-control reasons are in `RELEASE_CHECKLIST.md` under "Checker blind spots":
 
 - Optical/time-series: `cloudy-dates-included`, `index-of-medians-composite`, `all-invalid-zero-filled`, `spring-to-summer-difference`: require observation-stack/count/composite-rule or phenology-reference checks, not one-output range screens.
 - Spectral indices: `reversed-dnbr-sign`, `nbr-wrong-swir-band`, `unscaled-dn-ratio`, `gao-moisture-mislabeled`: require named formula, band identity and calibrated source comparisons.
 - SAR: `naive-db-average`, `descending-post-event`: require power-domain aggregation and orbit metadata comparisons.
-- Raster/STAC: `lossy-jpeg-cog`, `unsigned-wraparound`, `whole-scene-download`: require compression fidelity, pre-cast reference values and requested-window coverage contracts.
-- CRS/vector: `swapped-axis-order`, `foot-radius-unit-confusion`, `dissolve-away-identities`, `clockwise-geojson-winding`: require coordinate/control-point, distance-unit, identity/topology and export-winding checks.
+- Raster/STAC: `unsigned-wraparound`, `whole-scene-download`: require pre-cast reference values and a requested-window coverage contract.
+- CRS/vector: `swapped-axis-order`, `foot-radius-unit-confusion`, `dissolve-away-identities`: require control-point positions (the oracle's targets), the radius unit, and an identity/topology reference.
 
 The full run remains the source of truth for counts. The harness does not claim hosted-CI
 execution, real agent-host verification, or performance on held-out routing sets.

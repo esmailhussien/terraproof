@@ -35,10 +35,12 @@ def check_nodata(dataset: dict) -> list:
 
 
 def check_cog_layout(dataset: dict) -> list:
-    """Heuristic layout screen for GeoTIFFs: tiling, and internal overviews when needed.
+    """Heuristic layout screen for GeoTIFFs: tiling, internal overviews when needed, and lossy JPEG compression.
 
     Overviews are expected only when the raster is larger than one block in some dimension
     (in any band); a raster that fits in one block gets none from GDAL and is not warned about.
+    JPEG in a GeoTIFF is always lossy, so it changes stored pixel values; it suits visual
+    products, not analysis values. Lossy LERC or WebP settings are not detected.
     This is not Cloud Optimized GeoTIFF validation.
     """
     if dataset["driver"] != "GTiff":
@@ -57,12 +59,15 @@ def check_cog_layout(dataset: dict) -> list:
         "overview_counts": overview_counts,
         "fits_one_block": one_block,
         "block_sizes": [band["block_size"] for band in dataset["bands"]],
+        "compression": dataset.get("compression"),
     }
     problems = []
     if not tiled:
         problems.append("not tiled (striped layout)")
     if not one_block and not has_overviews:
         problems.append("no internal overviews")
+    if (dataset.get("compression") or "").lower() == "jpeg":
+        problems.append("lossy JPEG compression changes pixel values (acceptable for visual products, not analysis values)")
     if problems:
         return [
             result(

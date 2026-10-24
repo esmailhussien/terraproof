@@ -162,7 +162,7 @@ python -m terraproof check landcover.tif --categorical --resampling nearest --fo
 
 Inputs: vector (`.gpkg`, `.geojson`, `.json`, `.shp`, `.fgb`, `.parquet` where GDAL can read it), raster (`.tif`, `.tiff`, `.vrt`, `.jp2`), and local STAC Item JSON.
 
-Checks cover CRS and units (`crs.defined`, `crs.consistent`, `crs.metric_operation`), geometry (`geometry.valid`, `geometry.non_empty`, `geometry.type_consistent`), record counts (`scope.record_count`), raster integrity (`raster.nodata_declared`, `raster.resampling`, `raster.grid_alignment`, `raster.cog_layout`), remote-sensing value ranges (`rs.reflectance_range`, `rs.index_range`), and STAC provenance (`stac.provenance`), with Phase4 processing, preflight, and reproducibility checks documented below. A check that does not apply to an input is left out; a check that applies but cannot run is reported as `not-run`.
+Checks cover CRS and units (`crs.defined`, `crs.consistent`, `crs.metric_operation`), geometry (`geometry.valid`, `geometry.non_empty`, `geometry.type_consistent`, and `geometry.winding` for GeoJSON), record counts (`scope.record_count`), raster integrity (`raster.nodata_declared`, `raster.resampling`, `raster.grid_alignment`, `raster.cog_layout`), remote-sensing value ranges (`rs.reflectance_range`, `rs.index_range`), and STAC provenance (`stac.provenance`), with Phase4 processing, preflight, and reproducibility checks documented below. A check that does not apply to an input is left out; a check that applies but cannot run is reported as `not-run`.
 
 ### Phase 4 preflight, processing, and provenance
 
