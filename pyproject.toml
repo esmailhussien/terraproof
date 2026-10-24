@@ -46,6 +46,9 @@ build_py = "terraproof._build.BuildPy"
 
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
+# Import this checkout's package first, even when the environment has an editable
+# install of another checkout (for example a shared venv used by git worktrees).
+pythonpath = ["src"]
 # Python on some Windows setups cannot write to the user temp directory, so
 # pytest's tmp_path root is kept inside the (git-ignored) pytest cache instead.
 addopts = "--basetemp=.pytest_cache/basetemp"
