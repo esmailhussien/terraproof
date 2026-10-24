@@ -1,6 +1,6 @@
-# Terraproof Release Checklist — v0.5.0, v0.4.1 and v0.4.0
+# Terraproof Release Checklist — v0.5.1, v0.5.0, v0.4.1 and v0.4.0
 
-Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 routing measurement that v0.4.1 ships, and the gates that remain open. v0.4.0 was released on 2026-10-23: tag `v0.4.0`, GitHub release *Terraproof v0.4.0*, and `terraproof@0.4.0` on npm as `latest`. v0.4.1 was released on 2026-10-24: tag `v0.4.1` on `f39d342`, GitHub release *Terraproof v0.4.1* (marked Latest), and `terraproof@0.4.1` on npm as `latest`. v0.5.0 (new `geometry.winding` check, COG JPEG warning, Phase 5 agent-lift harness, and the docs/README tidy-up) was released on 2026-10-24: tag `v0.5.0` on `1a33c4c` (part of `main` through merge commit `af66faa`), GitHub release *Terraproof v0.5.0* (marked Latest), and `terraproof@0.5.0` on npm as `latest`, published 04:18 UTC. The published tarball matches the tagged files exactly (plus the built `dist/`). No version is published to PyPI. Sections 2–5 are the release procedure used for v0.5.0.
+Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 routing measurement that v0.4.1 ships, and the gates that remain open. v0.4.0 was released on 2026-10-23: tag `v0.4.0`, GitHub release *Terraproof v0.4.0*, and `terraproof@0.4.0` on npm as `latest`. v0.4.1 was released on 2026-10-24: tag `v0.4.1` on `f39d342`, GitHub release *Terraproof v0.4.1* (marked Latest), and `terraproof@0.4.1` on npm as `latest`. v0.5.0 (new `geometry.winding` check, COG JPEG warning, Phase 5 agent-lift harness, and the docs/README tidy-up) was released on 2026-10-24: tag `v0.5.0` on `1a33c4c` (part of `main` through merge commit `af66faa`), GitHub release *Terraproof v0.5.0* (marked Latest), and `terraproof@0.5.0` on npm as `latest`, published 04:18 UTC. The published tarball matches the tagged files exactly (plus the built `dist/`). v0.5.1 (fixes for all eight findings of an independent Codex review of v0.5.0 plus two further under-graded lift deliverables; re-grading the 72 saved Phase 5 main-run deliverables changed 0 verdicts) is prepared but not yet tagged or published. No version is published to PyPI. Sections 2–5 are the release procedure, now targeting v0.5.1.
 
 ---
 
@@ -239,7 +239,7 @@ Limits: v5 is agent-authored and not expert-adjudicated, and one pass on one 160
 - [x] Independent routing acceptance: **passed on v5** in both languages from a single measurement of commit `22c3564` (EN recall 0.971, 3.75 forbidden per 100; AR recall 0.9625, 2.5 per 100; see above). The v3/v4 failures stay on record. v5 is agent-authored and not expert-adjudicated. Its post-review re-run on the v0.4.1 code is a non-regression check only, not a second acceptance.
 - [ ] Remaining release gates: the release-validation Claude real-host gate (`tests/release_validation.py --agent-host claude`, not yet run; separately, the Phase 5 runs showed real Claude Code MCP tool use) and the 15 declared checker blind spots (17 at v0.4.1; two closed after release, see below). Tiny synthetic vector fixtures do not exhaustively validate raster/optical/SAR workflows or scientific fitness.
 
-Next release actions: v0.5.0 is released (sections 4–5). The remaining Claude release-validation and checker blind-spot gates carry over to the next release. The user-approved internal content review above replaces additional expert reviewers; it does not replace these acceptance gates. No automatic inference retry, credential inspection, provider/model fallback, or relaxed isolation is authorized by these checks.
+Next release actions: tag and publish v0.5.1 (sections 4–5) when the user decides, stating in the release notes that it fixes the independent-review findings and that re-grading changed no Phase 5 verdict. The remaining Claude release-validation and checker blind-spot gates carry over to the next release. The user-approved internal content review above replaces additional expert reviewers; it does not replace these acceptance gates. No automatic inference retry, credential inspection, provider/model fallback, or relaxed isolation is authorized by these checks.
 
 ### Checker blind spots
 
@@ -276,7 +276,7 @@ Still declared. In the invocation the spec defines, the checker has no legitimat
 
 - [x] **`package.json` Package Shape**:
   - `name`: `terraproof`
-  - `version`: `0.5.0`
+  - `version`: `0.5.1`
   - `bin`: `{"terraproof": "bin/terraproof.js"}`
   - `main` and `exports`: `./dist/router/index.js` (compiled router)
   - `engines.node`: `>=20`
@@ -286,6 +286,7 @@ Still declared. In the invocation the spec defines, the checker has no legitimat
 - [x] **Installed Package Smoke Test**:
   - `npm run test:package` packs the repository, installs the tarball into a fresh project, and runs `--version`, `route --format json`, `validate`, and unknown-collection rejection.
 - [x] **Tarball Size**:
+  - `npm pack --dry-run` on `5b222b9` with the 0.5.1 bump (2026-10-24): `terraproof@0.5.1` is 395.6 kB packed / 1.25 MB unpacked across 182 files; no test, eval, docs, `.terracache`, `__pycache__`, log or temporary files are packaged.
   - `npm pack --dry-run` on `202ca49` with the 0.5.0 bump (2026-10-24): `terraproof@0.5.0` is 395.6 kB packed / 1.25 MB unpacked across 182 files (151 under `skills/`); no test, eval, docs, `.terracache`, `__pycache__`, log or temporary files are packaged.
   - `npm pack --dry-run` on `302250f` (2026-10-23): `terraproof@0.4.0` is 402.4 kB packed / 1.3 MB unpacked across 182 files (v0.1.0 was about 560 kB across 330 files). Contents are `skills/` (151 files), `routing/`, `dist/`, `third_party/`, `instructions/`, `sources/SOURCES.md`, `bin/`, `README.md`, `LICENSE` and `package.json`; no test, eval, `.terracache`, `__pycache__`, log, temporary or OS files are packaged.
 
@@ -308,17 +309,17 @@ Still declared. In the invocation the spec defines, the checker has no legitimat
 
 1. **Tag the Release**:
    ```bash
-   git tag -a v0.5.0 -m "Terraproof v0.5.0 — winding check, COG JPEG warning, Phase 5 agent-lift harness"
-   git push origin v0.5.0
+   git tag -a v0.5.1 -m "Terraproof v0.5.1 — fixes from the independent v0.5.0 review"
+   git push origin v0.5.1
    ```
 2. **Publish to NPM** (from a checkout where `bin/terraproof.js` has LF endings; npm asks for browser/2FA approval):
    ```bash
    npm publish --access public
    ```
 3. **Create GitHub Release**:
-   - Title: `Terraproof v0.5.0`
-   - Attach tarball `terraproof-0.5.0.tgz` generated via `npm pack`.
-   - Use only the `0.5.0` CHANGELOG entry as release notes, and state the remaining Claude release-validation and checker blind-spot gates and that Phase 5 claims no lift.
+   - Title: `Terraproof v0.5.1`
+   - Attach tarball `terraproof-0.5.1.tgz` generated via `npm pack`.
+   - Use only the `0.5.1` CHANGELOG entry as release notes, and state the remaining Claude release-validation and checker blind-spot gates and that Phase 5 claims no lift.
 
 ---
 
@@ -330,3 +331,5 @@ Still declared. In the invocation the spec defines, the checker has no legitimat
 - [x] v0.4.1: `npx terraproof@0.4.1 route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL"` exits 0. 2026-10-24, Windows: exit 0.
 - [x] v0.5.0: `npx terraproof@0.5.0 --version` prints `terraproof v0.5.0` in a blank directory, and the published `bin/terraproof.js` contains no CR bytes. 2026-10-24, Windows: printed `terraproof v0.5.0`; the downloaded tarball's `bin/terraproof.js` has no CR bytes, and the registry lists `0.5.0` as `latest`.
 - [x] v0.5.0: `npx terraproof@0.5.0 route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL"` exits 0. 2026-10-24, Windows: exit 0.
+- [ ] v0.5.1: `npx terraproof@0.5.1 --version` prints `terraproof v0.5.1` in a blank directory, and the published `bin/terraproof.js` contains no CR bytes.
+- [ ] v0.5.1: `npx terraproof@0.5.1 route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL"` exits 0.
