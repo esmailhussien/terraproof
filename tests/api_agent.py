@@ -23,6 +23,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import shutil
 import time
 import urllib.error
@@ -99,8 +100,9 @@ CATEGORIES = {"list_files": "file_read", "read_file": "file_read", "write_file":
 
 def project_path(project: Path, relative: str | None) -> Path:
     """Resolve a model-supplied path inside the project, or refuse it."""
-    text = (relative or ".").strip()
-    if not text or Path(text).is_absolute() or Path(text).drive:
+    # Same rules on every OS: backslashes separate folders, and drive or rooted paths are refused.
+    text = (relative or ".").strip().replace("\\", "/")
+    if not text or text.startswith("/") or re.match(r"^[A-Za-z]:", text) or Path(text).is_absolute():
         raise ValueError("use a path relative to the project")
     target = (project / text).resolve()
     root = project.resolve()
