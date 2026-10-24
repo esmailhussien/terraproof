@@ -230,3 +230,120 @@ def test_driver_plans_api_hosts_and_refuses_without_a_key(capsys, monkeypatch):
     refused = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
     assert refused == {"model_called": False, "reason": "OPENAI_API_KEY is not set; no request was sent",
                        "status": "unavailable"}
+
+
+def _http_error(code, body=b"", headers=None):
+    from email.message import Message
+    import io
+
+    message = Message()
+    for key, value in (headers or {}).items():
+        message[key] = value
+    return urllib.error.HTTPError("https://api.example/v1/chat/completions", code, "error", message,
+                                  io.BytesIO(body))
+
+
+def test_error_labels_are_short_codes_and_never_body_text(monkeypatch):
+    secret = b'{"error": {"code": "tool_use_failed", "message": "Failed to call a function: secret-model-text"}}'
+    assert api_agent.error_type_label(secret) == "tool_use_failed"
+    assert api_agent.error_type_label(b'{"error": {"type": "rate_limit_exceeded"}}') == "rate_limit_exceeded"
+    assert api_agent.error_type_label(b'{"error": {"code": "has spaces and free text"}}') is None
+    assert api_agent.error_type_label(b"<html>secret</html>") is None
+    assert api_agent.retry_after_seconds("7") == 7.0 and api_agent.retry_after_seconds(None) is None
+    assert api_agent.retry_after_seconds("Wed, 21 Oct 2015 07:28:00 GMT") == 0.0  # a past date waits 0 s
+
+    def bad_request(request, timeout):
+        raise _http_error(400, secret)
+
+    monkeypatch.setattr(urllib.request, "urlopen", bad_request)
+    with pytest.raises(api_agent.ApiError) as raised:
+        api_agent.http_transport("https://api.groq.com/openai/v1/chat/completions", {"Authorization": f"Bearer {FAKE_KEY}"},
+                                 {}, 5)
+    assert str(raised.value) == "http 400 (tool_use_failed)" and raised.value.status == 400
+    assert "secret" not in str(raised.value) and FAKE_KEY not in str(raised.value)
+
+    def limited(request, timeout):
+        raise _http_error(429, b'{"error": {"code": "rate_limit_exceeded"}}', {"Retry-After": "2"})
+
+    monkeypatch.setattr(urllib.request, "urlopen", limited)
+    with pytest.raises(api_agent.ApiError) as raised:
+        api_agent.http_transport("https://api.groq.com/openai/v1/chat/completions", {}, {}, 5)
+    assert (raised.value.status, raised.value.error_type, raised.value.retry_after) == (429, "rate_limit_exceeded", 2.0)
+
+
+class FlakyModel(FakeModel):
+    """Raises scripted ApiErrors before replying like FakeModel."""
+
+    def __init__(self, errors, turns=((),)):
+        super().__init__([list(turn) for turn in turns])
+        self.errors = list(errors)
+
+    def __call__(self, url, headers, payload, timeout):
+        if self.errors:
+            self.requests.append({"error": True})
+            raise self.errors.pop(0)
+        return super().__call__(url, headers, payload, timeout)
+
+
+def _rate_limited(retry_after=None):
+    return api_agent.ApiError("http 429", status=429, error_type="rate_limit_exceeded", retry_after=retry_after)
+
+
+def _recording_sleep():
+    waits = []
+
+    async def sleep(seconds):
+        waits.append(seconds)
+
+    return waits, sleep
+
+
+def test_rate_limits_are_retried_with_retry_after_then_backoff(tmp_path, monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", FAKE_KEY)
+    project = _project(tmp_path, WITHOUT)
+    waits, sleep = _recording_sleep()
+    model = FlakyModel([_rate_limited(5.0), _rate_limited(None)])
+    result = api_agent.ApiAgentAdapter("groq", "m", PRICES, transport=model, sleep=sleep).run(_request(project, WITHOUT))
+    assert waits == [5.0, 4.0]  # Retry-After first, then exponential backoff (2 ** retry)
+    assert result.status == "completed" and result.turn["model_calls"] == 3 and result.turn["rate_limit_retries"] == 2
+    assert result.turn["error_types"] == ["rate_limit_exceeded"] and result.turn["error_items"] == 2
+
+
+def test_rate_limit_retries_are_bounded_and_count_against_the_caps(tmp_path, monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", FAKE_KEY)
+    project = _project(tmp_path, WITHOUT)
+    waits, sleep = _recording_sleep()
+    model = FlakyModel([_rate_limited(0.0)] * 10)
+    result = api_agent.ApiAgentAdapter("groq", "m", PRICES, transport=model, sleep=sleep).run(_request(project, WITHOUT))
+    assert result.status == "failed" and result.turn["reason"] == "http 429 (rate_limit_exceeded); rate-limit retries exhausted"
+    assert len(waits) == api_agent.RATE_LIMIT_RETRIES and result.turn["model_calls"] == api_agent.RATE_LIMIT_RETRIES + 1
+
+    capped = api_agent.ApiLimits(2.0, 8.0, max_model_calls=2)
+    model = FlakyModel([_rate_limited(0.0)] * 10)
+    result = api_agent.ApiAgentAdapter("groq", "m", capped, transport=model, sleep=sleep).run(_request(project, WITHOUT))
+    assert result.turn["reason"] == "model call cap reached" and len(model.requests) == 2
+
+
+def test_rate_limit_waits_respect_the_timeout_and_the_wait_cap(tmp_path, monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", FAKE_KEY)
+    project = _project(tmp_path, WITHOUT)
+    waits, sleep = _recording_sleep()
+    model = FlakyModel([_rate_limited(50.0)])
+    result = api_agent.ApiAgentAdapter("groq", "m", PRICES, transport=model, sleep=sleep).run(
+        _request(project, WITHOUT, timeout=10.0))
+    assert waits == [] and result.turn["reason"].endswith("retry wait exceeds the per-run timeout")
+
+    model = FlakyModel([_rate_limited(600.0)])
+    result = api_agent.ApiAgentAdapter("groq", "m", PRICES, transport=model, sleep=sleep).run(
+        _request(project, WITHOUT, timeout=900.0))
+    assert waits == [api_agent.MAX_RETRY_WAIT] and result.status == "completed"
+
+
+def test_tool_use_failed_is_labelled_and_not_retried(tmp_path, monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", FAKE_KEY)
+    project = _project(tmp_path, WITHOUT)
+    waits, sleep = _recording_sleep()
+    model = FlakyModel([api_agent.ApiError("http 400", status=400, error_type="tool_use_failed")])
+    result = api_agent.ApiAgentAdapter("groq", "m", PRICES, transport=model, sleep=sleep).run(_request(project, WITHOUT))
+    assert waits == [] and result.status == "failed"
+    assert result.turn["reason"] == "http 400 (tool_use_failed)" and result.turn["error_types"] == ["tool_use_failed"]

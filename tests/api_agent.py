@@ -46,6 +46,8 @@ OUTPUT_LIMIT = 8_000  # characters returned from a Python run
 PYTHON_TIMEOUT = 120.0
 MAX_COMPLETION_TOKENS = 4096  # per model call
 USER_AGENT = "terraproof-lift-harness"
+RATE_LIMIT_RETRIES = 3  # per run; every attempt counts against the model-call cap and the timeout
+MAX_RETRY_WAIT = 60.0  # seconds, per wait
 
 
 @dataclass(frozen=True)
@@ -62,7 +64,52 @@ class ApiLimits:
 
 
 class ApiError(RuntimeError):
-    """A failed API request, described by a fixed label (never the response body or key)."""
+    """A failed API request, described by fixed labels (never the response body or key).
+
+    `status` is the HTTP status, `error_type` a sanitized code from the error body (for example
+    `rate_limit_exceeded` or `tool_use_failed`), and `retry_after` the server's wait in seconds.
+    """
+
+    def __init__(self, label: str, *, status: int | None = None, error_type: str | None = None,
+                 retry_after: float | None = None):
+        super().__init__(f"{label} ({error_type})" if error_type else label)
+        self.status = status
+        self.error_type = error_type
+        self.retry_after = retry_after
+
+
+ERROR_TYPE = re.compile(r"^[a-z0-9_.-]{1,40}$")
+
+
+def error_type_label(body: bytes) -> str | None:
+    """A short, fixed-vocabulary error code from a JSON error body; never any free text."""
+    try:
+        error = json.loads(body.decode("utf-8")).get("error")
+    except (ValueError, UnicodeDecodeError, AttributeError):
+        return None
+    if not isinstance(error, dict):
+        return None
+    for key in ("code", "type"):
+        value = error.get(key)
+        if isinstance(value, str) and ERROR_TYPE.match(value):
+            return value
+    return None
+
+
+def retry_after_seconds(value: str | None) -> float | None:
+    """Retry-After as seconds: a number, or an HTTP date relative to now."""
+    if not value:
+        return None
+    try:
+        return max(0.0, float(value))
+    except ValueError:
+        pass
+    try:
+        from email.utils import parsedate_to_datetime
+
+        return max(0.0, parsedate_to_datetime(value).timestamp() - time.time())
+    except (TypeError, ValueError):
+        return None
 
 
 def http_transport(url: str, headers: dict, payload: dict, timeout: float) -> dict:
@@ -76,7 +123,13 @@ def http_transport(url: str, headers: dict, payload: dict, timeout: float) -> di
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
-        raise ApiError(f"http {error.code}") from None
+        try:
+            body = error.read(65_536) if error.fp else b""
+        except OSError:
+            body = b""
+        wait = retry_after_seconds(error.headers.get("Retry-After") if error.headers else None)
+        raise ApiError(f"http {error.code}", status=error.code, error_type=error_type_label(body),
+                       retry_after=wait) from None
     except (urllib.error.URLError, TimeoutError, OSError) as error:
         raise ApiError(f"network error ({type(error).__name__})") from None
     except ValueError:
@@ -124,7 +177,7 @@ class ApiAgentAdapter(Adapter):
     usd_capped = True
 
     def __init__(self, provider: str, model: str, limits: ApiLimits, agent_python_without: str | None = None,
-                 transport=http_transport, base_url: str | None = None):
+                 transport=http_transport, base_url: str | None = None, sleep=None):
         if provider not in PROVIDERS:
             raise ValueError(f"unknown provider {provider!r}")
         if not model:
@@ -134,6 +187,7 @@ class ApiAgentAdapter(Adapter):
         self.limits = limits
         self.agent_python_without = agent_python_without
         self.transport = transport
+        self.sleep = sleep or asyncio.sleep
         self.base_url = base_url or PROVIDERS[provider]["base_url"]
         self.name = f"{provider}-api"
 
@@ -227,7 +281,8 @@ class ApiAgentAdapter(Adapter):
         labels: set[str] = set()
         incidental: set[str] = set()
         skill_reads = 0
-        model_calls = input_tokens = output_tokens = 0
+        model_calls = input_tokens = output_tokens = retries = 0
+        error_types: list[str] = []
         status, reason = "aborted", "loop ended without a final answer"
 
         while True:
@@ -254,15 +309,26 @@ class ApiAgentAdapter(Adapter):
             # the completion cap bounds that.
             payload = {"model": self.model, "messages": messages, "tools": tools, "tool_choice": "auto",
                        "temperature": 0, "max_tokens": MAX_COMPLETION_TOKENS}
+            model_calls += 1  # every attempt counts, including rate-limited ones
             try:
                 response = await asyncio.to_thread(self.transport, f"{self.base_url}/chat/completions", headers,
                                                    payload, min(remaining, 300.0))
             except ApiError as error:
-                status, reason = "error", str(error)
+                if error.error_type:
+                    error_types.append(error.error_type)
+                if error.status == 429 and retries < RATE_LIMIT_RETRIES:
+                    retries += 1
+                    wait = error.retry_after if error.retry_after is not None else 2.0 ** retries
+                    wait = min(wait, MAX_RETRY_WAIT)
+                    if time.monotonic() + wait >= deadline:
+                        status, reason = "error", f"{error}; retry wait exceeds the per-run timeout"
+                        break
+                    await self.sleep(wait)
+                    continue
+                status, reason = "error", str(error) + ("; rate-limit retries exhausted" if error.status == 429 else "")
                 break
             finally:
                 del key, headers
-            model_calls += 1
             usage = response.get("usage") or {}
             input_tokens += int(usage.get("prompt_tokens") or 0)
             output_tokens += int(usage.get("completion_tokens") or 0)
@@ -321,8 +387,8 @@ class ApiAgentAdapter(Adapter):
             terraproof_tool_calls=sum(1 for c in calls if c["tool"].startswith("terraproof.")),
             skill_reads=skill_reads, input_tokens=input_tokens, output_tokens=output_tokens,
             contamination=sorted(labels), diagnostics=sorted(incidental), calls=calls,
-            turn={"status": status, "reason": reason, "error_types": [], "error_items": 0,
-                  "model_calls": model_calls})
+            turn={"status": status, "reason": reason, "error_types": sorted(set(error_types)),
+                  "error_items": len(error_types), "model_calls": model_calls, "rate_limit_retries": retries})
 
     def preflight(self, request: AgentRequest) -> dict:
         """No-model checks: the key variable is set, Python/IO work, and the isolation or MCP setup holds."""
