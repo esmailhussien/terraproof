@@ -45,6 +45,7 @@ READ_LIMIT = 20_000  # characters returned from a file or tool result
 OUTPUT_LIMIT = 8_000  # characters returned from a Python run
 PYTHON_TIMEOUT = 120.0
 MAX_COMPLETION_TOKENS = 4096  # per model call
+USER_AGENT = "terraproof-lift-harness"
 
 
 @dataclass(frozen=True)
@@ -65,7 +66,11 @@ class ApiError(RuntimeError):
 
 
 def http_transport(url: str, headers: dict, payload: dict, timeout: float) -> dict:
-    """POST one chat-completions request with the standard library."""
+    """POST one chat-completions request with the standard library.
+
+    An explicit User-Agent is required: Groq's edge rejects urllib's default one with HTTP 403.
+    """
+    headers = {"User-Agent": USER_AGENT, **headers}
     request = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:

@@ -150,6 +150,29 @@ def test_missing_key_sends_nothing_and_api_errors_carry_no_body(tmp_path, monkey
     assert FAKE_KEY not in json.dumps(asdict(errored))
 
 
+def test_http_transport_sends_an_explicit_user_agent(monkeypatch):
+    seen = {}
+
+    class Reply:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return b'{"choices": []}'
+
+    def capture(request, timeout):
+        seen.update({key.lower(): value for key, value in request.header_items()})
+        return Reply()
+
+    monkeypatch.setattr(urllib.request, "urlopen", capture)
+    api_agent.http_transport("https://api.groq.com/openai/v1/chat/completions", {"Authorization": "Bearer x"}, {}, 5)
+    # Groq's edge answers urllib's default "Python-urllib/3.x" agent with HTTP 403.
+    assert seen["user-agent"] == api_agent.USER_AGENT and not seen["user-agent"].startswith("Python-urllib")
+
+
 def test_terraproof_use_in_without_is_labelled_contamination(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", FAKE_KEY)
     project = _project(tmp_path, WITHOUT)
