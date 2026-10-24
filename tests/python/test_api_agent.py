@@ -339,11 +339,43 @@ def test_rate_limit_waits_respect_the_timeout_and_the_wait_cap(tmp_path, monkeyp
     assert waits == [api_agent.MAX_RETRY_WAIT] and result.status == "completed"
 
 
-def test_tool_use_failed_is_labelled_and_not_retried(tmp_path, monkeypatch):
+def _tool_use_failed():
+    return api_agent.ApiError("http 400", status=400, error_type="tool_use_failed")
+
+
+def test_tool_use_failed_is_retried_twice_without_waiting(tmp_path, monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", FAKE_KEY)
     project = _project(tmp_path, WITHOUT)
     waits, sleep = _recording_sleep()
-    model = FlakyModel([api_agent.ApiError("http 400", status=400, error_type="tool_use_failed")])
+    model = FlakyModel([_tool_use_failed(), _tool_use_failed()])
     result = api_agent.ApiAgentAdapter("groq", "m", PRICES, transport=model, sleep=sleep).run(_request(project, WITHOUT))
-    assert waits == [] and result.status == "failed"
-    assert result.turn["reason"] == "http 400 (tool_use_failed)" and result.turn["error_types"] == ["tool_use_failed"]
+    assert waits == [] and result.status == "completed"
+    assert result.turn["tool_use_retries"] == 2 and result.turn["model_calls"] == 3
+    assert result.turn["error_types"] == ["tool_use_failed"] and result.turn["error_items"] == 2
+
+
+def test_tool_use_retries_are_bounded_and_count_against_the_caps(tmp_path, monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", FAKE_KEY)
+    project = _project(tmp_path, WITHOUT)
+    waits, sleep = _recording_sleep()
+    model = FlakyModel([_tool_use_failed()] * 10)
+    result = api_agent.ApiAgentAdapter("groq", "m", PRICES, transport=model, sleep=sleep).run(_request(project, WITHOUT))
+    assert result.status == "failed"
+    assert result.turn["reason"] == "http 400 (tool_use_failed); tool-use retries exhausted"
+    assert result.turn["model_calls"] == api_agent.TOOL_USE_RETRIES + 1 and waits == []
+
+    capped = api_agent.ApiLimits(2.0, 8.0, max_model_calls=2)
+    model = FlakyModel([_tool_use_failed()] * 10)
+    result = api_agent.ApiAgentAdapter("groq", "m", capped, transport=model, sleep=sleep).run(_request(project, WITHOUT))
+    assert result.turn["reason"] == "model call cap reached" and len(model.requests) == 2
+
+
+def test_other_client_errors_are_labelled_and_not_retried(tmp_path, monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", FAKE_KEY)
+    project = _project(tmp_path, WITHOUT)
+    waits, sleep = _recording_sleep()
+    model = FlakyModel([api_agent.ApiError("http 400", status=400, error_type="invalid_request_error"),
+                        _tool_use_failed()])
+    result = api_agent.ApiAgentAdapter("groq", "m", PRICES, transport=model, sleep=sleep).run(_request(project, WITHOUT))
+    assert waits == [] and result.status == "failed" and result.turn["model_calls"] == 1
+    assert result.turn["reason"] == "http 400 (invalid_request_error)"

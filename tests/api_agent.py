@@ -47,6 +47,9 @@ PYTHON_TIMEOUT = 120.0
 MAX_COMPLETION_TOKENS = 4096  # per model call
 USER_AGENT = "terraproof-lift-harness"
 RATE_LIMIT_RETRIES = 3  # per run; every attempt counts against the model-call cap and the timeout
+# Groq answers HTTP 400 "tool_use_failed" when it cannot parse the model's tool call; a fresh
+# attempt often succeeds. Same accounting as rate-limit retries; no wait.
+TOOL_USE_RETRIES = 2
 MAX_RETRY_WAIT = 60.0  # seconds, per wait
 
 
@@ -281,7 +284,7 @@ class ApiAgentAdapter(Adapter):
         labels: set[str] = set()
         incidental: set[str] = set()
         skill_reads = 0
-        model_calls = input_tokens = output_tokens = retries = 0
+        model_calls = input_tokens = output_tokens = retries = tool_retries = 0
         error_types: list[str] = []
         status, reason = "aborted", "loop ended without a final answer"
 
@@ -325,7 +328,13 @@ class ApiAgentAdapter(Adapter):
                         break
                     await self.sleep(wait)
                     continue
-                status, reason = "error", str(error) + ("; rate-limit retries exhausted" if error.status == 429 else "")
+                if error.status == 400 and error.error_type == "tool_use_failed" and tool_retries < TOOL_USE_RETRIES:
+                    tool_retries += 1
+                    continue
+                exhausted = {429: "; rate-limit retries exhausted"}.get(error.status, "")
+                if error.error_type == "tool_use_failed":
+                    exhausted = "; tool-use retries exhausted"
+                status, reason = "error", str(error) + exhausted
                 break
             finally:
                 del key, headers
@@ -388,7 +397,8 @@ class ApiAgentAdapter(Adapter):
             skill_reads=skill_reads, input_tokens=input_tokens, output_tokens=output_tokens,
             contamination=sorted(labels), diagnostics=sorted(incidental), calls=calls,
             turn={"status": status, "reason": reason, "error_types": sorted(set(error_types)),
-                  "error_items": len(error_types), "model_calls": model_calls, "rate_limit_retries": retries})
+                  "error_items": len(error_types), "model_calls": model_calls, "rate_limit_retries": retries,
+                  "tool_use_retries": tool_retries})
 
     def preflight(self, request: AgentRequest) -> dict:
         """No-model checks: the key variable is set, Python/IO work, and the isolation or MCP setup holds."""
