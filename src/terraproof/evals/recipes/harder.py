@@ -12,6 +12,7 @@ from rasterio.warp import reproject
 from rasterio.enums import Resampling
 from terraproof.evals.fixtures import write_raster_grid
 from terraproof.evals.harder_oracles import grade
+from terraproof.inspect import inspect_dataset
 from terraproof.evals.recipes._util import check_step, correct, wrong, recipe
 NODATA = -9999.0
 GRID = from_origin(500000, 5000000, 10, 10)
@@ -19,12 +20,15 @@ GRID = from_origin(500000, 5000000, 10, 10)
 def _request(root, **parameters):
     (root / 'request.json').write_text(json.dumps(parameters, sort_keys=True, indent=2) + '\n', encoding='utf-8')
 
-def _finish(root, task_id, kind, expected, valid, transform, mistakes, *, dtype='float32', nodata=NODATA):
+def _finish(root, task_id, kind, expected, valid, transform, mistakes, *, dtype='float32', nodata=NODATA, dem=None):
 
     def control(name, values, support, is_wrong):
         data = np.where(support, values, nodata).astype(dtype)
         path = write_raster_grid(root / (name + '.tif'), data, transform=transform, nodata=nodata)
-        steps = [check_step('check ' + name + '.tif', [path])]
+        if dem is None:
+            steps = [check_step('check ' + name + '.tif', [path])]
+        else:
+            steps = [check_step('check ' + name + '.tif --dem ' + dem, [path], dem=inspect_dataset(str(root / dem)))]
         constructor = wrong if is_wrong else correct
         return constructor(name, 'Synthetic artifact evaluated cell-by-cell from declared input evidence.', steps, grade(kind, root, path))
     reference = control('result', expected, valid, False)
@@ -75,7 +79,7 @@ def terrain_slope(root):
         out = np.zeros(z.shape)
         out[1:-1, 1:-1] = np.degrees(np.arctan(np.hypot(gx, gy)))
         return out
-    return _finish(root, 'terrain-slope-map', 'slope', slope(0.3048, 60), support, transform, [('vertical-units-ignored', slope(1, 60), support), ('square-pixels-assumed', slope(0.3048, 30), support)])
+    return _finish(root, 'terrain-slope-map', 'slope', slope(0.3048, 60), support, transform, [('vertical-units-ignored', slope(1, 60), support), ('square-pixels-assumed', slope(0.3048, 30), support)], dem='elevation.tif')
 
 def population_transfer(root):
     r, c = np.indices((16, 16))

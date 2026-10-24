@@ -25,7 +25,8 @@
       ],
       "expected_checks": {
         "crs.defined": "pass",
-        "raster.nodata_declared": "pass"
+        "raster.nodata_declared": "pass",
+        "terrain.slope_consistent": "pass"
       },
       "pitfall": "Vertical-unit and anisotropic-grid gradient conversion."
     },

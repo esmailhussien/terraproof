@@ -259,6 +259,26 @@ def test_run_checks_with_reference_input_and_encoding(make_raster):
     assert ids.get("rs.scale_applied_once") == "pass"
 
 
+def test_run_checks_with_dem_flags_a_slope_that_ignores_vertical_units(tmp_path):
+    from rasterio.transform import from_origin
+    from terraproof.evals.fixtures import write_raster_grid
+
+    r, c = np.indices((8, 8))
+    z = (0.5 * c * c + 0.3 * r * r).astype("float32")
+    grid = from_origin(500000, 5000000, 30, 30)
+    dem = write_raster_grid(tmp_path / "dem.tif", z, transform=grid, unit="ft")
+    slope = np.full(z.shape, -9999.0, dtype="float32")
+    gx = (z[1:-1, 2:] - z[1:-1, :-2]) / 60
+    gy = (z[2:, 1:-1] - z[:-2, 1:-1]) / 60
+    slope[1:-1, 1:-1] = np.degrees(np.arctan(np.hypot(gx, gy)))  # feet read as metres
+    out = write_raster_grid(tmp_path / "slope.tif", slope, transform=grid)
+
+    payload = call("run_checks", {"paths": [out], "dem": dem}).structured_content
+
+    ids = {check["id"]: check["status"] for check in payload["report"]["checks"]}
+    assert ids.get("terrain.slope_consistent") == "fail"
+
+
 def test_run_checks_with_sar_expect(make_raster):
     path = make_raster("sar.tif", np.full((64, 64), -8.0, dtype="float32"), nodata=-9999.0)
 

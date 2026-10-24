@@ -73,6 +73,10 @@
       "family": "rs",
       "description": "Every STAC item datetime, or the whole start/end interval, falls inside a declared time range; items without a usable acquisition time are not-run."
     },
+    "terrain.slope_consistent": {
+      "family": "terrain",
+      "description": "A slope-in-degrees raster matches central differences on its DEM (passed with --dem) using the DEM's declared vertical unit and real pixel spacing; matching the slope with vertical units ignored or square pixels assumed fails, matching neither warns, and geographic or unaligned grids are not-run."
+    },
     "sar.value_domain": {
       "family": "sar",
       "description": "Sampled backscatter values lie in the domain declared by the expected scale (sigma0-db within [-50, 15] dB; sigma0-linear non-negative with p99 <= 5). Flags decibel/linear confusion as one possible cause; not a calibration check."

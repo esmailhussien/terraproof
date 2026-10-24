@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from terraproof.checks import accuracy, crs, geometry, raster, rs, rs_processing, sar, scope, stac
+from terraproof.checks import accuracy, crs, geometry, raster, rs, rs_processing, sar, scope, stac, terrain
 from terraproof.checks.base import STATUSES, CheckResult, result
 
 __all__ = ["STATUSES", "CheckResult", "result", "run_checks"]
@@ -26,6 +26,7 @@ def run_checks(
     class_areas=None,
     min_per_class: int | None = None,
     estimates_requested: bool = False,
+    dem: dict | None = None,
 ) -> list[CheckResult]:
     """Run every check that applies to the inspected inputs, in a fixed order."""
     vectors = [d for d in inputs if d["kind"] == "vector"]
@@ -71,6 +72,10 @@ def run_checks(
             results += rs_processing.check_cloud_mask_applied(dataset, qa_path, qa_kind)
     if time_range is not None:
         results += rs_processing.check_temporal_scope(stac_items, time_range)
+
+    if dem is not None:
+        for dataset in rasters:
+            results += terrain.check_slope_consistent(dataset, dem)
 
     if sar_expect is not None:
         results += sar.check_value_domain(rasters, sar_expect)
