@@ -32,7 +32,7 @@ python -m venv .venv
 .venv/bin/python -m pip install -e ".[dev]"
 ```
 
-Follow the README's [Quick Start](README.md#quick-start-route-a-real-task) to inspect routing. Test file-writing commands such as `apply` or `bundle` only against a disposable directory, and inspect generated files before using them in a real project.
+Follow the README's [Quick Start](README.md#quick-start) to inspect routing. Test file-writing commands such as `apply` or `bundle` only against a disposable directory, and inspect generated files before using them in a real project.
 
 ## Keep changes focused
 

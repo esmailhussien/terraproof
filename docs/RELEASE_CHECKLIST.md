@@ -30,7 +30,7 @@ the hosted matrix row was added after GitHub Actions passed on `06eb466`.
 
 The original thresholds are unchanged: recall at least 0.90 and no more than
 five forbidden selections per 100 **in each language**. The new
-[100-item audit and protocol](evals/routing/RELEASE_20261023_PROTOCOL.md) report
+[100-item audit and protocol](../evals/routing/RELEASE_20261023_PROTOCOL.md) report
 same-agent authorship, paired language task families and sample-size limits.
 No independent heldout pass is claimed. Under the user's sole-agent process,
 internal review and a fresh internal audit replace additional reviewers; they
@@ -143,7 +143,7 @@ same-agent internal evidence, not independent acceptance. EN recall was 0.95
 with 10 forbidden selections/80 (12.5 per 100); AR recall was 0.8125 with 3/80
 (3.75 per 100). EN failed the unchanged forbidden-rate threshold and AR failed
 the unchanged recall threshold. No labels or routing code were changed after
-measurement. The [protocol and result](evals/routing/INTERNAL_20261023_PROTOCOL.md)
+measurement. The [protocol and result](../evals/routing/INTERNAL_20261023_PROTOCOL.md)
 record authorship, limitations and corpus hash. This set was later exposed for
 development and is never presented as fresh acceptance again.
 
@@ -200,7 +200,7 @@ The predeclared v3 ranked gate requires recall >=0.9 for each language and <=5 f
 
 The same predeclared per-language gate requires recall >=0.9 and <=5 forbidden selections per 100. Neither language passes. This is not a direct apples-to-apples v3 improvement comparison. No labels or corpus were altered or tuned after freeze; negatives are largely ordinary nontechnical tasks, and the set is agent-authored, not expert-adjudicated. These results do not establish publish readiness.
 
-**Post-0.4.0 independent v5 routing gate (2026-10-24): BOTH LANGUAGES PASSED, single measurement.** A separate agent authored [heldout_v5.jsonl](evals/routing/heldout_v5.jsonl) and its [protocol](evals/routing/HELDOUT_V5_PROTOCOL.md) while reading only `AGENTS.md`, the registry, skill documents, the evaluator schema, the v4 protocol and the README schema section; it did not see the router, dev data, tests, older heldout sets or any router output. The set was frozen in its own commit (`b12104a`, SHA-256 `5cc76cffc955ee03dc85f99cf7dccee419dd319ac2cbaf6416f36765ea891889`, 160 items: 80 EN and 80 AR, each 60 positive and 20 negative) before measurement. The router was then committed (`22c3564`) and measured exactly once, ranked top 5 with `semantic=False`. The router author did not open v5 items or per-item failures, before or after the run.
+**Post-0.4.0 independent v5 routing gate (2026-10-24): BOTH LANGUAGES PASSED, single measurement.** A separate agent authored [heldout_v5.jsonl](../evals/routing/heldout_v5.jsonl) and its [protocol](../evals/routing/HELDOUT_V5_PROTOCOL.md) while reading only `AGENTS.md`, the registry, skill documents, the evaluator schema, the v4 protocol and the README schema section; it did not see the router, dev data, tests, older heldout sets or any router output. The set was frozen in its own commit (`b12104a`, SHA-256 `5cc76cffc955ee03dc85f99cf7dccee419dd319ac2cbaf6416f36765ea891889`, 160 items: 80 EN and 80 AR, each 60 positive and 20 negative) before measurement. The router was then committed (`22c3564`) and measured exactly once, ranked top 5 with `semantic=False`. The router author did not open v5 items or per-item failures, before or after the run.
 
 | Measurement | Items | Recall | Positive-only recall | Forbidden selections | Gate interpretation |
 | --- | --- | --- | --- | --- | --- |

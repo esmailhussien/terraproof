@@ -253,7 +253,7 @@ credential values. Detection covers URL userinfo, SAS signatures/tokens, AWS/Goo
 fields and common token/API-key fields; it is not a general secret scanner for arbitrary text,
 opaque encodings, non-JSON files or unrecognized credential conventions.
 
-Remaining oracle-only controls (15 total; none is claimed closed). In the invocation the spec defines, the checker has no legitimate evidence for any of them. The per-control reasons are in `RELEASE_CHECKLIST.md` under "Checker blind spots":
+Remaining oracle-only controls (15 total; none is claimed closed). In the invocation the spec defines, the checker has no legitimate evidence for any of them. The per-control reasons are in [`docs/RELEASE_CHECKLIST.md`](../docs/RELEASE_CHECKLIST.md) under "Checker blind spots":
 
 - Optical/time-series: `cloudy-dates-included`, `index-of-medians-composite`, `all-invalid-zero-filled`, `spring-to-summer-difference`: require observation-stack/count/composite-rule or phenology-reference checks, not one-output range screens.
 - Spectral indices: `reversed-dnbr-sign`, `nbr-wrong-swir-band`, `unscaled-dn-ratio`, `gao-moisture-mislabeled`: require named formula, band identity and calibrated source comparisons.
@@ -273,7 +273,7 @@ described above. The command runs only offline adapters (`--adapter scripted` or
 scoring accepts each reference and rejects each seeded-wrong output. Real agent hosts run
 only through the opt-in `tests/agent_lift.py` driver, after explicit approval. Design,
 statistics, budget and threats to validity are in
-[Terraproof_Phase5_PLAN.md](../Terraproof_Phase5_PLAN.md).
+[docs/plans/Terraproof_Phase5_PLAN.md](../docs/plans/Terraproof_Phase5_PLAN.md).
 
 ## Adding a task
 
