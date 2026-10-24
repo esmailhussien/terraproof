@@ -792,7 +792,9 @@ def plan(args) -> dict:
                     "--usd-per-million-input", f"{args.usd_per_million_input:g}",
                     "--usd-per-million-output", f"{args.usd_per_million_output:g}",
                     "--max-model-calls-per-run", str(args.max_model_calls_per_run),
-                    "--max-tokens-per-run", str(args.max_tokens_per_run)]
+                    "--max-tokens-per-run", str(args.max_tokens_per_run),
+                    "--rate-limit-retries", str(args.rate_limit_retries),
+                    "--max-retry-wait", f"{args.max_retry_wait:g}"]
     if capped:
         approve += ["--max-usd-per-run", f"{args.max_usd_per_run:g}", "--max-usd-total", f"{total_usd_cap(args, calls):g}"]
     approve += ["--timeout", f"{args.timeout:g}", "--approve-model-calls", str(calls)]
@@ -810,7 +812,9 @@ def plan(args) -> dict:
         **({"api": {"model": api_model(args), "usd_per_million_input": args.usd_per_million_input,
                     "usd_per_million_output": args.usd_per_million_output,
                     "max_model_calls_per_run": args.max_model_calls_per_run,
-                    "max_tokens_per_run": args.max_tokens_per_run}} if args.agent_host in API_HOSTS else {}),
+                    "max_tokens_per_run": args.max_tokens_per_run,
+                    "rate_limit_retries": args.rate_limit_retries,
+                    "max_retry_wait_seconds": args.max_retry_wait}} if args.agent_host in API_HOSTS else {}),
         "command_to_approve": " ".join(approve),
         "preflight_command": " ".join(approve[:-2] + ["--preflight-only"]),
     }
@@ -836,6 +840,10 @@ def main(argv=None) -> int:
                         help="openai/groq price per million output tokens (required)")
     parser.add_argument("--max-model-calls-per-run", type=int, default=40, help="openai/groq call cap per run")
     parser.add_argument("--max-tokens-per-run", type=int, default=300_000, help="openai/groq token cap per run")
+    parser.add_argument("--rate-limit-retries", type=int, default=3,
+                        help="openai/groq HTTP 429 retries per run (default 3; each counts against the caps)")
+    parser.add_argument("--max-retry-wait", type=float, default=60.0,
+                        help="openai/groq longest wait per 429 retry in seconds (default 60)")
     parser.add_argument("--codex-reasoning-effort", default="medium", choices=["low", "medium", "high"])
     parser.add_argument("--codex-executable", type=Path,
                         help="native codex.exe to use (default: the PATH-resolved native binary)")
@@ -864,6 +872,8 @@ def main(argv=None) -> int:
             parser.error("--usd-per-million-input and --usd-per-million-output are required and must be positive")
         if args.max_model_calls_per_run < 1 or args.max_tokens_per_run < 1:
             parser.error("--max-model-calls-per-run and --max-tokens-per-run must be positive")
+        if args.rate_limit_retries < 0 or args.max_retry_wait <= 0:
+            parser.error("--rate-limit-retries must be non-negative and --max-retry-wait positive")
     if args.preflight_only and args.approve_model_calls is not None:
         parser.error("--preflight-only starts no agent; do not combine it with --approve-model-calls")
     try:
@@ -889,7 +899,8 @@ def main(argv=None) -> int:
 
         limits = ApiLimits(usd_per_million_input=args.usd_per_million_input,
                            usd_per_million_output=args.usd_per_million_output,
-                           max_model_calls=args.max_model_calls_per_run, max_tokens=args.max_tokens_per_run)
+                           max_model_calls=args.max_model_calls_per_run, max_tokens=args.max_tokens_per_run,
+                           rate_limit_retries=args.rate_limit_retries, max_retry_wait=args.max_retry_wait)
         adapter = ApiAgentAdapter(args.agent_host, api_model(args), limits, agent_python)
         version = f"{args.agent_host} {adapter.model}"
         reason = "ok" if adapter.key_present() else f"{adapter.key_env} is not set; no request was sent"

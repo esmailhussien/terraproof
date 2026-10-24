@@ -46,11 +46,11 @@ OUTPUT_LIMIT = 8_000  # characters returned from a Python run
 PYTHON_TIMEOUT = 120.0
 MAX_COMPLETION_TOKENS = 4096  # per model call
 USER_AGENT = "terraproof-lift-harness"
-RATE_LIMIT_RETRIES = 3  # per run; every attempt counts against the model-call cap and the timeout
+RATE_LIMIT_RETRIES = 3  # default per run; every attempt counts against the model-call cap and the timeout
 # Groq answers HTTP 400 "tool_use_failed" when it cannot parse the model's tool call; a fresh
 # attempt often succeeds. Same accounting as rate-limit retries; no wait.
 TOOL_USE_RETRIES = 2
-MAX_RETRY_WAIT = 60.0  # seconds, per wait
+MAX_RETRY_WAIT = 60.0  # default seconds, per wait
 
 
 @dataclass(frozen=True)
@@ -61,6 +61,8 @@ class ApiLimits:
     usd_per_million_output: float
     max_model_calls: int = 40
     max_tokens: int = 300_000
+    rate_limit_retries: int = RATE_LIMIT_RETRIES
+    max_retry_wait: float = MAX_RETRY_WAIT
 
     def cost(self, input_tokens: int, output_tokens: int) -> float:
         return (input_tokens * self.usd_per_million_input + output_tokens * self.usd_per_million_output) / 1e6
@@ -319,10 +321,10 @@ class ApiAgentAdapter(Adapter):
             except ApiError as error:
                 if error.error_type:
                     error_types.append(error.error_type)
-                if error.status == 429 and retries < RATE_LIMIT_RETRIES:
+                if error.status == 429 and retries < self.limits.rate_limit_retries:
                     retries += 1
                     wait = error.retry_after if error.retry_after is not None else 2.0 ** retries
-                    wait = min(wait, MAX_RETRY_WAIT)
+                    wait = min(wait, self.limits.max_retry_wait)
                     if time.monotonic() + wait >= deadline:
                         status, reason = "error", f"{error}; retry wait exceeds the per-run timeout"
                         break

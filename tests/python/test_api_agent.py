@@ -339,6 +339,17 @@ def test_rate_limit_waits_respect_the_timeout_and_the_wait_cap(tmp_path, monkeyp
     assert waits == [api_agent.MAX_RETRY_WAIT] and result.status == "completed"
 
 
+def test_rate_limit_retries_and_wait_cap_are_configurable(tmp_path, monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", FAKE_KEY)
+    project = _project(tmp_path, WITHOUT)
+    waits, sleep = _recording_sleep()
+    patient = api_agent.ApiLimits(2.0, 8.0, rate_limit_retries=5, max_retry_wait=120.0)
+    model = FlakyModel([_rate_limited(600.0)] * 5)
+    result = api_agent.ApiAgentAdapter("groq", "m", patient, transport=model, sleep=sleep).run(
+        _request(project, WITHOUT, timeout=900.0))
+    assert waits == [120.0] * 5 and result.status == "completed" and result.turn["rate_limit_retries"] == 5
+
+
 def _tool_use_failed():
     return api_agent.ApiError("http 400", status=400, error_type="tool_use_failed")
 
