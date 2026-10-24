@@ -22,7 +22,7 @@ Fixes for all eight findings of an independent review of v0.5.0 (Codex, 2026-10-
 ### Evaluation
 
 - All 72 saved Phase 5 main-run deliverables (54 runs) were re-graded offline with the fixed grader: 0 verdicts changed (with 27/27; without 24/27 on files, 21/27 with the contamination rule). The sign-flip p, bootstrap CI and McNemar p are unchanged.
-- A generic probe found two more under-graded deliverables, still open: `sr_nir.tif` in `satellite-s2-baseline-offset-mask` is not graded, and a row-flipped `composite_counts.tif` in `satellite-seasonal-harmonized-composite` is accepted. A direct comparison shows every saved historical output for both files matches the reference exactly.
+- A generic probe found two more under-graded deliverables, now fixed: `sr_nir.tif` in `satellite-s2-baseline-offset-mask` was not graded, and a row-flipped `composite_counts.tif` in `satellite-seasonal-harmonized-composite` was accepted. Both oracles now grade every pixel and the mask from the delivered file, and a parametrized regression rejects zeroed, +1 and row-flipped versions of every deliverable of all nine lift tasks. Every saved historical output for both files matches the reference exactly, and re-grading the 72 main-run deliverables again changed 0 verdicts.
 
 ## [0.5.0] — 2026-10-24
 

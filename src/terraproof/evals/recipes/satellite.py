@@ -108,6 +108,23 @@ def satellite_s2_baseline_offset(root: Path):
     with rasterio.open(sr_red) as src:
         oracle.equal("the physical reflectance has identity scale/offset", (src.scales[0], src.offsets[0]), (1.0, 0.0))
         oracle.equal("nodata is declared on the decoded output", src.nodatavals[0], FLOAT_NODATA)
+    # The NIR deliverable is graded in full from the delivered file: same decode, same SCL mask.
+    delivered_nir = read_raster(sr_nir)
+    nir_valid = nir != FLOAT_NODATA
+    nir_got_valid = ~np.ma.getmaskarray(delivered_nir)
+    nir_values = np.ma.getdata(delivered_nir).astype("float64")
+    oracle.require(
+        "the NIR mask equals DN 0 plus SCL 3/8/9/10",
+        bool(np.array_equal(nir_got_valid, nir_valid)),
+        int(np.count_nonzero(nir_got_valid != nir_valid)),
+        "0 mismatched mask pixels",
+    )
+    oracle.require(
+        "every valid NIR pixel is DN x 0.0001 - 0.1",
+        bool(np.allclose(nir_values[nir_valid], nir[nir_valid], atol=1e-6)),
+        int(np.count_nonzero(~np.isclose(nir_values[nir_valid], nir[nir_valid], atol=1e-6))),
+        "0 wrong valid pixels",
+    )
     reflectance = results_for(steps, "rs.reflectance_range")
     grid = results_for(steps, "raster.grid_alignment")
     nodata = results_for(steps, "raster.nodata_declared")
@@ -495,7 +512,16 @@ def satellite_seasonal_composite(root: Path):
     oracle = Oracle("masked median composite and per-pixel valid-observation counts")
     expected_median = float(np.nanmedian([red_dates[0][5, 5], red_dates[1][5, 5], red_dates[2][5, 5]]))
     oracle.close("control pixel composite median (reflectance)", float(np.ma.getdata(delivered)[5, 5]), expected_median, 1e-6)
-    oracle.equal("control pixel valid-observation count", int(np.ma.getdata(read_raster(counts_path))[5, 5]), 3)
+    delivered_counts = read_raster(counts_path)
+    oracle.equal("control pixel valid-observation count", int(np.ma.getdata(delivered_counts)[5, 5]), 3)
+    # The count layer is graded in full from the delivered file; a zero count is a value, not nodata.
+    oracle.require(
+        "every pixel's count equals its number of valid dates",
+        bool(np.array_equal(np.ma.getdata(delivered_counts).astype("int64"), counts.astype("int64"))
+             and not np.ma.getmaskarray(delivered_counts).any()),
+        int(np.count_nonzero(np.ma.getdata(delivered_counts).astype("int64") != counts.astype("int64"))),
+        "0 wrong count pixels",
+    )
     oracle.require(
         "the wholly invalid pixel is nodata",
         bool(np.ma.getmaskarray(delivered)[0, 0]),
