@@ -43,6 +43,11 @@ The initial extended run reports **33/33 tasks, zero false passes and 27 checker
 blind spots**: the existing 15 plus the new 12 seeded mistakes. No new production
 check is claimed, and no existing blind spot is reclassified as closed.
 
+Later change: `terrain.slope_consistent` (added after the API-host pilots, where real
+agent slopes with the feet elevations read as metres passed every check) now rejects both
+`terrain-slope-map` seeds, so the run reports **25 checker blind spots** and 25 checker
+rejections. The other ten new seeds and the original 15 remain oracle-only.
+
 The original Phase 5 results remain historical nine-task results. The two task sets
 are separate cohorts and are never pooled: `run_lift` and both drivers select one
 cohort, `original` by default, and refuse `--task` together with `--cohort`. To run

@@ -410,7 +410,8 @@
         "crs.consistent",
         "raster.nodata_declared",
         "raster.resampling",
-        "raster.cog_layout"
+        "raster.cog_layout",
+        "terrain.slope_consistent"
       ]
     },
     "geomaster": {

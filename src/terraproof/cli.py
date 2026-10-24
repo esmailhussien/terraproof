@@ -53,6 +53,7 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument(
         "--encoding", choices=["s2-l2a", "landsat-c2-l2"], help="known product encoding for scale/offset checks"
     )
+    check_parser.add_argument("--dem", metavar="PATH", help="DEM a slope-in-degrees raster was derived from")
     check_parser.add_argument("--qa", metavar="PATH", dest="qa_path", help="QA raster (SCL or Landsat QA_PIXEL)")
     check_parser.add_argument(
         "--qa-kind", choices=["s2-scl", "landsat-qa-pixel"], help="kind of QA raster supplied with --qa"
@@ -135,10 +136,12 @@ def _cmd_check(args: argparse.Namespace) -> int:
     inspections = [inspect_dataset(path) for path in args.paths]
     compare = _inspect_if_exists(args.compare_to)
     reference_input = _inspect_if_exists(args.reference_input)
+    dem = _inspect_if_exists(args.dem)
 
     inputs: list[dict] = [input_record(path, "input", ds["kind"]) for path, ds in zip(args.paths, inspections)]
     _record_input(inputs, args.compare_to, "compare-to", compare["kind"] if compare else "unknown")
     _record_input(inputs, args.reference_input, "reference-input", reference_input["kind"] if reference_input else "unknown")
+    _record_input(inputs, args.dem, "dem", dem["kind"] if dem else "unknown")
     _record_input(inputs, args.qa_path, "qa", "raster")
     _record_input(inputs, args.accuracy_samples, "accuracy-samples", "accuracy-samples")
     _record_input(inputs, args.class_areas, "class-areas", "class-areas")
@@ -165,10 +168,11 @@ def _cmd_check(args: argparse.Namespace) -> int:
         class_areas=class_areas,
         min_per_class=args.min_per_class,
         estimates_requested=args.estimates_requested,
+        dem=dem,
     )
 
     checked_paths = list(args.paths)
-    for path in (args.compare_to, args.reference_input, args.qa_path, args.accuracy_samples, args.class_areas):
+    for path in (args.compare_to, args.reference_input, args.dem, args.qa_path, args.accuracy_samples, args.class_areas):
         if path:
             checked_paths.append(path)
 
@@ -193,6 +197,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         "expect": args.expect,
         "reference_input": args.reference_input,
         "encoding": args.encoding,
+        "dem": args.dem,
         "qa_path": args.qa_path,
         "qa_kind": args.qa_kind,
         "time_range": time_range,

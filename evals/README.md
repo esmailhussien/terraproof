@@ -1,7 +1,8 @@
 # Terraproof executable benchmark harness
 
 Local task-extension branch: six additional tasks bring the catalog to **33 tasks
-in 11 files**, with **27 checker blind spots** (the old 15 plus 12 new seeds).
+in 11 files**, with **25 checker blind spots** (the old 15 plus 10 of the 12 new seeds;
+the two `terrain-slope-map` seeds now fail `terrain.slope_consistent`).
 The original 27-task measurements below remain historical baseline results.
 See [the added cohort and its limitations](../docs/HARDER_TASKS.md).
 
@@ -226,8 +227,10 @@ After the focused provenance/optical fixes: **27/27 tasks, the same 38 wrong con
 After the post-v0.4.1 compression and winding checks: **27/27 tasks, 38 wrong controls,
 23 checker rejections, 15 oracle-only blind spots, zero false passes, 30 check IDs**.
 The separate preflight group still rejects all seven seeded failures.
+With the harder cohort and the terrain slope check: **33/33 tasks, 50 wrong controls,
+25 checker rejections, 25 oracle-only blind spots, zero false passes, 31 check IDs**.
 
-Eight controls now fail production checks (the independent numeric oracles remain independent):
+Ten controls now fail production checks (the independent numeric oracles remain independent):
 
 - `stac-pinned-search-manifest`: `timestamp-inside-core` and `signed-href-leak` fail `provenance.reproducible`.
 - `stac-signed-windowed-cog-subset`: `signed-href-stored` fails `provenance.reproducible` after the recipe supplies a manifest covering the unchanged signed JSON record.
@@ -236,6 +239,7 @@ Eight controls now fail production checks (the independent numeric oracles remai
 - `stac-loader-double-decode`: `zero-dn-decoded` fails `rs.scale_applied_once` because source nodata becomes valid output, including off-stride pixels.
 - `raster-cog-delivery`: `lossy-jpeg-cog` warns on `raster.cog_layout` because the file is tagged with JPEG compression, which is always lossy in GeoTIFF. Lossy LERC and WebP settings are not detected.
 - `vector-join-scope-and-geojson`: `clockwise-geojson-winding` fails `geometry.winding` because the export's own rings break the RFC 7946 right-hand rule. The check runs only on GeoJSON.
+- `terrain-slope-map` (harder cohort): `vertical-units-ignored` and `square-pixels-assumed` fail `terrain.slope_consistent` with the recipe's `--dem elevation.tif`. A slope that matches neither the declared units nor a named mistake only warns, and the slope's mask is not checked.
 
 No task specs or expected statuses were weakened or changed. Recipe processing calls use
 public `run_checks` with inspected `reference_input` data and the stated `encoding`.

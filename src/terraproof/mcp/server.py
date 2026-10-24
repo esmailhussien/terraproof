@@ -87,6 +87,7 @@ def run_checks(
     class_areas: dict | str | None = None,
     min_per_class: int | None = None,
     estimates_requested: bool = False,
+    dem: str | None = None,
     manifest: str | None = None,
     require_provenance: bool = False,
     lang: str = "en",
@@ -103,7 +104,8 @@ def run_checks(
     index). Phase 4 options include `reference_input`/`encoding` for scale/offset checks,
     `qa_path`/`qa_kind` for cloud-mask checks, `time_range` for temporal coverage,
     `sar_expect` for SAR domain checks, and `accuracy_samples`/`class_areas` for accuracy
-    assessment. `manifest` verifies a run manifest and appends `provenance.reproducible`;
+    assessment. `dem` is the DEM a slope-in-degrees output was derived from; it checks the
+    slope against the DEM's vertical unit and pixel spacing. `manifest` verifies a run manifest and appends `provenance.reproducible`;
     `require_provenance` prevents Decision-grade when no manifest is supplied. `lang`
     selects the Markdown language (en or ar). Results match `python -m terraproof check`.
     """
@@ -115,12 +117,15 @@ def run_checks(
         inspections = [_inspect_dataset(path) for path in paths]
         compare = _inspect_dataset(compare_to) if compare_to else None
         reference = _inspect_dataset(reference_input) if reference_input else None
+        dem_dataset = _inspect_dataset(dem) if dem else None
 
         inputs = [input_record(path, "input", dataset["kind"]) for path, dataset in zip(paths, inspections)]
         if compare is not None:
             inputs.append(input_record(compare_to, "compare-to", compare["kind"]))
         if reference is not None:
             inputs.append(input_record(reference_input, "reference-input", reference["kind"]))
+        if dem_dataset is not None:
+            inputs.append(input_record(dem, "dem", dem_dataset["kind"]))
         if qa_path and Path(qa_path).is_file():
             inputs.append(input_record(qa_path, "qa", "raster"))
         if isinstance(accuracy_samples, str) and Path(accuracy_samples).is_file():
@@ -151,10 +156,11 @@ def run_checks(
             class_areas=areas,
             min_per_class=min_per_class,
             estimates_requested=estimates_requested,
+            dem=dem_dataset,
         )
 
         checked_paths = list(paths)
-        for path in (compare_to, reference_input, qa_path, accuracy_samples, class_areas):
+        for path in (compare_to, reference_input, dem, qa_path, accuracy_samples, class_areas):
             if isinstance(path, str):
                 checked_paths.append(path)
 
@@ -181,6 +187,7 @@ def run_checks(
         "expect": expect,
         "reference_input": reference_input,
         "encoding": encoding,
+        "dem": dem,
         "qa_path": qa_path,
         "qa_kind": qa_kind,
         "time_range": time_tuple,
