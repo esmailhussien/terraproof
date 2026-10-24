@@ -11,6 +11,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Phase 5 agent-lift harness (`python -m terraproof.evals lift`, `terraproof.evals.lift`) with its plan in `Terraproof_Phase5_PLAN.md`. Nine artifact-producing benchmark tasks run in paired without/with projects. The "with" project gets Terraproof through its own installer: router-selected skills plus the MCP server. Agents see only the task prompt, the input files and a format-only deliverable contract.
+- The agent's deliverables are scored by substitution: they are copied into the existing recipe's correct-control slot, so the unmodified Phase 4 checks and independent oracles grade them. A calibration gate must pass first: inputs regenerate byte-identically, the reference is accepted, every seeded-wrong output and an echoed input are rejected, and a missing file is reported. All nine tasks pass it.
+- Deterministic paired statistics: the primary analysis is an exact task-level sign-flip test with a seeded task-cluster bootstrap CI; exact McNemar is a secondary analysis; a Connor (1987) minimum-detectable-effect estimate is included. Reports are stable JSON.
+- Offline `scripted` and `replay` adapters only; neither CI nor the tests call a model. The opt-in real-host driver `tests/agent_lift.py` (Codex or Claude Code) prints the plan and call count unless `--approve-model-calls N` matches it exactly. It reuses the release-validation isolation, auth probes and process-tree containment, and enforces per-run timeouts, a hard run count and Claude per-run/total USD caps. Traces are sanitised to counts and labels and include contamination labels.
+
+- Pilot 1 follow-up:
+  - Codex lift runs keep Codex's own execution features at their defaults instead of disabling `unified_exec`, and set `mcp_servers` explicitly in both conditions.
+  - `--codex-executable` pins a native runtime.
+  - A no-model preflight runs before every run. It probes the sandboxed shell, Python/rasterio, input reads and output writes, MCP registration and its six served tools, and checks that skills and AGENTS.md are visible only in "with". A failure starts no agent, and `--preflight-only` runs the preflight alone.
+  - The trace now holds per-call tool label, category, status, exit code and duration, plus a turn status, reason and error-type labels. Codex `error` items no longer count as calls.
+  - Runs that finish without a deliverable or any shell/edit call are reported as `no-attempt`, and "with" runs record `treatment_used`.
+- Pilot 2 follow-up:
+  - Codex built-in MCP resource tools (`list_mcp_resources`, `list_mcp_resource_templates`, `read_mcp_resource` on server `codex`) are labelled `mcp:codex-resource`, never as Terraproof calls or as attempts.
+  - The Codex preflight reads `codex debug models` and refuses to start while every listed model is `code_mode_only`, because shell exposure cannot be shown without a model turn.
+  - The Claude adapter passes an explicit MCP config copied from the installer entry, since project `.mcp.json` servers wait for approval in Claude Code.
+  - The Claude preflight resolves `python` on the agent's PATH.
+- Pilot 3 follow-up:
+  - `--claude-executable` selects the native `claude.exe`; npm's `claude.cmd` wrapper is refused.
+  - The lift summary reports each task's `baseline_pass_rate` and a descriptive `ceiling` flag, plus `ceiling_tasks` and `tasks_with_headroom`. The primary analysis is unchanged.
+- Main-run follow-up (isolation for future runs):
+  - Run projects use opaque `runs/NNN/project` paths under a neutral `paired-run-*` work directory.
+  - `--agent-python-without` supplies a dependency-only interpreter, and `PYTHONPATH` is dropped in "without". The preflight requires that interpreter, that it cannot import Terraproof, and that paths are neutral.
+  - Contamination now has sub-labels for real use (`import`, `module-or-cli`, `mcp`, `package-query`, `skill`, `mention`), separate from the path-only diagnostic `terraproof-path-text`.
+  - Forced rejections keep `accepted_before_contamination`, and the summary adds a labelled, not-pre-specified `sensitivity_contamination_ignored`.
 - `geometry.winding`: GeoJSON polygon rings must follow the RFC 7946 right-hand rule (counterclockwise exteriors, clockwise holes). It fails a non-conforming export, passes a conforming one, and does not run on other drivers. The vector inspection profile records `geometry.winding` for GeoJSON layers.
 
 ### Changed
@@ -19,8 +43,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Evaluation
 
+- Pilot 1 (2 approved Codex 0.160.1 invocations) produced no `ndvi.tif` in either condition, with zero Terraproof use. It is diagnosed in `Terraproof_Phase5_PLAN.md` §13 as a harness failure, most likely from the disabled execution tools, and is excluded from any analysis. Pilot 2 (2 approved invocations on the Codex 0.163.0-alpha.11.2 app runtime) again made no shell call; its only calls were two built-in resource listings per condition (§14). Codex is blocked by preflight on this machine. Claude Code pilot 3 (2 approved invocations, $0.52 reported) passed the gate: both conditions produced an accepted, decision-grade `ndvi.tif`, and the "with" run used Terraproof (2 `inspect_dataset`, 2 `run_checks`, 1 skill read). This is the first end-to-end harness run. It shows a 0.0 difference on a ceiling task, not a lift estimate (§15). Main run (54 approved Claude Code invocations, $8.71 reported):
+  - **Pre-specified result:** pass rate 1.0 with vs 0.778 without, mean task difference 0.222 (95% CI 0.037–0.444). **The primary exact sign-flip test gives p = 0.125, not significant, and no lift claim is made.** McNemar's secondary p = 0.031 is anti-conservative.
+  - **Ceiling:** five of nine tasks are at ceiling.
+  - **Contamination flags:** three of six "without" rejections came only from a `terraproof-in-without` flag that matched absolute `Read`-tool paths under the old `terraproof-lift-host-*` prefix. Whether those runs also used Terraproof for real cannot be determined from the sanitised trace.
+  - **Sensitivity (not pre-specified):** without 0.889, difference 0.111, sign-flip p = 1.0.
+  - **Robust exploratory finding:** Landsat QA, 3/3 with vs 0/3 without (§16).
 - Deterministic evals: **27/27 tasks, 0 false passes, 15 checker blind spots** (down from 17), 23 checks rejected (up from 21), 30 exercised check IDs. Newly rejected by the checks: `raster-cog-delivery` / `lossy-jpeg-cog` (`raster.cog_layout` warns) and `vector-join-scope-and-geojson` / `clockwise-geojson-winding` (`geometry.winding` fails). No task spec, oracle assertion or seeded wrong output was changed; only the recipes' descriptive notes were updated. CLI/MCP parity tests cover both controls.
 - The 15 remaining blind spots stay declared because the checker has no legitimate evidence for them in the invocation the spec defines. `RELEASE_CHECKLIST.md` and `evals/README.md` give the reason for each.
+
 
 ## [0.4.1] — 2026-10-24
 

@@ -264,6 +264,17 @@ Remaining oracle-only controls (15 total; none is claimed closed). In the invoca
 The full run remains the source of truth for counts. The harness does not claim hosted-CI
 execution, real agent-host verification, or performance on held-out routing sets.
 
+## Agent lift (Phase 5)
+
+`python -m terraproof.evals lift` reuses nine of these tasks to compare an agent with and
+without Terraproof. The agent's output files are graded by the same recipe checks and oracles
+described above. The command runs only offline adapters (`--adapter scripted` or
+`--adapter replay --recordings DIR`) and never calls a model. `--calibrate-only` proves that
+scoring accepts each reference and rejects each seeded-wrong output. Real agent hosts run
+only through the opt-in `tests/agent_lift.py` driver, after explicit approval. Design,
+statistics, budget and threats to validity are in
+[Terraproof_Phase5_PLAN.md](../Terraproof_Phase5_PLAN.md).
+
 ## Adding a task
 
 1. Add the spec JSON (three tasks per file) with a registered `expected_checks` mapping.

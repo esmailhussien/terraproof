@@ -1,4 +1,4 @@
-"""`python -m terraproof.evals run`: execute the benchmark task specs against generated fixtures."""
+"""`python -m terraproof.evals run|lift`: the benchmark task specs and the offline agent-lift harness."""
 
 from __future__ import annotations
 
@@ -8,6 +8,8 @@ import tempfile
 from pathlib import Path
 
 from terraproof.evals.harness import run_benchmark, to_json
+from terraproof.evals.lift import SCRIPTED_BEHAVIOURS, LiftError, ReplayAdapter, ScriptedAdapter, calibrate, run_lift
+from terraproof.evals.lift import to_json as lift_to_json
 from terraproof.evals.specs import SpecError
 
 EXIT_USAGE = 2
@@ -41,11 +43,62 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="keep the generated fixtures in the temporary run directory (path is printed to stderr)",
     )
+    lift_parser = subparsers.add_parser(
+        "lift",
+        help="run the paired with/without agent-lift harness with an OFFLINE adapter (never calls a model)",
+    )
+    lift_parser.add_argument("--adapter", choices=["scripted", "replay"], default="scripted",
+                             help="scripted control agent (default) or replay of recorded outputs")
+    lift_parser.add_argument("--with-behaviour", choices=SCRIPTED_BEHAVIOURS, default="reference",
+                             help="scripted output in the with condition (default: reference)")
+    lift_parser.add_argument("--without-behaviour", choices=SCRIPTED_BEHAVIOURS, default="seeded",
+                             help="scripted output in the without condition (default: seeded)")
+    lift_parser.add_argument("--recordings", metavar="DIR", help="recorded outputs for --adapter replay")
+    lift_parser.add_argument("--task", action="append", metavar="TASK_ID", help="lift task id (repeatable)")
+    lift_parser.add_argument("--runs", type=int, default=1, help="runs per condition and task (default 1)")
+    lift_parser.add_argument("--agent", default="codex", help="installer agent format for the with condition")
+    lift_parser.add_argument("--calibrate-only", action="store_true", help="run only the scoring calibration gate")
+    lift_parser.add_argument("--out", metavar="FILE", help="write the JSON report to FILE instead of stdout")
     return parser
+
+
+def _lift(args) -> int:
+    if args.calibrate_only:
+        report = calibrate(args.task)
+        code = 0 if report["eligible"] else 1
+    else:
+        if args.adapter == "replay":
+            if not args.recordings:
+                print("terraproof.evals: error: --adapter replay needs --recordings DIR", file=sys.stderr)
+                return EXIT_USAGE
+            adapter = ReplayAdapter(args.recordings)
+        else:
+            adapter = ScriptedAdapter({"with": args.with_behaviour, "without": args.without_behaviour})
+        report = run_lift(adapter, task_ids=args.task, runs=args.runs, agent=args.agent)
+        code = 0
+        summary = report["summary"]
+        print(
+            "terraproof.evals lift: "
+            f"{summary['complete_pairs']} pairs, pass rate with {summary['pass_rate']['with']}, "
+            f"without {summary['pass_rate']['without']}, adapter {report['adapter']['name']} (no model calls)",
+            file=sys.stderr,
+        )
+    text = lift_to_json(report)
+    if args.out:
+        Path(args.out).write_text(text, encoding="utf-8", newline="\n")
+    else:
+        sys.stdout.write(text)
+    return code
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.command == "lift":
+        try:
+            return _lift(args)
+        except (LiftError, SpecError) as error:
+            print(f"terraproof.evals: error: {error}", file=sys.stderr)
+            return EXIT_USAGE
     if args.keep:
         cache = Path.cwd() / ".terracache" / "evals-kept"
         cache.mkdir(parents=True, exist_ok=True)
