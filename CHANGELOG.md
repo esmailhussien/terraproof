@@ -27,10 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The Codex preflight reads `codex debug models` and refuses to start while every listed model is `code_mode_only`, because shell exposure cannot be shown without a model turn.
   - The Claude adapter passes an explicit MCP config copied from the installer entry, since project `.mcp.json` servers wait for approval in Claude Code.
   - The Claude preflight resolves `python` on the agent's PATH.
+- Pilot 3 follow-up:
+  - `--claude-executable` selects the native `claude.exe`; npm's `claude.cmd` wrapper is refused.
+  - The lift summary reports each task's `baseline_pass_rate` and a descriptive `ceiling` flag, plus `ceiling_tasks` and `tasks_with_headroom`. The primary analysis is unchanged.
 
 ### Evaluation
 
-- Pilot 1 (2 approved Codex 0.160.1 invocations) produced no `ndvi.tif` in either condition, with zero Terraproof use. It is diagnosed in `Terraproof_Phase5_PLAN.md` §13 as a harness failure, most likely from the disabled execution tools, and is excluded from any analysis. Pilot 2 (2 approved invocations on the Codex 0.163.0-alpha.11.2 app runtime) again made no shell call; its only calls were two built-in resource listings per condition (§14). Codex is blocked by preflight on this machine, and Claude Code pilot 3 (2 invocations, $4 ceiling) awaits user approval and login. Agent lift is still **unmeasured**.
+- Pilot 1 (2 approved Codex 0.160.1 invocations) produced no `ndvi.tif` in either condition, with zero Terraproof use. It is diagnosed in `Terraproof_Phase5_PLAN.md` §13 as a harness failure, most likely from the disabled execution tools, and is excluded from any analysis. Pilot 2 (2 approved invocations on the Codex 0.163.0-alpha.11.2 app runtime) again made no shell call; its only calls were two built-in resource listings per condition (§14). Codex is blocked by preflight on this machine. Claude Code pilot 3 (2 approved invocations, $0.52 reported) passed the gate: both conditions produced an accepted, decision-grade `ndvi.tif`, and the "with" run used Terraproof (2 `inspect_dataset`, 2 `run_checks`, 1 skill read). This is the first end-to-end harness run. It shows a 0.0 difference on a ceiling task, not a lift estimate (§15). The 54-invocation main run awaits approval, and agent lift is still **unmeasured**.
 
 ## [0.4.1] — 2026-10-24
 

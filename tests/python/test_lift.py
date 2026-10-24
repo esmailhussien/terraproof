@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import json
 from pathlib import Path
 
@@ -593,3 +594,31 @@ def test_claude_mcp_config_is_explicit_and_outside_the_project(tmp_path):
             assert servers == {"terraproof": installed}
         else:
             assert servers == {}
+
+
+# -- pilot 3 follow-up: native Claude executable, ceiling flags ------------------------------
+def test_claude_executable_option_refuses_wrappers_and_is_in_the_approved_command(tmp_path, capsys):
+    wrapper = tmp_path / "claude.cmd"
+    wrapper.write_text("@echo off\n", encoding="utf-8")
+    if os.name == "nt":
+        assert driver.probe_claude(str(wrapper))[0] is None
+    assert driver.probe_claude(str(tmp_path / "missing.exe"))[:2] == (None, "claude executable not found")
+    native = tmp_path / "claude.exe"
+    assert driver.main(["--agent-host", "claude", "--runs", "3", "--claude-executable", str(native),
+                        "--max-usd-per-run", "1", "--max-usd-total", "54"]) == 0
+    plan = json.loads(capsys.readouterr().out)
+    assert f"--claude-executable {native}" in plan["command_to_approve"]
+    assert plan["planned_model_invocations"] == 54 and plan["total_usd_ceiling"] == 54
+
+
+def test_ceiling_tasks_are_flagged_without_changing_the_primary_analysis(tmp_path):
+    both = lift.run_lift(ScriptedAdapter({WITH: "reference", WITHOUT: "reference"}), task_ids=FAST[:1],
+                         work_root=tmp_path / "both")
+    summary = both["summary"]
+    assert summary["per_task"][0]["baseline_pass_rate"] == 1.0 and summary["per_task"][0]["ceiling"] is True
+    assert summary["ceiling_tasks"] == [FAST[0]] and summary["tasks_with_headroom"] == 0
+    assert summary["mean_task_difference"] == 0.0 and summary["mcnemar"]["exact_p"] == 1.0
+    lifted = lift.run_lift(ScriptedAdapter({WITH: "reference", WITHOUT: "seeded"}), task_ids=FAST[:1],
+                           work_root=tmp_path / "lifted")
+    assert lifted["summary"]["per_task"][0]["ceiling"] is False
+    assert lifted["summary"]["ceiling_tasks"] == [] and lifted["summary"]["tasks_with_headroom"] == 1

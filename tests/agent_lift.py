@@ -643,11 +643,13 @@ class ClaudeHostAdapter(Adapter):
         return checks
 
 
-def probe_claude() -> tuple[str | None, str, str | None]:
-    executable = shutil.which("claude")
-    if not executable:
+def probe_claude(executable: str | None = None) -> tuple[str | None, str, str | None]:
+    """Resolve a native Claude Code binary. On Windows npm puts a `claude.cmd` wrapper first on
+    PATH; pass `--claude-executable` (for example `...\\@anthropic-ai\\claude-code\\bin\\claude.exe`)."""
+    executable = executable or shutil.which("claude")
+    if not executable or not Path(executable).is_file():
         return None, "claude executable not found", None
-    if os.name == "nt" and Path(executable).suffix.lower() in {".cmd", ".bat", ".ps1"}:
+    if os.name == "nt" and Path(executable).suffix.lower() != ".exe":
         return None, "Windows shell wrapper cannot guarantee bounded process cleanup; native executable required", None
     with tempfile.TemporaryDirectory(prefix="terraproof-lift-probe-") as directory:
         cwd = Path(directory)
@@ -677,6 +679,8 @@ def plan(args) -> dict:
         approve += ["--task", task_id]
     if args.agent_host == "codex" and args.codex_executable:
         approve += ["--codex-executable", str(args.codex_executable)]
+    if args.agent_host == "claude" and args.claude_executable:
+        approve += ["--claude-executable", str(args.claude_executable)]
     if args.agent_host == "claude":
         approve += ["--max-usd-per-run", f"{args.max_usd_per_run:g}", "--max-usd-total", f"{args.max_usd_total:g}"]
     approve += ["--timeout", f"{args.timeout:g}", "--approve-model-calls", str(calls)]
@@ -708,6 +712,8 @@ def main(argv=None) -> int:
     parser.add_argument("--codex-reasoning-effort", default="medium", choices=["low", "medium", "high"])
     parser.add_argument("--codex-executable", type=Path,
                         help="native codex.exe to use (default: the PATH-resolved native binary)")
+    parser.add_argument("--claude-executable", type=Path,
+                        help="native claude.exe to use (default: PATH; the npm claude.cmd wrapper is refused)")
     parser.add_argument("--preflight-only", action="store_true",
                         help="prepare every project and run the no-model host preflight; start no agent")
     parser.add_argument("--approve-model-calls", type=int, metavar="N",
@@ -736,7 +742,7 @@ def main(argv=None) -> int:
         adapter = CodexHostAdapter(executable, args.codex_reasoning_effort) if executable else None
         budget = Budget(max_runs=args.approve_model_calls, timeout_seconds=args.timeout)
     else:
-        executable, reason, version = probe_claude()
+        executable, reason, version = probe_claude(str(args.claude_executable) if args.claude_executable else None)
         adapter = ClaudeHostAdapter(executable) if executable else None
         budget = Budget(max_runs=args.approve_model_calls, per_run_usd=args.max_usd_per_run,
                         total_usd=args.max_usd_total, timeout_seconds=args.timeout)

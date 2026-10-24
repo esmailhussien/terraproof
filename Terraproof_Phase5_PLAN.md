@@ -1,6 +1,9 @@
 # Terraproof — Phase 5 Plan: Agent-lift measurement
 
-> Status: **harness implemented and verified offline; two approved 2-invocation Codex pilots produced no gradable output (sections 13 and 14).** The harness and driver were fixed offline after each, with no model or agent call. Codex is now blocked by preflight on this machine, and the next pilot is proposed on Claude Code. Lift is still **unmeasured**. Each further real run needs the user's explicit approval of the command, call count and cost ceiling in section 9.
+> Status: **harness verified end to end on Claude Code (pilot 3, section 15); the main run is the open decision.**
+> - **Codex pilots:** two approved 2-invocation pilots produced no gradable output (sections 13 and 14), and Codex is blocked by preflight on this machine.
+> - **Pilot 3:** passed the gate on a single task, where both conditions succeeded. It is a harness check, not a lift estimate.
+> - **Lift is still unmeasured.** Each further real run needs the user's explicit approval of the command, call count and cost ceiling in section 9.
 
 ## 1. Why this phase
 
@@ -112,6 +115,11 @@ All statistics are deterministic and implemented in `terraproof.evals.lift`. The
 
   These are run-level numbers and are optimistic. At the task level, the exact sign-flip test with nine tasks reaches p < 0.05 only when at least 8 of 9 tasks improve (with similar magnitude) and none gets worse: for equal |d_t|, 8/9 gives p = 0.039 and 7/9 gives p = 0.18. **With nine tasks, only a large and consistent lift can be distinguished from chance.** A null result does not show that there is no lift. The report also prints the MDE at the observed discordance.
 - **Incomplete pairs** (budget stop, install failure) are excluded from paired statistics and counted in `incomplete_pairs`.
+- **Ceiling tasks (descriptive, pre-specified after pilot 3).**
+  - **What is reported:** each task's `baseline_pass_rate` (its "without" acceptance rate) and a `ceiling` flag when every "without" pair was accepted. The summary lists `ceiling_tasks` and counts `tasks_with_headroom`.
+  - **Effect on the primary analysis:** none. It stays the mean over all nine tasks, with no post-hoc exclusion.
+  - **How the report reads it:** the effect is stated alongside the number of tasks with headroom. If most tasks are at ceiling, a null result means "no headroom to show lift on these tasks", not "no lift".
+  - **What is not done:** no spec, oracle or seeded output is changed to remove a ceiling. Harder artifact tasks are a later option through the normal Phase 4 review (section 11).
 
 ## 6. Threats to validity
 
@@ -200,13 +208,14 @@ All statistics are deterministic and implemented in `terraproof.evals.lift`. The
 
    - **Ceiling:** 2 invocations, **$4 total** ($2 per run via `--max-budget-usd`; the harness reserves both caps before starting the pair).
    - **Why $2:** the per-run cap is $2 rather than the planned $1, so that a cap stop (labelled `error_max_budget_usd`) does not hide the result. The pilot's measured cost then sets the main-run caps.
-3. **Main run, 54 invocations** (9 tasks × 3 runs × 2 conditions), only after the pilot passes the gate above:
+3. **Main run, 54 invocations** (9 tasks × 3 runs × 2 conditions), on Claude Code after pilot 3 passed the gate (section 15):
 
    ```powershell
-   $env:PYTHONPATH="src"; C:\Users\mrsom\.venvs\terraproof-py312\Scripts\python tests\agent_lift.py --agent-host codex --runs 3 --codex-executable C:\Users\mrsom\AppData\Local\OpenAI\Codex\bin\37f54d68e5533a51\codex.exe --timeout 900 --approve-model-calls 54
+   $env:PYTHONPATH="src"; C:\Users\mrsom\.venvs\terraproof-py312\Scripts\python tests\agent_lift.py --agent-host claude --runs 3 --claude-executable C:\Users\mrsom\AppData\Roaming\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe --max-usd-per-run 1 --max-usd-total 54 --timeout 900 --approve-model-calls 54 --out .terracache\agent-lift-main.json
    ```
 
-   Ceiling: 54 invocations, at most 13.5 hours of wall time. For Claude, add `--max-usd-per-run 1 --max-usd-total 54`, giving a **$54** ceiling. Without `--approve-model-calls`, the same command prints this plan and starts nothing.
+   - **Ceiling:** 54 invocations, **$54** (the harness reserves $2 per pair and stops before a pair that could exceed the total), and at most 13.5 hours of wall time.
+   - **No approval, no run:** without `--approve-model-calls`, the same command prints this plan and starts nothing. `--preflight-only` runs the free checks first.
 4. Report: publish the JSON report and per-task differences. State the result with its CI, p-values and MDE. Do not round a null or negative result into "lift".
 
 ## 10. Exit criteria
@@ -225,9 +234,18 @@ All statistics are deterministic and implemented in `terraproof.evals.lift`. The
 
 ## 12. Decisions needed
 
-1. **Approve pilot 3 on Claude Code** (section 9, step 2): 2 invocations, $4 ceiling, after `claude auth login`. Codex pilots are not proposed while every catalog model is `code_mode_only` (section 14).
-2. **Runs per condition for the main run:** 3 (proposed, 54 invocations) or 5 (90 invocations, MDE ≈ 0.22 at ψ = 0.3).
-3. **Claude caps** if Claude is used: $1 per run / $54 total proposed, or higher after the pilot shows typical cost.
+1. **The open decision: approve the main run on Claude Code.**
+   - **Size:** 54 invocations (9 tasks × 3 runs × 2 conditions).
+   - **Caps:** `--max-usd-per-run 1 --max-usd-total 54`, giving a $54 ceiling. About $14 is expected from pilot 3's cost (section 15).
+   - **Command** (section 9, step 3):
+
+   ```powershell
+   $env:PYTHONPATH="src"; C:\Users\mrsom\.venvs\terraproof-py312\Scripts\python tests\agent_lift.py --agent-host claude --runs 3 --claude-executable C:\Users\mrsom\AppData\Roaming\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe --max-usd-per-run 1 --max-usd-total 54 --timeout 900 --approve-model-calls 54 --out .terracache\agent-lift-main.json
+   ```
+2. **Runs per condition:** 3 (proposed, 54 invocations) or 5 (90 invocations, MDE ≈ 0.22 at ψ = 0.3, about $23 expected, with a cap of `--max-usd-total 90`).
+3. **Ceiling risk accepted?** If Claude solves most tasks without Terraproof, the run will report headroom-limited results (section 5) rather than a lift estimate. Harder tasks would be a separate, reviewed addition, not a change to these specs.
+
+Codex pilots are not proposed while every Codex catalog model is `code_mode_only` (section 14).
 
 ## 13. Pilot 1 findings (2026-10-24)
 
@@ -332,3 +350,52 @@ Gate: shell calls in 0 of 2 conditions, `treatment_used` 0, `no_attempt` 2. **Fa
    - **Remaining limits:** Claude Code has no model-free sandbox runner or skill renderer, so skill visibility under `--restricted` is confirmed only by pilot 3's trace (`skill_reads`, `Skill` calls).
 
 Pilot 2 is a harness/host failure, not evidence about lift, and is excluded from any analysis.
+
+## 15. Pilot 3 findings (2026-10-24)
+
+**What ran.** An approved 2-invocation Claude Code pilot, run from the parent session at commit `1e51940`:
+
+- `tests/agent_lift.py --agent-host claude --runs 1 --task indices-ndvi-physical-inputs --max-usd-per-run 2 --max-usd-total 4 --timeout 900 --approve-model-calls 2 --out .terracache\agent-lift-pilot3.json`
+- Python 3.12.10 venv, `PYTHONPATH=src`.
+- Host Claude Code 2.1.292, the native `claude.exe` (`C:\Users\mrsom\AppData\Roaming\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe`) put first on PATH.
+- `claude auth status`: `loggedIn` true, `authMethod` `claude.ai`.
+- `--preflight-only` reported `preflight_failures: []`.
+- 01:23:08Z to 01:24:48Z (1 min 40 s for both runs). `started_agent_runs` 2, `spent_usd` 0.519151, budget $2 per run and $4 total.
+
+**Results.**
+
+| | without | with |
+|---|---|---|
+| verdict / adapter_status | accepted / completed | accepted / completed |
+| `ndvi.tif` · checks_ok · oracle_ok · grade | present · true · true · decision-grade | present · true · true · decision-grade |
+| tool calls | 4 × Bash (shell), ≈ 4.75 s | 9: 5 × Bash, 2 × `terraproof.inspect_dataset`, 2 × `terraproof.run_checks`, all completed, ≈ 5.0 s |
+| terraproof_tool_calls / skill_reads | 0 / 0 | 4 / 1 (treatment_not_used 0) |
+| cost_usd | 0.173413 | 0.345738 |
+| output / input tokens | 2,924 / 10 | 4,324 / 16 |
+| turn | completed / ok | completed / ok, no errors |
+
+Summary: pass rate 1.0 with and 1.0 without; McNemar both 1, exact p = 1.0; mean task difference 0.0.
+
+Gate: shell calls in both conditions ✔, at least one "with" run with `treatment_used` ✔, no `no-attempt` ✔. **Passed.**
+
+**What this shows.** This is the first run in which the harness and treatment delivery work end to end:
+
+- the agent read the brief, computed with Python and wrote the deliverable;
+- the unmodified oracle and checks graded it;
+- in "with", the Terraproof skill and MCP tools were actually used.
+
+It is one pair on one task, so it is a harness check, not evidence about lift.
+
+**Ceiling-effect risk.** Both conditions passed this task, so its lift is 0 by construction. If Claude solves most of the nine tasks without Terraproof, the main run cannot show positive lift, whatever Terraproof's true value.
+
+The report therefore now gives each task's `baseline_pass_rate` and a `ceiling` flag, plus `ceiling_tasks` and `tasks_with_headroom` (section 5). The primary analysis is unchanged, and no spec, oracle or seeded output is altered. Harder artifact tasks are a later option through the normal review only.
+
+**Projected main-run cost.**
+- **Per pair:** about $0.52 on this task. "with" cost about 2× "without" ($0.35 vs $0.17), with more tool calls and skill/MCP context.
+- **Main run:** 27 pairs (9 tasks × 3 runs) gives roughly **$14 expected**, well under the $54 cap. Other tasks may cost more or less.
+- **Per-run cap:** $1 leaves about 3× headroom over the observed "with" run. A run that hits it is labelled `error_max_budget_usd`, and the harness charges the full cap when no cost is reported.
+- **What the dollars mean:** with `authMethod` `claude.ai`, `cost_usd` is Claude Code's reported figure, not necessarily a separate charge.
+
+**Known reporting limitation.** `input_tokens` of 10–16 almost certainly excludes cached input: Claude Code's `usage` reports cache reads and creation separately, and the driver keeps only `input_tokens`. Treat input-token counts as non-cached input only. Cost and output tokens are the usable cost signals.
+
+**Operational note.** On Windows, npm puts the `claude.cmd` wrapper first on PATH, and the driver refuses it because it cannot guarantee bounded process cleanup. Pass the native binary with the new `--claude-executable` option (same style as `--codex-executable`; non-`.exe` paths are refused on Windows), or put its directory first on PATH. The main-run command above passes it explicitly.

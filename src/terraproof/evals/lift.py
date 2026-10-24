@@ -865,8 +865,13 @@ def summarize(task_reports: list[dict]) -> dict:
         difference = (task_with - task_without) / pairs if pairs else None
         if difference is not None:
             differences.append(difference)
+        baseline = task_without / pairs if pairs else None
         per_task.append({"task": task["id"], "pairs": pairs, "accepted_with": task_with,
-                         "accepted_without": task_without, "difference": _round(difference)})
+                         "accepted_without": task_without, "difference": _round(difference),
+                         "baseline_pass_rate": _round(baseline),
+                         # Descriptive only: the primary analysis is unchanged. A task the agent
+                         # always solves without Terraproof cannot show positive lift.
+                         "ceiling": bool(pairs) and task_without == pairs})
     pairs_total = b + c + both + neither
     mean_difference = sum(differences) / len(differences) if differences else None
     ci = bootstrap_ci(differences)
@@ -886,6 +891,8 @@ def summarize(task_reports: list[dict]) -> dict:
         "observed_discordance": _round(discordance),
         "mde_at_observed_discordance": _round(mcnemar_mde(pairs_total, discordance)) if discordance else None,
         "per_task": per_task,
+        "ceiling_tasks": [item["task"] for item in per_task if item["ceiling"]],
+        "tasks_with_headroom": sum(1 for item in per_task if item["pairs"] and not item["ceiling"]),
         "secondary": {condition: {key: _round(value) if isinstance(value, float) else value
                                   for key, value in stats.items()}
                       for condition, stats in secondary.items()},
