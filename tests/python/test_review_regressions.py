@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 
 import numpy as np
 import pytest
@@ -135,3 +136,39 @@ def test_f8_reversed_stac_interval_is_not_in_window(tmp_path):
     assert scope.status != "pass"
     reasons = [entry["reason"] for entry in scope.evidence["items_without_time"]]
     assert "start_datetime is after end_datetime" in reasons
+
+
+def _probe(reference, outputs, name, kind):
+    """Overwrite one deliverable with a corrupted copy of the reference: zero, +1 or flip the valid pixels."""
+    with rasterio.open(reference / name) as src:
+        values, profile = src.read(1), src.profile
+    nodata = profile.get("nodata")
+    valid = np.ones(values.shape, bool) if nodata is None else values != nodata
+    wrong = values.copy()
+    if kind == "zeros":
+        wrong[valid] = 0
+    elif kind == "plus_one":
+        wrong[valid] = wrong[valid] + 1
+    else:
+        wrong = wrong[::-1].copy()
+    with rasterio.open(outputs / name, "w", **profile) as dst:
+        dst.write(wrong, 1)
+
+
+@pytest.mark.parametrize("task_id,name", [(task.task_id, name) for task in lift.LIFT_TASKS
+                                          for name in task.deliverable_names])
+@pytest.mark.parametrize("kind", ["zeros", "plus_one", "flipped_rows"])
+def test_every_lift_deliverable_is_graded_from_the_delivered_file(tmp_path, task_id, name, kind):
+    """No deliverable may be accepted after its valid pixels are zeroed, shifted by one, or flipped.
+
+    This probe found sr_nir.tif (satellite-s2-baseline-offset-mask) ungraded and a row-flipped
+    composite_counts.tif (satellite-seasonal-harmonized-composite) accepted.
+    """
+    task = lift.lift_task(task_id)
+
+    def corrupt_one(reference, outputs):
+        for other in task.deliverable_names:
+            shutil.copyfile(reference / other, outputs / other)
+        _probe(reference, outputs, name, kind)
+
+    assert _score(tmp_path, task_id, corrupt_one)["accepted"] is False
