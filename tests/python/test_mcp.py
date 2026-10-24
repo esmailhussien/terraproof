@@ -434,3 +434,41 @@ def test_mcp_run_checks_with_tampered_manifest_fails(make_vector, tmp_path):
 
     ids = {check["id"]: check["status"] for check in payload["report"]["checks"]}
     assert ids.get("provenance.reproducible") == "fail"
+
+
+def test_lossy_jpeg_cog_cli_mcp_parity(tmp_path, capsys):
+    import rasterio
+    from rasterio.enums import Resampling
+    from rasterio.transform import from_origin
+
+    rows, cols = np.indices((256, 256))
+    path = str(tmp_path / "lossy_parity.tif")
+    with rasterio.open(path, "w", driver="GTiff", width=256, height=256, count=1, dtype="uint8", crs="EPSG:32636",
+                       transform=from_origin(500000, 5000000, 10, 10), nodata=0, tiled=True, blockxsize=128,
+                       blockysize=128, compress="JPEG") as dst:
+        dst.write((40 + (rows // 8 + cols // 8) % 90).astype("uint8"), 1)
+        dst.build_overviews([2, 4], Resampling.average)
+    assert main(["check", path]) == 2
+    cli = json.loads(capsys.readouterr().out)
+    payload = call("run_checks", {"paths": [path]}).structured_content
+    cli_check = next(c for c in cli["checks"] if c["id"] == "raster.cog_layout")
+    mcp_check = next(c for c in payload["report"]["checks"] if c["id"] == "raster.cog_layout")
+    assert cli_check == mcp_check
+    assert cli_check["status"] == "warn"
+    assert "lossy JPEG compression" in cli_check["message"]
+
+
+def test_clockwise_geojson_winding_cli_mcp_parity(tmp_path, capsys):
+    exterior = [[30.0, 30.0], [30.0, 30.1], [30.1, 30.1], [30.1, 30.0], [30.0, 30.0]]
+    document = {"type": "FeatureCollection", "features": [
+        {"type": "Feature", "properties": {"pid": "P1"}, "geometry": {"type": "Polygon", "coordinates": [exterior]}},
+    ]}
+    path = tmp_path / "clockwise_parity.geojson"
+    path.write_text(json.dumps(document), encoding="utf-8")
+    assert main(["check", str(path)]) == 3
+    cli = json.loads(capsys.readouterr().out)
+    payload = call("run_checks", {"paths": [str(path)]}).structured_content
+    cli_check = next(c for c in cli["checks"] if c["id"] == "geometry.winding")
+    mcp_check = next(c for c in payload["report"]["checks"] if c["id"] == "geometry.winding")
+    assert cli_check == mcp_check
+    assert cli_check["status"] == "fail"

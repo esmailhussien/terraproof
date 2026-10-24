@@ -35,6 +35,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--agent-python-without` supplies a dependency-only interpreter, and `PYTHONPATH` is dropped in "without". The preflight requires that interpreter, that it cannot import Terraproof, and that paths are neutral.
   - Contamination now has sub-labels for real use (`import`, `module-or-cli`, `mcp`, `package-query`, `skill`, `mention`), separate from the path-only diagnostic `terraproof-path-text`.
   - Forced rejections keep `accepted_before_contamination`, and the summary adds a labelled, not-pre-specified `sensitivity_contamination_ignored`.
+- `geometry.winding`: GeoJSON polygon rings must follow the RFC 7946 right-hand rule (counterclockwise exteriors, clockwise holes). It fails a non-conforming export, passes a conforming one, and does not run on other drivers. The vector inspection profile records `geometry.winding` for GeoJSON layers.
+
+### Changed
+
+- `raster.cog_layout` now warns when a GeoTIFF uses JPEG compression, which is always lossy and changes stored pixel values. That is fine for visual products but not for analysis values. Lossy LERC (`MAX_Z_ERROR`) and WebP settings are not detected.
 
 ### Evaluation
 
@@ -44,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Contamination flags:** three of six "without" rejections came only from a `terraproof-in-without` flag that matched absolute `Read`-tool paths under the old `terraproof-lift-host-*` prefix. Whether those runs also used Terraproof for real cannot be determined from the sanitised trace.
   - **Sensitivity (not pre-specified):** without 0.889, difference 0.111, sign-flip p = 1.0.
   - **Robust exploratory finding:** Landsat QA, 3/3 with vs 0/3 without (§16).
+- Deterministic evals: **27/27 tasks, 0 false passes, 15 checker blind spots** (down from 17), 23 checks rejected (up from 21), 30 exercised check IDs. Newly rejected by the checks: `raster-cog-delivery` / `lossy-jpeg-cog` (`raster.cog_layout` warns) and `vector-join-scope-and-geojson` / `clockwise-geojson-winding` (`geometry.winding` fails). No task spec, oracle assertion or seeded wrong output was changed; only the recipes' descriptive notes were updated. CLI/MCP parity tests cover both controls.
+- The 15 remaining blind spots stay declared because the checker has no legitimate evidence for them in the invocation the spec defines. `RELEASE_CHECKLIST.md` and `evals/README.md` give the reason for each.
+
 
 ## [0.4.1] — 2026-10-24
 

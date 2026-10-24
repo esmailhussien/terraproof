@@ -21,7 +21,7 @@ the hosted matrix row was added after GitHub Actions passed on `06eb466`.
 | Fresh internal release audit | **EN 1.0 / AR 0.98 recall**; forbidden selections 4/100 EN and 2/100 AR; both original numeric thresholds met |
 | TypeScript router | **87/87**, deterministic, no over-selection warnings |
 | Registry/types/npm package | 24 skills current; typecheck passed; package smoke **8/8** |
-| Deterministic scientific evals | **27/27**, zero false passes, 17 explicitly retained checker blind spots, 29 exercised IDs; seven preflight controls valid |
+| Deterministic scientific evals | **27/27**, zero false passes, **15** explicitly retained checker blind spots (17 at v0.4.1; see [Checker blind spots](#checker-blind-spots)), 23 checker rejections, 30 exercised IDs; seven preflight controls valid. Unreleased, local Windows run |
 | Built wheel | Unmodified production smoke passed outside checkout, all 24 skills/all sections, EN/AR routing, installer and 27 evals; physical Windows LocalCache/LocalLow temporary path |
 | Source distribution | Rebuilt outside checkout; all 245 wheel-member hashes identical; routing corpora excluded |
 | CLI and official SDK stdio | **20/20** assertions on actual child processes, separate from real-agent inference |
@@ -237,9 +237,38 @@ Limits: v5 is agent-authored and not expert-adjudicated, and one pass on one 160
 - Claude retains its maximum USD1 / 120-second optional invocation with isolated local-server `--mcp-config`, `--strict-mcp-config`, `--no-session-persistence`, `--restricted`, disabled built-in tools/hooks/skills, an explicit Terraproof-only tool allowlist, and noninteractive permission denial. Windows shell wrappers are unavailable for model invocation; a native executable is required. Success requires actual successful `list_skills` and `inspect_dataset` tool-result trace events. Both runners retain only sanitized summary/tool status, not raw auth/model transcripts or credentials, and make no global agent configuration edits. Host inference necessarily contacts its configured service; these are CLI tool controls, not an OS-wide inference network block. If stronger isolation is required, do not invoke either runner without external assessment.
 - [x] Confirm green **current release commit** hosted CI. The Ubuntu/Windows × Python 3.11/3.13 matrix ran this driver after the Python and deterministic eval suites and uploaded its report; the package matrix passed on all three OSes × Node 20/22/24. Green on `06eb466` ([run 40012988399](https://github.com/esmailhussien/terraproof/actions/runs/40012988399)); re-confirm if the release commit differs.
 - [x] Independent routing acceptance: **passed on v5** in both languages from a single measurement of commit `22c3564` (EN recall 0.971, 3.75 forbidden per 100; AR recall 0.9625, 2.5 per 100; see above). The v3/v4 failures stay on record. v5 is agent-authored and not expert-adjudicated. Its post-review re-run on the v0.4.1 code is a non-regression check only, not a second acceptance.
-- [ ] Remaining release gates: Claude real-host tool use and the 17 declared checker blind spots. Tiny synthetic vector fixtures do not exhaustively validate raster/optical/SAR workflows or scientific fitness.
+- [ ] Remaining release gates: Claude real-host tool use and the 15 declared checker blind spots (17 at v0.4.1; two closed after release, see below). Tiny synthetic vector fixtures do not exhaustively validate raster/optical/SAR workflows or scientific fitness.
 
 Next release actions: v0.4.1 is released (sections 4–5). The remaining Claude real-host and checker blind-spot gates carry over to the next release. The user-approved internal content review above replaces additional expert reviewers; it does not replace these acceptance gates. No automatic inference retry, credential inspection, provider/model fallback, or relaxed isolation is authorized by these checks.
+
+### Checker blind spots
+
+A blind spot is a seeded wrong output that the independent oracle rejects but the production checks accept. After v0.4.1, a local Windows run (Python 3.14, `PYTHONPATH=src python -m terraproof.evals run`) gave **27/27 tasks, 38 wrong controls, 23 checker rejections, 15 blind spots, 0 false passes, 30 exercised IDs**. No task spec, oracle assertion or seeded output was changed.
+
+Closed (CLI/MCP parity tests in `tests/python/test_mcp.py`):
+
+- `raster-cog-delivery` / `lossy-jpeg-cog`: `raster.cog_layout` warns because the file is tagged with JPEG compression, which is always lossy.
+- `vector-join-scope-and-geojson` / `clockwise-geojson-winding`: the new `geometry.winding` fails because the export's own rings break the RFC 7946 right-hand rule.
+
+Still declared. In the invocation the spec defines, the checker has no legitimate evidence for any of these, and a check that read the oracle's answer would not count:
+
+| Task / control | Why the checks cannot reject it |
+| --- | --- |
+| `crs-axis-datum-control` / `swapped-axis-order` | The swapped values (about 30–31° on both axes) still fall inside the target UTM zone's area of use. Only the surveyed control-point positions show the swap, and those positions are the oracle's targets. |
+| `crs-local-metric-buffer` / `foot-radius-unit-confusion` | The check is not told the buffer radius or its unit. A foot CRS is correct for a radius in feet, and the spec documents that `crs.metric_operation` accepts feet. |
+| `indices-burn-evi-savi-ranges` / `reversed-dnbr-sign` | The control checks the same pre/post NBR rasters as the correct control, and the reversed dNBR raster is not an input to the checks. The checker sees identical evidence. |
+| `indices-burn-evi-savi-ranges` / `nbr-wrong-swir-band` | The NBR raster records no source-band provenance, and its values stay in range. |
+| `indices-ndvi-physical-inputs` / `unscaled-dn-ratio` | The index raster has no link to its source bands or their calibration, and its values stay in [-1, 1]. |
+| `indices-water-definition-grid` / `gao-moisture-mislabeled` | The file does not record which formula produced it, and its values stay in range. |
+| `raster-nodata-dtype-windowing` / `unsigned-wraparound` | `check difference.tif` gets no operands and no declared operation. A uint16 raster with high values is legitimate for many products. |
+| `sar-db-linear-monthly-mean` / `naive-db-average` | Only the mean raster is checked. Telling which aggregation was used needs the per-date stack. |
+| `sar-orbit-consistent-log-ratio` / `descending-post-event` | The step gets only the descending Item, with no pre-event Item to compare against; the correct control also checks a single Item. Closing this needs a multi-Item orbit-consistency check plus a spec/recipe invocation that supplies both Items. |
+| `satellite-seasonal-harmonized-composite` / `cloudy-dates-included` | The checks get the composite and one source Item, but no per-date QA or observation stack. |
+| `stac-signed-windowed-cog-subset` / `whole-scene-download` | No AOI or window is an input to `check whole_scene.tif`, and a full scene is a valid COG. |
+| `ts-monthly-ndvi-composite-counts` / `index-of-medians-composite` | The output does not record its composite rule, and the per-date stack is not an input. |
+| `ts-monthly-ndvi-composite-counts` / `all-invalid-zero-filled` | NDVI = 0 is a valid value. Telling fill from data needs the observation count or the stack. |
+| `ts-phenology-matched-difference` / `spring-to-summer-difference` | The Item set and checks are the same as the correct control's (`rs.temporal_scope` fails both as the intended preflight), and the difference raster records no source dates. |
+| `vector-coverage-and-duplicates` / `dissolve-away-identities` | The output is checked alone with no `--compare-to`. A single valid polygon is a legitimate output, and the spec states that coverage and identity are not checked automatically. |
 
 ---
 

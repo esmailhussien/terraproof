@@ -25,6 +25,10 @@
       "family": "geometry",
       "description": "The layer holds one geometry family; single and multi-part types count together."
     },
+    "geometry.winding": {
+      "family": "geometry",
+      "description": "GeoJSON polygon rings follow the RFC 7946 right-hand rule: counterclockwise exteriors, clockwise holes."
+    },
     "scope.record_count": {
       "family": "scope",
       "description": "The output feature count is compared with a reference dataset's count."
@@ -43,7 +47,7 @@
     },
     "raster.cog_layout": {
       "family": "raster",
-      "description": "Heuristic layout screen for GeoTIFFs: tiled, with internal overviews unless the raster fits in one block; not COG validation."
+      "description": "Heuristic layout screen for GeoTIFFs: tiled, with internal overviews unless the raster fits in one block, and not lossy JPEG; not COG validation."
     },
     "rs.reflectance_range": {
       "family": "rs",

@@ -386,7 +386,7 @@ def raster_cog_delivery(root: Path):
         "analysis values.",
         wrong_steps,
         wrong_oracle,
-        notes="raster.cog_layout passes; it cannot see lossy compression.",
+        notes="raster.cog_layout warns on the file's JPEG compression tag; the oracle independently measures the changed pixels.",
     )
 
     striped = write_raster(
