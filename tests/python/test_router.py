@@ -646,6 +646,27 @@ SNAPSHOT = json.loads(
 # covered by the pythonScenarios, dev.jsonl and semantic assertions instead.
 SNAPSHOT_NEW_SKILLS = ("sar-basics", "accuracy-assessment",
                        "stac-and-cloud-access", "time-series-and-change")
+# The 2026-10-24 geomaster terrain fix changed two section texts (and so BM25 scores, not
+# selections: all 25 snapshot prompts keep their skills). The corpus pin uses the
+# snapshot-era text of those files, kept verbatim under fixtures/geomaster_snapshot_era/.
+SNAPSHOT_ERA_TEXT = Path(__file__).parent / "fixtures" / "geomaster_snapshot_era"
+
+
+def _snapshot_era_section(section: Section, skill: dict) -> Section:
+    """Rebuild a geomaster section from its snapshot-era text with the index's own tokenization."""
+    if section.skill != "geomaster":
+        return section
+    if section.source.startswith("SKILL.md#"):
+        text = markdown_sections((SNAPSHOT_ERA_TEXT / "SKILL.md.txt").read_text(encoding="utf-8"))[
+            section.source.split("#", 1)[1]]
+    elif section.source == "references/code-examples.md":
+        text = (SNAPSHOT_ERA_TEXT / "code-examples.md.txt").read_text(encoding="utf-8")
+    else:
+        return section
+    metadata = " ".join(["geomaster", skill["explanation"], *skill["triggers"], *skill["capabilities"]])
+    frequencies = Counter(tokenize(section.title + " " + text + " " + metadata))
+    return Section(section.skill, section.id, section.title, section.source, text, frequencies,
+                   sum(frequencies.values()))
 
 
 @pytest.fixture
@@ -654,7 +675,8 @@ def head_snapshot_index(monkeypatch):
     import terraproof.router as router
     import terraproof.router.index as index_module
     full = index_module.get_index()
-    sections = tuple(section for section in full.sections if section.skill not in SNAPSHOT_NEW_SKILLS)
+    sections = tuple(_snapshot_era_section(section, full.skills["geomaster"])
+                     for section in full.sections if section.skill not in SNAPSHOT_NEW_SKILLS)
     ranked = [section for section in sections if section.skill not in index_module.PROCESS_SKILLS]
     document_frequency: Counter = Counter()
     for section in ranked:

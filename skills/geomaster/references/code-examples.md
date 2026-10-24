@@ -358,24 +358,11 @@ def map_flood(dem_path, flood_level, output_path):
 
 ```python
 # 68. Slope and aspect from DEM
-def terrain_analysis(dem_path):
-    import numpy as np
-    from scipy import ndimage
-
-    with rasterio.open(dem_path) as src:
-        dem = src.read(1)
-
-    # Calculate gradients
-    dy, dx = np.gradient(dem)
-
-    # Slope in degrees
-    slope = np.arctan(np.sqrt(dx**2 + dy**2)) * 180 / np.pi
-
-    # Aspect
-    aspect = np.arctan2(-dy, dx) * 180 / np.pi
-    aspect = (90 - aspect) % 360
-
-    return slope, aspect
+# Use terrain_metrics() in ../SKILL.md (section "Terrain Analysis"). It takes the real pixel size
+# from the transform, converts vertical units to metres, refuses geographic or rotated grids and
+# masks nodata. np.gradient(dem) without spacing assumes 1-unit square pixels and equal vertical
+# and horizontal units, which gives wrong slopes for almost every real DEM.
+slope, aspect, hillshade = terrain_metrics("dem.tif")
 ```
 
 ## Additional Examples (70-100)
