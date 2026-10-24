@@ -1,6 +1,6 @@
 # Terraproof Release Checklist — v0.5.0, v0.4.1 and v0.4.0
 
-Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 routing measurement that v0.4.1 ships, and the gates that remain open. v0.4.0 was released on 2026-10-23: tag `v0.4.0`, GitHub release *Terraproof v0.4.0*, and `terraproof@0.4.0` on npm as `latest`. v0.4.1 was released on 2026-10-24: tag `v0.4.1` on `f39d342`, GitHub release *Terraproof v0.4.1* (marked Latest), and `terraproof@0.4.1` on npm as `latest`. v0.5.0 (new `geometry.winding` check, COG JPEG warning, Phase 5 agent-lift harness, and the docs/README tidy-up) is prepared but not yet tagged or published. No version is published to PyPI. Sections 2–5 are the release procedure, now targeting v0.5.0.
+Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 routing measurement that v0.4.1 ships, and the gates that remain open. v0.4.0 was released on 2026-10-23: tag `v0.4.0`, GitHub release *Terraproof v0.4.0*, and `terraproof@0.4.0` on npm as `latest`. v0.4.1 was released on 2026-10-24: tag `v0.4.1` on `f39d342`, GitHub release *Terraproof v0.4.1* (marked Latest), and `terraproof@0.4.1` on npm as `latest`. v0.5.0 (new `geometry.winding` check, COG JPEG warning, Phase 5 agent-lift harness, and the docs/README tidy-up) was released on 2026-10-24: tag `v0.5.0` on `1a33c4c` (part of `main` through merge commit `af66faa`), GitHub release *Terraproof v0.5.0* (marked Latest), and `terraproof@0.5.0` on npm as `latest`, published 04:18 UTC. The published tarball matches the tagged files exactly (plus the built `dist/`). No version is published to PyPI. Sections 2–5 are the release procedure used for v0.5.0.
 
 ---
 
@@ -239,7 +239,7 @@ Limits: v5 is agent-authored and not expert-adjudicated, and one pass on one 160
 - [x] Independent routing acceptance: **passed on v5** in both languages from a single measurement of commit `22c3564` (EN recall 0.971, 3.75 forbidden per 100; AR recall 0.9625, 2.5 per 100; see above). The v3/v4 failures stay on record. v5 is agent-authored and not expert-adjudicated. Its post-review re-run on the v0.4.1 code is a non-regression check only, not a second acceptance.
 - [ ] Remaining release gates: the release-validation Claude real-host gate (`tests/release_validation.py --agent-host claude`, not yet run; separately, the Phase 5 runs showed real Claude Code MCP tool use) and the 15 declared checker blind spots (17 at v0.4.1; two closed after release, see below). Tiny synthetic vector fixtures do not exhaustively validate raster/optical/SAR workflows or scientific fitness.
 
-Next release actions: tag and publish v0.5.0 (sections 4–5) when the user decides, stating the remaining Claude release-validation and checker blind-spot gates and the Phase 5 result (no lift claimed) in the release notes. The user-approved internal content review above replaces additional expert reviewers; it does not replace these acceptance gates. No automatic inference retry, credential inspection, provider/model fallback, or relaxed isolation is authorized by these checks.
+Next release actions: v0.5.0 is released (sections 4–5). The remaining Claude release-validation and checker blind-spot gates carry over to the next release. The user-approved internal content review above replaces additional expert reviewers; it does not replace these acceptance gates. No automatic inference retry, credential inspection, provider/model fallback, or relaxed isolation is authorized by these checks.
 
 ### Checker blind spots
 
@@ -328,5 +328,5 @@ Still declared. In the invocation the spec defines, the checker has no legitimat
 - [x] Run `npx terraproof route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL"` to verify global routing. 2026-10-23, Windows: exit 0, 4 skills selected at 90% confidence.
 - [x] v0.4.1: `npx terraproof@0.4.1 --version` prints `terraproof v0.4.1` in a blank directory. 2026-10-24, Windows: printed `terraproof v0.4.1`; the published `bin/terraproof.js` contains no CR bytes, and the registry lists `0.4.1` as `latest`.
 - [x] v0.4.1: `npx terraproof@0.4.1 route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL"` exits 0. 2026-10-24, Windows: exit 0.
-- [ ] v0.5.0: `npx terraproof@0.5.0 --version` prints `terraproof v0.5.0` in a blank directory, and the published `bin/terraproof.js` contains no CR bytes.
-- [ ] v0.5.0: `npx terraproof@0.5.0 route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL"` exits 0.
+- [x] v0.5.0: `npx terraproof@0.5.0 --version` prints `terraproof v0.5.0` in a blank directory, and the published `bin/terraproof.js` contains no CR bytes. 2026-10-24, Windows: printed `terraproof v0.5.0`; the downloaded tarball's `bin/terraproof.js` has no CR bytes, and the registry lists `0.5.0` as `latest`.
+- [x] v0.5.0: `npx terraproof@0.5.0 route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL"` exits 0. 2026-10-24, Windows: exit 0.
