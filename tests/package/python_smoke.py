@@ -32,10 +32,11 @@ from terraproof.router import find_guidance
 for task in ['Convert GeoTIFF to COG with GDAL.', 'حول GeoTIFF باستخدام GDAL']:
     assert 'gdal' in {skill['name'] for skill in find_guidance(task, semantic=False)['skills']}
 from terraproof.evals import load_specs, run_benchmark
-assert len(load_specs()) == 27
+task_count = len(load_specs())
+assert task_count >= 27
 evaluation = run_benchmark()
 assert evaluation['summary']['exit_code'] == 0
-assert evaluation['summary']['tasks_passed'] == 27
+assert evaluation['summary']['tasks_passed'] == task_count
 assert not (assets / '.terracache').exists()
 from terraproof.install import main as install
 target = Path.cwd() / 'installed-agent'
@@ -45,7 +46,7 @@ with contextlib.redirect_stdout(io.StringIO()):
 assert (target / '.agents' / 'skills' / 'gdal' / 'SKILL.md').is_file()
 assert (assets / 'sources' / 'SOURCES.md').is_file()
 assert (assets / 'third_party').is_dir()
-print(json.dumps({'status':'pass','skills':len(skills),'all_sections_loaded':True,'bilingual_routing':True,'eval_tasks':27,'false_passes':evaluation['summary']['false_passes'],'checker_blind_spots':evaluation['summary']['wrong_controls_checker_blind_spots'],'installer':True,'uses_checkout_assets':False,'package_assets_modified':False}))
+print(json.dumps({'status':'pass','skills':len(skills),'all_sections_loaded':True,'bilingual_routing':True,'eval_tasks':task_count,'false_passes':evaluation['summary']['false_passes'],'checker_blind_spots':evaluation['summary']['wrong_controls_checker_blind_spots'],'installer':True,'uses_checkout_assets':False,'package_assets_modified':False}))
 '''
 
 

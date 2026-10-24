@@ -254,3 +254,34 @@ def read_features(path: str | os.PathLike, fields: list[str] | None = None):
     if missing:
         raise ValueError(f"{path} has no field(s): {missing}")
     return shapely.from_wkb(geoms), {name: columns[name] for name in wanted}
+
+
+def write_raster_grid(path, array, *, transform, crs=UTM, nodata=FLOAT_NODATA,
+                      scales=None, offsets=None, unit=None, descriptions=None):
+    """Write deterministic task inputs/outputs with explicit affine and band metadata.
+
+    The existing square-pixel writer remains unchanged. This additive writer
+    supports the new target-grid, anisotropic-DEM and multiband input contracts.
+    """
+    path = Path(path)
+    values = np.asarray(array)
+    if values.ndim == 2:
+        values = values[None, ...]
+    if values.ndim != 3:
+        raise ValueError("expected a band-row-column raster")
+    with rasterio.open(path, "w", driver="GTiff", count=values.shape[0],
+                       height=values.shape[1], width=values.shape[2], dtype=values.dtype.name,
+                       crs=crs, transform=transform, nodata=nodata, tiled=True,
+                       blockxsize=16, blockysize=16, compress="deflate") as dst:
+        dst.write(values)
+        if scales is not None:
+            dst.scales = tuple(float(x) for x in scales)
+        if offsets is not None:
+            dst.offsets = tuple(float(x) for x in offsets)
+        if unit is not None:
+            for index in dst.indexes:
+                dst.set_band_unit(index, unit)
+        if descriptions is not None:
+            for index, description in enumerate(descriptions, start=1):
+                dst.set_band_description(index, description)
+    return str(path)

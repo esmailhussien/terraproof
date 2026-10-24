@@ -35,7 +35,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import release_validation as validation  # noqa: E402  (shared host isolation helpers)
 
 from terraproof.evals.lift import (  # noqa: E402
-    LIFT_TASKS, WITH, Adapter, AgentRequest, AgentResult, Budget, LiftError, lift_task, planned_calls, run_lift, to_json,
+    COHORTS, DEFAULT_COHORT, WITH, Adapter, AgentRequest, AgentResult, Budget, LiftError, lift_task, planned_calls,
+    run_lift, to_json,
 )
 
 ROOT = validation.ROOT
@@ -745,13 +746,21 @@ def probe_claude(executable: str | None = None) -> tuple[str | None, str, str | 
 
 
 # -- plan and main -----------------------------------------------------------------------
+def total_usd_cap(args, calls: int) -> float:
+    """An explicit --max-usd-total, or by default every planned run at its full per-run cap."""
+    return args.max_usd_total if args.max_usd_total is not None else round(calls * args.max_usd_per_run, 2)
+
+
 def plan(args) -> dict:
-    tasks = args.task or [task.task_id for task in LIFT_TASKS]
+    cohort = None if args.task else (args.cohort or DEFAULT_COHORT)
+    tasks = args.task or [task.task_id for task in COHORTS[cohort]]
     calls = planned_calls(len(set(tasks)), args.runs)
-    ceiling = None if args.agent_host == "codex" else round(min(calls * args.max_usd_per_run, args.max_usd_total), 2)
+    ceiling = None if args.agent_host == "codex" else round(min(calls * args.max_usd_per_run, total_usd_cap(args, calls)), 2)
     approve = ["python", "tests/agent_lift.py", "--agent-host", args.agent_host, "--runs", str(args.runs)]
     for task_id in args.task or []:
         approve += ["--task", task_id]
+    if cohort:
+        approve += ["--cohort", cohort]
     if args.agent_host == "codex" and args.codex_executable:
         approve += ["--codex-executable", str(args.codex_executable)]
     if args.agent_host == "claude" and args.claude_executable:
@@ -759,11 +768,12 @@ def plan(args) -> dict:
     if args.agent_python_without:
         approve += ["--agent-python-without", str(args.agent_python_without)]
     if args.agent_host == "claude":
-        approve += ["--max-usd-per-run", f"{args.max_usd_per_run:g}", "--max-usd-total", f"{args.max_usd_total:g}"]
+        approve += ["--max-usd-per-run", f"{args.max_usd_per_run:g}", "--max-usd-total", f"{total_usd_cap(args, calls):g}"]
     approve += ["--timeout", f"{args.timeout:g}", "--approve-model-calls", str(calls)]
     return {
         "status": "plan-only (no host started, no model called)",
         "agent_host": args.agent_host,
+        "cohort": cohort,
         "tasks": sorted(set(tasks)),
         "runs_per_condition": args.runs,
         "planned_model_invocations": calls,
@@ -782,10 +792,13 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--agent-host", choices=["codex", "claude"], required=True)
     parser.add_argument("--runs", type=int, default=3, help="runs per condition and task (default 3)")
-    parser.add_argument("--task", action="append", help="lift task id (repeatable; default all nine)")
+    parser.add_argument("--task", action="append", help="lift task id (repeatable; not with --cohort)")
+    parser.add_argument("--cohort", choices=sorted(COHORTS),
+                        help=f"task cohort to run (default {DEFAULT_COHORT}); cohorts are separate experiments")
     parser.add_argument("--timeout", type=float, default=900, help="per-run timeout in seconds (default 900)")
     parser.add_argument("--max-usd-per-run", type=float, default=1.0, help="Claude per-run USD cap (default 1)")
-    parser.add_argument("--max-usd-total", type=float, default=54.0, help="Claude total USD cap (default 54)")
+    parser.add_argument("--max-usd-total", type=float, default=None,
+                        help="Claude total USD cap (default: planned runs x --max-usd-per-run)")
     parser.add_argument("--codex-reasoning-effort", default="medium", choices=["low", "medium", "high"])
     parser.add_argument("--codex-executable", type=Path,
                         help="native codex.exe to use (default: the PATH-resolved native binary)")
@@ -801,8 +814,11 @@ def main(argv=None) -> int:
     parser.add_argument("--out", type=Path, default=ROOT / ".terracache" / "agent-lift.json")
     parser.add_argument("--recordings", type=Path, default=ROOT / ".terracache" / "agent-lift-recordings")
     args = parser.parse_args(argv)
-    if args.runs < 1 or args.timeout <= 0 or args.max_usd_per_run <= 0 or args.max_usd_total <= 0:
+    if (args.runs < 1 or args.timeout <= 0 or args.max_usd_per_run <= 0
+            or (args.max_usd_total is not None and args.max_usd_total <= 0)):
         parser.error("--runs, --timeout and the USD caps must be positive")
+    if args.task and args.cohort:
+        parser.error("--task and --cohort select tasks in different ways; give one of them")
     if args.preflight_only and args.approve_model_calls is not None:
         parser.error("--preflight-only starts no agent; do not combine it with --approve-model-calls")
     try:
@@ -827,7 +843,8 @@ def main(argv=None) -> int:
         executable, reason, version = probe_claude(str(args.claude_executable) if args.claude_executable else None)
         adapter = ClaudeHostAdapter(executable, agent_python) if executable else None
         budget = Budget(max_runs=args.approve_model_calls, per_run_usd=args.max_usd_per_run,
-                        total_usd=args.max_usd_total, timeout_seconds=args.timeout)
+                        total_usd=total_usd_cap(args, summary["planned_model_invocations"]),
+                        timeout_seconds=args.timeout)
     if adapter is None:
         print(json.dumps({"status": "unavailable", "reason": reason, "model_called": False}, sort_keys=True))
         return 1
@@ -839,7 +856,8 @@ def main(argv=None) -> int:
         print(json.dumps({"status": "refused", "reason": "work directory inside the checkout"}))
         return 1
     try:
-        report = run_lift(adapter, task_ids=args.task, runs=1 if args.preflight_only else args.runs,
+        report = run_lift(adapter, task_ids=args.task, cohort=summary["cohort"] or DEFAULT_COHORT,
+                          runs=1 if args.preflight_only else args.runs,
                           agent=args.agent_host, budget=budget, work_root=work,
                           allow_model_calls=not args.preflight_only, preflight_only=args.preflight_only,
                           recordings_out=None if args.preflight_only else args.recordings)

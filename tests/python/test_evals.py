@@ -1,6 +1,6 @@
 """Tests for the executable benchmark harness (`python -m terraproof.evals run`).
 
-The full run is exercised: all 27 task specs, their generated fixtures, the real checks and
+The full run is exercised: all 33 task specs, their generated fixtures, the real checks and
 provenance APIs, and the oracle controls. No fixture binary is committed; everything is
 generated inside pytest's temporary directories.
 """
@@ -42,9 +42,9 @@ def specs() -> list:
 
 
 def test_specs_load_and_validate(specs):
-    assert len({spec.path for spec in specs}) == 9
-    assert len(specs) == 27
-    assert len({spec.id for spec in specs}) == 27
+    assert len({spec.path for spec in specs}) == 11
+    assert len(specs) == 33
+    assert len({spec.id for spec in specs}) == 33
     for spec in specs:
         assert spec.skill == spec.path.stem
         assert set(spec.expected_checks.values()) <= {"pass", "warn", "fail"}
@@ -71,14 +71,14 @@ def test_duplicate_recipe_is_rejected(monkeypatch):
 
 def test_full_report_passes(report):
     summary = report["summary"]
-    assert summary["tasks"] == 27
-    assert summary["tasks_passed"] == 27
+    assert summary["tasks"] == 33
+    assert summary["tasks_passed"] == 33
     assert summary["tasks_failed"] == 0
     assert summary["tasks_unrunnable"] == 0
     assert summary["false_passes"] == 0
     assert summary["missing_expected_checks"] == 0
     assert summary["exit_code"] == 0
-    assert summary["controls_correct"] == 27
+    assert summary["controls_correct"] == 33
     assert summary["controls_wrong"] >= 27
 
 
