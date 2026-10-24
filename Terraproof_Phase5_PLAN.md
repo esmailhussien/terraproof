@@ -1,6 +1,6 @@
 # Terraproof — Phase 5 Plan: Agent-lift measurement
 
-> Status: **harness implemented and verified offline; no real agent run has been made.** The paired with/without harness, its scoring calibration, the statistics and the opt-in real-host driver exist and are unit-tested with offline adapters only. No model or agent host was called while building it, not even a pilot. Every number about lift in this repository is therefore still **unmeasured**. The first real run needs the user's explicit approval of the command, call count and cost ceiling in section 9.
+> Status: **harness implemented and verified offline; one approved 2-invocation pilot ran and produced no gradable output (section 13).** The harness and driver were then fixed offline, with no model or agent call. Lift is still **unmeasured**. Each further real run needs the user's explicit approval of the command, call count and cost ceiling in section 9.
 
 ## 1. Why this phase
 
@@ -134,10 +134,30 @@ All statistics are deterministic and implemented in `terraproof.evals.lift`. The
 
 `tests/agent_lift.py` reuses `tests/release_validation.py` for the native-executable resolution, the auth probes (Claude `auth status`, Codex ChatGPT-subscription status with no paid-API fallback), and the Windows kill-on-close job object with suspended start. Differences from the release smoke test, which are needed because agents must compute:
 
-- **Codex:** `exec --ignore-user-config --ignore-rules --strict-config --ephemeral --sandbox workspace-write` with `sandbox_workspace_write.network_access=false` and web search disabled. Only the shell tool is enabled beyond the release list; every other capability stays disabled. MCP is passed with `-c` only in `with`.
+- **Codex:** `exec --ignore-user-config --ignore-rules --strict-config --ephemeral --sandbox workspace-write` with `sandbox_workspace_write.network_access=false` and web search disabled.
+  - Codex's own execution features (`shell_tool`, `unified_exec`, `unified_exec_tty`, `shell_snapshot`, `workspace_dependencies`) stay at their defaults. Only capabilities outside the task are disabled: browser, computer use, apps, plugins, sub-agents, memories, hooks and image generation.
+  - `mcp_servers` is set explicitly in both conditions: the Terraproof server in `with`, an empty table in `without`.
+  - `--codex-executable` selects a specific native `codex.exe`, such as the app runtime.
+- **Preflight (no model call), before every run:**
+  - The harness checks that inputs are present, `outputs/` is writable, the routed skills are installed and the MCP server is registered, and that no Terraproof files exist in `without`.
+  - The Codex adapter then checks, still without a model:
+    - **Sandboxed shell:** `codex sandbox -P :workspace` runs PowerShell → `python`, which must find numpy/rasterio, read an input and create and delete a file in `outputs/`.
+    - **MCP registration:** `codex mcp list --json` with the same `mcp_servers` override.
+    - **MCP tools:** the six Terraproof tools, listed by starting the server with the official MCP client.
+    - **Skill and instruction visibility:** `codex debug prompt-input` renders the model-visible prompt locally, and the check reads only skill names and the presence of the AGENTS.md block from it. In `without`, none of these may be visible.
+  - Any failure marks the run `preflight_failed` and starts no agent. `--preflight-only` runs all of this for every task and condition without approval.
+  - Limits:
+    - `codex sandbox -P :workspace` approximates exec's `workspace-write` policy.
+    - The model-visible **tool list** cannot be rendered without a turn, so whether the shell tool is exposed is confirmed only by the next pilot's trace.
+    - Claude Code has no model-free sandbox runner, so its Python/IO probe runs unsandboxed.
 - **Claude Code:** `--print --restricted --tools Bash,Read,Write,Edit,Glob,Grep,Skill --permission-mode dontAsk --permission-prompts none --strict-mcp-config` with an empty MCP config in `without` and the installer-written `.mcp.json` in `with`, plus `--no-session-persistence`, hooks disabled and `--max-budget-usd <per-run cap>`.
 - One invocation per run, no retries, per-run timeout (default 900 s), and the owned process tree is killed on every exit.
-- Only counts, tool names and fixed labels leave the stream: no prompts, model text, command lines, arguments or environment are persisted. Outputs and `result.json` are recorded to `.terracache/agent-lift-recordings/` (git-ignored), so `python -m terraproof.evals lift --adapter replay --recordings DIR` re-scores the run offline and deterministically.
+- Only fixed labels and numbers leave the stream:
+  - per tool call: a tool label from a fixed set, its category (`shell`, `file_edit`, `file_read`, `skill`, `mcp:<tool>`, `mcp:other`, `web`, `agent`, `other`), status (`started`/`completed`/`failed`/`declined`), exit code and duration;
+  - per turn: a status (`completed`, `error`, `refused`, `sandbox-denial`, `aborted`, `timeout`), a fixed reason, error-type labels from fixed patterns, and the count of Codex `error` items, which are not counted as calls.
+
+  No prompts, model text, command lines, arguments, environment or file contents are persisted.
+- **Run classification:** a host run that completes with no deliverable and no `shell` or `file_edit` call is reported as `adapter_status: no-attempt`, with the raw `host_status` kept. Each "with" run records `treatment_used`, and the summary reports `no_attempt`, `preflight_failed`, `treatment_not_used`, `calls_by_category` and `treatment_delivery`. Outputs and `result.json` are recorded to `.terracache/agent-lift-recordings/` (git-ignored), so `python -m terraproof.evals lift --adapter replay --recordings DIR` re-scores the run offline and deterministically.
 
 ## 8. Budget
 
@@ -149,17 +169,29 @@ All statistics are deterministic and implemented in `terraproof.evals.lift`. The
 ## 9. Execution steps (each real step needs explicit user approval)
 
 1. **Offline acceptance (done in this PR):** calibration 9/9 eligible; scripted reference-vs-seeded run gives pass rates 1.0 vs 0.0 with byte-identical reports across runs; unit tests for blinding, budget, contamination, replay and statistics.
-2. **Pilot, 2 invocations** (one task, one pair), to check treatment delivery, cost per run and timeouts. Recommended host: Codex (Claude Code is not logged in on this machine):
+2. **Pilot, 2 invocations** (one task, one pair), to check treatment delivery, cost per run and timeouts. Pilot 1 ran (section 13).
+   - Use the Python 3.12 venv. The 3.14 interpreter behind `D:\AgentLayer\.venv` has a Low integrity label, its temp directory falls back to the checkout, and the driver correctly refuses that.
+   - Use the app-bundled Codex runtime, the one that passed Phase 4 acceptance.
+   - First run the free preflight. It must report no `preflight_failures`:
 
    ```powershell
-   $env:PYTHONPATH="src"; D:\AgentLayer\.venv\Scripts\python tests\agent_lift.py --agent-host codex --runs 1 --task indices-ndvi-physical-inputs --timeout 900 --approve-model-calls 2
+   $env:PYTHONPATH="src"; C:\Users\mrsom\.venvs\terraproof-py312\Scripts\python tests\agent_lift.py --agent-host codex --runs 1 --task indices-ndvi-physical-inputs --codex-executable C:\Users\mrsom\AppData\Local\OpenAI\Codex\bin\37f54d68e5533a51\codex.exe --preflight-only --out .terracache\agent-lift-pilot2.json
    ```
 
-   Expected calls: **2** Codex `exec` invocations. Cost ceiling: no USD cap exists for Codex subscription usage; the limit is 2 invocations × 900 s. A Claude pilot would be `--agent-host claude --runs 1 --task indices-ndvi-physical-inputs --max-usd-per-run 1 --max-usd-total 2 --approve-model-calls 2` with a **$2** ceiling.
-3. **Main run, 54 invocations** (9 tasks × 3 runs × 2 conditions), only after the pilot shows nonzero Terraproof use in "with" and acceptable cost:
+   Then, only with approval, run pilot 2:
 
    ```powershell
-   $env:PYTHONPATH="src"; D:\AgentLayer\.venv\Scripts\python tests\agent_lift.py --agent-host codex --runs 3 --timeout 900 --approve-model-calls 54
+   $env:PYTHONPATH="src"; C:\Users\mrsom\.venvs\terraproof-py312\Scripts\python tests\agent_lift.py --agent-host codex --runs 1 --task indices-ndvi-physical-inputs --codex-executable C:\Users\mrsom\AppData\Local\OpenAI\Codex\bin\37f54d68e5533a51\codex.exe --timeout 900 --approve-model-calls 2 --out .terracache\agent-lift-pilot2.json
+   ```
+
+   - **Expected calls:** 2 Codex `exec` invocations.
+   - **Cost ceiling:** Codex subscription usage has no USD cap, so the limit is 2 invocations × 900 s.
+   - **Claude alternative:** `--agent-host claude --runs 1 --task indices-ndvi-physical-inputs --max-usd-per-run 1 --max-usd-total 2 --approve-model-calls 2`, with a **$2** ceiling.
+   - **Main run gate:** the pilot must show `shell` calls in `calls_by_category` for both conditions, at least one "with" run with `treatment_used: true`, and no `no-attempt`.
+3. **Main run, 54 invocations** (9 tasks × 3 runs × 2 conditions), only after the pilot passes the gate above:
+
+   ```powershell
+   $env:PYTHONPATH="src"; C:\Users\mrsom\.venvs\terraproof-py312\Scripts\python tests\agent_lift.py --agent-host codex --runs 3 --codex-executable C:\Users\mrsom\AppData\Local\OpenAI\Codex\bin\37f54d68e5533a51\codex.exe --timeout 900 --approve-model-calls 54
    ```
 
    Ceiling: 54 invocations, at most 13.5 hours of wall time. For Claude, add `--max-usd-per-run 1 --max-usd-total 54`, giving a **$54** ceiling. Without `--approve-model-calls`, the same command prints this plan and starts nothing.
@@ -181,6 +213,53 @@ All statistics are deterministic and implemented in `terraproof.evals.lift`. The
 
 ## 12. Decisions needed
 
-1. **Approve the pilot** (section 9, step 2): host (Codex proposed), 2 invocations, ceiling as stated.
+1. **Approve pilot 2** (section 9, step 2): Codex app runtime 0.163.0-alpha.11.2 proposed, 2 invocations, ceiling as stated.
 2. **Runs per condition for the main run:** 3 (proposed, 54 invocations) or 5 (90 invocations, MDE ≈ 0.22 at ψ = 0.3).
 3. **Claude caps** if Claude is used: $1 per run / $54 total proposed, or higher after the pilot shows typical cost.
+
+## 13. Pilot 1 findings (2026-10-24)
+
+**What ran.** An approved 2-invocation Codex pilot at commit `880da93`:
+
+- `python tests/agent_lift.py --agent-host codex --runs 1 --task indices-ndvi-physical-inputs --timeout 900 --approve-model-calls 2 --out .terracache/agent-lift-pilot.json`
+- Python 3.12.10 venv `C:\Users\mrsom\.venvs\terraproof-py312` with an editable `.[dev,mcp]` install. A first attempt with the 3.14 venv was refused before any call with "work directory inside the checkout", which was correct.
+- codex-cli 0.160.1 from PATH, logged in with ChatGPT.
+- 00:24:46Z to 00:28:24Z (3 min 38 s for both runs). Status complete, `started_agent_runs` 2, `spent_usd` 0.0.
+
+**Results.**
+
+| | without | with |
+|---|---|---|
+| adapter_status | completed | completed |
+| tool_calls (as counted at `880da93`) | 0 | 2 |
+| terraproof_tool_calls / skill_reads | 0 / 0 | 0 / 0 |
+| input / output tokens | 37,972 / 241 | 74,375 / 429 |
+| `ndvi.tif` present / verdict | false / missing | false / missing |
+| diagnostics | [] | [] |
+
+Calibration was eligible: the reference was accepted, and the seeded `ndvi_dn_ratio.tif`, the echoed input and the missing file were all rejected. The recordings' `outputs/` was empty, and `result.json` held counts only, so the run could not be diagnosed from them. That gap is fixed above.
+
+**Offline diagnosis.** No model or agent call was made. The tools used were `codex features list`, `codex sandbox`, `codex mcp list`, `codex debug prompt-input`, the Codex exec-event schema and Codex source.
+
+1. **Neither agent executed a single command.** In `without`, 0 calls and 241 output tokens in one sampling round show that the agent never even read `TASK.md`.
+
+   In `with`, the input tokens are about twice those of `without`, which fits two sampling rounds. The 2 counted "tool calls" are of unknown type: the `880da93` counter counted every non-message `item.completed`. That includes Codex `error` items, which are warnings, not calls (`ThreadItemDetails::Error` in `codex-rs/exec/src/exec_events.rs`). None of them was a Terraproof MCP call or a shell command.
+
+2. **Most likely cause: the lift command overrode Codex's execution tools.** The release smoke test's disable list was reused minus `shell_tool`, so `unified_exec`, `unified_exec_tty`, `shell_snapshot` and `workspace_dependencies` stayed disabled.
+
+   In Codex source, `add_shell_tools` (`codex-rs/core/src/tools/spec_plan.rs`, `main`) exposes either the unified exec tool or a one-shot fallback. It exposes no shell tool at all when the tool policy requires unified exec and `unified_exec` is disabled. Behaviour in 0.160.1 may differ from `main`.
+
+   With no shell tool, an agent cannot read `TASK.md` or write a GeoTIFF, which matches both runs. This cannot be confirmed offline: `codex debug prompt-input` renders messages but not the tool list, and it was identical under both feature sets.
+
+   **Fix:** lift runs now keep all five execution features at Codex defaults (a regression test enforces this).
+
+3. **The prompt and treatment did reach the agent.** `codex debug prompt-input` in prepared projects shows the following.
+   - **Prompt:** the user message "Read TASK.md in the current directory and complete the task it describes." The working directory is the project, and the shell is PowerShell.
+   - **with:** the three routed skills (`spectral-indices`, `geomaster`, `statistical-analysis`) and the Terraproof AGENTS.md block are both visible.
+   - **without:** neither is visible.
+   - **MCP:** `codex mcp list --json` parses the `with` override, and the official MCP client lists all six tools.
+4. **The Windows sandbox is not the blocker.** Under `codex sandbox -P :workspace` on 0.160.1 and 0.163.0-alpha.11.2, PowerShell runs the venv's `python`, which imports numpy/rasterio, reads `inputs/red_dn.tif` and creates `outputs/` files. Note that `%TEMP%` is writable as a whole (`:tmpdir`), so isolation between runs rests on deleting each run's project, as designed.
+5. **Host version.** Pilot 1 used codex-cli 0.160.1, which had startup failures in Phase 4. Phase 4 native acceptance passed on the app runtime 0.163.0-alpha.11.2. Pilot 2 pins that runtime with `--codex-executable` and records the version in the report.
+6. **Classification.** Under the new rules, both pilot 1 runs would be `no-attempt` rather than `completed`, and the "with" run would be `treatment_used: false`. Unit tests replay this pilot 1 shape.
+
+Pilot 1 is a harness failure, not evidence about lift. Its two runs are excluded from any analysis.

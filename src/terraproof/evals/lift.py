@@ -196,6 +196,18 @@ class AgentResult:
     output_tokens: int | None = None
     contamination: list[str] = field(default_factory=list)
     diagnostics: list[str] = field(default_factory=list)
+    # One record per tool call, fixed labels and numbers only:
+    # {"tool", "category", "status", "exit_code", "duration_ms"}.
+    calls: list[dict] = field(default_factory=list)
+    # {"status": completed|error|refused|sandbox-denial|aborted|timeout, "reason", "error_types": [...]}.
+    turn: dict = field(default_factory=dict)
+
+
+# Categories in which a call counts as an attempt to produce the deliverables.
+ATTEMPT_CATEGORIES = ("shell", "file_edit")
+NO_ATTEMPT = "no-attempt"
+PREFLIGHT_FAILED = "preflight_failed"
+PREFLIGHT_ONLY = "preflight_only"
 
 
 class Adapter:
@@ -207,6 +219,10 @@ class Adapter:
 
     def run(self, request: AgentRequest) -> AgentResult:  # pragma: no cover - interface
         raise NotImplementedError
+
+    def preflight(self, request: AgentRequest) -> dict:
+        """Host-specific checks of the prepared project. Must never call a model."""
+        return {}
 
 
 SCRIPTED_BEHAVIOURS = ("reference", "seeded", "echo-input", "missing")
@@ -354,6 +370,41 @@ def prepare_project(task: LiftTask, spec: TaskSpec, reference: Path, project: Pa
         code, skills = _install(project, agent, spec)
         installed = {"install_exit": code, "skills": skills}
     return installed
+
+
+def project_preflight(task: LiftTask, project: Path, *, condition: str, agent: str, routed: list[str]) -> dict:
+    """Host-independent checks of a prepared project; no agent is involved."""
+    checks = {"inputs_present": all((project / "inputs" / name).is_file() for name in task.inputs)}
+    probe = project / "outputs" / ".terraproof-preflight"
+    try:
+        probe.write_text("probe", encoding="utf-8")
+        probe.unlink()
+        checks["outputs_writable"] = True
+    except OSError:
+        checks["outputs_writable"] = False
+    if condition == WITH:
+        skills_dir = {"codex": ".agents/skills", "claude": ".claude/skills"}.get(agent)
+        checks["skills_installed"] = bool(routed) and skills_dir is not None and all(
+            (project / skills_dir / name / "SKILL.md").is_file() for name in routed)
+        if agent == "claude":
+            config = project / ".mcp.json"
+            servers = json.loads(config.read_text(encoding="utf-8")).get("mcpServers", {}) if config.is_file() else {}
+            checks["mcp_registered"] = "terraproof" in servers
+        else:
+            agents_md = project / "AGENTS.md"
+            checks["mcp_registered"] = agents_md.is_file() and "terraproof.mcp" in agents_md.read_text(encoding="utf-8")
+    else:
+        checks["no_terraproof_files"] = not any(
+            (project / name).exists() for name in ("AGENTS.md", ".agents", ".claude", ".mcp.json", ".codex"))
+    return checks
+
+
+def classify_attempt(result: AgentResult, present: dict[str, bool]) -> str:
+    """A completed run that wrote nothing and never ran a command or edited a file is no-attempt."""
+    if result.status != "completed" or any(present.values()):
+        return result.status
+    attempted = any(call.get("category") in ATTEMPT_CATEGORIES for call in result.calls)
+    return result.status if attempted else NO_ATTEMPT
 
 
 # -- scoring by substitution -------------------------------------------------------------
@@ -541,7 +592,10 @@ def planned_calls(task_count: int, runs: int) -> int:
     return task_count * runs * len(CONDITIONS)
 
 
-def _check_budget(adapter: Adapter, budget: Budget, planned: int, allow_model_calls: bool) -> None:
+def _check_budget(adapter: Adapter, budget: Budget, planned: int, allow_model_calls: bool,
+                  preflight_only: bool = False) -> None:
+    if preflight_only:
+        return  # preflight never starts an agent
     if adapter.model_calls and not allow_model_calls:
         raise LiftError(f"adapter {adapter.name!r} calls a model; it needs an explicit opt-in")
     if budget.max_runs is not None and planned > budget.max_runs:
@@ -565,14 +619,20 @@ def run_lift(
     keep: bool = False,
     allow_model_calls: bool = False,
     recordings_out: Path | str | None = None,
+    preflight_only: bool = False,
 ) -> dict:
-    """Run the paired with/without experiment and return a deterministic JSON report."""
+    """Run the paired with/without experiment and return a deterministic JSON report.
+
+    Every run is preflighted first (host-independent project checks plus the adapter's own
+    no-model checks); a failing preflight records `preflight_failed` and starts nothing.
+    `preflight_only` prepares and checks every project without starting any agent.
+    """
     if runs < 1:
         raise LiftError("runs must be at least 1")
     tasks = _select(task_ids)
     specs = _specs()
     planned = planned_calls(len(tasks), runs)
-    _check_budget(adapter, budget, planned, allow_model_calls)
+    _check_budget(adapter, budget, planned, allow_model_calls, preflight_only)
     spent = 0.0
     started = 0
     records: dict[str, list[dict]] = {task.task_id: [] for task in tasks}
@@ -618,6 +678,22 @@ def run_lift(
                     continue
                 request = AgentRequest(task.task_id, condition, run_index, project, brief(task, specs[task.task_id]),
                                        budget.timeout_seconds, budget.per_run_usd)
+                checks = project_preflight(task, project, condition=condition, agent=agent,
+                                           routed=installed["skills"])
+                try:
+                    checks.update(adapter.preflight(request))
+                except Exception as error:  # a broken probe must never fall through to a model call
+                    checks["adapter_preflight"] = False
+                    checks["adapter_preflight_error"] = type(error).__name__
+                preflight_ok = all(value for value in checks.values() if isinstance(value, bool))
+                record["preflight"] = {"ok": preflight_ok, "checks": checks}
+                if preflight_only or not preflight_ok:
+                    record.update(adapter_status=PREFLIGHT_ONLY if preflight_ok else PREFLIGHT_FAILED,
+                                  verdict=NOT_RUN, accepted=False)
+                    records[task.task_id].append(record)
+                    if not keep:
+                        shutil.rmtree(run_dir, ignore_errors=True)
+                    continue
                 started += 1
                 result = adapter.run(request)
                 cost = result.cost_usd if result.cost_usd is not None else (budget.per_run_usd or 0.0)
@@ -626,7 +702,10 @@ def run_lift(
                                       digests[task.task_id])
                 if result.contamination:
                     score.update(accepted=False, verdict=REJECTED if score["verdict"] == ACCEPTED else score["verdict"])
-                record.update(adapter_status=result.status, **score,
+                status = classify_attempt(result, score["deliverables_present"])
+                used = result.terraproof_tool_calls > 0 or result.skill_reads > 0
+                record.update(adapter_status=status, host_status=result.status,
+                              treatment_used=used if condition == WITH else None, **score,
                               agent={key: value for key, value in asdict(result).items() if key != "status"})
                 records[task.task_id].append(record)
                 if recordings_out is not None:
@@ -649,7 +728,7 @@ def run_lift(
         "adapter": {"name": adapter.name, "model_calls": adapter.model_calls},
         "agent_format": agent,
         "design": {"conditions": list(CONDITIONS), "tasks": len(tasks), "runs_per_condition": runs,
-                   "planned_agent_runs": planned, "started_agent_runs": started,
+                   "planned_agent_runs": planned, "started_agent_runs": started, "preflight_only": preflight_only,
                    "order": "paired, back to back, first condition alternating by task and run",
                    "treatment": "python -m terraproof.install --task <spec prompt> --with-mcp"},
         "budget": {**asdict(budget), "spent_usd": round(spent, 6)},
@@ -740,7 +819,8 @@ def summarize(task_reports: list[dict]) -> dict:
     rates = {WITH: [0, 0], WITHOUT: [0, 0]}
     secondary = {condition: {"rejected_by_checks": 0, "rejected_by_oracle_only": 0, "missing_or_error": 0,
                              "contaminated": 0, "tool_calls": 0, "terraproof_tool_calls": 0, "skill_reads": 0,
-                             "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0}
+                             "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0, "no_attempt": 0,
+                             "preflight_failed": 0, "treatment_not_used": 0, "calls_by_category": {}}
                  for condition in CONDITIONS}
     incomplete = 0
     for task in task_reports:
@@ -755,6 +835,12 @@ def summarize(task_reports: list[dict]) -> dict:
             elif run["verdict"] in (MISSING, ERROR, INVALID):
                 stats["missing_or_error"] += 1
             agent = run.get("agent", {})
+            stats["no_attempt"] += run.get("adapter_status") == NO_ATTEMPT
+            stats["preflight_failed"] += run.get("adapter_status") == PREFLIGHT_FAILED
+            stats["treatment_not_used"] += run.get("treatment_used") is False
+            for call in agent.get("calls") or []:
+                category = str(call.get("category"))
+                stats["calls_by_category"][category] = stats["calls_by_category"].get(category, 0) + 1
             stats["contaminated"] += bool(agent.get("contamination"))
             for key in ("tool_calls", "terraproof_tool_calls", "skill_reads", "input_tokens", "output_tokens"):
                 stats[key] += int(agent.get(key) or 0)
@@ -803,6 +889,13 @@ def summarize(task_reports: list[dict]) -> dict:
         "secondary": {condition: {key: _round(value) if isinstance(value, float) else value
                                   for key, value in stats.items()}
                       for condition, stats in secondary.items()},
+        "treatment_delivery": {
+            "with_runs_started": sum(1 for task in task_reports for run in task["runs"]
+                                     if run.get("treatment_used") is not None),
+            "with_runs_using_terraproof": sum(1 for task in task_reports for run in task["runs"]
+                                              if run.get("treatment_used") is True),
+            "note": "intention-to-treat: runs that never used Terraproof still count in the primary metric",
+        },
     }
 
 
@@ -813,7 +906,8 @@ def to_json(report: dict) -> str:
 
 
 __all__ = [
-    "AgentRequest", "AgentResult", "Adapter", "Budget", "LIFT_TASKS", "LiftError", "LiftTask", "ReplayAdapter",
+    "ATTEMPT_CATEGORIES", "AgentRequest", "AgentResult", "Adapter", "NO_ATTEMPT", "PREFLIGHT_FAILED",
+    "PREFLIGHT_ONLY", "classify_attempt", "project_preflight", "Budget", "LIFT_TASKS", "LiftError", "LiftTask", "ReplayAdapter",
     "ScriptedAdapter", "SpecError", "brief", "calibrate", "exact_mcnemar", "mcnemar_mde", "planned_calls",
     "prepare_project", "run_lift", "schedule", "score_outputs", "sign_flip_p", "summarize", "to_json",
 ]

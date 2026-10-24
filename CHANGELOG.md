@@ -16,9 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deterministic paired statistics: the primary analysis is an exact task-level sign-flip test with a seeded task-cluster bootstrap CI; exact McNemar is a secondary analysis; a Connor (1987) minimum-detectable-effect estimate is included. Reports are stable JSON.
 - Offline `scripted` and `replay` adapters only; neither CI nor the tests call a model. The opt-in real-host driver `tests/agent_lift.py` (Codex or Claude Code) prints the plan and call count unless `--approve-model-calls N` matches it exactly. It reuses the release-validation isolation, auth probes and process-tree containment, and enforces per-run timeouts, a hard run count and Claude per-run/total USD caps. Traces are sanitised to counts and labels and include contamination labels.
 
+- Pilot 1 follow-up:
+  - Codex lift runs keep Codex's own execution features at their defaults instead of disabling `unified_exec`, and set `mcp_servers` explicitly in both conditions.
+  - `--codex-executable` pins a native runtime.
+  - A no-model preflight runs before every run. It probes the sandboxed shell, Python/rasterio, input reads and output writes, MCP registration and its six served tools, and checks that skills and AGENTS.md are visible only in "with". A failure starts no agent, and `--preflight-only` runs the preflight alone.
+  - The trace now holds per-call tool label, category, status, exit code and duration, plus a turn status, reason and error-type labels. Codex `error` items no longer count as calls.
+  - Runs that finish without a deliverable or any shell/edit call are reported as `no-attempt`, and "with" runs record `treatment_used`.
+
 ### Evaluation
 
-- No real agent run has been made, so agent lift is still **unmeasured**. The pilot (2 invocations) and the main run (54 invocations) await user approval.
+- Pilot 1 (2 approved Codex 0.160.1 invocations) produced no `ndvi.tif` in either condition, with zero Terraproof use. It is diagnosed in `Terraproof_Phase5_PLAN.md` §13 as a harness failure, most likely from the disabled execution tools, and is excluded from any analysis. Agent lift is still **unmeasured**, and pilot 2 awaits user approval.
 
 ## [0.4.1] — 2026-10-24
 

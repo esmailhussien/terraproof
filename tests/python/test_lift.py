@@ -254,9 +254,12 @@ def test_driver_host_commands_isolate_conditions(tmp_path):
     for command in (without, with_mcp):
         assert command[command.index("--sandbox") + 1] == "workspace-write"
         assert "sandbox_workspace_write.network_access=false" in command
-        assert "shell_tool" not in [command[i + 1] for i, part in enumerate(command) if part == "--disable"]
+        disabled = [command[i + 1] for i, part in enumerate(command) if part == "--disable"]
+        # Pilot 1 regression: Codex's own execution tools must stay at their defaults.
+        assert not set(disabled) & set(driver.CODEX_EXECUTION_DEFAULTS)
+        assert "browser_use" in disabled and "multi_agent" in disabled
         assert command[-1] == driver.PROMPT
-    assert not any(part.startswith("mcp_servers=") for part in without)
+    assert "mcp_servers={}" in without
     assert any(part.startswith("mcp_servers={terraproof=") for part in with_mcp)
     claude_without = driver.claude_lift_command("claude.exe", tmp_path, tmp_path / "e.json", WITHOUT, 1.0)
     claude_with = driver.claude_lift_command("claude.exe", tmp_path, tmp_path / "m.json", WITH, 1.0)
@@ -302,3 +305,208 @@ def test_driver_traces_keep_counts_and_labels_only():
 def test_agent_result_fields_round_trip_through_recordings():
     assert set(AgentResult.__dataclass_fields__) >= {"status", "cost_usd", "tool_calls", "terraproof_tool_calls",
                                                      "skill_reads", "contamination", "input_tokens", "output_tokens"}
+
+
+# -- pilot 1 follow-up: sanitised per-call trace, preflight, no-attempt -------------------
+SECRET = "python make_ndvi.py --token SECRET-ARG"
+
+
+def _codex_item(kind, stamp, item):
+    return (stamp, {"type": kind, "item": item})
+
+
+def test_codex_trace_records_fixed_labels_numbers_and_turn_status_only():
+    events = [
+        (0.0, {"type": "turn.started"}),
+        _codex_item("item.started", 1.0, {"id": "c1", "type": "command_execution", "command": SECRET,
+                                          "status": "in_progress"}),
+        _codex_item("item.completed", 3.5, {"id": "c1", "type": "command_execution", "command": SECRET,
+                                            "aggregated_output": "SECRET-OUTPUT", "exit_code": 1, "status": "failed"}),
+        _codex_item("item.completed", 4.0, {"id": "e1", "type": "error", "message": "SECRET warning"}),
+        _codex_item("item.started", 5.0, {"id": "m1", "type": "mcp_tool_call", "server": "terraproof",
+                                          "tool": "run_checks", "arguments": {"paths": ["SECRET.tif"]}}),
+        _codex_item("item.completed", 5.25, {"id": "m1", "type": "mcp_tool_call", "server": "terraproof",
+                                             "tool": "run_checks", "status": "completed"}),
+        _codex_item("item.completed", 6.0, {"id": "m2", "type": "mcp_tool_call", "server": "evil", "tool": "SECRET"}),
+        _codex_item("item.completed", 7.0, {"id": "f1", "type": "file_change", "changes": [{"path": "SECRET"}],
+                                            "status": "completed"}),
+        _codex_item("item.completed", 7.5, {"id": "a1", "type": "agent_message", "text": "SECRET prose"}),
+        (8.0, {"type": "turn.completed", "usage": {"input_tokens": 7, "output_tokens": 3}}),
+    ]
+    result = driver.codex_trace(events, WITH, ())
+    assert result.calls == [
+        {"tool": "command_execution", "category": "shell", "status": "failed", "exit_code": 1, "duration_ms": 2500},
+        {"tool": "terraproof.run_checks", "category": "mcp:run_checks", "status": "completed", "exit_code": None,
+         "duration_ms": 250},
+        {"tool": "mcp", "category": "mcp:other", "status": "completed", "exit_code": None, "duration_ms": 0},
+        {"tool": "file_change", "category": "file_edit", "status": "completed", "exit_code": None, "duration_ms": 0},
+    ]
+    assert (result.tool_calls, result.terraproof_tool_calls) == (4, 1)  # the error item is not a call
+    assert result.turn == {"status": "completed", "reason": "ok", "error_types": ["unclassified"], "error_items": 1}
+    assert "SECRET" not in json.dumps(result.__dict__)
+
+
+@pytest.mark.parametrize("events, kwargs, status, turn_status", [
+    ([(0.0, {"type": "turn.completed"})], {}, "completed", "completed"),
+    ([(0.0, {"type": "turn.failed", "error": {"message": "unexpected argument --foo"}})], {}, "failed", "error"),
+    ([(0.0, {"type": "error", "message": "Not logged in"})], {}, "failed", "error"),
+    ([(0.0, {"type": "turn.started"})], {}, "failed", "aborted"),
+    ([(0.0, {"type": "turn.started"})], {"timed_out": True}, "timeout", "timeout"),
+    ([_codex_item("item.completed", 1.0, {"id": "c", "type": "command_execution", "command": "x",
+                                          "status": "declined"}), (2.0, {"type": "turn.completed"})],
+     {}, "completed", "sandbox-denial"),
+    ([_codex_item("item.completed", 1.0, {"id": "c", "type": "command_execution", "command": "x", "exit_code": 1,
+                                          "status": "failed", "aggregated_output": "Access is denied."}),
+      (2.0, {"type": "turn.completed"})], {}, "completed", "sandbox-denial"),
+])
+def test_codex_turn_status_labels(events, kwargs, status, turn_status):
+    result = driver.codex_trace(events, WITHOUT, (), **kwargs)
+    assert (result.status, result.turn["status"]) == (status, turn_status)
+    if turn_status == "completed":
+        assert result.turn["reason"] == "no tool calls"
+    if turn_status == "sandbox-denial":
+        assert "sandbox_denied" in result.turn["error_types"]
+    if "unexpected argument" in json.dumps(events):
+        assert result.turn["error_types"] == ["unsupported_flag_or_config"]
+    if "Not logged in" in json.dumps(events):
+        assert result.turn["error_types"] == ["auth_unavailable"]
+
+
+def test_claude_trace_pairs_results_and_labels_refusals_and_budget_stops():
+    events = [
+        (0.0, {"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": SECRET}},
+            {"type": "tool_use", "id": "t2", "name": "mcp__terraproof__preflight", "input": {"plan": "SECRET"}},
+            {"type": "tool_use", "id": "t3", "name": "SECRET_TOOL", "input": {}}]}}),
+        (1.5, {"type": "user", "message": {"content": [
+            {"type": "tool_result", "tool_use_id": "t1", "is_error": True, "content": "SECRET"},
+            {"type": "tool_result", "tool_use_id": "t2", "content": "SECRET"}]}}),
+        (2.0, {"type": "result", "subtype": "error_max_budget_usd", "is_error": True, "total_cost_usd": 1.01}),
+    ]
+    result = driver.claude_trace(events, WITH, ())
+    assert result.calls == [
+        {"tool": "Bash", "category": "shell", "status": "failed", "exit_code": None, "duration_ms": 1500},
+        {"tool": "terraproof.preflight", "category": "mcp:preflight", "status": "completed", "exit_code": None,
+         "duration_ms": 1500},
+        {"tool": "other", "category": "other", "status": "started", "exit_code": None, "duration_ms": None},
+    ]
+    assert result.status == "failed" and result.cost_usd == 1.01
+    assert result.turn["status"] == "error" and result.turn["error_types"] == ["error_max_budget_usd"]
+    assert "SECRET" not in json.dumps(result.__dict__)
+    refused = driver.claude_trace([(0.0, {"type": "assistant", "message": {"stop_reason": "refusal", "content": []}}),
+                                   (0.1, {"type": "result", "subtype": "success", "is_error": False})], WITHOUT, ())
+    assert (refused.status, refused.turn["status"]) == ("failed", "refused")
+
+
+def test_no_attempt_is_classified_from_calls_and_deliverables():
+    present = {"ndvi.tif": False}
+    assert lift.classify_attempt(AgentResult(status="completed"), present) == lift.NO_ATTEMPT
+    other_only = AgentResult(status="completed", calls=[{"category": "mcp:list_skills"}])
+    assert lift.classify_attempt(other_only, present) == lift.NO_ATTEMPT
+    tried = AgentResult(status="completed", calls=[{"category": "shell"}])
+    assert lift.classify_attempt(tried, present) == "completed"
+    assert lift.classify_attempt(AgentResult(status="completed"), {"ndvi.tif": True}) == "completed"
+    assert lift.classify_attempt(AgentResult(status="timeout"), present) == "timeout"
+
+
+class SilentAdapter(lift.Adapter):
+    """Mimics pilot 1: the host completes a turn but runs nothing and writes nothing."""
+
+    name = "silent"
+
+    def __init__(self, checks=None):
+        self.checks = checks or {}
+        self.calls = 0
+
+    def preflight(self, request):
+        return dict(self.checks)
+
+    def run(self, request):
+        self.calls += 1
+        return AgentResult(status="completed", input_tokens=37972, output_tokens=241,
+                           calls=[{"tool": "mcp", "category": "mcp:other", "status": "completed",
+                                   "exit_code": None, "duration_ms": 5}] if request.condition == WITH else [],
+                           turn={"status": "completed", "reason": "no tool calls", "error_types": [], "error_items": 0})
+
+
+def test_pilot1_shape_is_reported_as_no_attempt_and_unused_treatment(tmp_path):
+    report = lift.run_lift(SilentAdapter(), task_ids=FAST[:1], work_root=tmp_path)
+    runs = {run["condition"]: run for run in report["tasks"][0]["runs"]}
+    assert {run["adapter_status"] for run in runs.values()} == {lift.NO_ATTEMPT}
+    assert {run["host_status"] for run in runs.values()} == {"completed"}
+    assert runs[WITH]["treatment_used"] is False and runs[WITHOUT]["treatment_used"] is None
+    assert all(run["preflight"]["ok"] for run in runs.values())
+    summary = report["summary"]
+    assert summary["secondary"][WITH]["no_attempt"] == summary["secondary"][WITHOUT]["no_attempt"] == 1
+    assert summary["secondary"][WITH]["treatment_not_used"] == 1
+    assert summary["secondary"][WITH]["calls_by_category"] == {"mcp:other": 1}
+    assert summary["treatment_delivery"]["with_runs_started"] == 1
+    assert summary["treatment_delivery"]["with_runs_using_terraproof"] == 0
+
+
+def test_failed_preflight_starts_no_agent(tmp_path):
+    adapter = SilentAdapter({"sandbox_shell": False})
+    report = lift.run_lift(adapter, task_ids=FAST[:1], work_root=tmp_path)
+    assert adapter.calls == 0 and report["design"]["started_agent_runs"] == 0
+    runs = report["tasks"][0]["runs"]
+    assert {run["adapter_status"] for run in runs} == {lift.PREFLIGHT_FAILED}
+    assert all(run["preflight"]["checks"]["sandbox_shell"] is False for run in runs)
+    assert report["summary"]["complete_pairs"] == 0 and report["summary"]["incomplete_pairs"] == 1
+
+    class Broken(SilentAdapter):
+        def preflight(self, request):
+            raise RuntimeError("probe crashed")
+
+    broken = Broken()
+    report = lift.run_lift(broken, task_ids=FAST[:1], work_root=tmp_path / "broken")
+    assert broken.calls == 0
+    assert report["tasks"][0]["runs"][0]["preflight"]["checks"]["adapter_preflight_error"] == "RuntimeError"
+
+
+def test_preflight_only_needs_no_approval_and_starts_nothing(tmp_path):
+    adapter = CountingAdapter(cost=1.0)
+    report = lift.run_lift(adapter, task_ids=FAST[:1], work_root=tmp_path, preflight_only=True)
+    assert adapter.calls == 0 and report["design"]["preflight_only"] is True
+    assert {run["adapter_status"] for run in report["tasks"][0]["runs"]} == {lift.PREFLIGHT_ONLY}
+
+
+def test_project_preflight_checks_treatment_files(tmp_path):
+    task = lift.lift_task(FAST[0])
+    reference = tmp_path / "reference"
+    lift._generate(task, reference)
+    with_project, without_project = tmp_path / "with", tmp_path / "without"
+    installed = lift.prepare_project(task, SPECS[task.task_id], reference, with_project, condition=WITH, agent="codex")
+    lift.prepare_project(task, SPECS[task.task_id], reference, without_project, condition=WITHOUT, agent="codex")
+    checks = lift.project_preflight(task, with_project, condition=WITH, agent="codex", routed=installed["skills"])
+    assert checks == {"inputs_present": True, "outputs_writable": True, "skills_installed": True, "mcp_registered": True}
+    assert lift.project_preflight(task, without_project, condition=WITHOUT, agent="codex", routed=[]) == {
+        "inputs_present": True, "outputs_writable": True, "no_terraproof_files": True}
+    (with_project / "AGENTS.md").unlink()
+    assert lift.project_preflight(task, with_project, condition=WITH, agent="codex",
+                                  routed=installed["skills"])["mcp_registered"] is False
+
+
+def test_prompt_input_parser_reads_names_and_block_only():
+    document = [{"role": "developer", "content": [{"type": "input_text", "text": "## Skills\n- gdal: SECRET\n- geomaster: x"}]},
+                {"role": "user", "content": [{"type": "input_text", "text": "<!-- terraproof:codex:begin --> SECRET"}]}]
+    assert driver._prompt_input_names(document) == ({"gdal", "geomaster"}, True)
+    assert driver._prompt_input_names({"not": "a list"}) == (set(), False)
+
+
+def test_driver_preflight_only_starts_no_agent(tmp_path, monkeypatch):
+    seen = {}
+
+    def fake_run_lift(adapter, **kwargs):
+        seen.update(kwargs)
+        return {"tasks": [], "design": {"started_agent_runs": 0}, "budget": {"spent_usd": 0.0}}
+
+    monkeypatch.setattr(driver, "probe_codex", lambda executable=None: ("codex.exe", "ok", "codex-cli test"))
+    monkeypatch.setattr(driver, "run_lift", fake_run_lift)
+    monkeypatch.setattr(driver, "to_json", lambda report: json.dumps(report))
+    out = tmp_path / "lift.json"
+    assert driver.main(["--agent-host", "codex", "--task", FAST[0], "--preflight-only", "--out", str(out)]) == 0
+    assert seen["preflight_only"] is True and seen["allow_model_calls"] is False and seen["runs"] == 1
+    assert seen["recordings_out"] is None
+    assert json.loads((tmp_path / "lift-preflight.json").read_text())["host"]["version"] == "codex-cli test"
+    with pytest.raises(SystemExit):
+        driver.main(["--agent-host", "codex", "--preflight-only", "--approve-model-calls", "18"])
