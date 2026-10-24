@@ -513,3 +513,18 @@ An independent review by Codex (a different model family; it disclosed earlier c
 
 - **Re-grading:** all 72 saved main-run deliverables were scored again with the fixed grader, offline. **0 verdicts changed.** The pre-specified result in section 16 stands (sign-flip p = 0.125, not significant; no lift claimed); only the MDE line changes, to none feasible at 27 pairs and ψ = 0.222.
 - **Two more gaps, fixed in a follow-up:** a generic probe (zeros, +1 and row-flipped outputs per deliverable) found `sr_nir.tif` in `satellite-s2-baseline-offset-mask` ungraded and a row-flipped `composite_counts.tif` in `satellite-seasonal-harmonized-composite` accepted. Both oracles now grade the full delivered file, and the probe is a regression test over every deliverable of all nine tasks. Every saved historical output for both files matches the reference pixel for pixel; re-grading the 72 deliverables again changed 0 verdicts.
+
+## 18. API agent hosts: OpenAI and Groq (2026-10-25)
+
+Claude Code solved all six harder tasks without Terraproof in a one-run screen (12 runs, $1.74), so lift cannot show for that host. Weaker models may leave room. OpenAI (e.g. GPT-4o) and Groq expose plain chat APIs rather than agents, so `tests/api_agent.py` supplies the agent loop:
+
+- **Tools:** `list_files`, `read_file`, `write_file` (confined to the run project: no absolute paths or `..`) and `run_python` (one script per call, the condition's interpreter, the project directory, a 120 s timeout with process-tree cleanup). In "with" only, Terraproof's six MCP tools come from the installer-registered server, as for the other hosts; `load_section` calls and reads of installed skill files count as skill reads.
+- **Not a sandbox:** `run_python` executes model-written code on the local machine with the user's permissions. Run it on a machine where that is acceptable.
+- **Keys:** only from `OPENAI_API_KEY` / `GROQ_API_KEY`, read when a request is sent; never stored, logged or reported. Errors are reported as status labels (`http 401`), never response bodies. A missing key refuses the run before any request.
+- **Caps per run:** model calls (`--max-model-calls-per-run`, default 40), total tokens (`--max-tokens-per-run`, default 300,000), output tokens per call (4,096) and USD (`--max-usd-per-run`). Spend is computed from returned token usage at prices the user passes (`--usd-per-million-input/-output`, required; prices are never guessed). The total cap and `--approve-model-calls` apply as for Claude.
+- **Isolation:** the same preflight and "without" rules apply: a dependency-only Python via `--agent-python-without`, no Terraproof importable, neutral paths. Calls made through the tools are checked with the same contamination labels.
+- **Tests:** `tests/python/test_api_agent.py` drives the loop with a scripted fake model and blocks real HTTP. No API request has been made.
+
+```bash
+python tests/agent_lift.py --agent-host openai --runs 1 --task terrain-slope-map --usd-per-million-input <price> --usd-per-million-output <price>   # plan only
+```
