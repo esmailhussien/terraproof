@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Six harder agent-lift tasks, authored independently by Codex (a different model family): `landcover-summary-grid`, `terrain-slope-map`, `population-grid-transfer`, `vegetation-change-rate`, `storm-total-rainfall` and `three-band-vegetation-index`. Each has a spec, recipe, independent scalar oracle reading every cell and mask of the delivered file, and two seeded wrong outputs (see `docs/HARDER_TASKS.md`). The benchmark grows to 33 tasks with 0 false passes and 27 checker blind spots (the 15 existing plus 12 new oracle-only seeds). Their difficulty is not yet measured.
 - Lift cohorts: `ORIGINAL_LIFT_TASKS` (the nine of the first run) and `HARDER_LIFT_TASKS` (the six above) are separate experiments. `run_lift`, `python -m terraproof.evals lift` and `tests/agent_lift.py` take `--cohort original|harder`, default `original`, and refuse `--task` together with `--cohort`; reports record the cohort. Calibration and the grader probe still cover all fifteen tasks.
 
+### Fixed
+
+- `geomaster` skill: the terrain snippet (`SKILL.md` "Terrain Analysis", and example 68 in `references/code-examples.md`) computed slope with `np.gradient(dem)` and no spacing, assuming 1-unit square pixels and equal vertical and horizontal units, and its hillshade swapped the sine and cosine of the slope. `terrain_metrics()` now uses the signed pixel size from the transform, converts the band's vertical unit to metres (or a given `z_factor`), refuses geographic, non-metre, rotated or sheared grids, masks nodata, and uses the standard hillshade. Found by the independent review; documented in `skills/geomaster/UPSTREAM.md` and `sources/SOURCES.md`. `tests/python/test_skill_snippets.py` runs the snippet from the skill text on synthetic DEMs (6 tests; all fail on the upstream snippet), and the router's snapshot test pins the snapshot-era text of the two edited files.
+
 ### Changed
 
 - `tests/agent_lift.py`: the Claude total USD cap now defaults to the planned runs × `--max-usd-per-run` instead of a fixed $54, so a cohort's budget always covers its planned runs.

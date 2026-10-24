@@ -160,7 +160,7 @@ This file tracks upstream repositories, specifications, and references evaluated
 - **Local AgentLayer Paths:**
   - Production Skill: [skills/geomaster/](../skills/geomaster/) (`SKILL.md`, `UPSTREAM.md`)
   - License/Notice: [third_party/kdense-scientific-agent-skills/](../third_party/kdense-scientific-agent-skills/) (`LICENSE`, `NOTICE.md`)
-- **Modification Status:** Unchanged (byte-for-byte faithful vendoring).
+- **Modification Status:** Modified locally (2026-10-24): the `SKILL.md` "Terrain Analysis" snippet and `references/code-examples.md` example 68 are corrected to use real pixel spacing and vertical units (see [skills/geomaster/UPSTREAM.md](../skills/geomaster/UPSTREAM.md)). Everything else is unchanged from upstream.
 
 ### design-postgis-tables
 

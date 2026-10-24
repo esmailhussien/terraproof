@@ -178,23 +178,52 @@ union = gpd.overlay(gdf1, gdf2, how='union')
 ### Terrain Analysis
 
 ```python
-def terrain_metrics(dem_path):
-    """Calculate slope, aspect, hillshade from DEM."""
+# Vertical units to metres; extend for your data. None means "assume metres".
+Z_TO_METRES = {None: 1.0, "": 1.0, "m": 1.0, "metre": 1.0, "meter": 1.0, "metres": 1.0, "meters": 1.0,
+               "ft": 0.3048, "foot": 0.3048, "feet": 0.3048, "us-ft": 1200 / 3937, "us survey foot": 1200 / 3937}
+
+def terrain_metrics(dem_path, z_factor=None, azimuth=315.0, altitude=45.0):
+    """Slope (degrees), aspect (compass degrees the slope faces) and hillshade from a projected DEM.
+
+    Gradients use the real pixel size from the transform (pixels are often not square), and
+    elevations are converted to metres from the band unit unless z_factor is given.
+    Nodata becomes NaN, so cells next to nodata are NaN too; flat cells have no aspect.
+    """
     with rasterio.open(dem_path) as src:
-        dem = src.read(1)
+        if src.crs is None or src.crs.is_geographic:
+            raise ValueError("reproject the DEM to a projected CRS in metres first")
+        if src.crs.linear_units_factor[1] != 1.0:
+            raise ValueError("the CRS units are not metres; reproject or rescale the horizontal units")
+        a, b, _, d, e, _ = tuple(src.transform)[:6]
+        if b or d:
+            raise ValueError("resample a rotated or sheared DEM to a north-up grid first")
+        dem = src.read(1, masked=True).astype("float64").filled(np.nan)
+        unit = (src.units[0] or "").strip().lower() if src.units else None
+    if z_factor is None:
+        if unit not in Z_TO_METRES:
+            raise ValueError(f"unknown elevation unit {unit!r}; pass z_factor")
+        z_factor = Z_TO_METRES[unit]
 
-    dy, dx = np.gradient(dem)
-    slope = np.arctan(np.sqrt(dx**2 + dy**2)) * 180 / np.pi
-    aspect = (90 - np.arctan2(-dy, dx) * 180 / np.pi) % 360
+    # Signed spacing: one row step moves e metres north (e < 0 on north-up grids), one column a metres east.
+    dz_dnorth, dz_deast = np.gradient(dem * z_factor, e, a)
+    slope = np.degrees(np.arctan(np.hypot(dz_deast, dz_dnorth)))
+    aspect = np.degrees(np.arctan2(-dz_deast, -dz_dnorth)) % 360  # downslope direction, clockwise from north
+    aspect[slope == 0] = np.nan
+    # A central difference skips the centre cell, so nodata cells themselves must be masked explicitly.
+    slope[np.isnan(dem)] = np.nan
+    aspect[np.isnan(dem)] = np.nan
 
-    # Hillshade
-    az_rad, alt_rad = np.radians(315), np.radians(45)
-    hillshade = (np.sin(alt_rad) * np.sin(np.radians(slope)) +
-                 np.cos(alt_rad) * np.cos(np.radians(slope)) *
-                 np.cos(np.radians(aspect) - az_rad))
+    # Hillshade (Burrough & McDonnell): zenith = 90 - altitude; 0 = shadow, 1 = facing the sun.
+    s, alt = np.radians(slope), np.radians(altitude)
+    facing = np.cos(np.radians(azimuth) - np.radians(np.nan_to_num(aspect)))
+    hillshade = np.clip(np.sin(alt) * np.cos(s) + np.cos(alt) * np.sin(s) * facing, 0, 1)
 
     return slope, aspect, hillshade
 ```
+
+Check the DEM before trusting any terrain metric: projected CRS in metres, north-up grid, the
+band's vertical unit, and the real pixel size (`src.res`). A geographic DEM (degrees) or a
+feet-vs-metres mismatch gives slopes that look plausible but are wrong.
 
 ### Network Analysis
 
