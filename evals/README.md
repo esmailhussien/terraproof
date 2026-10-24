@@ -1,5 +1,10 @@
 # Terraproof executable benchmark harness
 
+Local task-extension branch: six additional tasks bring the catalog to **33 tasks
+in 11 files**, with **27 checker blind spots** (the old 15 plus 12 new seeds).
+The original 27-task measurements below remain historical baseline results.
+See [the added cohort and its limitations](../docs/HARDER_TASKS.md).
+
 This directory holds the benchmark **specifications** (`tasks/*.json`) and their
 **executable harness**: `python -m terraproof.evals run` generates deterministic fixtures,
 runs the real Terraproof checks and provenance API, and reports whether each spec's
@@ -13,7 +18,7 @@ the checks, the oracle, or both.
 
 ## Commands
 
-Run every spec (27 tasks, 9 files) and print JSON to stdout:
+Run every spec (33 tasks, 11 files in this extension) and print JSON to stdout:
 
 ```powershell
 .venv\Scripts\python -m terraproof.evals run

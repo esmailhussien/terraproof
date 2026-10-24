@@ -1,0 +1,47 @@
+{
+  "skill": "gdal",
+  "tasks": [
+    {
+      "id": "landcover-summary-grid",
+      "prompt": "Create the land-cover summary on target_grid.tif, using source.tif and the reporting policies in request.json. Deliver result.tif with the most represented valid class in each target cell.",
+      "inputs": "Synthetic declared files: source.tif, target_grid.tif, request.json. Parameters describe user policies, not oracle controls.",
+      "acceptance": [
+        "The independent oracle must evaluate every delivered numeric cell and its mask from the declared files.",
+        "The delivered spatial metadata and storage domain must meet the file contract."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Categorical coarsening with fractional support and deterministic ties."
+    },
+    {
+      "id": "terrain-slope-map",
+      "prompt": "Produce a slope-angle map in degrees from elevation.tif using the central-difference and support policies in request.json. Deliver result.tif on the elevation grid.",
+      "inputs": "Synthetic declared files: elevation.tif, request.json. Parameters describe user policies, not oracle controls.",
+      "acceptance": [
+        "The independent oracle must evaluate every delivered numeric cell and its mask from the declared files.",
+        "The delivered spatial metadata and storage domain must meet the file contract."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Vertical-unit and anisotropic-grid gradient conversion."
+    },
+    {
+      "id": "population-grid-transfer",
+      "prompt": "Transfer the population counts in source.tif to target_grid.tif under the allocation and coverage policies in request.json. Deliver result.tif for the planning grid.",
+      "inputs": "Synthetic declared files: source.tif, target_grid.tif, request.json. Parameters describe user policies, not oracle controls.",
+      "acceptance": [
+        "The independent oracle must evaluate every delivered numeric cell and its mask from the declared files.",
+        "The delivered spatial metadata and storage domain must meet the file contract."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Interpolating extensive counts instead of conservative area allocation."
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "skill": "geomaster",
+  "tasks": [
+    {
+      "id": "vegetation-change-rate",
+      "prompt": "Fit a per-pixel ordinary least-squares annual vegetation trend from the observations and acquisition dates in request.json. Deliver the slope as result.tif using the stated observation support policy.",
+      "inputs": "Synthetic declared files: observation-0.tif, observation-1.tif, observation-2.tif, observation-3.tif, observation-4.tif, request.json. Parameters describe user policies, not oracle controls.",
+      "acceptance": [
+        "The independent oracle must evaluate every delivered numeric cell and its mask from the declared files.",
+        "The delivered spatial metadata and storage domain must meet the file contract."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Observation-index regression in place of actual calendar elapsed time."
+    },
+    {
+      "id": "storm-total-rainfall",
+      "prompt": "Compute the total storm rainfall in millimetres from the interval-average rates and interval bounds in request.json. Deliver result.tif over the supplied rate grid under the stated coverage policy.",
+      "inputs": "Synthetic declared files: interval-0.tif, interval-1.tif, interval-2.tif, interval-3.tif, request.json. Parameters describe user policies, not oracle controls.",
+      "acceptance": [
+        "The independent oracle must evaluate every delivered numeric cell and its mask from the declared files.",
+        "The delivered spatial metadata and storage domain must meet the file contract."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Summing rates or using equal-duration weights for unequal observation intervals."
+    },
+    {
+      "id": "three-band-vegetation-index",
+      "prompt": "Compute EVI from bands.tif using its band metadata and the index definition in request.json. Deliver result.tif with unsupported or undefined results represented as nodata.",
+      "inputs": "Synthetic declared files: bands.tif, request.json. Parameters describe user policies, not oracle controls.",
+      "acceptance": [
+        "The independent oracle must evaluate every delivered numeric cell and its mask from the declared files.",
+        "The delivered spatial metadata and storage domain must meet the file contract."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Using stored three-band values or one common calibration instead of band-specific physical values."
+    }
+  ]
+}

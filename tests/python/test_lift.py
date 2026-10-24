@@ -48,7 +48,7 @@ class CountingAdapter(ScriptedAdapter):
 
 
 def test_lift_tasks_are_real_specs_with_recipes_and_consistent_files():
-    assert len(LIFT_TASKS) == 9
+    assert len(LIFT_TASKS) == 15
     for task in LIFT_TASKS:
         assert task.task_id in SPECS and task.task_id in REGISTRY
         names = set(task.inputs) | set(task.deliverable_names) | {wrong for _, wrong in task.seeded}
@@ -240,9 +240,9 @@ def test_driver_prints_a_plan_without_starting_any_host(capsys, monkeypatch):
     monkeypatch.setattr(driver, "run_lift", forbidden)
     assert driver.main(["--agent-host", "claude", "--runs", "3", "--max-usd-per-run", "1", "--max-usd-total", "40"]) == 0
     plan = json.loads(capsys.readouterr().out)
-    assert plan["planned_model_invocations"] == 54
+    assert plan["planned_model_invocations"] == 6 * len(LIFT_TASKS)
     assert plan["total_usd_ceiling"] == 40
-    assert plan["command_to_approve"].endswith("--approve-model-calls 54")
+    assert plan["command_to_approve"].endswith(f"--approve-model-calls {6 * len(LIFT_TASKS)}")
     assert driver.main(["--agent-host", "codex", "--runs", "1", "--task", FAST[0]]) == 0
     plan = json.loads(capsys.readouterr().out)
     assert plan["planned_model_invocations"] == 2 and plan["total_usd_ceiling"] is None
@@ -611,7 +611,7 @@ def test_claude_executable_option_refuses_wrappers_and_is_in_the_approved_comman
                         "--max-usd-per-run", "1", "--max-usd-total", "54"]) == 0
     plan = json.loads(capsys.readouterr().out)
     assert f"--claude-executable {native}" in plan["command_to_approve"]
-    assert plan["planned_model_invocations"] == 54 and plan["total_usd_ceiling"] == 54
+    assert plan["planned_model_invocations"] == 6 * len(LIFT_TASKS) and plan["total_usd_ceiling"] == 54
 
 
 def test_ceiling_tasks_are_flagged_without_changing_the_primary_analysis(tmp_path):

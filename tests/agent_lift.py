@@ -782,7 +782,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--agent-host", choices=["codex", "claude"], required=True)
     parser.add_argument("--runs", type=int, default=3, help="runs per condition and task (default 3)")
-    parser.add_argument("--task", action="append", help="lift task id (repeatable; default all nine)")
+    parser.add_argument("--task", action="append", help="lift task id (repeatable; default all registered tasks)")
     parser.add_argument("--timeout", type=float, default=900, help="per-run timeout in seconds (default 900)")
     parser.add_argument("--max-usd-per-run", type=float, default=1.0, help="Claude per-run USD cap (default 1)")
     parser.add_argument("--max-usd-total", type=float, default=54.0, help="Claude total USD cap (default 54)")

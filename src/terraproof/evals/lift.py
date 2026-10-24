@@ -159,6 +159,23 @@ LIFT_TASKS: tuple[LiftTask, ...] = (
 )
 
 
+
+# Additional cohort; the original nine contracts and task definitions are unchanged.
+LIFT_TASKS += (
+    LiftTask('landcover-summary-grid', ('source.tif', 'target_grid.tif', 'request.json'), (("result.tif", 'single-band uint8 GeoTIFF on target_grid.tif grid, nodata 255'),),
+             (('result.tif', 'nearest.tif'), ('result.tif', 'coverage-ignored.tif'))),
+    LiftTask('terrain-slope-map', ('elevation.tif', 'request.json'), (("result.tif", 'single-band float32 GeoTIFF on elevation.tif grid, nodata -9999'),),
+             (('result.tif', 'vertical-units-ignored.tif'), ('result.tif', 'square-pixels-assumed.tif'))),
+    LiftTask('population-grid-transfer', ('source.tif', 'target_grid.tif', 'request.json'), (("result.tif", 'single-band float32 GeoTIFF on target_grid.tif grid, nodata -9999'),),
+             (('result.tif', 'bilinear.tif'), ('result.tif', 'nearest-count.tif'))),
+    LiftTask('vegetation-change-rate', ('observation-0.tif', 'observation-1.tif', 'observation-2.tif', 'observation-3.tif', 'observation-4.tif', 'request.json'), (("result.tif", 'single-band float32 GeoTIFF on observation-0.tif grid, nodata -9999'),),
+             (('result.tif', 'equally-spaced-index.tif'), ('result.tif', 'missing-as-zero.tif'))),
+    LiftTask('storm-total-rainfall', ('interval-0.tif', 'interval-1.tif', 'interval-2.tif', 'interval-3.tif', 'request.json'), (("result.tif", 'single-band float32 GeoTIFF on interval-0.tif grid, nodata -9999'),),
+             (('result.tif', 'sum-of-rates.tif'), ('result.tif', 'equal-duration-mean.tif'))),
+    LiftTask('three-band-vegetation-index', ('bands.tif', 'request.json'), (("result.tif", 'single-band float32 GeoTIFF on bands.tif grid, nodata -9999'),),
+             (('result.tif', 'stored-values.tif'), ('result.tif', 'one-band-calibration.tif'))),
+)
+
 # -- budget and adapters -----------------------------------------------------------------
 @dataclass(frozen=True)
 class Budget:

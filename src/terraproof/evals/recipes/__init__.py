@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from terraproof.evals.recipes import accuracy, crs, indices, raster, sar, satellite, stac, timeseries, vector
+from terraproof.evals.recipes import accuracy, crs, indices, raster, sar, satellite, stac, timeseries, vector, harder
 from terraproof.evals.specs import SpecError
 
-_MODULES = (accuracy, crs, indices, raster, sar, satellite, stac, timeseries, vector)
+_MODULES = (accuracy, crs, indices, raster, sar, satellite, stac, timeseries, vector, harder)
 
 
 def build_registry() -> dict:
