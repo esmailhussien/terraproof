@@ -22,19 +22,19 @@ performance targets, successful real-host tool use or hosted CI. Historical v3
 and v4 routing acceptance failed. A new frozen internal audit also missed the
 unchanged thresholds: EN recall 0.95 with 12.5 forbidden selections per 100; AR
 recall 0.8125 with 3.75 forbidden selections per 100. This same-agent audit is
-not independent acceptance; see [its protocol](evals/routing/INTERNAL_20261023_PROTOCOL.md).
+not independent acceptance; see [its protocol](../../evals/routing/INTERNAL_20261023_PROTOCOL.md).
 
 Subsequent completion request: that exposed internal set is now development
 coverage. After scope/Arabic fixes, a separate frozen 100-item same-agent audit
 met the unchanged per-language targets (EN recall 1.0, AR 0.98; forbidden rates
-4/100 and 2/100). See [release audit](evals/routing/RELEASE_20261023_PROTOCOL.md).
+4/100 and 2/100). See [release audit](../../evals/routing/RELEASE_20261023_PROTOCOL.md).
 This is explicitly internal evidence under the requested sole-agent process,
 not an independent heldout pass. The full local Python suite passed 1037 tests.
 After a supported runtime restart and a fresh app-bundled Python environment,
 native Codex passed actual call/result checks for both allowed read-only MCP
 tools and successful turn completion. No file-security labels or ownership were
 changed, and the trace gate remains strict. Hosted CI is verified after the
-checkpoint push. Current detail is in [the release checklist](RELEASE_CHECKLIST.md).
+checkpoint push. Current detail is in [the release checklist](../RELEASE_CHECKLIST.md).
 
 ## 2. Goals
 
