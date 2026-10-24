@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [0.5.0] — 2026-10-24
 
 ### Added
 
@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Repository layout: the design plans moved to `docs/plans/` and the release checklist to `docs/RELEASE_CHECKLIST.md`. `README.md` is rewritten as a shorter, current front page with an explicit evaluation status.
 - `raster.cog_layout` now warns when a GeoTIFF uses JPEG compression, which is always lossy and changes stored pixel values. That is fine for visual products but not for analysis values. Lossy LERC (`MAX_Z_ERROR`) and WebP settings are not detected.
 
 ### Evaluation
