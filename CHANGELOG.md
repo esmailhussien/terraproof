@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+Fixes for all eight findings of an independent review of v0.5.0 (Codex, 2026-10-24), each with a regression test in `tests/python/test_review_regressions.py`:
+
+- Agent-lift grading: the `raster-nodata-dtype-windowing` oracle now reads every value and the mask from the delivered file (an all-zero answer with the right mask was accepted), and `score_outputs` enforces the deliverable contract (CRS, transform, shape, bands, dtype, nodata) against the task's own reference, so right values on the wrong grid are rejected (`contract_ok`, `contract_failures`, `caught_by: contract`).
+- `raster.grid_alignment` compares rotation and shear terms and measures the origin offset in the reference grid's pixel coordinates; a sheared grid no longer passes as aligned, and matching rotated grids now align.
+- Accuracy checks: a mapped class with positive area and no samples fails `accuracy.sample_design` and withholds area estimates; negative, non-finite or non-numeric class areas and a zero total are rejected; a reference class that is never mapped gets producer's accuracy 0 instead of a crash.
+- `rs.temporal_scope` reports a STAC item whose start is after its end as unusable instead of inside the window.
+- `mcnemar_mde` searches only feasible differences (≤ the discordance) and returns `None` when none reaches the power; the Phase 5 plan's MDE table and the main-run MDE (0.243 → none) are corrected.
+
+### Evaluation
+
+- All 72 saved Phase 5 main-run deliverables (54 runs) were re-graded offline with the fixed grader: 0 verdicts changed (with 27/27; without 24/27 on files, 21/27 with the contamination rule). The sign-flip p, bootstrap CI and McNemar p are unchanged.
+- A generic probe found two more under-graded deliverables, still open: `sr_nir.tif` in `satellite-s2-baseline-offset-mask` is not graded, and a row-flipped `composite_counts.tif` in `satellite-seasonal-harmonized-composite` is accepted. A direct comparison shows every saved historical output for both files matches the reference exactly.
+
 ## [0.5.0] — 2026-10-24
 
 ### Added

@@ -453,11 +453,43 @@ def _deliverable_ok(path: Path) -> bool:
     return path.is_file() and not path.is_symlink() and path.stat().st_size <= MAX_DELIVERABLE_BYTES
 
 
+def _contract_failures(task: LiftTask, outputs: Path, reference: Path) -> list[str]:
+    """Compare each delivered raster's grid, bands, dtype and nodata with the task's own reference.
+
+    The contract promises the input grid, so a right array on a wrong CRS or transform is a wrong answer.
+    A contract that asks only for "floating-point" accepts any float dtype.
+    """
+    import rasterio
+
+    failures = []
+    for name, contract in task.deliverables:
+        with rasterio.open(outputs / name) as got, rasterio.open(reference / name) as want:
+            if got.crs != want.crs:
+                failures.append(f"{name}: CRS {got.crs} differs from the input grid's {want.crs}")
+            if (got.width, got.height) != (want.width, want.height):
+                failures.append(f"{name}: shape {got.height}x{got.width} differs from {want.height}x{want.width}")
+            if not got.transform.almost_equals(want.transform, precision=1e-9):
+                failures.append(f"{name}: transform differs from the input grid")
+            if got.count != want.count:
+                failures.append(f"{name}: {got.count} bands, expected {want.count}")
+            got_dtype, want_dtype = got.dtypes[0], want.dtypes[0]
+            if "floating-point" in contract:
+                if not got_dtype.startswith("float"):
+                    failures.append(f"{name}: dtype {got_dtype} is not floating point")
+            elif got_dtype != want_dtype:
+                failures.append(f"{name}: dtype {got_dtype}, expected {want_dtype}")
+            if got.nodata != want.nodata and not (got.nodata is not None and want.nodata is not None
+                                                  and math.isclose(got.nodata, want.nodata)):
+                failures.append(f"{name}: nodata {got.nodata}, expected {want.nodata}")
+    return failures
+
+
 def score_outputs(task: LiftTask, spec: TaskSpec, outputs: Path, scoring_root: Path, input_digests: dict[str, str]) -> dict:
     """Grade the agent's deliverables with the task's own checks and independent oracle."""
     present = {name: _deliverable_ok(outputs / name) for name in task.deliverable_names}
     record = {"deliverables_present": present, "verdict": MISSING, "accepted": False, "checks_ok": None,
-              "oracle_ok": None, "caught_by": [], "mismatched_checks": [], "unexpected_failures": [],
+              "oracle_ok": None, "contract_ok": None, "contract_failures": [], "caught_by": [],
+              "mismatched_checks": [], "unexpected_failures": [],
               "failed_assertions": [], "evidence_grade": None, "error": None}
     if not all(present.values()):
         return record
@@ -478,10 +510,18 @@ def score_outputs(task: LiftTask, spec: TaskSpec, outputs: Path, scoring_root: P
     control = recipe.correct
     if control.kind != CORRECT:  # pragma: no cover - guarded by TaskRecipe
         raise LiftError("recipe correct control is not marked correct")
+    reference = scoring_root / "contract-reference"
+    _generate(task, reference)
+    try:
+        contract = _contract_failures(task, outputs, reference)
+    except Exception as error:  # an unreadable artifact cannot meet its contract
+        contract = [f"deliverable could not be read as a raster ({type(error).__name__})"]
     results = [result for step in control.steps for result in step.results]
     graded = _control_record(control, spec.expected_checks, scoring_root, grade_for(results))
-    accepted = graded["verdict"] == "accepted"
+    accepted = graded["verdict"] == "accepted" and not contract
     caught = []
+    if contract:
+        caught.append("contract")
     if not graded["checks_ok"]:
         caught.append("checks")
     if not graded["oracle_ok"]:
@@ -491,6 +531,8 @@ def score_outputs(task: LiftTask, spec: TaskSpec, outputs: Path, scoring_root: P
         accepted=accepted,
         checks_ok=graded["checks_ok"],
         oracle_ok=graded["oracle_ok"],
+        contract_ok=not contract,
+        contract_failures=contract,
         caught_by=caught,
         mismatched_checks=graded["mismatched_checks"],
         unexpected_failures=graded["unexpected_failures"],
@@ -797,7 +839,11 @@ def bootstrap_ci(differences: list[float], *, seed: int = BOOTSTRAP_SEED, resamp
 
 
 def mcnemar_mde(pairs: int, discordance: float, *, alpha: float = 0.05, power: float = 0.8) -> float | None:
-    """Smallest paired difference detectable with McNemar's test (Connor 1987 approximation)."""
+    """Smallest paired difference detectable with McNemar's test (Connor 1987 approximation).
+
+    A paired difference cannot exceed the discordant proportion (|P10 - P01| <= P10 + P01), so
+    the search stops at `discordance`; None means no feasible difference reaches the power.
+    """
     if pairs <= 0 or not 0 < discordance <= 1:
         return None
     z_alpha = NormalDist().inv_cdf(1 - alpha / 2)
@@ -806,7 +852,7 @@ def mcnemar_mde(pairs: int, discordance: float, *, alpha: float = 0.05, power: f
     def required(delta: float) -> float:
         return (z_alpha * math.sqrt(discordance) + z_beta * math.sqrt(max(0.0, discordance - delta**2))) ** 2 / delta**2
 
-    low, high = 1e-6, math.sqrt(discordance)
+    low, high = 1e-6, discordance
     if required(high) > pairs:
         return None
     for _ in range(200):
