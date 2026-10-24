@@ -209,10 +209,14 @@ def without_isolation_checks(project: Path, agent_python: str | None, env: dict)
                                timeout=60, check=False)
         importable = probe.returncode != 0
     first_path_entry = env["PATH"].split(os.pathsep)[0]
-    visible = (str(project.resolve()), first_path_entry, str(python or ""))
     return {"without_agent_python_set": bool(agent_python),
             "without_terraproof_not_importable": bool(python) and not importable,
-            "without_paths_neutral": not any("terraproof" in item.lower() for item in visible)}
+            "without_paths_neutral": paths_neutral(str(project.resolve()), first_path_entry, str(python or ""))}
+
+
+def paths_neutral(*paths: str) -> bool:
+    """True when no agent-visible path (project, PATH head, interpreter) names Terraproof."""
+    return not any("terraproof" in path.lower() for path in paths)
 
 
 def _json_lines(lines) -> tuple[list[tuple[float, object]], int]:

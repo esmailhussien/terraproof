@@ -777,8 +777,12 @@ def test_without_isolation_checks_detect_importable_terraproof_and_named_paths(t
     project.mkdir(parents=True)
     isolated = _python_shim(tmp_path / "isolated-bin", "-I", "-S")  # no site-packages, no PYTHONPATH
     env = driver.host_env(WITHOUT, str(isolated))
+    # tmp_path lives inside the checkout (pytest --basetemp), whose path may itself contain
+    # "terraproof" (CI: .../terraproof/terraproof/...); the neutral rule is tested on strings below.
+    base_neutral = "terraproof" not in str(tmp_path.resolve()).lower()
     assert driver.without_isolation_checks(project, str(isolated), env) == {
-        "without_agent_python_set": True, "without_terraproof_not_importable": True, "without_paths_neutral": True}
+        "without_agent_python_set": True, "without_terraproof_not_importable": True,
+        "without_paths_neutral": base_neutral}
     leaky = _python_shim(tmp_path / "leaky-bin")
     env = driver.host_env(WITHOUT, str(leaky))
     env["PYTHONPATH"] = str(Path(lift.__file__).resolve().parents[2])  # e.g. a checkout's src
@@ -796,3 +800,13 @@ def test_driver_carries_the_agent_python_into_the_approved_command(capsys, tmp_p
                         "--agent-python-without", str(agent_python)]) == 0
     plan = json.loads(capsys.readouterr().out)
     assert f"--agent-python-without {agent_python}" in plan["command_to_approve"]
+
+
+def test_paths_neutral_rule_is_independent_of_the_checkout_location():
+    assert driver.paths_neutral(r"C:\Temp\paired-run-ab12\runs\001\project",
+                                r"C:\venvs\geo-agent-py312\Scripts", r"C:\venvs\geo-agent-py312\Scripts\python.exe")
+    assert driver.paths_neutral("/tmp/paired-run-x/runs/002/project", "/opt/geo/bin", "/opt/geo/bin/python")
+    assert not driver.paths_neutral(r"C:\Temp\terraproof-lift-host-ab12\runs\001\project", r"C:\venvs\geo")
+    assert not driver.paths_neutral("/tmp/paired-run-x/project", "/home/u/.venvs/TerraProof-py312/bin")
+    assert not driver.paths_neutral("/tmp/paired-run-x/project", "/opt/geo/bin", "/home/runner/work/terraproof/python")
+    assert driver.paths_neutral()
