@@ -1,6 +1,6 @@
-# Terraproof Release Checklist — v0.4.1 (routing fixes) and v0.4.0 (Phase 4)
+# Terraproof Release Checklist — v0.5.0, v0.4.1 and v0.4.0
 
-Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 routing measurement that v0.4.1 ships, and the gates that remain open. v0.4.0 was released on 2026-10-23: tag `v0.4.0`, GitHub release *Terraproof v0.4.0*, and `terraproof@0.4.0` on npm as `latest`. v0.4.1 was released on 2026-10-24: tag `v0.4.1` on `f39d342`, GitHub release *Terraproof v0.4.1* (marked Latest), and `terraproof@0.4.1` on npm as `latest`. Neither version is published to PyPI. Sections 2–5 are the release procedure used for v0.4.1.
+Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 routing measurement that v0.4.1 ships, and the gates that remain open. v0.4.0 was released on 2026-10-23: tag `v0.4.0`, GitHub release *Terraproof v0.4.0*, and `terraproof@0.4.0` on npm as `latest`. v0.4.1 was released on 2026-10-24: tag `v0.4.1` on `f39d342`, GitHub release *Terraproof v0.4.1* (marked Latest), and `terraproof@0.4.1` on npm as `latest`. v0.5.0 (new `geometry.winding` check, COG JPEG warning, Phase 5 agent-lift harness, and the docs/README tidy-up) is prepared but not yet tagged or published. No version is published to PyPI. Sections 2–5 are the release procedure, now targeting v0.5.0.
 
 ---
 
@@ -237,9 +237,9 @@ Limits: v5 is agent-authored and not expert-adjudicated, and one pass on one 160
 - Claude retains its maximum USD1 / 120-second optional invocation with isolated local-server `--mcp-config`, `--strict-mcp-config`, `--no-session-persistence`, `--restricted`, disabled built-in tools/hooks/skills, an explicit Terraproof-only tool allowlist, and noninteractive permission denial. Windows shell wrappers are unavailable for model invocation; a native executable is required. Success requires actual successful `list_skills` and `inspect_dataset` tool-result trace events. Both runners retain only sanitized summary/tool status, not raw auth/model transcripts or credentials, and make no global agent configuration edits. Host inference necessarily contacts its configured service; these are CLI tool controls, not an OS-wide inference network block. If stronger isolation is required, do not invoke either runner without external assessment.
 - [x] Confirm green **current release commit** hosted CI. The Ubuntu/Windows × Python 3.11/3.13 matrix ran this driver after the Python and deterministic eval suites and uploaded its report; the package matrix passed on all three OSes × Node 20/22/24. Green on `06eb466` ([run 40012988399](https://github.com/esmailhussien/terraproof/actions/runs/40012988399)); re-confirm if the release commit differs.
 - [x] Independent routing acceptance: **passed on v5** in both languages from a single measurement of commit `22c3564` (EN recall 0.971, 3.75 forbidden per 100; AR recall 0.9625, 2.5 per 100; see above). The v3/v4 failures stay on record. v5 is agent-authored and not expert-adjudicated. Its post-review re-run on the v0.4.1 code is a non-regression check only, not a second acceptance.
-- [ ] Remaining release gates: Claude real-host tool use and the 15 declared checker blind spots (17 at v0.4.1; two closed after release, see below). Tiny synthetic vector fixtures do not exhaustively validate raster/optical/SAR workflows or scientific fitness.
+- [ ] Remaining release gates: the release-validation Claude real-host gate (`tests/release_validation.py --agent-host claude`, not yet run; separately, the Phase 5 runs showed real Claude Code MCP tool use) and the 15 declared checker blind spots (17 at v0.4.1; two closed after release, see below). Tiny synthetic vector fixtures do not exhaustively validate raster/optical/SAR workflows or scientific fitness.
 
-Next release actions: v0.4.1 is released (sections 4–5). The remaining Claude real-host and checker blind-spot gates carry over to the next release. The user-approved internal content review above replaces additional expert reviewers; it does not replace these acceptance gates. No automatic inference retry, credential inspection, provider/model fallback, or relaxed isolation is authorized by these checks.
+Next release actions: tag and publish v0.5.0 (sections 4–5) when the user decides, stating the remaining Claude release-validation and checker blind-spot gates and the Phase 5 result (no lift claimed) in the release notes. The user-approved internal content review above replaces additional expert reviewers; it does not replace these acceptance gates. No automatic inference retry, credential inspection, provider/model fallback, or relaxed isolation is authorized by these checks.
 
 ### Checker blind spots
 
@@ -276,7 +276,7 @@ Still declared. In the invocation the spec defines, the checker has no legitimat
 
 - [x] **`package.json` Package Shape**:
   - `name`: `terraproof`
-  - `version`: `0.4.1`
+  - `version`: `0.5.0`
   - `bin`: `{"terraproof": "bin/terraproof.js"}`
   - `main` and `exports`: `./dist/router/index.js` (compiled router)
   - `engines.node`: `>=20`
@@ -286,6 +286,7 @@ Still declared. In the invocation the spec defines, the checker has no legitimat
 - [x] **Installed Package Smoke Test**:
   - `npm run test:package` packs the repository, installs the tarball into a fresh project, and runs `--version`, `route --format json`, `validate`, and unknown-collection rejection.
 - [x] **Tarball Size**:
+  - `npm pack --dry-run` on `202ca49` with the 0.5.0 bump (2026-10-24): `terraproof@0.5.0` is 395.6 kB packed / 1.25 MB unpacked across 182 files (151 under `skills/`); no test, eval, docs, `.terracache`, `__pycache__`, log or temporary files are packaged.
   - `npm pack --dry-run` on `302250f` (2026-10-23): `terraproof@0.4.0` is 402.4 kB packed / 1.3 MB unpacked across 182 files (v0.1.0 was about 560 kB across 330 files). Contents are `skills/` (151 files), `routing/`, `dist/`, `third_party/`, `instructions/`, `sources/SOURCES.md`, `bin/`, `README.md`, `LICENSE` and `package.json`; no test, eval, `.terracache`, `__pycache__`, log, temporary or OS files are packaged.
 
 ---
@@ -307,17 +308,17 @@ Still declared. In the invocation the spec defines, the checker has no legitimat
 
 1. **Tag the Release**:
    ```bash
-   git tag -a v0.4.1 -m "Terraproof v0.4.1 — routing precision and Arabic recall fixes"
-   git push origin v0.4.1
+   git tag -a v0.5.0 -m "Terraproof v0.5.0 — winding check, COG JPEG warning, Phase 5 agent-lift harness"
+   git push origin v0.5.0
    ```
 2. **Publish to NPM** (from a checkout where `bin/terraproof.js` has LF endings; npm asks for browser/2FA approval):
    ```bash
    npm publish --access public
    ```
 3. **Create GitHub Release**:
-   - Title: `Terraproof v0.4.1`
-   - Attach tarball `terraproof-0.4.1.tgz` generated via `npm pack`.
-   - Use only the `0.4.1` CHANGELOG entry as release notes, and state the remaining Claude real-host and checker blind-spot gates.
+   - Title: `Terraproof v0.5.0`
+   - Attach tarball `terraproof-0.5.0.tgz` generated via `npm pack`.
+   - Use only the `0.5.0` CHANGELOG entry as release notes, and state the remaining Claude release-validation and checker blind-spot gates and that Phase 5 claims no lift.
 
 ---
 
@@ -327,3 +328,5 @@ Still declared. In the invocation the spec defines, the checker has no legitimat
 - [x] Run `npx terraproof route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL"` to verify global routing. 2026-10-23, Windows: exit 0, 4 skills selected at 90% confidence.
 - [x] v0.4.1: `npx terraproof@0.4.1 --version` prints `terraproof v0.4.1` in a blank directory. 2026-10-24, Windows: printed `terraproof v0.4.1`; the published `bin/terraproof.js` contains no CR bytes, and the registry lists `0.4.1` as `latest`.
 - [x] v0.4.1: `npx terraproof@0.4.1 route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL"` exits 0. 2026-10-24, Windows: exit 0.
+- [ ] v0.5.0: `npx terraproof@0.5.0 --version` prints `terraproof v0.5.0` in a blank directory, and the published `bin/terraproof.js` contains no CR bytes.
+- [ ] v0.5.0: `npx terraproof@0.5.0 route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL"` exits 0.
