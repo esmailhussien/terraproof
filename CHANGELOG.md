@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Six harder agent-lift tasks, authored independently by Codex (a different model family): `landcover-summary-grid`, `terrain-slope-map`, `population-grid-transfer`, `vegetation-change-rate`, `storm-total-rainfall` and `three-band-vegetation-index`. Each has a spec, recipe, independent scalar oracle reading every cell and mask of the delivered file, and two seeded wrong outputs (see `docs/HARDER_TASKS.md`). The benchmark grows to 33 tasks with 0 false passes and 27 checker blind spots (the 15 existing plus 12 new oracle-only seeds). Their difficulty is not yet measured.
+- API agent hosts for the lift driver: `--agent-host openai|groq` runs a small tool-calling agent (`tests/api_agent.py`) against any OpenAI-compatible chat API. It has project-confined file tools, a Python runner with a timeout, Terraproof's MCP tools in "with" only, keys only from `OPENAI_API_KEY` / `GROQ_API_KEY`, and per-run caps on model calls, tokens and USD at user-supplied prices. Tested offline with a fake model; no API request has been made (see Phase 5 plan §18).
 - Lift cohorts: `ORIGINAL_LIFT_TASKS` (the nine of the first run) and `HARDER_LIFT_TASKS` (the six above) are separate experiments. `run_lift`, `python -m terraproof.evals lift` and `tests/agent_lift.py` take `--cohort original|harder`, default `original`, and refuse `--task` together with `--cohort`; reports record the cohort. Calibration and the grader probe still cover all fifteen tasks.
 
 ### Fixed

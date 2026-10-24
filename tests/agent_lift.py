@@ -751,11 +751,31 @@ def total_usd_cap(args, calls: int) -> float:
     return args.max_usd_total if args.max_usd_total is not None else round(calls * args.max_usd_per_run, 2)
 
 
+API_HOSTS = ("openai", "groq")  # plain chat APIs driven by tests/api_agent.py
+USD_CAPPED_HOSTS = ("claude", *API_HOSTS)
+BILLING = {
+    "codex": "ChatGPT subscription usage; Codex exposes no USD cap, so the approved invocation count and timeout "
+             "are the hard limits",
+    "claude": "Claude API spend, capped per run by --max-budget-usd and in total by the harness",
+    "openai": "OpenAI API spend from OPENAI_API_KEY, computed from returned token usage at the given prices; "
+              "capped per run (calls, tokens, USD) by the adapter and in total by the harness",
+    "groq": "Groq API spend from GROQ_API_KEY, computed from returned token usage at the given prices; "
+            "capped per run (calls, tokens, USD) by the adapter and in total by the harness",
+}
+
+
+def api_model(args) -> str | None:
+    from api_agent import PROVIDERS
+
+    return args.api_model or PROVIDERS[args.agent_host]["default_model"]
+
+
 def plan(args) -> dict:
     cohort = None if args.task else (args.cohort or DEFAULT_COHORT)
     tasks = args.task or [task.task_id for task in COHORTS[cohort]]
     calls = planned_calls(len(set(tasks)), args.runs)
-    ceiling = None if args.agent_host == "codex" else round(min(calls * args.max_usd_per_run, total_usd_cap(args, calls)), 2)
+    capped = args.agent_host in USD_CAPPED_HOSTS
+    ceiling = round(min(calls * args.max_usd_per_run, total_usd_cap(args, calls)), 2) if capped else None
     approve = ["python", "tests/agent_lift.py", "--agent-host", args.agent_host, "--runs", str(args.runs)]
     for task_id in args.task or []:
         approve += ["--task", task_id]
@@ -767,7 +787,15 @@ def plan(args) -> dict:
         approve += ["--claude-executable", str(args.claude_executable)]
     if args.agent_python_without:
         approve += ["--agent-python-without", str(args.agent_python_without)]
-    if args.agent_host == "claude":
+    if args.agent_host in API_HOSTS:
+        approve += ["--api-model", str(api_model(args)),
+                    "--usd-per-million-input", f"{args.usd_per_million_input:g}",
+                    "--usd-per-million-output", f"{args.usd_per_million_output:g}",
+                    "--max-model-calls-per-run", str(args.max_model_calls_per_run),
+                    "--max-tokens-per-run", str(args.max_tokens_per_run),
+                    "--rate-limit-retries", str(args.rate_limit_retries),
+                    "--max-retry-wait", f"{args.max_retry_wait:g}"]
+    if capped:
         approve += ["--max-usd-per-run", f"{args.max_usd_per_run:g}", "--max-usd-total", f"{total_usd_cap(args, calls):g}"]
     approve += ["--timeout", f"{args.timeout:g}", "--approve-model-calls", str(calls)]
     return {
@@ -778,11 +806,15 @@ def plan(args) -> dict:
         "runs_per_condition": args.runs,
         "planned_model_invocations": calls,
         "per_run_timeout_seconds": args.timeout,
-        "per_run_usd_cap": args.max_usd_per_run if args.agent_host == "claude" else None,
+        "per_run_usd_cap": args.max_usd_per_run if capped else None,
         "total_usd_ceiling": ceiling,
-        "billing": ("ChatGPT subscription usage; Codex exposes no USD cap, so the approved invocation count and "
-                    "timeout are the hard limits" if args.agent_host == "codex"
-                    else "Claude API spend, capped per run by --max-budget-usd and in total by the harness"),
+        "billing": BILLING[args.agent_host],
+        **({"api": {"model": api_model(args), "usd_per_million_input": args.usd_per_million_input,
+                    "usd_per_million_output": args.usd_per_million_output,
+                    "max_model_calls_per_run": args.max_model_calls_per_run,
+                    "max_tokens_per_run": args.max_tokens_per_run,
+                    "rate_limit_retries": args.rate_limit_retries,
+                    "max_retry_wait_seconds": args.max_retry_wait}} if args.agent_host in API_HOSTS else {}),
         "command_to_approve": " ".join(approve),
         "preflight_command": " ".join(approve[:-2] + ["--preflight-only"]),
     }
@@ -790,15 +822,28 @@ def plan(args) -> dict:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--agent-host", choices=["codex", "claude"], required=True)
+    parser.add_argument("--agent-host", choices=["codex", "claude", *API_HOSTS], required=True,
+                        help="openai/groq use tests/api_agent.py; keys come only from OPENAI_API_KEY / GROQ_API_KEY")
     parser.add_argument("--runs", type=int, default=3, help="runs per condition and task (default 3)")
     parser.add_argument("--task", action="append", help="lift task id (repeatable; not with --cohort)")
     parser.add_argument("--cohort", choices=sorted(COHORTS),
                         help=f"task cohort to run (default {DEFAULT_COHORT}); cohorts are separate experiments")
     parser.add_argument("--timeout", type=float, default=900, help="per-run timeout in seconds (default 900)")
-    parser.add_argument("--max-usd-per-run", type=float, default=1.0, help="Claude per-run USD cap (default 1)")
+    parser.add_argument("--max-usd-per-run", type=float, default=1.0,
+                        help="per-run USD cap for claude/openai/groq (default 1)")
     parser.add_argument("--max-usd-total", type=float, default=None,
-                        help="Claude total USD cap (default: planned runs x --max-usd-per-run)")
+                        help="total USD cap for claude/openai/groq (default: planned runs x --max-usd-per-run)")
+    parser.add_argument("--api-model", help="model for openai/groq (openai default gpt-4o; groq has no default)")
+    parser.add_argument("--usd-per-million-input", type=float,
+                        help="openai/groq price per million input tokens (required; prices are never guessed)")
+    parser.add_argument("--usd-per-million-output", type=float,
+                        help="openai/groq price per million output tokens (required)")
+    parser.add_argument("--max-model-calls-per-run", type=int, default=40, help="openai/groq call cap per run")
+    parser.add_argument("--max-tokens-per-run", type=int, default=300_000, help="openai/groq token cap per run")
+    parser.add_argument("--rate-limit-retries", type=int, default=3,
+                        help="openai/groq HTTP 429 retries per run (default 3; each counts against the caps)")
+    parser.add_argument("--max-retry-wait", type=float, default=60.0,
+                        help="openai/groq longest wait per 429 retry in seconds (default 60)")
     parser.add_argument("--codex-reasoning-effort", default="medium", choices=["low", "medium", "high"])
     parser.add_argument("--codex-executable", type=Path,
                         help="native codex.exe to use (default: the PATH-resolved native binary)")
@@ -819,6 +864,16 @@ def main(argv=None) -> int:
         parser.error("--runs, --timeout and the USD caps must be positive")
     if args.task and args.cohort:
         parser.error("--task and --cohort select tasks in different ways; give one of them")
+    if args.agent_host in API_HOSTS:
+        if not api_model(args):
+            parser.error(f"--api-model is required for {args.agent_host}")
+        if not (args.usd_per_million_input and args.usd_per_million_input > 0
+                and args.usd_per_million_output and args.usd_per_million_output > 0):
+            parser.error("--usd-per-million-input and --usd-per-million-output are required and must be positive")
+        if args.max_model_calls_per_run < 1 or args.max_tokens_per_run < 1:
+            parser.error("--max-model-calls-per-run and --max-tokens-per-run must be positive")
+        if args.rate_limit_retries < 0 or args.max_retry_wait <= 0:
+            parser.error("--rate-limit-retries must be non-negative and --max-retry-wait positive")
     if args.preflight_only and args.approve_model_calls is not None:
         parser.error("--preflight-only starts no agent; do not combine it with --approve-model-calls")
     try:
@@ -839,6 +894,20 @@ def main(argv=None) -> int:
         adapter = (CodexHostAdapter(executable, args.codex_reasoning_effort, agent_python) if executable
                    else None)
         budget = Budget(max_runs=args.approve_model_calls, timeout_seconds=args.timeout)
+    elif args.agent_host in API_HOSTS:
+        from api_agent import ApiAgentAdapter, ApiLimits
+
+        limits = ApiLimits(usd_per_million_input=args.usd_per_million_input,
+                           usd_per_million_output=args.usd_per_million_output,
+                           max_model_calls=args.max_model_calls_per_run, max_tokens=args.max_tokens_per_run,
+                           rate_limit_retries=args.rate_limit_retries, max_retry_wait=args.max_retry_wait)
+        adapter = ApiAgentAdapter(args.agent_host, api_model(args), limits, agent_python)
+        version = f"{args.agent_host} {adapter.model}"
+        reason = "ok" if adapter.key_present() else f"{adapter.key_env} is not set; no request was sent"
+        adapter = adapter if adapter.key_present() else None
+        budget = Budget(max_runs=args.approve_model_calls, per_run_usd=args.max_usd_per_run,
+                        total_usd=total_usd_cap(args, summary["planned_model_invocations"]),
+                        timeout_seconds=args.timeout)
     else:
         executable, reason, version = probe_claude(str(args.claude_executable) if args.claude_executable else None)
         adapter = ClaudeHostAdapter(executable, agent_python) if executable else None
@@ -858,7 +927,9 @@ def main(argv=None) -> int:
     try:
         report = run_lift(adapter, task_ids=args.task, cohort=summary["cohort"] or DEFAULT_COHORT,
                           runs=1 if args.preflight_only else args.runs,
-                          agent=args.agent_host, budget=budget, work_root=work,
+                          # API agents read the claude-format install: .mcp.json and .claude/skills/.
+                          agent="claude" if args.agent_host in API_HOSTS else args.agent_host,
+                          budget=budget, work_root=work,
                           allow_model_calls=not args.preflight_only, preflight_only=args.preflight_only,
                           recordings_out=None if args.preflight_only else args.recordings)
     finally:
