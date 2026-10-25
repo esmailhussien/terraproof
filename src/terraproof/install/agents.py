@@ -303,6 +303,25 @@ def plan_codex(target: Path, skills: list[Skill], *, with_mcp: bool, command: li
     return writes
 
 
+def plan_antigravity(target: Path, skills: list[Skill], *, with_mcp: bool, command: list[str]) -> list[Write]:
+    """Antigravity workspace rules, workspace skills, and workspace MCP servers.
+
+    Rules: https://antigravity.google/docs/rules (`AGENTS.md` in the workspace root).
+    Skills: https://antigravity.google/docs/skills (`<workspace-root>/.agents/skills/<name>/`).
+    MCP: https://antigravity.google/docs/mcp (`<workspace>/.agents/mcp_config.json`,
+    `mcpServers` entry with `command` and `args`).
+    """
+    writes: list[Write] = []
+    for skill in skills:
+        writes += _skill_copies(skill, target / ".agents" / "skills" / skill.name)
+    block = _index_block(skills, agent="antigravity", skills_dir=".agents/skills", with_mcp=with_mcp, command=command)
+    writes.append(_markdown_section(target / "AGENTS.md", block, agent="antigravity"))
+    if with_mcp:
+        entry = {"command": command[0], "args": command[1:]}
+        writes.append(_json_servers(target / ".agents" / "mcp_config.json", "mcpServers", SERVER_NAME, entry))
+    return writes
+
+
 def plan_gemini(target: Path, skills: list[Skill], *, with_mcp: bool, command: list[str]) -> list[Write]:
     """Gemini CLI project context and project MCP servers.
 
@@ -369,6 +388,7 @@ def plan_opencode(target: Path, skills: list[Skill], *, with_mcp: bool, command:
 
 
 PLANNERS = {
+    "antigravity": plan_antigravity,
     "claude": plan_claude,
     "cursor": plan_cursor,
     "codex": plan_codex,

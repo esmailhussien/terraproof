@@ -668,3 +668,38 @@ remain unchanged in frozen benchmark tasks, so their existing blind-spot counts
 and historical results are preserved. Source identity does not validate full COG
 conformance. This offline batch introduces no paid run or inference authorization,
 nor a general repair reliability or agent-lift claim.
+
+
+## 19. Antigravity CLI host (2026-10-26)
+
+`tests/agent_lift.py --agent-host antigravity --antigravity-model <id>` drives the
+Antigravity CLI (`agy`, checked against 1.3.0 and 1.4.7) headlessly: flags first, then
+`--print` and the fixed prompt, with `--output-format stream-json` and
+`--dangerously-skip-permissions` so no run waits for an approval.
+
+- **Install and isolation.** agy reads per-workspace `AGENTS.md`,
+  `.agents/skills/` and `.agents/mcp_config.json` (Antigravity's rules, skills and
+  MCP docs), so the condition lives in the run project. "with" is installed with
+  the new `--agent antigravity` installer format; "without" gets nothing. What every
+  workspace sees is global: `~/.gemini/config/mcp_config.json`, the global skill
+  folders, `~/.gemini/GEMINI.md`/`AGENTS.md` and rule folders, and plugins.
+  Preflight fails a run when any of them carries Terraproof (a server, a skill
+  folder named after a registry skill or Terraproof, or the word in a rule or
+  plugin config). Only booleans are recorded.
+- **Probe.** `agy --help` must list the headless flags, and the no-inference
+  `agy models` listing must confirm cached sign-in and include the requested
+  model. The model is required, so runs never depend on the host's default.
+- **Trace.** `init`, `step_update` and `result` events become fixed labels: tool
+  steps by keyword category, Terraproof MCP tools from the documented `server/tool`
+  and common prefixed forms, durations, statuses, token counts and a short
+  error-type code. Terraproof tools listed by `init` in "without" are
+  contamination; their absence in "with" is a diagnostic; an `init` workspace other
+  than the run project fails the run.
+- **Limits.** agy reports no spend, so the approved run count and timeout are the
+  hard limits (as for Codex). Commands are not sandboxed. agy may keep conversation
+  history under `~/.gemini`, and the counterbalanced order is the only control for
+  that. The MCP tool-name format and the init payload are from the docs only. A
+  first approved pilot must confirm them before any lift run. agy updates itself
+  (1.3.0 became 1.4.7 during this work); reports record the probed version. No agy
+  model call has been made. The no-model preflight on agy 1.4.7 (one
+  `terrain-slope-map` pair) passed every workspace, global, Python and isolation check.
