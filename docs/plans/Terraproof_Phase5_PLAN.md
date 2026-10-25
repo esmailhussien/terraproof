@@ -519,6 +519,7 @@ An independent review by Codex (a different model family; it disclosed earlier c
 Claude Code solved all six harder tasks with and without Terraproof in a one-repeat screen (12 runs, $1.74). This small screen has no observed headroom; it does not establish that lift is impossible for that host on other tasks or repetitions. Weaker models may leave room. OpenAI (e.g. GPT-4o) and Groq expose plain chat APIs rather than agents, so `tests/api_agent.py` supplies the agent loop:
 
 - **Tools:** `list_files`, `read_file`, `write_file` (confined to the run project: no absolute paths or `..`) and `run_python` (one script per call, the condition's interpreter, the project directory, a 120 s timeout with process-tree cleanup). In "with" only, Terraproof's six MCP tools come from the installer-registered server, as for the other hosts; `load_section` calls and reads of installed skill files count as skill reads.
+- **Instruction delivery (v0.7.1):** both API conditions receive the same general instruction to verify saved outputs against task/source values, masks, grid and metadata before finishing, and to report unresolved requirements. In "with" only, the adapter also forwards the configured MCP server's negotiated instructions as a labelled system message, before the unchanged task prompt. The server describes guidance retrieval, final `run_checks`, source-aware NDVI options and check limitations. It does not automatically load installed skill files, root `CLAUDE.md` or other local instruction files. Claude installation creates skill files and `.mcp.json`, not a root `CLAUDE.md`. Preflight checks tools and nonempty, valid UTF-8 instructions (at most 20,000 characters) on one connection; execution rechecks before a provider request. Missing/invalid instructions fail without inference. The whole message is included in token/USD reservations. `turn.mcp_instructions_delivered`, `mcp_instructions_chars` and `mcp_instructions_sha256` record host submission to the transport, not model attention, successful provider receipt, actual checking or accepted outputs. Tool-use evidence remains in the call trace. A final answer with no observed output failure can still complete without checks; the independent deliverable grader decides acceptance. The bounded completion review described below prevents completion after unresolved observed output failures. This changes the treatment and common host prompt for future experiments only, not saved pilot results. OpenAI's [Chat Completions reference](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create) documents system messages as instruction context, separately from tool definitions.
 - **Not a sandbox:** `run_python` executes model-written code on the local machine with the user's permissions. Run it on a machine where that is acceptable.
 - **Keys:** only from `OPENAI_API_KEY` / `GROQ_API_KEY`, read when a request is sent; never stored, logged or reported. Errors are reported as status labels (`http 401`), never response bodies. A missing key refuses the run before any request.
 - **Local admission limits per run:** model calls (`--max-model-calls-per-run`, default 40), reserved/reported tokens (`--max-tokens-per-run`, default 300,000), at most 4,096 output tokens per request and USD (`--max-usd-per-run`). Before sending, reserve the complete conversation and tool schemas using their UTF-8 size plus framing allowance, then shrink requested output to the remaining token/USD allowance. This is conservative accounting, not a provider tokenizer or a provider-side invoice cap. Post-response usage is validated before completion or tool execution; an over-limit or malformed-usage reply fails. Missing usage and failed attempts retain their admitted reservation (including retries); reports separate reported usage from reserved unknown usage. Prices are explicitly supplied (`--usd-per-million-input/-output`), not guessed. Provider overhead, prices and returned usage can differ, so no absolute invoiced-dollar guarantee is made. The harness reserves complete pairs within the configured total budget and retains the explicit invocation-approval gate.
@@ -548,3 +549,81 @@ agent, and keep exploratory screening separate from held-out confirmation. Do no
 pool the original and harder cohorts or select a host merely because observed
 outcomes look favourable. Additional real calls require a separately specified
 budget and explicit user approval.
+
+
+### Bounded completion review (v0.7.1)
+
+The separate exploratory instruction-delivery follow-up completed two GPT-4o
+sessions on fresh data. Treatment received the MCP instructions and used the NDVI
+source contract on both saved outputs; both returned `fail`, and both delivered
+rasters remained unacceptable because of four mask errors each. This motivates a
+host completion guard, not a change to those frozen results or the grader.
+
+When `run_checks` returns a failed requirement for a task's explicitly declared
+`outputs/<deliverable>` paths, the API adapter remembers that requirement. A final
+answer while requirements remain unresolved receives at most two fixed review
+messages asking the model to repair and recheck. Every additional request passes
+the existing call, token, USD and timeout checks; there is no new session, budget
+reset, automatic checker invocation or host-written data repair. Exhausted review
+attempts end with adapter status `failed` and reason `output verification unresolved`.
+Earlier cap, timeout, transport and refusal outcomes retain their original reasons.
+
+Only a subsequent explicit `pass` for the same check, output and option/source
+context resolves an observed failure. Multi-input checks retain their referenced
+path group. Context options must be identical (except paths and report language);
+changing source options, omitting the failed check, warning, not-run, tool errors,
+malformed reports and unrelated passes cannot establish that it passed. Errors or
+invalid reports on submitted deliverables also require a valid same-context report.
+Clearly scoped failures on original/source files are excluded; unscoped failures
+in a report containing deliverables conservatively apply to those deliverables.
+
+Any `write_file` or `run_python` attempt invalidates earlier resolutions, including
+failed operations that could have partially written. This is intentionally
+conservative: even a read-only Python script requires another explicit recheck
+after an earlier failure was resolved. It is not a file snapshot and does not
+detect out-of-band edits by other processes. The guard does not require checks
+that were never attempted, certify warnings, validate every task requirement or
+replace the independent grader. `turn.output_review` is `no-failure-observed`,
+`unresolved` or `resolved`, with requirement/unresolved counts and the number of
+review prompts. No filenames, check prose or source arguments enter saved reports.
+
+The guard changes future treatment behaviour and must be frozen as such in any
+later study. No additional live experiment is implied or authorized by these
+offline changes. Historical pilot code, tasks, outputs and negative verdicts stay
+unchanged. Tool definitions and subsequent tool-result messages follow the
+[official Chat Completions message contract](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create).
+
+
+### Exploratory and controlled API observations — 2026-10-25
+
+These operator-recorded trials were frozen before inference and kept separate
+from the original/harder study and from one another. Requested alias: GPT-4o;
+all actual responses reported `gpt-4o-2024-08-06`. They establish no general lift
+or causal before/after improvement. Each paired trial used one shared synthetic
+scene; products and cells are not independent repeats.
+
+| Exploratory pair | Full acceptance without / with | Relevant observed behaviour |
+| --- | --- | --- |
+| Published v0.7.0 host, first NDVI audit | fail / fail | Treatment used inspections, no source checks; both final rasters had mask errors. |
+| Forwarded MCP instructions, fresh scene | fail / fail | Treatment used source checks on saved outputs; both failed and remained unrepaired. |
+| Completion guard, another fresh scene | fail / pass | Treatment audited originals, then delivered correct values/masks/verdicts. It did not check final outputs; zero review prompts, so the recovery branch was not exercised. |
+
+A separately approved, directed engineering test then seeded a four-cell mask
+error in a single declared output and explicitly requested an initial check and
+status before repair. This is not a blind task or a lift measurement. In one
+GPT-4o session the real checker failed, the host issued two review prompts, and
+two model-written Python attempts and real rechecks did not fix the mask. All
+three output checks failed. The host correctly stopped with adapter `failed`,
+reason `output verification unresolved`, rather than successful completion.
+The independent grader still rejected the output (zero value errors, four mask
+errors). This demonstrates the bounded-blocker branch live, not successful
+automatic repair. Scripted offline regressions separately cover successful
+repair followed by an explicit passing recheck.
+
+The directed session used 10 provider requests, approximately $0.110100 in
+cache-aware recorded-usage cost ($0.182580 conservative uncached accounting),
+within its approved $1 local ceiling. No replacement session, HTTP retry, hidden
+repair or post-result artifact alteration occurred. The older negative results,
+frozen source/input hashes and output hashes remain preserved. Private host
+reports and conversations are not committed; this paragraph is the sanitized
+release summary. Usage estimates are not provider invoices or billing guarantees.

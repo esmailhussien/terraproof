@@ -22,6 +22,7 @@ category, status, exit code and duration. Prompts, model text and tool arguments
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import math
 import os
@@ -41,8 +42,19 @@ PROVIDERS = {
     "groq": {"base_url": "https://api.groq.com/openai/v1", "key_env": "GROQ_API_KEY", "default_model": None},
 }
 SYSTEM_PROMPT = ("You are working in a project directory on a geospatial task. Use the tools to inspect the "
-                 "files, compute with Python and write the required outputs. When you are done, reply with a "
+                 "files, compute with Python and write the required outputs. Before finishing, verify the "
+                 "saved outputs against the task and source data using the available tools: check values, "
+                 "valid-data masks, grid and metadata. Correct problems and verify again after changes; "
+                 "report any unresolved or unverified requirements. When you are done, reply with a "
                  "short summary and no tool call.")
+MAX_COMPLETION_REVIEWS = 2  # further final answers fail if observed output checks remain unresolved
+COMPLETION_REVIEW = (
+    "Output verification still has unresolved failures. Review the run_checks results already in context, "
+    "correct the declared outputs, and rerun the failed checks with the same sources and options after "
+    "the last write. A warning, not-run result, inspection or unrelated passing check cannot resolve a "
+    "failed requirement. If you cannot resolve it within the remaining limits, report the blocker; "
+    "this run will remain unresolved."
+)
 READ_LIMIT = 20_000  # characters returned from a file or tool result
 OUTPUT_LIMIT = 8_000  # characters returned from a Python run
 PYTHON_TIMEOUT = 120.0
@@ -207,6 +219,110 @@ def project_path(project: Path, relative: str | None) -> Path:
     return target
 
 
+def server_instructions(client) -> str:
+    """Read bounded instructions from the configured server, never from project files."""
+    text = client.instructions
+    if not isinstance(text, str) or not text.strip() or len(text) > READ_LIMIT:
+        raise ValueError("missing or invalid Terraproof MCP instructions")
+    # Refuse malformed Unicode before it reaches request serialization or the provider.
+    text.encode("utf-8")
+    return text
+
+
+def mcp_parameters(project: Path):
+    from mcp import StdioServerParameters
+
+    entry = json.loads((project / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]["terraproof"]
+    return StdioServerParameters(command=entry["command"], args=entry.get("args", []), cwd=str(project),
+                                 env={"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"})
+
+
+async def mcp_preflight(project: Path) -> dict:
+    """Probe tools and instructions on one connection; no model request is made."""
+    from mcp import Client
+
+    checks = {"mcp_tools_served": False, "mcp_instructions_available": False}
+    try:
+        async with Client(mcp_parameters(project), raise_exceptions=False,
+                          read_timeout_seconds=PYTHON_TIMEOUT) as client:
+            checks["mcp_tools_served"] = sorted(t.name for t in (await client.list_tools()).tools) == sorted(driver.TOOLS)
+            server_instructions(client)
+            checks["mcp_instructions_available"] = True
+    except Exception:
+        pass  # fixed booleans only; no server output or configuration in reports
+    return checks
+
+
+class _OutputReview:
+    """Track observed failed checks on declared deliverables, not on audit inputs.
+
+    Only an explicit pass of that check in the same context resolves a failure.
+    Writes conservatively invalidate prior resolutions, even after partial failure.
+    This is a completion guard, not an independent grader or filesystem sandbox.
+    """
+
+    def __init__(self, project: Path, names):
+        self.project = project
+        self.outputs = {(project / "outputs" / name).resolve() for name in names}
+        self.records: dict[tuple, bool] = {}
+
+    def _path(self, value):
+        if not isinstance(value, str):
+            return None
+        path = Path(value)
+        try:
+            return (path if path.is_absolute() else self.project / path).resolve()
+        except (OSError, ValueError, RuntimeError):
+            return None
+
+    @property
+    def unresolved(self) -> int:
+        return sum(not resolved for resolved in self.records.values())
+
+    def invalidate(self):
+        for key in self.records:
+            self.records[key] = False
+
+    def observe(self, arguments, response):
+        paths = arguments.get("paths", [])
+        if not isinstance(paths, list):
+            return
+        targets = {self._path(path) for path in paths} & self.outputs
+        if not targets:
+            return  # a legitimate failed audit of originals must not block completion
+        context = json.dumps({key: value for key, value in arguments.items() if key not in ("paths", "lang")},
+                             sort_keys=True)
+        group = tuple(sorted(str(path) for path in targets))
+        payload = getattr(response, "structured_content", None)
+        report = payload.get("report") if isinstance(payload, dict) else None
+        checks = report.get("checks") if isinstance(report, dict) else None
+        valid = (not response.is_error and isinstance(report, dict)
+                 and report.get("schema_version") == "terraproof.evidence/0.1"
+                 and isinstance(checks, list) and bool(checks)
+                 and all(isinstance(check, dict) and isinstance(check.get("id"), str)
+                         and re.fullmatch(r"[a-z_]+\.[a-z_]+", check["id"])
+                         and check.get("status") in ("pass", "fail", "warn", "not-run")
+                         and isinstance(check.get("evidence"), dict) for check in checks))
+        for target in targets:
+            key = (target, "report.valid", context, group)
+            if not valid or key in self.records:
+                self.records[key] = bool(valid)
+        if not valid:
+            return
+        for check in checks:
+            evidence = check["evidence"]
+            references = [evidence.get("input"), evidence.get("output")]
+            if isinstance(evidence.get("inputs"), list):
+                references.extend(evidence["inputs"])
+            referenced = {path for value in references if (path := self._path(value)) is not None}
+            affected = targets & referenced if referenced else targets
+            scope = tuple(sorted(str(path) for path in referenced)) if referenced else group
+            for target in affected:
+                key = (target, check["id"], context, scope)
+                if check["status"] == "fail" or key in self.records:
+                    self.records[key] = check["status"] == "pass"
+
+
 class ApiAgentAdapter(Adapter):
     """Runs one lift task with an OpenAI-compatible chat model."""
 
@@ -288,12 +404,10 @@ class ApiAgentAdapter(Adapter):
     async def _run(self, request: AgentRequest) -> AgentResult:
         if request.condition != WITH:
             return await self._loop(request, None)
-        from mcp import Client, StdioServerParameters
+        from mcp import Client
 
-        entry = json.loads((request.project / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]["terraproof"]
-        params = StdioServerParameters(command=entry["command"], args=entry.get("args", []), cwd=str(request.project),
-                                       env={"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"})
-        async with Client(params, raise_exceptions=False, read_timeout_seconds=PYTHON_TIMEOUT) as client:
+        async with Client(mcp_parameters(request.project), raise_exceptions=False,
+                          read_timeout_seconds=PYTHON_TIMEOUT) as client:
             return await self._loop(request, client)
 
     async def _loop(self, request: AgentRequest, mcp_client) -> AgentResult:
@@ -308,7 +422,14 @@ class ApiAgentAdapter(Adapter):
 
         tools = list(FILE_TOOLS)
         mcp_names = {}
+        instructions = None
         if mcp_client is not None:
+            try:
+                instructions = server_instructions(mcp_client)
+            except (ValueError, AttributeError):
+                return AgentResult(status="failed", turn={"status": "error",
+                    "reason": "missing or invalid Terraproof MCP instructions", "model_calls": 0,
+                    "mcp_instructions_delivered": False})
             for tool in (await mcp_client.list_tools()).tools:
                 exposed = f"terraproof_{tool.name}"
                 mcp_names[exposed] = tool.name
@@ -316,11 +437,17 @@ class ApiAgentAdapter(Adapter):
                     "name": exposed, "description": tool.description or tool.name,
                     "parameters": tool.input_schema or {"type": "object", "properties": {}}}})
 
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": driver.PROMPT}]
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        if instructions is not None:
+            messages.append({"role": "system", "content": "Terraproof tool guidance from the configured MCP server:\n"
+                             + instructions})
+        messages.append({"role": "user", "content": driver.PROMPT})
         calls: list[dict] = []
         labels: set[str] = set()
         incidental: set[str] = set()
         skill_reads = 0
+        output_review = _OutputReview(project, lift_task(request.task_id).deliverable_names)
+        completion_reviews = 0
         model_calls = input_tokens = output_tokens = retries = tool_retries = 0
         error_types: list[str] = []
         unreported_cost = 0.0
@@ -426,6 +553,14 @@ class ApiAgentAdapter(Adapter):
                 status, reason = "refused", "model refused or content filtered"
                 break
             if not tool_calls:
+                if output_review.unresolved:
+                    if completion_reviews >= MAX_COMPLETION_REVIEWS:
+                        status, reason = "error", "output verification unresolved"
+                        break
+                    completion_reviews += 1
+                    messages.append({"role": "assistant", "content": message.get("content")})
+                    messages.append({"role": "user", "content": COMPLETION_REVIEW})
+                    continue  # the normal request, time, token and USD admission checks still apply
                 status, reason = "completed", "ok" if calls else "no tool calls"
                 break
             messages.append({"role": "assistant", "content": message.get("content"), "tool_calls": tool_calls})
@@ -451,10 +586,14 @@ class ApiAgentAdapter(Adapter):
                     skill_reads += name == "read_file" and driver._is_skill_read(str((arguments or {}).get("path", "")))
                 else:
                     tool, category = "other", "other"
+                if name in ("run_python", "write_file") and arguments is not None:
+                    output_review.invalidate()  # even a failed write/script may have changed artifacts
                 if arguments is None:
                     reply, outcome = "arguments were not a JSON object", "failed"
                 elif name in mcp_names:
                     result = await mcp_client.call_tool(mcp_names[name], arguments)
+                    if mcp_names[name] == "run_checks":
+                        output_review.observe(arguments, result)
                     reply = "\n".join(getattr(part, "text", "") for part in result.content)[:READ_LIMIT]
                     outcome = "failed" if result.is_error else "completed"
                 else:
@@ -477,6 +616,15 @@ class ApiAgentAdapter(Adapter):
             turn={"status": status, "reason": reason, "error_types": sorted(set(error_types)),
                   "error_items": len(error_types), "model_calls": model_calls, "rate_limit_retries": retries,
                   "tool_use_retries": tool_retries,
+                  "completion_review_prompts": completion_reviews,
+                  "output_review": ("unresolved" if output_review.unresolved else
+                                    "resolved" if output_review.records else "no-failure-observed"),
+                  "output_review_requirements": len(output_review.records),
+                  "output_review_unresolved": output_review.unresolved,
+                  "mcp_instructions_delivered": instructions is not None and model_calls > 0,
+                  "mcp_instructions_chars": len(instructions) if instructions is not None else 0,
+                  "mcp_instructions_sha256": hashlib.sha256(instructions.encode("utf-8")).hexdigest()
+                  if instructions is not None else None,
                   "unreported_tokens_reserved": unreported_tokens,
                   "unreported_usd_reserved": round(unreported_cost, 6),
                   "cost_basis": "reported-plus-reserved" if unreported_tokens else "reported",
@@ -501,7 +649,8 @@ class ApiAgentAdapter(Adapter):
         if request.condition != WITH:
             checks.update(driver.without_isolation_checks(request.project, self.agent_python_without, env))
         else:
-            entry = json.loads((request.project / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]["terraproof"]
-            checks["mcp_tools_served"] = driver.mcp_tools_served(entry["command"], entry.get("args", []),
-                                                                 request.project)
+            try:
+                checks.update(asyncio.run(asyncio.wait_for(mcp_preflight(request.project), PYTHON_TIMEOUT)))
+            except asyncio.TimeoutError:
+                checks.update({"mcp_tools_served": False, "mcp_instructions_available": False})
         return checks

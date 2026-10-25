@@ -35,8 +35,16 @@ INSTRUCTIONS = (
     "remote-sensing result is correct, call `run_checks` on the outputs and report the grade. "
     "Call `inspect_dataset` on unfamiliar inputs, `find_guidance` at the start of a task to "
     "retrieve the relevant skill sections, and `load_section` to read one of those sections in "
-    "full. Use `preflight` to validate a declared plan against the real inputs before spending "
-    "compute. All tools are read-only: they never modify your data."
+    "full; installed skill files are not automatically loaded by every host. Use `preflight` "
+    "to validate a declared plan against the real inputs before spending compute. For derived "
+    "outputs, supply the relevant source operands and options to `run_checks`; inspection or "
+    "a plausible value range alone does not verify the derivation. For NDVI, use "
+    "`index_formula=\"ndvi\"`, `nir` and `red` on the saved output. Respect each band's scale "
+    "and offset, source nodata masks and undefined denominators; valid zero values remain "
+    "data. Review extra output masking against the task's QA policy. Read individual check "
+    "statuses and limitations: warn and not-run do not establish correctness. Correct failed "
+    "requirements and rerun checks after changes, or report what remains unresolved. All "
+    "tools are read-only: they never modify your data."
 )
 
 mcp = MCPServer(name="terraproof", version=__version__, instructions=INSTRUCTIONS)
