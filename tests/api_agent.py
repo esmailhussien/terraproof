@@ -267,7 +267,7 @@ class _OutputReview:
         self.records: dict[tuple, bool] = {}
 
     def _path(self, value):
-        if not isinstance(value, str):
+        if not isinstance(value, str) or "\0" in value:
             return None
         path = Path(value)
         try:
