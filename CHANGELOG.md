@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Bundled required-output plans for terrain slope and the COG delivery layout
+  screen, using existing source-consistency, layout, nodata and CRS checks.
+  Offline real-MCP tests cover completion gating and demonstrate that a passing
+  declared screen can still fail independent full-artifact grading. The English
+  [policy guide](docs/OUTPUT_VERIFICATION.md) documents coverage and limits.
+  No production checker, routing rule, frozen task or scientific result changed.
+
 ## [0.7.2] — 2026-10-25
 
 ### Added

@@ -47,6 +47,66 @@ output coverage and invalid schemas are refused. The active MCP `run_checks`
 schema must accept all arguments before a provider call. Plan-only mode validates
 the document and coverage; preflight also checks current data and the MCP schema.
 
+## Bundled task plans
+
+Choose the file that matches the selected task; these files are not automatically
+merged. A plan must still cover every deliverable of every task selected for a
+run. The original and harder experimental cohorts remain separate.
+
+| Plan | Task and required evidence | Explicit limits |
+| --- | --- | --- |
+| [NDVI source contract](../tests/verification_plans/ndvi-source-contract.json) | `indices-ndvi-physical-inputs`: `rs.index_formula`, with explicit NIR/red sources | Covers the declared NDVI source relation, not every scientific requirement; see [the NDVI guide](INDEX_FORMULA.md). |
+| [Slope source contract](../tests/verification_plans/terrain-slope-source-contract.json) | `terrain-slope-map`: `terrain.slope_consistent`, `raster.nodata_declared`, `crs.defined`; DEM is `inputs/elevation.tif` | A declared-source consistency screen, not full stencil/mask/edge acceptance. |
+| [COG delivery screen](../tests/verification_plans/cog-delivery-screen.json) | `raster-cog-delivery`: `raster.cog_layout`, `raster.nodata_declared`, `crs.defined` | Heuristic layout/nodata/CRS screen, not source-pixel identity or complete COG conformance. |
+
+### Slope scope
+
+The slope plan targets `outputs/result.tif` with `dem=inputs/elevation.tif`.
+The actual `run_checks` call must supply that DEM. An omitted or different source
+cannot satisfy the policy, even if it has identical bytes and yields a passing
+check. The original-source content and freshness rules apply as usual.
+
+The existing slope check compares available valid, sloping cells against central
+differences using the DEM's declared vertical units and pixel spacings. It
+requires at least 95% of compared cells within its tolerance (relative 0.001,
+absolute 0.01 degrees), and skips expected slopes below 0.5 degrees. Named
+vertical-unit and square-pixel mistakes fail; other mismatches warn. No sloping
+comparison cells, an unsupported vertical unit, a geographic DEM or an
+incompatible grid leaves the slope check not-run and the plan unverified.
+
+This check does not enforce the full delivered mask, complete stencil support,
+edge policy or all-cell numeric accuracy. `raster.nodata_declared` establishes
+that nodata is declared, not that the mask is correct. A locally added missing
+slope cell can pass the declared screen while failing the independent task
+oracle. The plan deliberately preserves this documented check scope.
+
+### COG scope
+
+The delivery plan targets `outputs/delivery.tif` without extra source arguments.
+The existing layout check screens GeoTIFF tiling, internal overview presence
+when larger than one block, and JPEG compression. A striped/no-overview delivery
+or JPEG compression warns, which blocks strict completion as review-required.
+Non-applicable or absent required evidence stays unverified.
+
+The plan does not compare output values, masks, dimensions, dtype, grid or CRS
+against `inputs/analysis.tif`. A defined output CRS need not equal the source CRS.
+It does not validate IFD/byte ordering, HTTP range behaviour, every compression
+setting or full Cloud Optimized GeoTIFF conformance. A well-laid-out COG with an
+altered pixel can pass this policy while the independent task oracle rejects it.
+Source identity/full-file grading and a full COG validator remain separate work.
+
+### Offline coverage
+
+`tests/python/test_verification_plan_examples.py` runs both plans through the
+actual API host and local MCP with a scripted fake provider; real HTTP is blocked
+and a dummy key is used. Tests cover current/missing/stale checks, explicit
+rechecking, same-time content changes, source mutation, named bad outputs,
+not-run/warning outcomes, source-context matching and the documented oracle-only
+gaps. They also exercise key-free plan-only commands and baseline isolation.
+No paid experiment, new checker capability or generalized agent-lift result is
+implied. Historical task specs, oracles, seeded controls and measured outcomes
+are unchanged.
+
 ## Plan without inference
 
 From a source checkout with Python dependencies and the `mcp` extra installed,
@@ -56,6 +116,14 @@ prices before approving any paid run.
 
 ```powershell
 python tests/agent_lift.py --agent-host openai --api-model gpt-4o --runs 1 --task indices-ndvi-physical-inputs --verification-plan tests/verification_plans/ndvi-source-contract.json --usd-per-million-input 1 --usd-per-million-output 1
+```
+
+For the other bundled plans, these commands also only print a plan. The prices
+`1` remain illustrative planning inputs, not verified provider rates:
+
+```powershell
+python tests/agent_lift.py --agent-host openai --runs 1 --task terrain-slope-map --verification-plan tests/verification_plans/terrain-slope-source-contract.json --usd-per-million-input 1 --usd-per-million-output 1
+python tests/agent_lift.py --agent-host openai --runs 1 --task raster-cog-delivery --verification-plan tests/verification_plans/cog-delivery-screen.json --usd-per-million-input 1 --usd-per-million-output 1
 ```
 
 Without `--approve-model-calls`, this only prints the plan: no provider request,

@@ -651,3 +651,16 @@ exercise those blocked-completion branches. Recorded usage was approximately
 USD 0.058643 cache-aware (USD 0.084723 uncached) under the approved USD 1 ceiling.
 This single directed synthetic-scene result establishes neither general repair
 reliability nor lift. Historical negative outcomes remain unchanged.
+
+
+### Additional required-output examples (unreleased)
+
+The [policy guide](../OUTPUT_VERIFICATION.md#bundled-task-plans) now includes
+explicit plans for `terrain-slope-map` and `raster-cog-delivery`, alongside NDVI.
+They use existing checks only: source/units/spacing consistency for slope and a
+heuristic layout screen for COG, plus declared nodata and a defined CRS. They do
+not replace independent full-file oracles or a complete COG validator. Offline
+tests explicitly retain examples where a passing policy does not imply artifact
+acceptance (an extra missing slope cell or an altered COG pixel). Existing task
+specs, recipes, source/checker implementations and historical measurements stay
+unchanged. This batch introduces no paid run or new inference authorization.

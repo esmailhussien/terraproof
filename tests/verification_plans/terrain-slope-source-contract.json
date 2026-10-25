@@ -1,0 +1,20 @@
+{
+  "schema": "terraproof.required-output-verification/1",
+  "tasks": {
+    "terrain-slope-map": [
+      {
+        "paths": [
+          "outputs/result.tif"
+        ],
+        "checks": [
+          "terrain.slope_consistent",
+          "raster.nodata_declared",
+          "crs.defined"
+        ],
+        "parameters": {
+          "dem": "inputs/elevation.tif"
+        }
+      }
+    ]
+  }
+}
