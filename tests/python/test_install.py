@@ -13,6 +13,7 @@ from terraproof.install import main
 SKILLS = "gdal,crs-and-units"
 
 NATIVE_FILES = {
+    "antigravity": ["AGENTS.md", ".agents/skills/gdal/SKILL.md", ".agents/skills/gdal/references/gdal-recipes.md"],
     "claude": [
         ".claude/skills/gdal/SKILL.md",
         ".claude/skills/gdal/references/gdal-recipes.md",
@@ -26,6 +27,7 @@ NATIVE_FILES = {
 }
 
 MCP_FILES = {
+    "antigravity": (".agents/mcp_config.json", "mcpServers"),
     "claude": (".mcp.json", "mcpServers"),
     "cursor": (".cursor/mcp.json", "mcpServers"),
     "gemini": (".gemini/settings.json", "mcpServers"),
@@ -92,7 +94,7 @@ def test_copilot_instruction_has_apply_to_frontmatter(tmp_path):
 
 
 def test_agents_md_uses_the_terraproof_markers(tmp_path):
-    for agent in ("codex", "gemini", "opencode"):
+    for agent in ("antigravity", "codex", "gemini", "opencode"):
         assert install(tmp_path, agent) == 0
         text = (tmp_path / ("AGENTS.md" if agent != "gemini" else "GEMINI.md")).read_text(encoding="utf-8")
         assert text.count(f"<!-- terraproof:{agent}:begin -->") == 1

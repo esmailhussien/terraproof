@@ -112,6 +112,7 @@ python -m terraproof.install --agent cursor --skills gdal,crs-and-units --target
 
 | `--agent` | Skills are written to | MCP config (`--with-mcp`) |
 |---|---|---|
+| `antigravity` | `.agents/skills/<skill>/` and `AGENTS.md` | `.agents/mcp_config.json` |
 | `claude` | `.claude/skills/<skill>/` | `.mcp.json` |
 | `codex` | `.agents/skills/<skill>/` and `AGENTS.md` | `.codex/config.toml` |
 | `cursor` | `.cursor/rules/terraproof-<skill>.mdc` | `.cursor/mcp.json` |
@@ -154,7 +155,7 @@ Each skill lives in `skills/<name>/` with a `SKILL.md`, references, and a `skill
 - **Routing:** an independent, frozen 160-item set (v5) passed once in both languages: English recall 0.97 with 3.75 wrong picks per 100, Arabic recall 0.96 with 2.5. Earlier independent sets (v3, v4) failed and stay on record. The v5 set was written by an AI agent, not reviewed by an expert.
 - **Agent lift:** in a 54-run Claude Code comparison on 9 tasks, runs with Terraproof passed 27/27 and runs without it 21/27. The pre-specified test is **not significant** (p = 0.125), and five tasks passed either way, so no lift is claimed. The clearest single result is Landsat QA masking (3/3 with, 0/3 without). See [`docs/plans/Terraproof_Phase5_PLAN.md`](docs/plans/Terraproof_Phase5_PLAN.md).
 - **Harder cohort:** a one-repeat Claude Code screen passed all six tasks both with and without Terraproof. That small screen shows no observed benefit and is separate from the original nine-task study. API pilots are exploratory and do not establish lift.
-- **Real hosts:** tool use through MCP has been verified with Codex and Claude Code. Cursor, Copilot and OpenCode are unit-tested against their documented layouts only.
+- **Real hosts:** tool use through MCP has been verified with Codex and Claude Code. Antigravity, Cursor, Copilot and OpenCode are unit-tested against their documented layouts only.
 
 ---
 

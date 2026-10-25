@@ -746,6 +746,261 @@ def probe_claude(executable: str | None = None) -> tuple[str | None, str, str | 
     return executable, "ok", version.stdout.strip()
 
 
+# -- Antigravity -------------------------------------------------------------------------
+# agy 1.3.0, https://antigravity.google/docs/cli/headless: `--output-format stream-json` emits one
+# `init`, then `step_update` events (tool steps carry `tool_name` and `tool_info`), then one `result`
+# whose `status` is SUCCESS, ERROR, CANCELED, INTERRUPTED, INVALID, WAITING or RUNNING.
+ANTIGRAVITY_REQUIRED_FLAGS = ("--print", "--output-format", "--dangerously-skip-permissions", "--model")
+ANTIGRAVITY_RESULT_REASONS = {"ERROR": "result status error", "CANCELED": "result status canceled",
+                              "INTERRUPTED": "result status interrupted", "INVALID": "result status invalid",
+                              "WAITING": "waiting for approval", "RUNNING": "result status running"}
+# Built-in tool names are matched by keyword, first match wins; names are not a stable contract.
+ANTIGRAVITY_CATEGORIES = (("shell", ("command", "terminal", "shell", "bash", "powershell")),
+                          ("web", ("url", "web", "browser", "http")),
+                          ("agent", ("subagent", "agent")),
+                          ("skill", ("skill",)),
+                          ("file_edit", ("write", "replace", "edit", "create", "delete", "move")),
+                          ("file_read", ("view", "read", "list", "find", "grep", "search", "glob", "file")))
+# Global locations every workspace sees, so both conditions see them
+# (https://antigravity.google/docs/{mcp,skills,rules}). Terraproof must be absent from all of them.
+ANTIGRAVITY_GLOBAL_MCP = ("config/mcp_config.json",)
+ANTIGRAVITY_GLOBAL_SKILLS = ("antigravity-cli/skills", "config/skills", "antigravity/skills")
+ANTIGRAVITY_GLOBAL_RULES = ("GEMINI.md", "AGENTS.md", "config/rules", "antigravity-cli/rules")
+ANTIGRAVITY_PLUGINS = "antigravity-cli/plugins"
+SHORT_LABEL = re.compile(r"[A-Za-z0-9_.:-]{1,64}")
+
+
+def antigravity_lift_command(executable: str, model: str, effort: str | None) -> list[str]:
+    """Flags first and the prompt last, so `--print` works whether it takes a value or not."""
+    command = [executable, "--output-format", "stream-json", "--dangerously-skip-permissions", "--model", model]
+    if effort:
+        command += ["--effort", effort]
+    return command + ["--print", PROMPT]
+
+
+def _antigravity_label(name: str) -> tuple[str, str]:
+    match = re.fullmatch(r"(?:mcp[_:/.]+)?terraproof(?:__|[_:/.])(\w+)|mcp\(terraproof/(\w+)\)", name, re.IGNORECASE)
+    tool = (match.group(1) or match.group(2)) if match else (name if name in TOOLS else None)
+    if tool in TOOLS:
+        return f"terraproof.{tool}", f"mcp:{tool}"
+    if re.search(r"mcp", name, re.IGNORECASE):
+        return "mcp", "mcp:other"
+    label = name if SHORT_LABEL.fullmatch(name) else "other"
+    lowered = name.lower()
+    for category, words in ANTIGRAVITY_CATEGORIES:
+        if any(word in lowered for word in words):
+            return label, category
+    return label, "other"
+
+
+def _same_path(first, second: Path) -> bool:
+    try:
+        return os.path.normcase(str(Path(str(first)).resolve())) == os.path.normcase(str(second.resolve()))
+    except (OSError, ValueError):
+        return False
+
+
+def antigravity_trace(events, condition: str, seeded: tuple[str, ...], *, project: Path | None = None,
+                      timed_out: bool = False) -> AgentResult:
+    """Sanitise agy stream-json into per-call labels, a turn status and counts."""
+    calls: dict[str, dict] = {}
+    order: list[str] = []
+    labels: set[str] = set()
+    incidental: set[str] = set()
+    workspace_ok = True
+    final: dict = {}
+    for stamp, event in _timed(events):
+        if not isinstance(event, dict):
+            continue
+        kind = event.get("event")
+        payload = event.get(kind) if isinstance(event.get(kind), dict) else event
+        if kind == "init":
+            tools = json.dumps(payload.get("tools"), default=str)
+            if condition != WITH and re.search(r"terraproof", tools, re.IGNORECASE):
+                labels.add("terraproof-in-without:mcp")
+            if condition == WITH and not re.search(r"terraproof", tools, re.IGNORECASE):
+                incidental.add("terraproof-tools-not-listed")
+            if project is not None and payload.get("cwd") and not _same_path(payload["cwd"], project):
+                workspace_ok = False
+        elif kind == "result":
+            final = payload
+        elif kind == "step_update":
+            info = payload.get("tool_info") if isinstance(payload.get("tool_info"), dict) else {}
+            kind_of_step = str(payload.get("step_type") or "")
+            if kind_of_step != "tool" and not info and not payload.get("subagent_info"):
+                continue
+            identifier = f"{payload.get('conversation_id')}:{payload.get('step_index')}"
+            if identifier not in calls:
+                name = str(payload.get("tool_name") or info.get("name") or "")
+                tool, category = _antigravity_label(name) if name else ("subagent", "agent")
+                calls[identifier] = {"tool": tool, "category": category, "status": "started", "exit_code": None,
+                                     "duration_ms": None, "_start": stamp, "_text": ""}
+                order.append(identifier)
+            record = calls[identifier]
+            text = json.dumps({"name": payload.get("tool_name") or info.get("name"),
+                               "parameters": info.get("parameters")}, default=str)
+            record["_text"] = record["_text"] + " " + text if text not in record["_text"] else record["_text"]
+            if payload.get("state") == "DONE":
+                record["status"] = "failed" if info.get("error") else "completed"
+                seconds = payload.get("duration_seconds")
+                record["duration_ms"] = (max(0, int(round(seconds * 1000))) if isinstance(seconds, (int, float))
+                                         else _duration_ms(record["_start"], stamp))
+    public = []
+    skill_reads = 0
+    for identifier in order:
+        record = calls[identifier]
+        skill_reads += record["category"] == "skill" or _is_skill_read(record["_text"])
+        labels |= contamination_labels(record["_text"], condition, seeded)
+        incidental |= incidental_labels(record["_text"], condition)
+        public.append({key: value for key, value in record.items() if not key.startswith("_")})
+    status = str(final.get("status") or "")
+    error = final.get("error") if isinstance(final.get("error"), dict) else {}
+    error_type = str(error.get("type") or "").lower()
+    error_types = [error_type] if re.fullmatch(r"[a-z0-9_.-]{1,40}", error_type) else []
+    usage = final.get("usage") if isinstance(final.get("usage"), dict) else {}
+    if timed_out:
+        turn_status, reason = "timeout", "per-run timeout; owned process tree terminated"
+    elif not workspace_ok:
+        turn_status, reason = "error", "host workspace is not the run project"
+    elif status == "SUCCESS":
+        turn_status, reason = "completed", "no tool calls" if not public else "ok"
+    elif final:
+        turn_status, reason = "error", ANTIGRAVITY_RESULT_REASONS.get(status, "unclassified result")
+    else:
+        turn_status, reason = "aborted", "stream ended without a result event"
+    return AgentResult(status="completed" if turn_status == "completed" else ("timeout" if timed_out else "failed"),
+                       cost_usd=None, tool_calls=len(public),
+                       terraproof_tool_calls=sum(1 for call in public if call["tool"].startswith("terraproof.")),
+                       skill_reads=skill_reads,
+                       input_tokens=usage.get("input_tokens") if type(usage.get("input_tokens")) is int else None,
+                       output_tokens=usage.get("output_tokens") if type(usage.get("output_tokens")) is int else None,
+                       contamination=sorted(labels), diagnostics=sorted(incidental), calls=public,
+                       turn={"status": turn_status, "reason": reason, "error_types": error_types, "error_items": 0})
+
+
+def _mentions_terraproof(path: Path) -> bool:
+    try:
+        return "terraproof" in path.read_text(encoding="utf-8", errors="replace").lower()
+    except OSError:
+        return True  # unreadable: cannot show it is clean
+
+
+def antigravity_global_checks(home: Path) -> dict:
+    """No-model checks that nothing global to every agy workspace carries Terraproof.
+
+    Only booleans are returned; no file content leaves this function.
+    """
+    registry = set(_registry_names())
+    servers_clean = True
+    for relative in ANTIGRAVITY_GLOBAL_MCP:
+        path = home / relative
+        if path.is_file() and path.read_text(encoding="utf-8", errors="replace").strip():
+            try:
+                servers = json.loads(path.read_text(encoding="utf-8")).get("mcpServers") or {}
+            except (ValueError, AttributeError):
+                servers_clean = False
+                continue
+            servers_clean &= not any("terraproof" in (name + json.dumps(entry, default=str)).lower()
+                                     for name, entry in servers.items())
+    plugins = home / ANTIGRAVITY_PLUGINS
+    skill_roots = [home / relative for relative in ANTIGRAVITY_GLOBAL_SKILLS]
+    skill_roots += sorted(plugins.glob("*/skills")) if plugins.is_dir() else []
+    skills_clean = not any(child.is_dir() and (child.name in registry or "terraproof" in child.name.lower())
+                           for root in skill_roots if root.is_dir() for child in root.iterdir())
+    rule_files = []
+    for relative in ANTIGRAVITY_GLOBAL_RULES:
+        path = home / relative
+        rule_files += sorted(path.glob("*.md")) if path.is_dir() else ([path] if path.is_file() else [])
+    rule_files += sorted(plugins.glob("*/rules/*.md")) if plugins.is_dir() else []
+    plugin_configs = sorted(plugins.glob("**/*.json")) if plugins.is_dir() else []
+    return {"no_terraproof_in_global_mcp": servers_clean,
+            "no_terraproof_in_global_skills": skills_clean,
+            "no_terraproof_in_global_rules": not any(_mentions_terraproof(path) for path in rule_files),
+            "no_terraproof_in_plugins": not any(_mentions_terraproof(path) for path in plugin_configs)}
+
+
+class AntigravityHostAdapter(Adapter):
+    name = "antigravity-host"
+    model_calls = True
+    usd_capped = False
+
+    def __init__(self, executable: str, model: str, effort: str | None = None,
+                 agent_python_without: str | None = None, home: Path | None = None):
+        self.executable = executable
+        self.model = model
+        self.effort = effort
+        self.agent_python_without = agent_python_without
+        self.home = home or Path.home() / ".gemini"
+
+    def run(self, request: AgentRequest) -> AgentResult:
+        command = antigravity_lift_command(self.executable, self.model, self.effort)
+        env = host_env(request.condition, self.agent_python_without)
+        code, lines, _stderr, timed_out = run_contained(command, request.project, env, request.timeout_seconds)
+        events, invalid = _json_lines(lines)
+        result = antigravity_trace(events, request.condition, _seeded(request.task_id), project=request.project,
+                                   timed_out=timed_out)
+        if (code not in (0, None) or invalid) and result.status == "completed":
+            result.status = "failed"
+            result.turn["reason"] = "nonzero host exit or invalid JSONL"
+        return result
+
+    def preflight(self, request: AgentRequest) -> dict:
+        """agy has no model-free sandbox runner; Python/IO are probed directly, as for Claude Code."""
+        task = lift_task(request.task_id)
+        script = request.project.parent / "preflight_probe.py"
+        script.write_text(PREFLIGHT_SCRIPT.format(name=task.inputs[0]), encoding="utf-8")
+        env = host_env(request.condition, self.agent_python_without)
+        python = shutil.which("python", path=env["PATH"])
+        stdout = ""
+        if python:
+            stdout = subprocess.run([python, str(script)], cwd=request.project, env=env, capture_output=True,
+                                    text=True, encoding="utf-8", errors="replace", timeout=120, check=False).stdout
+        checks = {check.replace("sandbox_", "unsandboxed_"): marker in stdout
+                  for check, marker in PREFLIGHT_MARKERS if check != "sandbox_shell"}
+        checks.update(antigravity_global_checks(self.home))
+        if request.condition == WITH:
+            config = request.project / ".agents" / "mcp_config.json"
+            entry = (json.loads(config.read_text(encoding="utf-8")).get("mcpServers", {}).get("terraproof", {})
+                     if config.is_file() else {})
+            checks["mcp_tools_served"] = bool(entry) and mcp_tools_served(entry["command"], entry.get("args", []),
+                                                                         request.project)
+            agents_md = request.project / "AGENTS.md"
+            checks["agents_md_block_written"] = (agents_md.is_file() and "terraproof:antigravity:begin"
+                                                 in agents_md.read_text(encoding="utf-8"))
+        else:
+            checks.update(without_isolation_checks(request.project, self.agent_python_without, env))
+        return checks
+
+
+def antigravity_models(output: str) -> list[str]:
+    """Model ids from `agy models` (one `<id>\\t<display name>` per line)."""
+    return [line.split("\t", 1)[0].strip() for line in output.splitlines()
+            if "\t" in line and re.fullmatch(r"[\w.:-]+", line.split("\t", 1)[0].strip())]
+
+
+def probe_antigravity(executable: str | None = None, model: str | None = None) -> tuple[str | None, str, str | None]:
+    """Resolve a native agy binary; `agy models` (no inference) confirms cached sign-in and the model."""
+    executable = executable or shutil.which("agy")
+    if not executable or not Path(executable).is_file():
+        return None, "agy executable not found", None
+    if os.name == "nt" and Path(executable).suffix.lower() != ".exe":
+        return None, "Antigravity CLI must be a native .exe", None
+    with tempfile.TemporaryDirectory(prefix="terraproof-lift-probe-") as directory:
+        cwd = Path(directory)
+        version = validation.run([executable, "--version"], cwd=cwd)
+        help_result = validation.run([executable, "--help"], cwd=cwd)
+        if version.returncode or not all(flag in help_result.stdout + help_result.stderr
+                                         for flag in ANTIGRAVITY_REQUIRED_FLAGS):
+            return None, "agy lacks a required headless flag", None
+        listed = validation.run([executable, "models"], cwd=cwd, timeout=120)
+        models = antigravity_models(listed.stdout) if listed.returncode == 0 else []
+        if not models:
+            return None, "agy models listed none; sign in with an interactive agy session; no credentials logged", None
+        if model not in models:
+            return None, "the requested model is not listed by agy models", None
+    return executable, "ok", f"agy {version.stdout.strip()} {model}"
+
+
 # -- plan and main -----------------------------------------------------------------------
 def total_usd_cap(args, calls: int) -> float:
     """An explicit --max-usd-total, or by default every planned run at its full per-run cap."""
@@ -758,6 +1013,8 @@ BILLING = {
     "codex": "ChatGPT subscription usage; Codex exposes no USD cap, so the approved invocation count and timeout "
              "are the hard limits",
     "claude": "Claude API spend, capped per run by --max-budget-usd and in total by the harness",
+    "antigravity": "Antigravity (Google account) quota; agy exposes no USD cap, so the approved invocation count "
+                   "and timeout are the hard limits",
     "openai": "OpenAI API spend from OPENAI_API_KEY, computed from returned token usage at the given prices; "
               "locally limited by conservative request reservations and reported usage, not a provider-side invoice cap",
     "groq": "Groq API spend from GROQ_API_KEY, computed from returned token usage at the given prices; "
@@ -795,6 +1052,12 @@ def plan(args) -> dict:
         approve += ["--codex-executable", str(args.codex_executable)]
     if args.agent_host == "claude" and args.claude_executable:
         approve += ["--claude-executable", str(args.claude_executable)]
+    if args.agent_host == "antigravity":
+        if args.antigravity_executable:
+            approve += ["--antigravity-executable", str(args.antigravity_executable)]
+        approve += ["--antigravity-model", str(args.antigravity_model)]
+        if args.antigravity_effort:
+            approve += ["--antigravity-effort", args.antigravity_effort]
     if args.agent_python_without:
         approve += ["--agent-python-without", str(args.agent_python_without)]
     if args.agent_host in API_HOSTS:
@@ -838,7 +1101,7 @@ def plan(args) -> dict:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--agent-host", choices=["codex", "claude", *API_HOSTS], required=True,
+    parser.add_argument("--agent-host", choices=["codex", "claude", "antigravity", *API_HOSTS], required=True,
                         help="openai/groq use tests/api_agent.py; keys come only from OPENAI_API_KEY / GROQ_API_KEY")
     parser.add_argument("--runs", type=int, default=3, help="runs per condition and task (default 3)")
     parser.add_argument("--task", action="append", help="lift task id (repeatable; not with --cohort)")
@@ -867,6 +1130,11 @@ def main(argv=None) -> int:
                         help="native codex.exe to use (default: the PATH-resolved native binary)")
     parser.add_argument("--claude-executable", type=Path,
                         help="native claude.exe to use (default: PATH; the npm claude.cmd wrapper is refused)")
+    parser.add_argument("--antigravity-executable", type=Path,
+                        help="native agy.exe to use (default: the PATH-resolved agy)")
+    parser.add_argument("--antigravity-model", help="agy model id from `agy models` (required for antigravity)")
+    parser.add_argument("--antigravity-effort", choices=["low", "medium", "high", "xhigh", "max"],
+                        help="agy reasoning effort (default: the host's own)")
     parser.add_argument("--agent-python-without", type=Path,
                         help="dependency-only Python (numpy, rasterio, pyogrio, shapely, pyproj; no Terraproof) "
                              "on a path without 'terraproof', first on PATH for the without agent; required by preflight")
@@ -884,6 +1152,8 @@ def main(argv=None) -> int:
         parser.error("--runs, --timeout and the USD caps must be positive")
     if args.task and args.cohort:
         parser.error("--task and --cohort select tasks in different ways; give one of them")
+    if args.agent_host == "antigravity" and not args.antigravity_model:
+        parser.error("--antigravity-model is required for antigravity (see `agy models`)")
     if args.agent_host in API_HOSTS:
         if not api_model(args):
             parser.error(f"--api-model is required for {args.agent_host}")
@@ -926,6 +1196,12 @@ def main(argv=None) -> int:
         executable, reason, version = probe_codex(str(args.codex_executable) if args.codex_executable else None)
         adapter = (CodexHostAdapter(executable, args.codex_reasoning_effort, agent_python) if executable
                    else None)
+        budget = Budget(max_runs=args.approve_model_calls, timeout_seconds=args.timeout)
+    elif args.agent_host == "antigravity":
+        executable, reason, version = probe_antigravity(
+            str(args.antigravity_executable) if args.antigravity_executable else None, args.antigravity_model)
+        adapter = (AntigravityHostAdapter(executable, args.antigravity_model, args.antigravity_effort, agent_python)
+                   if executable else None)
         budget = Budget(max_runs=args.approve_model_calls, timeout_seconds=args.timeout)
     elif args.agent_host in API_HOSTS:
         from api_agent import ApiAgentAdapter, ApiLimits

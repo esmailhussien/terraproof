@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Installer format `--agent antigravity`: workspace skills in `.agents/skills/<skill>/`, an
+  `AGENTS.md` block, and with `--with-mcp` a `mcpServers` entry in `.agents/mcp_config.json`
+  (the workspace locations in Antigravity's skills, rules and MCP docs). Unit-tested only.
+- Lift driver host `--agent-host antigravity` for the Antigravity CLI (`agy`, checked against
+  1.3.0 and 1.4.7): headless `--print` with `stream-json` output, an explicit `--antigravity-model`
+  (confirmed by the no-inference `agy models` listing, which also confirms cached sign-in)
+  and optional `--antigravity-effort`. Each run's workspace carries its own condition: the
+  "with" project gets the installer's skills, `AGENTS.md` and workspace MCP config, the
+  "without" project none. Preflight refuses runs when Terraproof is visible to every
+  workspace through agy's global MCP config, global skills, global rules or plugins, and the
+  trace flags Terraproof tools offered in "without" and a host workspace other than the run
+  project. Like Codex, agy reports no spend, so the approved run count and timeout are the
+  only hard limits. Tests use fake streams in the documented shape; no agy model call was made.
+  The no-model preflight on a real install (agy 1.4.7) passed every check in both conditions.
+
+### Known limits
+
+- agy's stream-json tool names are matched by keyword and by the documented `server/tool`
+  forms; the real MCP tool-name format is unconfirmed until a first paid run. agy runs with
+  `--dangerously-skip-permissions` and without `--sandbox`, so commands are not sandboxed (as
+  for Claude Code), and agy may keep conversation history under `~/.gemini`; conditions
+  alternate order to counterbalance this. agy updates itself (1.3.0 became 1.4.7 during this
+  work); every report records the version the probe saw.
+
 ## [0.7.3] — 2026-10-25
 
 ### Added

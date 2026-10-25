@@ -406,11 +406,11 @@ def project_preflight(task: LiftTask, project: Path, *, condition: str, agent: s
     except OSError:
         checks["outputs_writable"] = False
     if condition == WITH:
-        skills_dir = {"codex": ".agents/skills", "claude": ".claude/skills"}.get(agent)
+        skills_dir = {"codex": ".agents/skills", "antigravity": ".agents/skills", "claude": ".claude/skills"}.get(agent)
         checks["skills_installed"] = bool(routed) and skills_dir is not None and all(
             (project / skills_dir / name / "SKILL.md").is_file() for name in routed)
-        if agent == "claude":
-            config = project / ".mcp.json"
+        if agent in ("claude", "antigravity"):
+            config = project / (".mcp.json" if agent == "claude" else ".agents/mcp_config.json")
             servers = json.loads(config.read_text(encoding="utf-8")).get("mcpServers", {}) if config.is_file() else {}
             checks["mcp_registered"] = "terraproof" in servers
         else:
