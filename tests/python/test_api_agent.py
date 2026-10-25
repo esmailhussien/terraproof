@@ -114,8 +114,8 @@ def test_file_tools_refuse_paths_outside_the_project(tmp_path, monkeypatch, path
 
 @pytest.mark.parametrize("limits,max_usd,reason,calls", [
     (api_agent.ApiLimits(2.0, 8.0, max_model_calls=3), 1.0, "model call cap reached", 3),
-    (api_agent.ApiLimits(2.0, 8.0, max_tokens=2500), 1.0, "token cap reached", 3),
-    (api_agent.ApiLimits(100.0, 400.0), 0.25, "per-run budget reached", 2),
+    (api_agent.ApiLimits(2.0, 8.0, max_tokens=100), 1.0, "insufficient token allowance for next request", 0),
+    (api_agent.ApiLimits(100.0, 400.0), 0.01, "insufficient budget for next request", 0),
 ])
 def test_caps_stop_the_loop_before_the_next_call(tmp_path, monkeypatch, limits, max_usd, reason, calls):
     monkeypatch.setenv("OPENAI_API_KEY", FAKE_KEY)
@@ -188,7 +188,7 @@ def test_with_condition_exposes_terraproof_tools_from_the_installed_server(tmp_p
                        [("terraproof_load_section", {"skill": "spectral-indices", "section_id": "missing-section"})],
                        []])
     result = api_agent.ApiAgentAdapter("openai", "gpt-4o", PRICES, transport=model).run(_request(project, WITH))
-    assert result.status == "completed"
+    assert result.status == "completed", result.turn
     assert {f"terraproof_{name}" for name in driver.TOOLS} <= set(model.requests[0]["tools"])
     assert [c["tool"] for c in result.calls] == ["terraproof.list_skills", "terraproof.load_section"]
     assert result.calls[0]["status"] == "completed" and result.calls[0]["category"] == "mcp:list_skills"
@@ -207,7 +207,7 @@ def test_run_lift_integration_with_a_fake_model(tmp_path, monkeypatch):
     # No dependency-only Python was given, so "without" must not start: the isolation gate holds for API hosts.
     assert runs[WITHOUT]["adapter_status"] == "preflight_failed"
     assert runs[WITHOUT]["preflight"]["checks"]["without_agent_python_set"] is False
-    assert runs[WITH]["verdict"] == "missing" and runs[WITH]["preflight"]["checks"]["mcp_tools_served"] is True
+    assert runs[WITH]["verdict"] == "missing" and runs[WITH]["preflight"]["checks"]["mcp_tools_served"] is True, runs[WITH]
     assert report["design"]["started_agent_runs"] == 1
     assert 0 < report["budget"]["spent_usd"] <= 1.0
     assert FAKE_KEY not in lift.to_json(report)
@@ -390,3 +390,81 @@ def test_other_client_errors_are_labelled_and_not_retried(tmp_path, monkeypatch)
     result = api_agent.ApiAgentAdapter("groq", "m", PRICES, transport=model, sleep=sleep).run(_request(project, WITHOUT))
     assert waits == [] and result.status == "failed" and result.turn["model_calls"] == 1
     assert result.turn["reason"] == "http 400 (invalid_request_error)"
+
+
+@pytest.mark.parametrize("tokens,usd,usage,reason", [
+    (300000, 0.10, (1000, 20000), "per-run budget exceeded"),
+    (20000, 1.0, (25000, 200), "token cap exceeded"),
+    (300000, 1.0, (1000, 5000), "provider usage exceeded request reservation"),
+])
+def test_terminal_reply_cannot_bypass_limits(tmp_path, monkeypatch, tokens, usd, usage, reason):
+    monkeypatch.setenv("OPENAI_API_KEY", FAKE_KEY)
+    model = FakeModel([[]], usage=usage)
+    adapter = api_agent.ApiAgentAdapter("openai", "fake", api_agent.ApiLimits(2, 8, max_tokens=tokens), transport=model)
+    result = adapter.run(_request(_project(tmp_path, WITHOUT), WITHOUT, max_usd=usd))
+    assert len(model.requests) == 1
+    assert result.status == "failed" and result.turn["reason"] == reason
+    assert result.cost_usd == pytest.approx((usage[0] * 2 + usage[1] * 8) / 1e6)
+    assert result.tool_calls == 0
+
+
+@pytest.mark.parametrize("usage", [None, {}, {"prompt_tokens": -1, "completion_tokens": 2},
+    {"prompt_tokens": True, "completion_tokens": 2},
+    {"prompt_tokens": "10", "completion_tokens": 2},
+    {"prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 99}])
+def test_unknown_usage_is_not_free_or_successful(tmp_path, monkeypatch, usage):
+    monkeypatch.setenv("OPENAI_API_KEY", FAKE_KEY)
+    def response(*args):
+        return {"usage": usage, "choices": [{"message": {"content": "done"}}]}
+    adapter = api_agent.ApiAgentAdapter("openai", "fake", PRICES, transport=response)
+    result = adapter.run(_request(_project(tmp_path, WITHOUT), WITHOUT))
+    assert result.status == "failed" and "invalid usage" in result.turn["reason"]
+    assert result.cost_usd > 0 and result.input_tokens == result.output_tokens == 0
+    assert result.turn["unreported_tokens_reserved"] > 0
+    assert result.turn["cost_basis"] == "reported-plus-reserved"
+
+
+def test_requested_output_shrinks_to_remaining_budget(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", FAKE_KEY)
+    model = FakeModel([[]], usage=(1, 1))
+    result = api_agent.ApiAgentAdapter("openai", "fake", PRICES, transport=model).run(
+        _request(_project(tmp_path, WITHOUT), WITHOUT, max_usd=0.025))
+    assert result.status == "completed" and len(model.requests) == 1
+    assert 0 < model.requests[0]["max_tokens"] < api_agent.MAX_COMPLETION_TOKENS
+
+
+def test_over_budget_tool_reply_cannot_write(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", FAKE_KEY)
+    project = _project(tmp_path, WITHOUT)
+    model = FakeModel([[('write_file', {'path': 'outputs/forbidden.txt', 'content': 'x'})]], usage=(1000, 20000))
+    result = api_agent.ApiAgentAdapter("openai", "fake", PRICES, transport=model).run(
+        _request(project, WITHOUT, max_usd=0.1))
+    assert result.status == "failed" and result.tool_calls == 0
+    assert not (project / 'outputs/forbidden.txt').exists()
+
+
+def test_failed_transport_reserves_the_admitted_request(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", FAKE_KEY)
+    def failed(*args):
+        raise OSError("private response text")
+    result = api_agent.ApiAgentAdapter("openai", "fake", PRICES, transport=failed).run(
+        _request(_project(tmp_path, WITHOUT), WITHOUT))
+    assert result.status == "failed" and result.cost_usd > 0
+    assert result.turn["reason"] == "transport error (OSError)"
+    assert 'private response text' not in json.dumps(asdict(result))
+
+
+@pytest.mark.parametrize('field,value', [('usd_per_million_input', float('nan')),
+    ('usd_per_million_output', float('inf')), ('max_tokens', -1), ('max_model_calls', 0)])
+def test_invalid_api_limits_are_rejected(field, value):
+    args = {'usd_per_million_input': 2.0, 'usd_per_million_output': 8.0, field: value}
+    with pytest.raises(ValueError):
+        api_agent.ApiLimits(**args)
+
+
+@pytest.mark.parametrize("option,value", [("--max-usd-per-run", "nan"), ("--max-usd-total", "inf"),
+    ("--usd-per-million-input", "inf"), ("--max-retry-wait", "nan")])
+def test_driver_rejects_nonfinite_limits_before_planning(option, value):
+    prices = ["--usd-per-million-input", "2", "--usd-per-million-output", "8"]
+    with pytest.raises(SystemExit):
+        driver.main(["--agent-host", "openai", "--runs", "1", "--task", TASK, *prices, option, value])

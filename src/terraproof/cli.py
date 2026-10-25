@@ -53,6 +53,9 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument(
         "--encoding", choices=["s2-l2a", "landsat-c2-l2"], help="known product encoding for scale/offset checks"
     )
+    check_parser.add_argument("--index-formula", choices=["ndvi"], help="verify NDVI from explicitly supplied calibrated source bands")
+    check_parser.add_argument("--nir", metavar="PATH", help="single-band NIR source; calibration comes from its scale/offset metadata")
+    check_parser.add_argument("--red", metavar="PATH", help="single-band red source; calibration comes from its scale/offset metadata")
     check_parser.add_argument("--dem", metavar="PATH", help="DEM a slope-in-degrees raster was derived from")
     check_parser.add_argument("--qa", metavar="PATH", dest="qa_path", help="QA raster (SCL or Landsat QA_PIXEL)")
     check_parser.add_argument(
@@ -137,11 +140,15 @@ def _cmd_check(args: argparse.Namespace) -> int:
     compare = _inspect_if_exists(args.compare_to)
     reference_input = _inspect_if_exists(args.reference_input)
     dem = _inspect_if_exists(args.dem)
+    nir = _inspect_if_exists(args.nir)
+    red = _inspect_if_exists(args.red)
 
     inputs: list[dict] = [input_record(path, "input", ds["kind"]) for path, ds in zip(args.paths, inspections)]
     _record_input(inputs, args.compare_to, "compare-to", compare["kind"] if compare else "unknown")
     _record_input(inputs, args.reference_input, "reference-input", reference_input["kind"] if reference_input else "unknown")
     _record_input(inputs, args.dem, "dem", dem["kind"] if dem else "unknown")
+    _record_input(inputs, args.nir, "nir", nir["kind"] if nir else "unknown")
+    _record_input(inputs, args.red, "red", red["kind"] if red else "unknown")
     _record_input(inputs, args.qa_path, "qa", "raster")
     _record_input(inputs, args.accuracy_samples, "accuracy-samples", "accuracy-samples")
     _record_input(inputs, args.class_areas, "class-areas", "class-areas")
@@ -169,10 +176,13 @@ def _cmd_check(args: argparse.Namespace) -> int:
         min_per_class=args.min_per_class,
         estimates_requested=args.estimates_requested,
         dem=dem,
+        index_formula=args.index_formula,
+        nir=nir,
+        red=red,
     )
 
     checked_paths = list(args.paths)
-    for path in (args.compare_to, args.reference_input, args.dem, args.qa_path, args.accuracy_samples, args.class_areas):
+    for path in (args.compare_to, args.reference_input, args.dem, args.nir, args.red, args.qa_path, args.accuracy_samples, args.class_areas):
         if path:
             checked_paths.append(path)
 
@@ -198,6 +208,9 @@ def _cmd_check(args: argparse.Namespace) -> int:
         "reference_input": args.reference_input,
         "encoding": args.encoding,
         "dem": args.dem,
+        "index_formula": args.index_formula,
+        "nir": args.nir,
+        "red": args.red,
         "qa_path": args.qa_path,
         "qa_kind": args.qa_kind,
         "time_range": time_range,

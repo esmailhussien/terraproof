@@ -1,10 +1,13 @@
 # Additional offline artifact cohort
 
-This local extension adds six synthetic tasks to the v0.5.1 baseline without
+The v0.6.0 extension adds six synthetic tasks to the v0.5.1 baseline without
 changing its 27 task specs, existing recipe functions, numeric oracles or frozen
 routing sets. The full catalog now contains **33 tasks in 11 files**; the lift
-catalog contains the original nine plus these six. No live agent has been run on
-the added cohort, so harder is a design goal, not a measured result.
+catalog contains the original nine plus these six. They were designed before live
+measurement. A later one-repeat Claude Code screen passed all six both with and
+without Terraproof (12 runs); that small screen shows no observed headroom, not
+proof of universal ease. API-host terrain pilots were exploratory and do not
+establish lift. See Phase 5 plan section 18; harder remains a design goal.
 
 | Task | User deliverable | Independently evaluated relation | Seeded mistakes |
 | --- | --- | --- | --- |
@@ -40,8 +43,8 @@ python -c "from terraproof.evals import lift; r=lift.calibrate(); print(r['eligi
 ```
 
 The initial extended run reports **33/33 tasks, zero false passes and 27 checker
-blind spots**: the existing 15 plus the new 12 seeded mistakes. No new production
-check is claimed, and no existing blind spot is reclassified as closed.
+blind spots**: the existing 15 plus the new 12 seeded mistakes. At that initial point no new production check was claimed and no existing blind
+spot was reclassified as closed.
 
 Later change: `terrain.slope_consistent` (added after the API-host pilots, where real
 agent slopes with the feet elevations read as metres passed every check) now rejects both
@@ -61,3 +64,8 @@ treatment-isolation rule was relaxed.
 python tests/agent_lift.py --agent-host claude --runs 3 --cohort harder   # prints the plan only
 ``` Do not interpret calibration as evidence of baseline difficulty,
 agent lift or generalization beyond this deliberately selected challenge set.
+
+
+The later opt-in `rs.index_formula` NDVI check has separate source-contract and
+CLI/MCP tests. Existing frozen task invocations were not changed to supply new
+operands, so it does not reduce the historical 25 blind spots in this benchmark.

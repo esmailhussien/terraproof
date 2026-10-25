@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -758,9 +759,9 @@ BILLING = {
              "are the hard limits",
     "claude": "Claude API spend, capped per run by --max-budget-usd and in total by the harness",
     "openai": "OpenAI API spend from OPENAI_API_KEY, computed from returned token usage at the given prices; "
-              "capped per run (calls, tokens, USD) by the adapter and in total by the harness",
+              "locally limited by conservative request reservations and reported usage, not a provider-side invoice cap",
     "groq": "Groq API spend from GROQ_API_KEY, computed from returned token usage at the given prices; "
-            "capped per run (calls, tokens, USD) by the adapter and in total by the harness",
+            "locally limited by conservative request reservations and reported usage, not a provider-side invoice cap",
 }
 
 
@@ -814,7 +815,8 @@ def plan(args) -> dict:
                     "max_model_calls_per_run": args.max_model_calls_per_run,
                     "max_tokens_per_run": args.max_tokens_per_run,
                     "rate_limit_retries": args.rate_limit_retries,
-                    "max_retry_wait_seconds": args.max_retry_wait}} if args.agent_host in API_HOSTS else {}),
+                    "max_retry_wait_seconds": args.max_retry_wait,
+                    "budget_enforcement": "local-reservation-not-provider-cap"}} if args.agent_host in API_HOSTS else {}),
         "command_to_approve": " ".join(approve),
         "preflight_command": " ".join(approve[:-2] + ["--preflight-only"]),
     }
@@ -859,20 +861,23 @@ def main(argv=None) -> int:
     parser.add_argument("--out", type=Path, default=ROOT / ".terracache" / "agent-lift.json")
     parser.add_argument("--recordings", type=Path, default=ROOT / ".terracache" / "agent-lift-recordings")
     args = parser.parse_args(argv)
-    if (args.runs < 1 or args.timeout <= 0 or args.max_usd_per_run <= 0
-            or (args.max_usd_total is not None and args.max_usd_total <= 0)):
+    if (args.runs < 1 or not math.isfinite(args.timeout) or args.timeout <= 0
+            or not math.isfinite(args.max_usd_per_run) or args.max_usd_per_run <= 0
+            or (args.max_usd_total is not None and
+                (not math.isfinite(args.max_usd_total) or args.max_usd_total <= 0))):
         parser.error("--runs, --timeout and the USD caps must be positive")
     if args.task and args.cohort:
         parser.error("--task and --cohort select tasks in different ways; give one of them")
     if args.agent_host in API_HOSTS:
         if not api_model(args):
             parser.error(f"--api-model is required for {args.agent_host}")
-        if not (args.usd_per_million_input and args.usd_per_million_input > 0
-                and args.usd_per_million_output and args.usd_per_million_output > 0):
+        if not (args.usd_per_million_input and math.isfinite(args.usd_per_million_input)
+                and args.usd_per_million_input > 0 and args.usd_per_million_output
+                and math.isfinite(args.usd_per_million_output) and args.usd_per_million_output > 0):
             parser.error("--usd-per-million-input and --usd-per-million-output are required and must be positive")
         if args.max_model_calls_per_run < 1 or args.max_tokens_per_run < 1:
             parser.error("--max-model-calls-per-run and --max-tokens-per-run must be positive")
-        if args.rate_limit_retries < 0 or args.max_retry_wait <= 0:
+        if args.rate_limit_retries < 0 or not math.isfinite(args.max_retry_wait) or args.max_retry_wait <= 0:
             parser.error("--rate-limit-retries must be non-negative and --max-retry-wait positive")
     if args.preflight_only and args.approve_model_calls is not None:
         parser.error("--preflight-only starts no agent; do not combine it with --approve-model-calls")

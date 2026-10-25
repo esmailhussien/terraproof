@@ -12,7 +12,7 @@ Terraproof helps AI coding agents do geospatial work they can prove. It gives an
 
 Everything runs locally and offline. No model API key is needed.
 
-**Status:** experimental (v0.6.0). See [Evaluation status](#evaluation-status) for what has and has not been measured.
+**Status:** experimental (v0.7.0). See [Evaluation status](#evaluation-status) for what has and has not been measured.
 
 ---
 
@@ -62,6 +62,20 @@ Checks cover CRS and units, geometry validity and GeoJSON winding, record counts
 | Advisory only | استرشادي فقط | At least one check failed or could not run, or no check ran. |
 
 The grade describes the data path and the checks that ran. It is not a certification of survey, engineering, legal, or safety fitness.
+
+### Verify NDVI against its source bands
+
+```bash
+python -m terraproof check outputs/ndvi.tif --index-formula ndvi --nir inputs/nir.tif --red inputs/red.tif
+```
+
+This opt-in check compares every output cell with `(NIR-red)/(NIR+red)`, using each
+raster's own scale/offset metadata. Supply single-band rasters on the same grid;
+source-band roles and calibration must be declared correctly. Missing source data
+and a zero denominator cannot become valid output values. Extra output masking
+warns because its QA policy is not verified here. Source files are included in the
+evidence report and must be covered when a provenance manifest is supplied.
+See [the full contract and limits](docs/INDEX_FORMULA.md).
 
 ---
 
@@ -122,9 +136,10 @@ Each skill lives in `skills/<name>/` with a `SKILL.md`, references, and a `skill
 
 ## Evaluation status
 
-- **Checks:** 27 executable eval tasks with independent oracles pass with 0 false passes. 15 seeded wrong outputs are still caught only by the oracle, not by the checks (declared blind spots). See [`evals/README.md`](evals/README.md).
+- **Checks:** 33 executable eval tasks with independent oracles pass with 0 false passes. Of 50 seeded wrong outputs, production checks reject 25; the other 25 are caught only by the independent oracle (declared blind spots). Passing the benchmark does not mean the production checks catch every wrong output. See [`evals/README.md`](evals/README.md).
 - **Routing:** an independent, frozen 160-item set (v5) passed once in both languages: English recall 0.97 with 3.75 wrong picks per 100, Arabic recall 0.96 with 2.5. Earlier independent sets (v3, v4) failed and stay on record. The v5 set was written by an AI agent, not reviewed by an expert.
 - **Agent lift:** in a 54-run Claude Code comparison on 9 tasks, runs with Terraproof passed 27/27 and runs without it 21/27. The pre-specified test is **not significant** (p = 0.125), and five tasks passed either way, so no lift is claimed. The clearest single result is Landsat QA masking (3/3 with, 0/3 without). See [`docs/plans/Terraproof_Phase5_PLAN.md`](docs/plans/Terraproof_Phase5_PLAN.md).
+- **Harder cohort:** a one-repeat Claude Code screen passed all six tasks both with and without Terraproof. That small screen shows no observed benefit and is separate from the original nine-task study. API pilots are exploratory and do not establish lift.
 - **Real hosts:** tool use through MCP has been verified with Codex and Claude Code. Cursor, Copilot and OpenCode are unit-tested against their documented layouts only.
 
 ---

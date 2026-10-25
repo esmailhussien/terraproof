@@ -10,9 +10,10 @@ loop and a minimal tool set, so a plain model can work on a lift task the same w
   This is not a sandbox: the script itself can reach anything the user can;
 - in "with" only, Terraproof's six MCP tools, served by the installer-registered server.
 
-Hard limits per run: model calls, total tokens and USD (computed from the usage the API
-returns and the prices passed in; prices are never guessed). The API key is read from the
-provider's environment variable only when a request is sent; it is never stored, logged or
+Local limits per run: model calls, reserved/reported tokens and USD at user-supplied
+prices. Conservative request reservations and post-response checks stop further work;
+these are not provider-side invoice caps or a guarantee of the provider's token accounting.
+The API key is read from the provider's environment variable only when a request is sent; it is never stored, logged or
 reported. Error reports carry status codes only, never response bodies.
 
 Like the other hosts, only fixed labels and numbers leave a run: per call a tool label,
@@ -22,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import os
 import re
 import shutil
@@ -55,7 +57,7 @@ MAX_RETRY_WAIT = 60.0  # default seconds, per wait
 
 @dataclass(frozen=True)
 class ApiLimits:
-    """Per-run hard caps. Prices are USD per million tokens, as the provider bills them."""
+    """Local admission limits; prices are supplied USD per million tokens."""
 
     usd_per_million_input: float
     usd_per_million_output: float
@@ -64,8 +66,39 @@ class ApiLimits:
     rate_limit_retries: int = RATE_LIMIT_RETRIES
     max_retry_wait: float = MAX_RETRY_WAIT
 
+    def __post_init__(self):
+        for name in ("usd_per_million_input", "usd_per_million_output", "max_retry_wait"):
+            value = getattr(self, name)
+            if not math.isfinite(value) or value <= 0:
+                raise ValueError(f"{name} must be finite and positive")
+        for name in ("max_model_calls", "max_tokens", "rate_limit_retries"):
+            value = getattr(self, name)
+            if type(value) is not int or value < (0 if name == "rate_limit_retries" else 1):
+                raise ValueError(f"{name} must be a valid integer limit")
+
     def cost(self, input_tokens: int, output_tokens: int) -> float:
         return (input_tokens * self.usd_per_million_input + output_tokens * self.usd_per_million_output) / 1e6
+
+
+def prompt_reservation(messages: list, tools: list) -> int:
+    """Conservative UTF-8 byte allowance plus framing; not a provider tokenizer.
+
+    Includes the accumulated conversation and tool schemas, never just the last turn.
+    Providers can add hidden tokens, so returned usage must still be verified.
+    """
+    body = json.dumps({"messages": messages, "tools": tools}, ensure_ascii=False)
+    return len(body.encode("utf-8")) + 1024 + 64 * (len(messages) + len(tools))
+
+
+def valid_usage(usage) -> bool:
+    if not isinstance(usage, dict):
+        return False
+    if any(type(usage.get(name)) is not int or usage[name] < 0
+           for name in ("prompt_tokens", "completion_tokens")):
+        return False
+    return ("total_tokens" not in usage or
+            (type(usage["total_tokens"]) is int and
+             usage["total_tokens"] == usage["prompt_tokens"] + usage["completion_tokens"]))
 
 
 class ApiError(RuntimeError):
@@ -270,6 +303,8 @@ class ApiAgentAdapter(Adapter):
         seeded = driver._seeded(request.task_id)
         deadline = time.monotonic() + request.timeout_seconds
         per_run_usd = request.max_usd
+        if per_run_usd is None or not math.isfinite(per_run_usd) or per_run_usd <= 0:
+            return AgentResult(status="failed", turn={"status": "error", "reason": "a finite positive USD budget is required"})
 
         tools = list(FILE_TOOLS)
         mcp_names = {}
@@ -288,14 +323,16 @@ class ApiAgentAdapter(Adapter):
         skill_reads = 0
         model_calls = input_tokens = output_tokens = retries = tool_retries = 0
         error_types: list[str] = []
+        unreported_cost = 0.0
+        unreported_tokens = 0
         status, reason = "aborted", "loop ended without a final answer"
 
         while True:
-            cost = self.limits.cost(input_tokens, output_tokens)
+            cost = self.limits.cost(input_tokens, output_tokens) + unreported_cost
             if model_calls >= self.limits.max_model_calls:
                 status, reason = "error", "model call cap reached"
                 break
-            if input_tokens + output_tokens >= self.limits.max_tokens:
+            if input_tokens + output_tokens + unreported_tokens >= self.limits.max_tokens:
                 status, reason = "error", "token cap reached"
                 break
             if per_run_usd is not None and cost >= per_run_usd:
@@ -310,15 +347,32 @@ class ApiAgentAdapter(Adapter):
                 status, reason = "error", f"{self.key_env} is not set"
                 break
             headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
-            # Spend is checked before each call, so one call can overshoot a cap by at most its own cost;
-            # the completion cap bounds that.
+            prompt_tokens_reserved = prompt_reservation(messages, tools)
+            completion_limit = min(MAX_COMPLETION_TOKENS,
+                                   self.limits.max_tokens - input_tokens - output_tokens - unreported_tokens
+                                   - prompt_tokens_reserved)
+            if completion_limit < 1:
+                status, reason = "error", "insufficient token allowance for next request"
+                break
+            prompt_cost = self.limits.cost(prompt_tokens_reserved, 0)
+            affordable_output = math.floor((per_run_usd - cost - prompt_cost) * 1e6
+                                           / self.limits.usd_per_million_output)
+            completion_limit = min(completion_limit, affordable_output)
+            if completion_limit < 1:
+                status, reason = "error", "insufficient budget for next request"
+                break
+            reserved_cost = self.limits.cost(prompt_tokens_reserved, completion_limit)
             payload = {"model": self.model, "messages": messages, "tools": tools, "tool_choice": "auto",
-                       "temperature": 0, "max_tokens": MAX_COMPLETION_TOKENS}
+                       "temperature": 0, "max_tokens": completion_limit}
             model_calls += 1  # every attempt counts, including rate-limited ones
             try:
                 response = await asyncio.to_thread(self.transport, f"{self.base_url}/chat/completions", headers,
                                                    payload, min(remaining, 300.0))
             except ApiError as error:
+                # Error responses do not establish that a generation was free. Reserve
+                # the whole admitted request, including retries, rather than report $0.
+                unreported_cost += reserved_cost
+                unreported_tokens += prompt_tokens_reserved + completion_limit
                 if error.error_type:
                     error_types.append(error.error_type)
                 if error.status == 429 and retries < self.limits.rate_limit_retries:
@@ -338,11 +392,33 @@ class ApiAgentAdapter(Adapter):
                     exhausted = "; tool-use retries exhausted"
                 status, reason = "error", str(error) + exhausted
                 break
+            except Exception as error:
+                unreported_cost += reserved_cost
+                unreported_tokens += prompt_tokens_reserved + completion_limit
+                status, reason = "error", f"transport error ({type(error).__name__})"
+                break
             finally:
                 del key, headers
-            usage = response.get("usage") or {}
-            input_tokens += int(usage.get("prompt_tokens") or 0)
-            output_tokens += int(usage.get("completion_tokens") or 0)
+            usage = response.get("usage") if isinstance(response, dict) else None
+            if not valid_usage(usage):
+                unreported_cost += reserved_cost
+                unreported_tokens += prompt_tokens_reserved + completion_limit
+                status, reason = "error", "missing or invalid usage; request reservation retained"
+                break
+            input_tokens += usage["prompt_tokens"]
+            output_tokens += usage["completion_tokens"]
+            if input_tokens + output_tokens + unreported_tokens > self.limits.max_tokens:
+                status, reason = "error", "token cap exceeded"
+                break
+            if self.limits.cost(input_tokens, output_tokens) + unreported_cost > per_run_usd:
+                status, reason = "error", "per-run budget exceeded"
+                break
+            if usage["prompt_tokens"] > prompt_tokens_reserved or usage["completion_tokens"] > completion_limit:
+                status, reason = "error", "provider usage exceeded request reservation"
+                break
+            if time.monotonic() >= deadline:
+                status, reason = "timeout", "per-run timeout"
+                break
             choice = (response.get("choices") or [{}])[0]
             message = choice.get("message") or {}
             tool_calls = message.get("tool_calls") or []
@@ -391,7 +467,7 @@ class ApiAgentAdapter(Adapter):
                               "duration_ms": driver._duration_ms(started, time.monotonic())})
                 messages.append({"role": "tool", "tool_call_id": call.get("id", ""), "content": reply})
 
-        cost = round(self.limits.cost(input_tokens, output_tokens), 6)
+        cost = round(self.limits.cost(input_tokens, output_tokens) + unreported_cost, 6)
         return AgentResult(
             status={"completed": "completed", "timeout": "timeout"}.get(status, "failed"),
             cost_usd=cost, tool_calls=len(calls),
@@ -400,7 +476,11 @@ class ApiAgentAdapter(Adapter):
             contamination=sorted(labels), diagnostics=sorted(incidental), calls=calls,
             turn={"status": status, "reason": reason, "error_types": sorted(set(error_types)),
                   "error_items": len(error_types), "model_calls": model_calls, "rate_limit_retries": retries,
-                  "tool_use_retries": tool_retries})
+                  "tool_use_retries": tool_retries,
+                  "unreported_tokens_reserved": unreported_tokens,
+                  "unreported_usd_reserved": round(unreported_cost, 6),
+                  "cost_basis": "reported-plus-reserved" if unreported_tokens else "reported",
+                  "budget_enforcement": "local-reservation-not-provider-cap"})
 
     def preflight(self, request: AgentRequest) -> dict:
         """No-model checks: the key variable is set, Python/IO work, and the isolation or MCP setup holds."""
