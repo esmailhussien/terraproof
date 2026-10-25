@@ -286,3 +286,55 @@ def test_run_lift_drives_the_adapter_end_to_end_with_a_fake_stream(tmp_path, mon
     assert sorted(run["condition"] for run in runs) == [WITH, WITHOUT]
     assert all(run["adapter_status"] == "completed" and run["verdict"] == "missing" for run in runs)
     assert report["design"]["started_agent_runs"] == 2
+
+
+# -- shape seen in the 2026-10-26 pilot (agy 1.4.7): one generic MCP tool, server/tool in its arguments --
+def _mcp_step(index, state, server, tool, *, key="parameters", as_string=False, conversation="c1"):
+    arguments = {"ServerName": server, "ToolName": tool, "Arguments": {"paths": ["outputs/slope.tif"]}}
+    info = {"name": "call_mcp_tool", key: json.dumps(arguments) if as_string else arguments,
+            "output": "SECRET OUTPUT TEXT"}
+    return {"event": "step_update", "step_update": {"conversation_id": conversation, "step_index": index,
+                                                    "state": state, "step_type": "tool",
+                                                    "tool_name": "call_mcp_tool", "tool_info": info}}
+
+
+def test_call_mcp_tool_steps_are_labelled_by_server_and_tool(tmp_path):
+    events = [_init(tmp_path, ["run_command", "read_file", "call_mcp_tool"]),
+              _mcp_step(1, "DONE", "terraproof", "run_checks"),
+              _mcp_step(2, "DONE", "terraproof", "inspect_dataset", key="args"),
+              _mcp_step(3, "DONE", "terraproof", "run_checks", as_string=True),
+              _mcp_step(4, "DONE", "sqlite", "query"),
+              _mcp_step(5, "DONE", "terraproof", "not_a_terraproof_tool"),
+              _result()]
+    result = driver.antigravity_trace(events, WITH, SEEDED, project=tmp_path)
+    assert [(call["tool"], call["category"]) for call in result.calls] == [
+        ("terraproof.run_checks", "mcp:run_checks"), ("terraproof.inspect_dataset", "mcp:inspect_dataset"),
+        ("terraproof.run_checks", "mcp:run_checks"), ("mcp", "mcp:other"), ("mcp", "mcp:other")]
+    assert result.terraproof_tool_calls == 3
+    assert result.diagnostics == [] and result.contamination == []
+    assert "SECRET OUTPUT TEXT" not in json.dumps(result.__dict__)
+
+
+def test_call_mcp_tool_arguments_arriving_on_a_later_update_relabel_the_step(tmp_path):
+    started = {"event": "step_update", "step_update": {"conversation_id": "c1", "step_index": 7, "state": "ACTIVE",
+                                                       "step_type": "tool", "tool_name": "call_mcp_tool",
+                                                       "tool_info": {"name": "call_mcp_tool"}}}
+    result = driver.antigravity_trace([started, _mcp_step(7, "DONE", "terraproof", "run_checks"), _result()],
+                                      WITH, SEEDED, project=tmp_path)
+    assert result.calls == [{"tool": "terraproof.run_checks", "category": "mcp:run_checks", "status": "completed",
+                             "exit_code": None, "duration_ms": result.calls[0]["duration_ms"]}]
+
+
+def test_a_terraproof_mcp_call_in_without_is_contamination(tmp_path):
+    result = driver.antigravity_trace([_init(tmp_path, ["call_mcp_tool"]),
+                                       _mcp_step(1, "DONE", "terraproof", "run_checks"), _result()],
+                                      WITHOUT, SEEDED, project=tmp_path)
+    assert "terraproof-in-without:mcp" in result.contamination
+
+
+def test_init_listing_only_the_generic_mcp_tool_is_not_a_missing_treatment(tmp_path):
+    listed = driver.antigravity_trace([_init(tmp_path, ["run_command", "call_mcp_tool"]), _result()],
+                                      WITH, SEEDED, project=tmp_path)
+    assert listed.diagnostics == []
+    unlisted = driver.antigravity_trace([_init(tmp_path, ["run_command"]), _result()], WITH, SEEDED, project=tmp_path)
+    assert unlisted.diagnostics == ["terraproof-tools-not-listed"]

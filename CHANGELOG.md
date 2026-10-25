@@ -26,10 +26,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   only hard limits. Tests use fake streams in the documented shape; no agy model call was made.
   The no-model preflight on a real install (agy 1.4.7) passed every check in both conditions.
 
+### Fixed
+
+- Antigravity host: agy routes every MCP call through one built-in tool, `call_mcp_tool`, with
+  `ServerName`, `ToolName` and `Arguments` in its arguments. The trace now labels those steps
+  from `ServerName`/`ToolName` (`terraproof.<tool>` for Terraproof's tools, `mcp:other`
+  otherwise; parameters or args, object or JSON string, also when they arrive on a later
+  update). A Terraproof call in "without" is contamination. `init` lists only the generic
+  tool, so `terraproof-tools-not-listed` now fires only when neither it nor Terraproof is
+  listed. Found in the first approved pilot (2026-10-26, agy 1.4.7, `gemini-3.8-flash-high`,
+  `terrain-slope-map`, one pair). Both conditions were accepted, but the report counted 0
+  Terraproof calls where the "with" run made 7 (6 `run_checks`, 1 `inspect_dataset`), and it
+  raised the diagnostic falsely. The verdicts did not depend on these labels.
+
 ### Known limits
 
-- agy's stream-json tool names are matched by keyword and by the documented `server/tool`
-  forms; the real MCP tool-name format is unconfirmed until a first paid run. agy runs with
+- agy's built-in tool names are matched by keyword; MCP calls are labelled from
+  `call_mcp_tool` arguments as seen in agy 1.4.7. The `init` payload's exact shape is still
+  unconfirmed beyond its tool listing. agy runs with
   `--dangerously-skip-permissions` and without `--sandbox`, so commands are not sandboxed (as
   for Claude Code), and agy may keep conversation history under `~/.gemini`; conditions
   alternate order to counterbalance this. agy updates itself (1.3.0 became 1.4.7 during this

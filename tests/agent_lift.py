@@ -778,6 +778,33 @@ def antigravity_lift_command(executable: str, model: str, effort: str | None) ->
     return command + ["--print", PROMPT]
 
 
+# agy 1.4.7 routes every MCP call through one built-in tool; the server and tool are in its
+# arguments (`{"ServerName": ..., "ToolName": ..., "Arguments": ...}`), seen in the 2026-10-26 pilot.
+ANTIGRAVITY_MCP_TOOL = "call_mcp_tool"
+
+
+def _antigravity_parameters(info: dict) -> dict:
+    """The tool step's arguments: `parameters` per the docs, `args` in agy's own transcripts."""
+    params = info.get("parameters", info.get("args"))
+    if isinstance(params, str):
+        try:
+            params = json.loads(params)
+        except ValueError:
+            return {}
+    return params if isinstance(params, dict) else {}
+
+
+def _antigravity_mcp_label(params: dict) -> tuple[str, str] | None:
+    """Label a call_mcp_tool step by its ServerName/ToolName, or None when they are absent."""
+    server = next((params[key] for key in ("ServerName", "serverName", "server_name") if key in params), None)
+    tool = next((params[key] for key in ("ToolName", "toolName", "tool_name") if key in params), None)
+    if not isinstance(server, str) or not isinstance(tool, str):
+        return None
+    if server.lower() == "terraproof" and tool in TOOLS:
+        return f"terraproof.{tool}", f"mcp:{tool}"
+    return "mcp", "mcp:other"
+
+
 def _antigravity_label(name: str) -> tuple[str, str]:
     match = re.fullmatch(r"(?:mcp[_:/.]+)?terraproof(?:__|[_:/.])(\w+)|mcp\(terraproof/(\w+)\)", name, re.IGNORECASE)
     tool = (match.group(1) or match.group(2)) if match else (name if name in TOOLS else None)
@@ -818,7 +845,8 @@ def antigravity_trace(events, condition: str, seeded: tuple[str, ...], *, projec
             tools = json.dumps(payload.get("tools"), default=str)
             if condition != WITH and re.search(r"terraproof", tools, re.IGNORECASE):
                 labels.add("terraproof-in-without:mcp")
-            if condition == WITH and not re.search(r"terraproof", tools, re.IGNORECASE):
+            # init lists the generic MCP tool, not server or tool names (2026-10-26 pilot).
+            if condition == WITH and not re.search(r"terraproof|" + ANTIGRAVITY_MCP_TOOL, tools, re.IGNORECASE):
                 incidental.add("terraproof-tools-not-listed")
             if project is not None and payload.get("cwd") and not _same_path(payload["cwd"], project):
                 workspace_ok = False
@@ -837,8 +865,16 @@ def antigravity_trace(events, condition: str, seeded: tuple[str, ...], *, projec
                                      "duration_ms": None, "_start": stamp, "_text": ""}
                 order.append(identifier)
             record = calls[identifier]
-            text = json.dumps({"name": payload.get("tool_name") or info.get("name"),
-                               "parameters": info.get("parameters")}, default=str)
+            params = _antigravity_parameters(info)
+            if str(payload.get("tool_name") or info.get("name") or "") == ANTIGRAVITY_MCP_TOOL:
+                # Arguments may arrive only on a later update of the same step.
+                mcp_label = _antigravity_mcp_label(params)
+                if mcp_label:
+                    record["tool"], record["category"] = mcp_label
+                    if condition != WITH and mcp_label[0].startswith("terraproof."):
+                        labels.add("terraproof-in-without:mcp")
+            text = json.dumps({"name": payload.get("tool_name") or info.get("name"), "parameters": params},
+                              default=str)
             record["_text"] = record["_text"] + " " + text if text not in record["_text"] else record["_text"]
             if payload.get("state") == "DONE":
                 record["status"] = "failed" if info.get("error") else "completed"

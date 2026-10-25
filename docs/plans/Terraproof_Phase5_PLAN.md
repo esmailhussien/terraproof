@@ -703,3 +703,27 @@ Antigravity CLI (`agy`, checked against 1.3.0 and 1.4.7) headlessly: flags first
   (1.3.0 became 1.4.7 during this work); reports record the probed version. No agy
   model call has been made. The no-model preflight on agy 1.4.7 (one
   `terrain-slope-map` pair) passed every workspace, global, Python and isolation check.
+
+### First Antigravity pilot (2026-10-26)
+
+One approved pair on `terrain-slope-map`, agy 1.4.7, `gemini-3.8-flash-high`, 900 s
+timeout. It was run from `main` at `a7a2a6d` between 23:21 and 23:34 UTC.
+
+| | with | without |
+|---|---|---|
+| verdict | accepted (oracle, checks, contract) | accepted |
+| Terraproof MCP calls | 7 (6 `run_checks`, 1 `inspect_dataset`) | 0 |
+| skill reads | 5 | 0 |
+| input / output tokens | 228,618 / 20,498 | 244,174 / 42,344 |
+| wall time | about 4.9 min | about 7.4 min |
+
+There were no errors, no quota or rate-limit failures and no contamination. The task is at
+ceiling for this model, as it was for Claude, so this pair says nothing about lift.
+
+The run showed the real MCP shape. Every MCP call is the built-in `call_mcp_tool`, with
+`ServerName`, `ToolName` and `Arguments`. The first report therefore counted 0 Terraproof
+calls and raised `terraproof-tools-not-listed` falsely. These names were read afterwards
+from agy's own transcripts of the two pilot conversations, names and key structure only.
+The trace now labels these calls, and offline tests use this shape. A passive observer meant
+to record the stream's structure crashed on a serialisation bug before saving, so the
+`init` payload's exact shape remains unconfirmed.
