@@ -627,3 +627,27 @@ repair or post-result artifact alteration occurred. The older negative results,
 frozen source/input hashes and output hashes remain preserved. Private host
 reports and conversations are not committed; this paragraph is the sanitized
 release summary. Usage estimates are not provider invoices or billing guarantees.
+
+
+### Required output policy (v0.7.2)
+
+Future API experiments can opt into an explicit required-output contract with
+`--verification-plan`; see [the policy guide](../OUTPUT_VERIFICATION.md) and its
+NDVI example. Every selected task's declared deliverables must be covered. The
+with-condition host requires matching current MCP evidence before completion,
+using `verified`, `review-required` and `unverified` states. Source files remain
+bound to their initial content; whole-tree hashes include output masks and
+invalidate evidence after data changes. The without condition receives no policy
+and remains unverified. This is an explicit treatment change, not a replacement
+for independent grading or a retrospective change to the trials above.
+
+The offline implementation was followed by a separately frozen, directed
+engineering acceptance trial on 2026-10-25: one GPT-4o session, five requests,
+real source-check fail -> model repair -> current pass, host `verified` completion,
+and zero value/mask errors under an independent oracle. All source inputs stayed
+unchanged. Three separate scripted local controls covered absent, stale and
+current evidence; the live session needed zero review prompts and did not
+exercise those blocked-completion branches. Recorded usage was approximately
+USD 0.058643 cache-aware (USD 0.084723 uncached) under the approved USD 1 ceiling.
+This single directed synthetic-scene result establishes neither general repair
+reliability nor lift. Historical negative outcomes remain unchanged.
