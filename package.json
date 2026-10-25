@@ -1,6 +1,6 @@
 {
   "name": "terraproof",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "evidence-graded skills, tools, and checks for mapping and remote-sensing AI agents. By Geova.",
   "type": "module",
   "main": "./dist/router/index.js",

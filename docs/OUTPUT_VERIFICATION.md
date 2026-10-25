@@ -134,5 +134,10 @@ changes between snapshots, external dependencies of other formats and changes
 after the final snapshot are outside that guarantee. Unsupported dependency
 layouts should remain unverified rather than be advertised as certified.
 
-Offline fake-provider regressions exercise the gate and real local MCP checks.
-They establish no new paid experiment, general agent lift or published release.
+Offline fake-provider regressions exercise missing/stale/current evidence using
+real local MCP. Separately, one directed GPT-4o engineering trial on 2026-10-25
+repaired a seeded output, obtained a current passing source check and passed an
+independent full-file oracle with zero value/mask errors. Five provider requests
+were used; no completion-review prompt was needed. Missing/stale completion was
+tested locally, not attempted by the live model. This establishes no general
+repair reliability or agent lift. The feature ships in source-checkout v0.7.2.

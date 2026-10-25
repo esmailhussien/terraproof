@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [0.7.2] — 2026-10-25
 
 ### Added
 
@@ -19,6 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Existing session limits and the observed-failure guard remain active. The
   without condition receives no policy and stays unverified; independent artifact
   acceptance is unchanged. See [the policy guide](docs/OUTPUT_VERIFICATION.md).
+
+### Verification and limits
+
+- Offline Python verification: 1398 passed, 1 skipped. Local missing/stale/current
+  evidence controls passed with real MCP and a scripted provider. In one fresh,
+  prospectively frozen, directed GPT-4o session, an initial failed source check
+  was followed by model repair, a current pass and independent acceptance with
+  zero value/mask errors. Five requests cost approximately USD 0.058643 using
+  cache-aware usage (USD 0.084723 uncached), below the approved USD 1 ceiling.
+  No completion-review prompts were needed in the live session. This single
+  engineering trial establishes no general repair reliability or agent lift;
+  historical negative results and scientific checker limitations remain unchanged.
 
 ## [0.7.1] — 2026-10-25
 
