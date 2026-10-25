@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.1] — 2026-10-25
+
+### Fixed
+
+- The API agent host reviews final answers when actual MCP checks have reported
+  failures on declared deliverables. Up to two reminders allow repair and explicit
+  rechecking within the existing per-session limits; unresolved failures prevent
+  successful host completion. Input-only audit failures are excluded, warnings or
+  unrelated passes cannot erase failures, and agent write attempts invalidate
+  earlier resolutions. No checker or repair is run automatically. Reports keep
+  this guard separate from independent artifact acceptance.
+- The API agent host now forwards the configured MCP server's negotiated instructions
+  in the treatment's system context and refuses missing, malformed or oversized
+  instructions before a model request. Preflight checks both tool availability and
+  instructions. Reports record delivery, character count and SHA-256, separately from
+  actual tool calls; prompt reservations include the added text.
+- Both API conditions receive the same final-output verification guidance. MCP
+  guidance explains source-aware checks, calibrated NDVI, valid-data masks and
+  unresolved check statuses. Instruction delivery alone does not enforce compliance or establish
+  improved task performance; historical experiments and benchmarks remain unchanged.
+
+### Verification and limits
+
+- Offline completion regressions cover successful repair/recheck, unresolved
+  termination, input-only audits, stale checks and original request limits.
+  A directed live GPT-4o test exercised two review prompts and correctly stopped
+  unresolved after three failing output checks; the model did not repair the mask.
+  This is bounded-blocker acceptance, not a claim of reliable automatic repair or
+  statistically demonstrated agent lift. Earlier exploratory results are retained.
+
 ## [0.7.0] — 2026-10-25
 
 ### Fixed

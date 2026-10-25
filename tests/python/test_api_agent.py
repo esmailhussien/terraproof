@@ -3,6 +3,9 @@ every model reply comes from a scripted fake transport, and a guard fails any re
 
 from __future__ import annotations
 
+import asyncio
+import copy
+import hashlib
 import importlib.util
 import json
 import sys
@@ -48,7 +51,8 @@ class FakeModel:
     def __call__(self, url, headers, payload, timeout):
         self.requests.append({"url": url, "auth": headers.get("Authorization"),
                               "tools": [tool["function"]["name"] for tool in payload["tools"]],
-                              "max_tokens": payload.get("max_tokens")})
+                              "max_tokens": payload.get("max_tokens"),
+                              "messages": copy.deepcopy(payload["messages"])})
         turn = self.turns.pop(0) if self.turns else []
         message = {"role": "assistant", "content": None if turn else "done"}
         if turn:
@@ -99,6 +103,10 @@ def test_loop_runs_confined_tools_and_reports_labels_only(tmp_path, monkeypatch)
     report = json.dumps(asdict(result))
     assert FAKE_KEY not in report and "secret-model-text" not in report and "write_text" not in report
     assert not result.contamination
+    assert result.turn["mcp_instructions_delivered"] is False
+    assert result.turn["mcp_instructions_sha256"] is None
+    assert model.requests[0]["messages"] == [
+        {"role": "system", "content": api_agent.SYSTEM_PROMPT}, {"role": "user", "content": driver.PROMPT}]
 
 
 @pytest.mark.parametrize("path", ["../escape.txt", "..\\escape.txt", "/tmp/escape.txt", "C:\\escape.txt",
@@ -184,6 +192,7 @@ def test_terraproof_use_in_without_is_labelled_contamination(tmp_path, monkeypat
 def test_with_condition_exposes_terraproof_tools_from_the_installed_server(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", FAKE_KEY)
     project = _project(tmp_path, WITH)
+    (project / "CLAUDE.md").write_text("unrelated-local-instructions", encoding="utf-8")
     model = FakeModel([[("terraproof_list_skills", {})],
                        [("terraproof_load_section", {"skill": "spectral-indices", "section_id": "missing-section"})],
                        []])
@@ -194,6 +203,18 @@ def test_with_condition_exposes_terraproof_tools_from_the_installed_server(tmp_p
     assert result.calls[0]["status"] == "completed" and result.calls[0]["category"] == "mcp:list_skills"
     assert result.terraproof_tool_calls == 2 and result.skill_reads == 1
     assert not result.contamination
+    from terraproof.mcp.server import INSTRUCTIONS
+    expected = {"role": "system", "content": "Terraproof tool guidance from the configured MCP server:\n" + INSTRUCTIONS}
+    assert model.requests[0]["messages"] == [
+        {"role": "system", "content": api_agent.SYSTEM_PROMPT}, expected, {"role": "user", "content": driver.PROMPT}]
+    assert all(request["messages"][1] == expected for request in model.requests)
+    assert "unrelated-local-instructions" not in json.dumps(model.requests)
+    assert result.turn["mcp_instructions_delivered"] is True
+    assert result.turn["mcp_instructions_chars"] == len(INSTRUCTIONS)
+    assert result.turn["mcp_instructions_sha256"] == hashlib.sha256(INSTRUCTIONS.encode("utf-8")).hexdigest()
+    # Delivery is not compliance: the scripted model called no run_checks and read no valid section.
+    assert not any(call["tool"] == "terraproof.run_checks" for call in result.calls)
+    assert INSTRUCTIONS not in json.dumps(asdict(result))
 
 
 def test_run_lift_integration_with_a_fake_model(tmp_path, monkeypatch):
@@ -208,6 +229,7 @@ def test_run_lift_integration_with_a_fake_model(tmp_path, monkeypatch):
     assert runs[WITHOUT]["adapter_status"] == "preflight_failed"
     assert runs[WITHOUT]["preflight"]["checks"]["without_agent_python_set"] is False
     assert runs[WITH]["verdict"] == "missing" and runs[WITH]["preflight"]["checks"]["mcp_tools_served"] is True, runs[WITH]
+    assert runs[WITH]["preflight"]["checks"]["mcp_instructions_available"] is True
     assert report["design"]["started_agent_runs"] == 1
     assert 0 < report["budget"]["spent_usd"] <= 1.0
     assert FAKE_KEY not in lift.to_json(report)
@@ -468,3 +490,91 @@ def test_driver_rejects_nonfinite_limits_before_planning(option, value):
     prices = ["--usd-per-million-input", "2", "--usd-per-million-output", "8"]
     with pytest.raises(SystemExit):
         driver.main(["--agent-host", "openai", "--runs", "1", "--task", TASK, *prices, option, value])
+
+
+class StubMcpClient:
+    """Exercise missing instructions without launching a replacement server or model."""
+
+    def __init__(self, instructions):
+        self.instructions = instructions
+
+    async def list_tools(self):
+        from types import SimpleNamespace
+        return SimpleNamespace(tools=[])
+
+
+@pytest.mark.parametrize("instructions", [None, "", "  ", 42, "x" * (api_agent.READ_LIMIT + 1), "\ud800"])
+def test_invalid_server_instructions_stop_before_model_request(tmp_path, monkeypatch, instructions):
+    monkeypatch.setenv("OPENAI_API_KEY", FAKE_KEY)
+    model = FakeModel([[]])
+    adapter = api_agent.ApiAgentAdapter("openai", "gpt-4o", PRICES, transport=model)
+    request = _request(_project(tmp_path, WITH), WITH)
+    result = asyncio.run(adapter._loop(request, StubMcpClient(instructions)))
+    assert result.status == "failed" and not model.requests and result.cost_usd == 0.0
+    assert result.turn["reason"] == "missing or invalid Terraproof MCP instructions"
+    assert result.turn["model_calls"] == 0 and result.turn["mcp_instructions_delivered"] is False
+
+
+def test_instructions_consume_the_request_allowance(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", FAKE_KEY)
+    project = _project(tmp_path, WITH)
+    instructions = "guidance-" * 2000  # valid size but larger than this run's allowance
+    model = FakeModel([[]])
+    adapter = api_agent.ApiAgentAdapter("openai", "gpt-4o", api_agent.ApiLimits(2, 8, max_tokens=12000), transport=model)
+    # The same base prompt and file schemas fit without the server text.
+    assert api_agent.prompt_reservation([
+        {"role": "system", "content": api_agent.SYSTEM_PROMPT}, {"role": "user", "content": driver.PROMPT}],
+        api_agent.FILE_TOOLS) + 1 < 12000
+    result = asyncio.run(adapter._loop(_request(project, WITH), StubMcpClient(instructions)))
+    assert not model.requests and result.turn["reason"] == "insufficient token allowance for next request"
+    assert result.turn["mcp_instructions_delivered"] is False
+
+
+def test_preflight_rejects_missing_instructions_even_when_tools_are_served(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    import mcp
+
+    class Client:
+        instructions = None
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+        async def list_tools(self):
+            return SimpleNamespace(tools=[SimpleNamespace(name=name) for name in driver.TOOLS])
+
+    monkeypatch.setattr(mcp, "Client", Client)
+    checks = asyncio.run(api_agent.mcp_preflight(_project(tmp_path, WITH)))
+    assert checks == {"mcp_tools_served": True, "mcp_instructions_available": False}
+
+
+def test_agent_receives_source_check_results_without_automatic_repair(tmp_path, monkeypatch):
+    from test_index_formula import _case, GRID
+    from terraproof.evals.fixtures import write_raster_grid
+
+    monkeypatch.setenv("OPENAI_API_KEY", FAKE_KEY)
+    project = _project(tmp_path, WITH)
+    (project / "verification").mkdir()
+    out, nir, red, values = _case(project / "verification")
+    bad = project / "verification" / "bad-mask.tif"
+    values[2, 3] = 0  # numerically plausible but unsupported by the source nodata mask
+    write_raster_grid(bad, values, transform=GRID)
+    before = bad.read_bytes()
+    model = FakeModel([[('terraproof_run_checks', {
+        'paths': [str(path)], 'index_formula': 'ndvi', 'nir': str(nir), 'red': str(red)})
+        for path in (out, bad)], []])
+    result = api_agent.ApiAgentAdapter("openai", "gpt-4o", PRICES, transport=model).run(_request(project, WITH))
+    replies = [json.loads(message['content']) for message in model.requests[1]['messages'] if message['role'] == 'tool']
+    checks = [next(check for check in reply['report']['checks'] if check['id'] == 'rs.index_formula')
+              for reply in replies]
+    assert [check['status'] for check in checks] == ['pass', 'fail']
+    assert checks[1]['evidence']['unsupported_output_cells'] == 1
+    assert result.terraproof_tool_calls == 2 and all(call['status'] == 'completed' for call in result.calls)
+    # A completed tool/agent is not an accepted deliverable; no hidden repair or forced retry occurs.
+    assert result.status == 'completed' and bad.read_bytes() == before
