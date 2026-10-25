@@ -124,6 +124,10 @@
     "preflight.output_units": {
       "family": "preflight",
       "description": "Plan check: the output CRS units match the measurement units the plan requests, so a metric result is not written in degrees or the reverse."
+    },
+    "rs.index_formula": {
+      "family": "rs",
+      "description": "Opt-in NDVI comparison with declared red/NIR sources, their scale/offset and joint valid support; extra masking warns."
     }
   }
 }

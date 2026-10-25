@@ -1,6 +1,37 @@
-# Terraproof Release Checklist — v0.6.0, v0.5.1, v0.5.0, v0.4.1 and v0.4.0
+# Terraproof Release Checklist — v0.7.0, v0.6.0, v0.5.1, v0.5.0, v0.4.1 and v0.4.0
 
-Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 routing measurement that v0.4.1 ships, and the gates that remain open. v0.4.0 was released on 2026-10-23: tag `v0.4.0`, GitHub release *Terraproof v0.4.0*, and `terraproof@0.4.0` on npm as `latest`. v0.4.1 was released on 2026-10-24: tag `v0.4.1` on `f39d342`, GitHub release *Terraproof v0.4.1* (marked Latest), and `terraproof@0.4.1` on npm as `latest`. v0.5.0 (new `geometry.winding` check, COG JPEG warning, Phase 5 agent-lift harness, and the docs/README tidy-up) was released on 2026-10-24: tag `v0.5.0` on `1a33c4c` (part of `main` through merge commit `af66faa`), GitHub release *Terraproof v0.5.0* (marked Latest), and `terraproof@0.5.0` on npm as `latest`, published 04:18 UTC. The published tarball matches the tagged files exactly (plus the built `dist/`). v0.5.1 (fixes for all eight findings of an independent Codex review of v0.5.0 plus two further under-graded lift deliverables; re-grading the 72 saved Phase 5 main-run deliverables changed 0 verdicts) was released on 2026-10-24: tag `v0.5.1` on merge commit `6937a3e`, GitHub release *Terraproof v0.5.1* (marked Latest), and `terraproof@0.5.1` on npm as `latest`. The published tarball matches the tagged files exactly (plus the built `dist/`). v0.6.0 (six harder agent-lift tasks as a separate `harder` cohort, the OpenAI-compatible API agent host for the lift driver, the new `terrain.slope_consistent` check, and the geomaster terrain snippet fix; the benchmark is 33/33 tasks, 0 false passes, 25 checker rejections and 25 checker blind spots) was released on 2026-10-25: tag `v0.6.0` on `e18c143` (part of `main` through merge commit `2f81050`), GitHub release *Terraproof v0.6.0* (marked Latest), and `terraproof@0.6.0` on npm as `latest`, published 00:01 UTC. No version is published to PyPI. Sections 2–5 are the release procedure used for v0.6.0.
+Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 routing measurement that v0.4.1 ships, and the gates that remain open. v0.4.0 was released on 2026-10-23: tag `v0.4.0`, GitHub release *Terraproof v0.4.0*, and `terraproof@0.4.0` on npm as `latest`. v0.4.1 was released on 2026-10-24: tag `v0.4.1` on `f39d342`, GitHub release *Terraproof v0.4.1* (marked Latest), and `terraproof@0.4.1` on npm as `latest`. v0.5.0 (new `geometry.winding` check, COG JPEG warning, Phase 5 agent-lift harness, and the docs/README tidy-up) was released on 2026-10-24: tag `v0.5.0` on `1a33c4c` (part of `main` through merge commit `af66faa`), GitHub release *Terraproof v0.5.0* (marked Latest), and `terraproof@0.5.0` on npm as `latest`, published 04:18 UTC. The published tarball matches the tagged files exactly (plus the built `dist/`). v0.5.1 (fixes for all eight findings of an independent Codex review of v0.5.0 plus two further under-graded lift deliverables; re-grading the 72 saved Phase 5 main-run deliverables changed 0 verdicts) was released on 2026-10-24: tag `v0.5.1` on merge commit `6937a3e`, GitHub release *Terraproof v0.5.1* (marked Latest), and `terraproof@0.5.1` on npm as `latest`. The published tarball matches the tagged files exactly (plus the built `dist/`). v0.6.0 (six harder agent-lift tasks as a separate `harder` cohort, the OpenAI-compatible API agent host for the lift driver, the new `terrain.slope_consistent` check, and the geomaster terrain snippet fix; the benchmark is 33/33 tasks, 0 false passes, 25 checker rejections and 25 checker blind spots) was released on 2026-10-25: tag `v0.6.0` on `e18c143` (part of `main` through merge commit `2f81050`), GitHub release *Terraproof v0.6.0* (marked Latest), and `terraproof@0.6.0` on npm as `latest`, published 00:01 UTC. No version is published to PyPI. Sections 2–5 describe the v0.7.0 release procedure. Historical verification below remains explicitly versioned.
+
+---
+
+
+## v0.7.0 grouped release — 2026-10-25
+
+This batch combines API-host budget/usage fixes, an opt-in source-calibrated NDVI
+check with CLI/MCP/provenance parity, current evaluation documentation, and CI
+trigger deduplication. Version declarations are synchronized across npm and Python.
+No new agent-lift claim is made; the original study remains not significant.
+
+Pre-publication code verification (before the metadata-only version bump): full
+Python suite **1320 passed, 1 skipped, 3 expected georeference warnings**;
+benchmark **33/33**, 0 false passes, 25 checker rejections and 25 oracle-only blind
+spots; router **87/87**, deterministic, no over-selection warnings; typecheck,
+repository validation, actual MCP stdio release validation **20/20**, and a built
+wheel outside the checkout passed. Original frozen tasks, recipes, oracles, skills
+and routing scenarios are unchanged. `rs.index_formula` has separate regressions
+and does not retroactively reduce the frozen benchmark's blind-spot count.
+
+Publication requires green PR and merged-main CI and smoke tests of the versioned
+artifacts. Their final commit, run links, tarball/wheel hashes and post-publication
+results are recorded in the [v0.7.0 release](https://github.com/esmailhussien/terraproof/releases/tag/v0.7.0)
+and the accompanying local handoff, rather than opening an additional docs-only
+PR for the same batch. This pre-publication snapshot does not itself assert that
+publication has occurred. Python is available from source and the release wheel;
+no PyPI publication is part of this procedure.
+
+CI still runs the complete matrix on PRs to main and pushes to main. Feature-branch
+pushes do not start a second copy of the PR matrix; manual dispatch and cancellation
+of superseded runs remain available.
 
 ---
 
@@ -239,7 +270,7 @@ Limits: v5 is agent-authored and not expert-adjudicated, and one pass on one 160
 - [x] Independent routing acceptance: **passed on v5** in both languages from a single measurement of commit `22c3564` (EN recall 0.971, 3.75 forbidden per 100; AR recall 0.9625, 2.5 per 100; see above). The v3/v4 failures stay on record. v5 is agent-authored and not expert-adjudicated. Its post-review re-run on the v0.4.1 code is a non-regression check only, not a second acceptance.
 - [ ] Remaining release gates: the release-validation Claude real-host gate (`tests/release_validation.py --agent-host claude`, not yet run; separately, the Phase 5 runs showed real Claude Code MCP tool use) and the 15 declared checker blind spots (17 at v0.4.1; two closed after release, see below). Tiny synthetic vector fixtures do not exhaustively validate raster/optical/SAR workflows or scientific fitness.
 
-Next release actions: v0.6.0 is released (sections 4–5). The remaining Claude release-validation and checker blind-spot gates carry over to the next release. The user-approved internal content review above replaces additional expert reviewers; it does not replace these acceptance gates. No automatic inference retry, credential inspection, provider/model fallback, or relaxed isolation is authorized by these checks.
+Next release actions: v0.7.0 follows the grouped procedure above; v0.6.0 release evidence remains historical. The remaining Claude release-validation and checker blind-spot gates carry over to the next release. The user-approved internal content review above replaces additional expert reviewers; it does not replace these acceptance gates. No automatic inference retry, credential inspection, provider/model fallback, or relaxed isolation is authorized by these checks.
 
 ### Checker blind spots
 
@@ -276,7 +307,7 @@ Still declared. In the invocation the spec defines, the checker has no legitimat
 
 - [x] **`package.json` Package Shape**:
   - `name`: `terraproof`
-  - `version`: `0.6.0`
+  - `version`: `0.7.0`
   - `bin`: `{"terraproof": "bin/terraproof.js"}`
   - `main` and `exports`: `./dist/router/index.js` (compiled router)
   - `engines.node`: `>=20`
@@ -295,32 +326,26 @@ Still declared. In the invocation the spec defines, the checker has no legitimat
 
 ## 3. Package Name & Registry Strategy
 
-> [!IMPORTANT]
-> The unscoped npm package name `terraproof` was free on 2026-10-23 (`npm view terraproof` returned 404) but is not claimed until the first publish.
->
-> **Before publishing:**
-> - Re-check availability with `npm view terraproof` (a 404 means the name is still free).
-> - If it has been taken since, publish a scoped package instead: `@<owner>/terraproof`.
->   1. Set `"name": "@<owner>/terraproof"` in `package.json`.
->   2. Run `npm publish --access public`.
+The npm identity is the existing unscoped `terraproof` package. Confirm the
+publishing account with `npm whoami` and check that `0.7.0` is unpublished before
+publishing. Use the exact reviewed tarball, keep its version and integrity hash,
+and complete any npm browser/2FA approval through the supported login flow.
 
 ---
 
 ## 4. Release Procedure
 
-1. **Tag the Release**:
-   ```bash
-   git tag -a v0.6.0 -m "Terraproof v0.6.0 — harder lift cohort, API agent host, terrain slope check"
-   git push origin v0.6.0
-   ```
-2. **Publish to NPM** (from a checkout where `bin/terraproof.js` has LF endings; npm asks for browser/2FA approval):
-   ```bash
-   npm publish --access public
-   ```
-3. **Create GitHub Release**:
-   - Title: `Terraproof v0.6.0`
-   - Attach tarball `terraproof-0.6.0.tgz` generated via `npm pack`.
-   - Use only the `0.6.0` CHANGELOG entry as release notes, and state the remaining Claude release-validation and checker blind-spot gates and that Phase 5 claims no lift.
+1. Combine the complete batch and version bump in one PR. Wait for its full CI,
+   merge it, and verify CI on the exact merged-main commit.
+2. Tag that commit `v0.7.0` and push the tag (branch-only CI does not rerun for tags).
+3. Build the npm tarball and Python wheel from that clean commit. Verify the npm
+   executable uses LF and smoke-test both artifacts outside the checkout.
+4. Publish the reviewed npm tarball with `npm publish <tarball> --access public`.
+5. Create **Terraproof v0.7.0** on GitHub with the tarball and wheel attached. Use
+   the 0.7.0 changelog and record final verification links/hashes and the existing
+   scientific/checker limitations. No PyPI publication or new model run is implied.
+6. Verify the published version and routing from a blank directory. Record the
+   outcome in the release and local handoff without another PR for this batch.
 
 ---
 

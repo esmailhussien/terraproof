@@ -2,7 +2,7 @@ name: CI - Terraproof Integrity, Router & Package Smoke Tests
 
 on:
   push:
-    branches: ["**"]
+    branches: ["main"]
   pull_request:
     branches: ["main"]
   workflow_dispatch:

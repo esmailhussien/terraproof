@@ -88,6 +88,9 @@ def run_checks(
     min_per_class: int | None = None,
     estimates_requested: bool = False,
     dem: str | None = None,
+    index_formula: str | None = None,
+    nir: str | None = None,
+    red: str | None = None,
     manifest: str | None = None,
     require_provenance: bool = False,
     lang: str = "en",
@@ -105,7 +108,9 @@ def run_checks(
     `qa_path`/`qa_kind` for cloud-mask checks, `time_range` for temporal coverage,
     `sar_expect` for SAR domain checks, and `accuracy_samples`/`class_areas` for accuracy
     assessment. `dem` is the DEM a slope-in-degrees output was derived from; it checks the
-    slope against the DEM's vertical unit and pixel spacing. `manifest` verifies a run manifest and appends `provenance.reproducible`;
+    slope against the DEM's vertical unit and pixel spacing. `index_formula="ndvi"` with
+    single-band `nir` and `red` verifies calibrated NDVI values and source support; extra
+    output masking warns because its QA policy is not supplied. `manifest` verifies a run manifest and appends `provenance.reproducible`;
     `require_provenance` prevents Decision-grade when no manifest is supplied. `lang`
     selects the Markdown language (en or ar). Results match `python -m terraproof check`.
     """
@@ -118,6 +123,8 @@ def run_checks(
         compare = _inspect_dataset(compare_to) if compare_to else None
         reference = _inspect_dataset(reference_input) if reference_input else None
         dem_dataset = _inspect_dataset(dem) if dem else None
+        nir_dataset = _inspect_dataset(nir) if nir else None
+        red_dataset = _inspect_dataset(red) if red else None
 
         inputs = [input_record(path, "input", dataset["kind"]) for path, dataset in zip(paths, inspections)]
         if compare is not None:
@@ -126,6 +133,10 @@ def run_checks(
             inputs.append(input_record(reference_input, "reference-input", reference["kind"]))
         if dem_dataset is not None:
             inputs.append(input_record(dem, "dem", dem_dataset["kind"]))
+        if nir_dataset is not None:
+            inputs.append(input_record(nir, "nir", nir_dataset["kind"]))
+        if red_dataset is not None:
+            inputs.append(input_record(red, "red", red_dataset["kind"]))
         if qa_path and Path(qa_path).is_file():
             inputs.append(input_record(qa_path, "qa", "raster"))
         if isinstance(accuracy_samples, str) and Path(accuracy_samples).is_file():
@@ -157,10 +168,13 @@ def run_checks(
             min_per_class=min_per_class,
             estimates_requested=estimates_requested,
             dem=dem_dataset,
+            index_formula=index_formula,
+            nir=nir_dataset,
+            red=red_dataset,
         )
 
         checked_paths = list(paths)
-        for path in (compare_to, reference_input, dem, qa_path, accuracy_samples, class_areas):
+        for path in (compare_to, reference_input, dem, nir, red, qa_path, accuracy_samples, class_areas):
             if isinstance(path, str):
                 checked_paths.append(path)
 
@@ -188,6 +202,9 @@ def run_checks(
         "reference_input": reference_input,
         "encoding": encoding,
         "dem": dem,
+        "index_formula": index_formula,
+        "nir": nir,
+        "red": red,
         "qa_path": qa_path,
         "qa_kind": qa_kind,
         "time_range": time_tuple,

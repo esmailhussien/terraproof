@@ -516,16 +516,35 @@ An independent review by Codex (a different model family; it disclosed earlier c
 
 ## 18. API agent hosts: OpenAI and Groq (2026-10-25)
 
-Claude Code solved all six harder tasks without Terraproof in a one-run screen (12 runs, $1.74), so lift cannot show for that host. Weaker models may leave room. OpenAI (e.g. GPT-4o) and Groq expose plain chat APIs rather than agents, so `tests/api_agent.py` supplies the agent loop:
+Claude Code solved all six harder tasks with and without Terraproof in a one-repeat screen (12 runs, $1.74). This small screen has no observed headroom; it does not establish that lift is impossible for that host on other tasks or repetitions. Weaker models may leave room. OpenAI (e.g. GPT-4o) and Groq expose plain chat APIs rather than agents, so `tests/api_agent.py` supplies the agent loop:
 
 - **Tools:** `list_files`, `read_file`, `write_file` (confined to the run project: no absolute paths or `..`) and `run_python` (one script per call, the condition's interpreter, the project directory, a 120 s timeout with process-tree cleanup). In "with" only, Terraproof's six MCP tools come from the installer-registered server, as for the other hosts; `load_section` calls and reads of installed skill files count as skill reads.
 - **Not a sandbox:** `run_python` executes model-written code on the local machine with the user's permissions. Run it on a machine where that is acceptable.
 - **Keys:** only from `OPENAI_API_KEY` / `GROQ_API_KEY`, read when a request is sent; never stored, logged or reported. Errors are reported as status labels (`http 401`), never response bodies. A missing key refuses the run before any request.
-- **Caps per run:** model calls (`--max-model-calls-per-run`, default 40), total tokens (`--max-tokens-per-run`, default 300,000), output tokens per call (4,096) and USD (`--max-usd-per-run`). Spend is computed from returned token usage at prices the user passes (`--usd-per-million-input/-output`, required; prices are never guessed). The total cap and `--approve-model-calls` apply as for Claude.
+- **Local admission limits per run:** model calls (`--max-model-calls-per-run`, default 40), reserved/reported tokens (`--max-tokens-per-run`, default 300,000), at most 4,096 output tokens per request and USD (`--max-usd-per-run`). Before sending, reserve the complete conversation and tool schemas using their UTF-8 size plus framing allowance, then shrink requested output to the remaining token/USD allowance. This is conservative accounting, not a provider tokenizer or a provider-side invoice cap. Post-response usage is validated before completion or tool execution; an over-limit or malformed-usage reply fails. Missing usage and failed attempts retain their admitted reservation (including retries); reports separate reported usage from reserved unknown usage. Prices are explicitly supplied (`--usd-per-million-input/-output`), not guessed. Provider overhead, prices and returned usage can differ, so no absolute invoiced-dollar guarantee is made. The harness reserves complete pairs within the configured total budget and retains the explicit invocation-approval gate.
 - **API errors and rate limits:** HTTP 429 is retried at most 3 times per run by default (`--rate-limit-retries`), waiting for `Retry-After` when given, else 2, 4, 8 s; each wait is capped at 60 s by default (`--max-retry-wait`) and never runs past the per-run timeout. Every attempt counts against the model-call cap. Errors are reported as the status plus a short code from the error body, such as `http 400 (tool_use_failed)` or `http 429 (rate_limit_exceeded)`. The code must match `[a-z0-9_.-]{1,40}`; message text is never kept. HTTP 400 `tool_use_failed` (the provider could not parse the model's tool call) is retried at most 2 times per run, without waiting, and also counts against the model-call cap. Other errors are not retried.
 - **Isolation:** the same preflight and "without" rules apply: a dependency-only Python via `--agent-python-without`, no Terraproof importable, neutral paths. Calls made through the tools are checked with the same contamination labels.
-- **Tests:** `tests/python/test_api_agent.py` drives the loop with a scripted fake model and blocks real HTTP. No API request has been made.
+- **Offline tests:** `tests/python/test_api_agent.py` drives the loop with a scripted fake model and blocks real HTTP. That test suite makes no API requests. Separately, saved local OpenAI/Groq pilots did make requests; these were exploratory host smoke tests, not a confirmatory lift study.
 
 ```bash
 python tests/agent_lift.py --agent-host openai --runs 1 --task terrain-slope-map --usd-per-million-input <price> --usd-per-million-output <price>   # plan only
 ```
+
+
+### Current exploratory results and next measurement
+
+The saved Claude harder screen (`harder-screen.json`) has six complete pairs,
+6/6 accepted in both conditions, no contamination flags and zero skill reads.
+The GPT-4o terrain pilot (`api-pilot-openai.json`) rejected both outputs. Groq/Qwen
+terrain pilots also include missing outputs and host/API errors; these cannot be
+interpreted as geospatial computation errors or positive lift. Pilot outcomes
+motivated the slope check and must not be reused as independent confirmation of
+that change. The new local budget fixes and NDVI source-contract tests use no
+live model; no new inference experiment is implied by this maintenance work.
+
+Before a further live study, freeze its model, tasks, treatment, errors/exclusions,
+primary analysis and budget, verify treatment actually reaches and is used by the
+agent, and keep exploratory screening separate from held-out confirmation. Do not
+pool the original and harder cohorts or select a host merely because observed
+outcomes look favourable. Additional real calls require a separately specified
+budget and explicit user approval.

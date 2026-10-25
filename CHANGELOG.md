@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.0] — 2026-10-25
+
+### Fixed
+
+- API lift host: reserve a conservative complete-request allowance before each call,
+  constrain requested output to remaining token/USD allowance, validate usage and
+  reject over-limit terminal replies before any tool executes. Failed attempts and
+  unknown usage retain their reservations. Reports and plans describe local limits
+  rather than a guaranteed provider-side invoice cap. Non-finite budgets/prices
+  are refused.
+- Current evaluation documentation now records 33 tasks, 25 checker rejections and
+  25 blind spots, and distinguishes real exploratory API pilots from offline tests.
+
+### Added
+
+- Opt-in `rs.index_formula`: `check OUTPUT --index-formula ndvi --nir NIR --red RED`
+  (also Python/MCP) verifies every cell against calibrated source bands on the same
+  grid, rejects unsupported valid output, and warns on extra masking. Source roles
+  and calibration are supplied by the user. Provenance coverage includes both
+  operands. Historical task invocations and benchmark scores remain unchanged.
+
+### Changed
+
+- CI runs on pull requests to main, pushes to main and manual dispatch. Feature-branch
+  pushes no longer start a duplicate matrix before the pull-request matrix. All OS,
+  Node and Python test combinations and the existing cancellation policy are retained.
+
 ## [0.6.0] — 2026-10-25
 
 ### Added

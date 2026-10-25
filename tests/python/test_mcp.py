@@ -492,3 +492,20 @@ def test_clockwise_geojson_winding_cli_mcp_parity(tmp_path, capsys):
     mcp_check = next(c for c in payload["report"]["checks"] if c["id"] == "geometry.winding")
     assert cli_check == mcp_check
     assert cli_check["status"] == "fail"
+
+
+@pytest.mark.parametrize("mistake", [False, True])
+def test_ndvi_cli_mcp_source_contract_parity(tmp_path, capsys, mistake):
+    from test_index_formula import _case, GRID
+    from terraproof.evals.fixtures import write_raster_grid
+    out, nir, red, values = _case(tmp_path)
+    if mistake:
+        values[-1, -1] += .1
+        write_raster_grid(out, values, transform=GRID)
+    args=["check",out,"--index-formula","ndvi","--nir",nir,"--red",red,"--format","json"]
+    assert main(args) == (3 if mistake else 0)
+    cli=json.loads(capsys.readouterr().out)
+    payload=call("run_checks", {"paths":[out],"index_formula":"ndvi","nir":nir,"red":red}).structured_content
+    assert cli == payload["report"]
+    check=next(c for c in cli["checks"] if c["id"]=="rs.index_formula")
+    assert check["status"] == ("fail" if mistake else "pass")
