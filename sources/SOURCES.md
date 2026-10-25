@@ -372,3 +372,14 @@ In 0.2.0 the project was refocused as Terraproof and these off-scope skills were
 - **Import Date:** 2026-08-26
 - **Former Local Paths:** `skills/ai-sdk/` (`SKILL.md`, `UPSTREAM.md`)
 - **Modification Status:** Faithful vendoring of the official Vercel AI SDK skill.
+
+
+## Native raster source-contract references
+
+The `terrain.slope_formula` and `raster.source_identity` implementations are
+original Terraproof/Geova code under this repository's MIT license. No upstream
+implementation or prose is vendored. Technical references for reader semantics
+and COG scope are the [Rasterio nodata-mask documentation](https://rasterio.readthedocs.io/en/stable/topics/masks.html)
+and [GDAL COG driver documentation](https://gdal.org/en/stable/drivers/raster/cog.html).
+The [versioned contract guide](https://github.com/esmailhussien/terraproof/blob/v0.7.3/docs/RASTER_CONTRACTS.md) describes the implemented
+mathematics, tolerances, validity policy and limits.

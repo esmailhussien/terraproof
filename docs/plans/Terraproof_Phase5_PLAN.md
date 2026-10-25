@@ -653,14 +653,18 @@ This single directed synthetic-scene result establishes neither general repair
 reliability nor lift. Historical negative outcomes remain unchanged.
 
 
-### Additional required-output examples (unreleased)
+### Strict slope and raster-source contracts (v0.7.3)
 
-The [policy guide](../OUTPUT_VERIFICATION.md#bundled-task-plans) now includes
-explicit plans for `terrain-slope-map` and `raster-cog-delivery`, alongside NDVI.
-They use existing checks only: source/units/spacing consistency for slope and a
-heuristic layout screen for COG, plus declared nodata and a defined CRS. They do
-not replace independent full-file oracles or a complete COG validator. Offline
-tests explicitly retain examples where a passing policy does not imply artifact
-acceptance (an extra missing slope cell or an altered COG pixel). Existing task
-specs, recipes, source/checker implementations and historical measurements stay
-unchanged. This batch introduces no paid run or new inference authorization.
+The [policy guide](../OUTPUT_VERIFICATION.md#bundled-task-plans) provides explicit
+slope and COG plans alongside NDVI. These now select new opt-in production checks:
+`terrain.slope_formula` verifies the complete declared central-difference value/
+stencil/edge contract; `raster.source_identity` verifies exact valid data, complete
+band-validity masks and grid/band metadata against the source. The
+[contract guide](../RASTER_CONTRACTS.md) documents CLI/Python/MCP use and limits.
+
+Regressions now reject the extra missing slope cell and altered COG pixel while
+the independent task oracles agree. The original heuristic/check invocations
+remain unchanged in frozen benchmark tasks, so their existing blind-spot counts
+and historical results are preserved. Source identity does not validate full COG
+conformance. This offline batch introduces no paid run or inference authorization,
+nor a general repair reliability or agent-lift claim.

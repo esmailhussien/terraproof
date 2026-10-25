@@ -12,7 +12,7 @@ Terraproof helps AI coding agents do geospatial work they can prove. It gives an
 
 Everything runs locally and offline. No model API key is needed.
 
-**Status:** experimental (v0.7.2). See [Evaluation status](#evaluation-status) for what has and has not been measured.
+**Status:** experimental (v0.7.3). See [Evaluation status](#evaluation-status) for what has and has not been measured.
 
 ---
 
@@ -76,6 +76,20 @@ and a zero denominator cannot become valid output values. Extra output masking
 warns because its QA policy is not verified here. Source files are included in the
 evidence report and must be covered when a provenance manifest is supplied.
 See [the full contract and limits](docs/INDEX_FORMULA.md).
+
+### Verify slope and lossless raster delivery
+
+```bash
+python -m terraproof check outputs/result.tif --dem inputs/elevation.tif --slope-method central-difference
+python -m terraproof check outputs/delivery.tif --compare-to inputs/analysis.tif --raster-identity
+```
+
+The explicit slope method checks all required values, flat cells, stencil masks
+and nodata edges. Raster identity checks every band's valid samples, complete
+validity masks and grid/band metadata against the declared source. Full COG
+conformance remains separate from this data comparison and the existing layout
+screen. See [supported contracts and limits](docs/RASTER_CONTRACTS.md).
+
 
 ---
 

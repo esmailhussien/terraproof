@@ -7,12 +7,13 @@
           "outputs/result.tif"
         ],
         "checks": [
-          "terrain.slope_consistent",
+          "terrain.slope_formula",
           "raster.nodata_declared",
           "crs.defined"
         ],
         "parameters": {
-          "dem": "inputs/elevation.tif"
+          "dem": "inputs/elevation.tif",
+          "slope_method": "central-difference"
         }
       }
     ]

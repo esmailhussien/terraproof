@@ -49,63 +49,35 @@ the document and coverage; preflight also checks current data and the MCP schema
 
 ## Bundled task plans
 
-Choose the file that matches the selected task; these files are not automatically
-merged. A plan must still cover every deliverable of every task selected for a
-run. The original and harder experimental cohorts remain separate.
+Choose the file matching the selected task. Files are not automatically merged;
+every selected deliverable still needs coverage, and experimental cohorts remain
+separate. The [strict raster contract guide](RASTER_CONTRACTS.md) defines the new
+explicit slope and identity checks in full.
 
-| Plan | Task and required evidence | Explicit limits |
+| Plan | Required evidence | Scope |
 | --- | --- | --- |
-| [NDVI source contract](../tests/verification_plans/ndvi-source-contract.json) | `indices-ndvi-physical-inputs`: `rs.index_formula`, with explicit NIR/red sources | Covers the declared NDVI source relation, not every scientific requirement; see [the NDVI guide](INDEX_FORMULA.md). |
-| [Slope source contract](../tests/verification_plans/terrain-slope-source-contract.json) | `terrain-slope-map`: `terrain.slope_consistent`, `raster.nodata_declared`, `crs.defined`; DEM is `inputs/elevation.tif` | A declared-source consistency screen, not full stencil/mask/edge acceptance. |
-| [COG delivery screen](../tests/verification_plans/cog-delivery-screen.json) | `raster-cog-delivery`: `raster.cog_layout`, `raster.nodata_declared`, `crs.defined` | Heuristic layout/nodata/CRS screen, not source-pixel identity or complete COG conformance. |
+| [NDVI source contract](../tests/verification_plans/ndvi-source-contract.json) | `rs.index_formula` with declared NIR/red | Calibrated NDVI relation and support; [limits](INDEX_FORMULA.md). |
+| [Slope source contract](../tests/verification_plans/terrain-slope-source-contract.json) | `terrain.slope_formula`, nodata, CRS; `dem=inputs/elevation.tif`, `slope_method=central-difference` | Every required degree value, full four-neighbour stencil mask and nodata edges on the exact DEM grid; flat cells included. |
+| [COG delivery screen](../tests/verification_plans/cog-delivery-screen.json) | `raster.source_identity`, layout, nodata, CRS; `compare_to=inputs/analysis.tif`, `raster_identity=true` | Exact valid data, all band-validity masks and grid/band metadata, plus the existing layout screen. Full COG conformance remains separate. |
 
-### Slope scope
+The slope plan now uses the explicit full-value/mask method instead of the
+original 95% heuristic. The COG plan now supplies its source and requires decoded
+identity as well as layout. Omitting or changing those source/options cannot
+satisfy the declared plan, even if another call passes. Original source bytes
+must stay unchanged and every result must be current.
 
-The slope plan targets `outputs/result.tif` with `dem=inputs/elevation.tif`.
-The actual `run_checks` call must supply that DEM. An omitted or different source
-cannot satisfy the policy, even if it has identical bytes and yields a passing
-check. The original-source content and freshness rules apply as usual.
+Local regressions retain the previously oracle-only missing slope cell and
+altered COG pixel: both strengthened plans now block them and agree with the
+independent grader. The frozen benchmark still runs its original invocations,
+which remain unchanged. A passing declared plan is not universal scientific
+certification or a substitute for independent task grading.
 
-The existing slope check compares available valid, sloping cells against central
-differences using the DEM's declared vertical units and pixel spacings. It
-requires at least 95% of compared cells within its tolerance (relative 0.001,
-absolute 0.01 degrees), and skips expected slopes below 0.5 degrees. Named
-vertical-unit and square-pixel mistakes fail; other mismatches warn. No sloping
-comparison cells, an unsupported vertical unit, a geographic DEM or an
-incompatible grid leaves the slope check not-run and the plan unverified.
-
-This check does not enforce the full delivered mask, complete stencil support,
-edge policy or all-cell numeric accuracy. `raster.nodata_declared` establishes
-that nodata is declared, not that the mask is correct. A locally added missing
-slope cell can pass the declared screen while failing the independent task
-oracle. The plan deliberately preserves this documented check scope.
-
-### COG scope
-
-The delivery plan targets `outputs/delivery.tif` without extra source arguments.
-The existing layout check screens GeoTIFF tiling, internal overview presence
-when larger than one block, and JPEG compression. A striped/no-overview delivery
-or JPEG compression warns, which blocks strict completion as review-required.
-Non-applicable or absent required evidence stays unverified.
-
-The plan does not compare output values, masks, dimensions, dtype, grid or CRS
-against `inputs/analysis.tif`. A defined output CRS need not equal the source CRS.
-It does not validate IFD/byte ordering, HTTP range behaviour, every compression
-setting or full Cloud Optimized GeoTIFF conformance. A well-laid-out COG with an
-altered pixel can pass this policy while the independent task oracle rejects it.
-Source identity/full-file grading and a full COG validator remain separate work.
-
-### Offline coverage
-
-`tests/python/test_verification_plan_examples.py` runs both plans through the
-actual API host and local MCP with a scripted fake provider; real HTTP is blocked
-and a dummy key is used. Tests cover current/missing/stale checks, explicit
-rechecking, same-time content changes, source mutation, named bad outputs,
-not-run/warning outcomes, source-context matching and the documented oracle-only
-gaps. They also exercise key-free plan-only commands and baseline isolation.
-No paid experiment, new checker capability or generalized agent-lift result is
-implied. Historical task specs, oracles, seeded controls and measured outcomes
-are unchanged.
+`tests/python/test_verification_plan_examples.py` uses the actual host and local
+MCP with a scripted provider, blocked HTTP and a dummy key. It covers current,
+missing and stale evidence; rechecking; same-time content changes; immutable
+sources; method/source-context matching; known wrong outputs; unavailable data;
+independent grading; key-free planning; and baseline isolation. No paid run is
+included.
 
 ## Plan without inference
 

@@ -65,7 +65,7 @@ def test_current_actual_evidence_and_independent_reference_pass(case, tmp_path):
     assert result.status == 'completed', result.turn
     assert result.turn['verification_status'] == 'verified'
     assert result.turn['required_verification']['checks'] == {
-        'verified': 3, 'review-required': 0, 'unverified': 0}
+        'verified': 3 if case[0].task_id == SLOPE else 4, 'review-required': 0, 'unverified': 0}
     assert result.turn['verification_plan_sha256'] == case[2].sha256
     assert result.terraproof_tool_calls == 1
     assert score(case, tmp_path)['accepted']
@@ -77,7 +77,7 @@ def test_current_actual_evidence_and_independent_reference_pass(case, tmp_path):
 def test_missing_checks_block_completion(case):
     result, model = run(case, [[]])
     assert result.status == 'failed' and result.turn['verification_status'] == 'unverified'
-    assert result.turn['required_verification']['checks']['unverified'] == 3
+    assert result.turn['required_verification']['checks']['unverified'] == (3 if case[0].task_id == SLOPE else 4)
     assert result.turn['completion_review_prompts'] == 2 and len(model.requests) == 3
 
 
@@ -111,8 +111,8 @@ def test_content_changes_with_restored_mtime_cannot_keep_a_pass(case, target):
 
 
 @pytest.mark.parametrize('task_id,seed,check_id,verdict', [
-    (SLOPE, 'vertical-units-ignored.tif', 'terrain.slope_consistent', 'fail'),
-    (SLOPE, 'square-pixels-assumed.tif', 'terrain.slope_consistent', 'fail'),
+    (SLOPE, 'vertical-units-ignored.tif', 'terrain.slope_formula', 'fail'),
+    (SLOPE, 'square-pixels-assumed.tif', 'terrain.slope_formula', 'fail'),
     (COG, 'delivery_lossy.tif', 'raster.cog_layout', 'warn'),
     (COG, 'delivery_striped.tif', 'raster.cog_layout', 'warn'),
 ])
@@ -130,22 +130,24 @@ def test_known_mistakes_require_review(tmp_path, task_id, seed, check_id, verdic
     assert not score(case, tmp_path)['accepted']
 
 
-def test_unknown_slope_method_requires_review(tmp_path):
+def test_wrong_values_fail_the_explicit_slope_method(tmp_path):
     case = prepare(tmp_path, SLOPE)
     with rasterio.open(case[4], 'r+') as dst:
         values = dst.read(1); valid = dst.read_masks(1) > 0
         values[valid] *= .5; dst.write(values, 1)
     result, _ = run(case, [[('terraproof_run_checks', case[3])], []])
     assert result.status == 'failed' and result.turn['verification_status'] == 'review-required'
-    assert result.turn['output_review'] == 'no-failure-observed'  # actual warning, no failed requirement
+    assert result.turn['output_review'] == 'unresolved'
     assert result.turn['required_verification']['checks'] == {
         'verified': 2, 'review-required': 1, 'unverified': 0}
 
 
-def test_no_sloping_comparison_cells_remains_unverified(tmp_path):
+def test_no_complete_finite_stencil_remains_unverified(tmp_path):
     case = prepare(tmp_path, SLOPE)
     with rasterio.open(case[1] / 'inputs/elevation.tif', 'r+') as dst:
-        dst.write(np.zeros((dst.height, dst.width), dtype=dst.dtypes[0]), 1)
+        dst.write(np.full((dst.height, dst.width), dst.nodata, dtype=dst.dtypes[0]), 1)
+    with rasterio.open(case[4], 'r+') as dst:
+        dst.write(np.full((dst.height, dst.width), dst.nodata, dtype=dst.dtypes[0]), 1)
     result, _ = run(case, [[('terraproof_run_checks', case[3])], []])
     assert result.status == 'failed' and result.turn['verification_status'] == 'unverified'
     assert result.turn['required_verification']['checks']['unverified'] == 1
@@ -170,7 +172,7 @@ def test_unreadable_output_cannot_be_verified(case):
 
 
 @pytest.mark.parametrize('task_id', [SLOPE, COG])
-def test_passing_policy_is_not_independent_artifact_acceptance(tmp_path, task_id):
+def test_strict_policy_rejects_previously_oracle_only_errors(tmp_path, task_id):
     case = prepare(tmp_path, task_id)
     with rasterio.open(case[4]) as src:
         data = src.read(1); profile = src.profile
@@ -183,9 +185,10 @@ def test_passing_policy_is_not_independent_artifact_acceptance(tmp_path, task_id
         write_cog(case[4], data, crs=profile['crs'], origin=(profile['transform'].c, profile['transform'].f),
                   resolution=profile['transform'].a, nodata=profile['nodata'])
     result, _ = run(case, [[('terraproof_run_checks', case[3])], []])
-    assert result.status == 'completed' and result.turn['verification_status'] == 'verified', result.turn
+    assert result.status == 'failed' and result.turn['verification_status'] == 'review-required', result.turn
     graded = score(case, tmp_path)
     assert not graded['accepted'] and not graded['oracle_ok'] and 'oracle' in graded['caught_by']
+    assert graded['checks_ok']  # frozen benchmark still uses its original, limited checks
 
 
 @pytest.mark.parametrize('task_id', [SLOPE, COG])

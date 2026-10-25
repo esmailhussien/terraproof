@@ -7,16 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [0.7.3] — 2026-10-25
 
 ### Added
 
-- Bundled required-output plans for terrain slope and the COG delivery layout
-  screen, using existing source-consistency, layout, nodata and CRS checks.
-  Offline real-MCP tests cover completion gating and demonstrate that a passing
-  declared screen can still fail independent full-artifact grading. The English
-  [policy guide](docs/OUTPUT_VERIFICATION.md) documents coverage and limits.
-  No production checker, routing rule, frozen task or scientific result changed.
+- Opt-in `terrain.slope_formula`: explicit `--slope-method central-difference`
+  with `--dem` verifies every calibrated slope value, complete four-neighbour
+  support and nodata edges, including flat cells, using bounded window halos.
+- Opt-in `raster.source_identity`: `--raster-identity --compare-to SOURCE`
+  compares every band's valid samples and full validity masks plus exact grid
+  and band metadata. CLI, Python, MCP and provenance use the same source context.
+- Bundled slope and COG plans now require these stronger checks. Offline
+  regressions reject the missing slope cell and altered COG pixel that their
+  original screens could pass. English [contract](docs/RASTER_CONTRACTS.md) and
+  [host-policy](docs/OUTPUT_VERIFICATION.md) guides explain support and limits.
+
+### Compatibility and limits
+
+- The original `--dem` heuristic and default vector `--compare-to` behaviour
+  remain unchanged. Historical tasks, recipes, oracles, invocations and frozen
+  experiments are preserved. New opt-in checks do not retroactively change the
+  benchmark's declared blind-spot count. No routing trigger or skill was added.
+- Source identity is decoded valid-data identity, not file-byte identity or full
+  COG conformance. The explicit slope method assumes declared source units and
+  its stated stencil/edge policy. No paid inference or new agent-lift claim.
+
+### Verification
+
+- Local final Python suite: 1483 passed, 1 skipped, three expected raster warnings.
+  Router 87/87, packed npm install 8/8 and real CLI/installer/MCP stdio 20/20 pass.
+  Candidate-wheel tests outside the checkout exercise both new contracts plus
+  all skills/sections, bilingual routing, installer and the unchanged 33-task
+  benchmark. No paid model request was made for this release batch.
 
 ## [0.7.2] — 2026-10-25
 

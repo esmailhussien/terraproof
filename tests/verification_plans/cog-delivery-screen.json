@@ -9,9 +9,13 @@
         "checks": [
           "raster.cog_layout",
           "raster.nodata_declared",
-          "crs.defined"
+          "crs.defined",
+          "raster.source_identity"
         ],
-        "parameters": {}
+        "parameters": {
+          "compare_to": "inputs/analysis.tif",
+          "raster_identity": true
+        }
       }
     ]
   }
