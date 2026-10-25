@@ -771,6 +771,15 @@ def api_model(args) -> str | None:
     return args.api_model or PROVIDERS[args.agent_host]["default_model"]
 
 
+def shell_command(parts) -> str:
+    """Render approval commands for PowerShell on Windows and POSIX shells elsewhere."""
+    if os.name != "nt":
+        import shlex
+        return shlex.join(parts)
+    return " ".join(part if re.fullmatch(r"[A-Za-z0-9_./:\\=-]+", part)
+                    else "'" + part.replace("'", "''") + "'" for part in parts)
+
+
 def plan(args) -> dict:
     cohort = None if args.task else (args.cohort or DEFAULT_COHORT)
     tasks = args.task or [task.task_id for task in COHORTS[cohort]]
@@ -796,6 +805,8 @@ def plan(args) -> dict:
                     "--max-tokens-per-run", str(args.max_tokens_per_run),
                     "--rate-limit-retries", str(args.rate_limit_retries),
                     "--max-retry-wait", f"{args.max_retry_wait:g}"]
+    if getattr(args, "verification_plan", None):
+        approve += ["--verification-plan", str(args.verification_plan)]
     if capped:
         approve += ["--max-usd-per-run", f"{args.max_usd_per_run:g}", "--max-usd-total", f"{total_usd_cap(args, calls):g}"]
     approve += ["--timeout", f"{args.timeout:g}", "--approve-model-calls", str(calls)]
@@ -817,8 +828,11 @@ def plan(args) -> dict:
                     "rate_limit_retries": args.rate_limit_retries,
                     "max_retry_wait_seconds": args.max_retry_wait,
                     "budget_enforcement": "local-reservation-not-provider-cap"}} if args.agent_host in API_HOSTS else {}),
-        "command_to_approve": " ".join(approve),
-        "preflight_command": " ".join(approve[:-2] + ["--preflight-only"]),
+        **({"required_verification": {"plan_sha256": args.verification_policy.sha256,
+                                     "applies_to": "with-only", "task_coverage": "all-declared-outputs"}}
+           if getattr(args, "verification_policy", None) is not None else {}),
+        "command_to_approve": shell_command(approve),
+        "preflight_command": shell_command(approve[:-2] + ["--preflight-only"]),
     }
 
 
@@ -836,6 +850,8 @@ def main(argv=None) -> int:
     parser.add_argument("--max-usd-total", type=float, default=None,
                         help="total USD cap for claude/openai/groq (default: planned runs x --max-usd-per-run)")
     parser.add_argument("--api-model", help="model for openai/groq (openai default gpt-4o; groq has no default)")
+    parser.add_argument("--verification-plan", type=Path,
+                        help="explicit required MCP checks for every declared output; API with-condition only")
     parser.add_argument("--usd-per-million-input", type=float,
                         help="openai/groq price per million input tokens (required; prices are never guessed)")
     parser.add_argument("--usd-per-million-output", type=float,
@@ -879,6 +895,18 @@ def main(argv=None) -> int:
             parser.error("--max-model-calls-per-run and --max-tokens-per-run must be positive")
         if args.rate_limit_retries < 0 or not math.isfinite(args.max_retry_wait) or args.max_retry_wait <= 0:
             parser.error("--rate-limit-retries must be non-negative and --max-retry-wait positive")
+    args.verification_policy = None
+    if args.verification_plan is not None:
+        if args.agent_host not in API_HOSTS:
+            parser.error("--verification-plan is supported only by API hosts")
+        try:
+            from output_verification import VerificationPlan
+            args.verification_policy = VerificationPlan(args.verification_plan)
+            selected = args.task or [task.task_id for task in COHORTS[args.cohort or DEFAULT_COHORT]]
+            for task_id in selected:
+                args.verification_policy.groups(task_id, lift_task(task_id).deliverable_names)
+        except (OSError, ValueError):
+            parser.error("invalid verification plan or incomplete declared-output coverage")
     if args.preflight_only and args.approve_model_calls is not None:
         parser.error("--preflight-only starts no agent; do not combine it with --approve-model-calls")
     try:
@@ -906,7 +934,8 @@ def main(argv=None) -> int:
                            usd_per_million_output=args.usd_per_million_output,
                            max_model_calls=args.max_model_calls_per_run, max_tokens=args.max_tokens_per_run,
                            rate_limit_retries=args.rate_limit_retries, max_retry_wait=args.max_retry_wait)
-        adapter = ApiAgentAdapter(args.agent_host, api_model(args), limits, agent_python)
+        adapter = ApiAgentAdapter(args.agent_host, api_model(args), limits, agent_python,
+                                  verification_plan=args.verification_policy)
         version = f"{args.agent_host} {adapter.model}"
         reason = "ok" if adapter.key_present() else f"{adapter.key_env} is not set; no request was sent"
         adapter = adapter if adapter.key_present() else None

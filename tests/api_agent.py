@@ -35,6 +35,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import agent_lift as driver
+from output_verification import VerificationPlan, RequiredVerification
 from terraproof.evals.lift import WITH, Adapter, AgentRequest, AgentResult, lift_task
 
 PROVIDERS = {
@@ -237,15 +238,21 @@ def mcp_parameters(project: Path):
                                  env={"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"})
 
 
-async def mcp_preflight(project: Path) -> dict:
+async def mcp_preflight(project: Path, verification=None) -> dict:
     """Probe tools and instructions on one connection; no model request is made."""
     from mcp import Client
 
     checks = {"mcp_tools_served": False, "mcp_instructions_available": False}
+    if verification is not None:
+        checks["required_verification_schema"] = False
     try:
         async with Client(mcp_parameters(project), raise_exceptions=False,
                           read_timeout_seconds=PYTHON_TIMEOUT) as client:
-            checks["mcp_tools_served"] = sorted(t.name for t in (await client.list_tools()).tools) == sorted(driver.TOOLS)
+            tools = (await client.list_tools()).tools
+            checks["mcp_tools_served"] = sorted(t.name for t in tools) == sorted(driver.TOOLS)
+            if verification is not None:
+                checker = next((tool for tool in tools if tool.name == "run_checks"), None)
+                checks["required_verification_schema"] = checker is not None and verification.validate_schema(checker.input_schema)
             server_instructions(client)
             checks["mcp_instructions_available"] = True
     except Exception:
@@ -331,7 +338,7 @@ class ApiAgentAdapter(Adapter):
     usd_capped = True
 
     def __init__(self, provider: str, model: str, limits: ApiLimits, agent_python_without: str | None = None,
-                 transport=http_transport, base_url: str | None = None, sleep=None):
+                 transport=http_transport, base_url: str | None = None, sleep=None, verification_plan=None):
         if provider not in PROVIDERS:
             raise ValueError(f"unknown provider {provider!r}")
         if not model:
@@ -340,6 +347,8 @@ class ApiAgentAdapter(Adapter):
         self.model = model
         self.limits = limits
         self.agent_python_without = agent_python_without
+        self.verification_plan = (verification_plan if isinstance(verification_plan, VerificationPlan)
+                                  else VerificationPlan(verification_plan) if verification_plan is not None else None)
         self.transport = transport
         self.sleep = sleep or asyncio.sleep
         self.base_url = base_url or PROVIDERS[provider]["base_url"]
@@ -396,10 +405,12 @@ class ApiAgentAdapter(Adapter):
     # -- loop ------------------------------------------------------------------------
     def run(self, request: AgentRequest) -> AgentResult:
         try:
-            return asyncio.run(self._run(request))
+            result = asyncio.run(self._run(request))
         except Exception as error:  # an unexpected local failure ends the run, labelled, never raised
-            return AgentResult(status="failed", turn={"status": "error", "reason": f"adapter error ({type(error).__name__})",
+            result = AgentResult(status="failed", turn={"status": "error", "reason": f"adapter error ({type(error).__name__})",
                                                       "error_types": [], "error_items": 0})
+        result.turn.setdefault("verification_status", "unverified")
+        return result
 
     async def _run(self, request: AgentRequest) -> AgentResult:
         if request.condition != WITH:
@@ -420,6 +431,20 @@ class ApiAgentAdapter(Adapter):
         if per_run_usd is None or not math.isfinite(per_run_usd) or per_run_usd <= 0:
             return AgentResult(status="failed", turn={"status": "error", "reason": "a finite positive USD budget is required"})
 
+        required = None
+        if self.verification_plan is not None and request.condition == WITH:
+            try:
+                names = lift_task(request.task_id).deliverable_names
+                required = RequiredVerification(project, self.verification_plan.groups(request.task_id, names), names, deadline)
+            except ValueError:
+                return AgentResult(status="failed", turn={"status": "error", "reason": "invalid required verification coverage",
+                                                          "model_calls": 0, "verification_status": "unverified"})
+            if required.initial_inputs is None:
+                return AgentResult(status="failed", turn={"status": "error", "reason": "unsafe required verification data",
+                                                          "model_calls": 0, "verification_status": "unverified"})
+            if mcp_client is None:
+                return AgentResult(status="failed", turn={"status": "error", "reason": "required MCP verification unavailable",
+                                                          "model_calls": 0, "verification_status": "unverified"})
         tools = list(FILE_TOOLS)
         mcp_names = {}
         instructions = None
@@ -430,7 +455,13 @@ class ApiAgentAdapter(Adapter):
                 return AgentResult(status="failed", turn={"status": "error",
                     "reason": "missing or invalid Terraproof MCP instructions", "model_calls": 0,
                     "mcp_instructions_delivered": False})
-            for tool in (await mcp_client.list_tools()).tools:
+            served = (await mcp_client.list_tools()).tools
+            if required is not None:
+                checker = next((tool for tool in served if tool.name == "run_checks"), None)
+                if checker is None or not required.validate_schema(checker.input_schema):
+                    return AgentResult(status="failed", turn={"status": "error", "reason": "invalid required verification arguments",
+                                                              "model_calls": 0, "verification_status": "unverified"})
+            for tool in served:
                 exposed = f"terraproof_{tool.name}"
                 mcp_names[exposed] = tool.name
                 tools.append({"type": "function", "function": {
@@ -441,6 +472,8 @@ class ApiAgentAdapter(Adapter):
         if instructions is not None:
             messages.append({"role": "system", "content": "Terraproof tool guidance from the configured MCP server:\n"
                              + instructions})
+        if required is not None:
+            messages.append({"role": "system", "content": required.prompt()})
         messages.append({"role": "user", "content": driver.PROMPT})
         calls: list[dict] = []
         labels: set[str] = set()
@@ -553,13 +586,22 @@ class ApiAgentAdapter(Adapter):
                 status, reason = "refused", "model refused or content filtered"
                 break
             if not tool_calls:
-                if output_review.unresolved:
+                verification_state = required.summary()["status"] if required is not None else None
+                if output_review.unresolved or (verification_state is not None and verification_state != "verified"):
                     if completion_reviews >= MAX_COMPLETION_REVIEWS:
-                        status, reason = "error", "output verification unresolved"
+                        reason = ("required output verification unverified" if verification_state == "unverified" else
+                                  "required output verification needs review" if verification_state == "review-required" else
+                                  "output verification unresolved")
+                        status = "error"
                         break
                     completion_reviews += 1
                     messages.append({"role": "assistant", "content": message.get("content")})
-                    messages.append({"role": "user", "content": COMPLETION_REVIEW})
+                    feedback = ("Required output verification is missing, stale, or needs review. Run every declared "
+                                "check on the saved outputs using the policy arguments after all data writes. "
+                                "Missing/not-run/stale checks are unverified; fail/warn requires review. "
+                                "Resolve requirements or report the blocker within the remaining session limits."
+                                if required is not None else COMPLETION_REVIEW)
+                    messages.append({"role": "user", "content": feedback})
                     continue  # the normal request, time, token and USD admission checks still apply
                 status, reason = "completed", "ok" if calls else "no tool calls"
                 break
@@ -591,9 +633,12 @@ class ApiAgentAdapter(Adapter):
                 if arguments is None:
                     reply, outcome = "arguments were not a JSON object", "failed"
                 elif name in mcp_names:
+                    before = required.snapshot() if required is not None and mcp_names[name] == "run_checks" else None
                     result = await mcp_client.call_tool(mcp_names[name], arguments)
                     if mcp_names[name] == "run_checks":
                         output_review.observe(arguments, result)
+                        if required is not None:
+                            required.observe(arguments, result, before)
                     reply = "\n".join(getattr(part, "text", "") for part in result.content)[:READ_LIMIT]
                     outcome = "failed" if result.is_error else "completed"
                 else:
@@ -607,6 +652,11 @@ class ApiAgentAdapter(Adapter):
                 messages.append({"role": "tool", "tool_call_id": call.get("id", ""), "content": reply})
 
         cost = round(self.limits.cost(input_tokens, output_tokens) + unreported_cost, 6)
+        verification = required.summary() if required is not None else {"status": "unverified"}
+        if verification["status"] == "verified" and output_review.unresolved:
+            verification["status"] = "review-required"
+        if required is not None and status == "completed" and verification["status"] != "verified":
+            status, reason = "error", "required output verification changed before completion"
         return AgentResult(
             status={"completed": "completed", "timeout": "timeout"}.get(status, "failed"),
             cost_usd=cost, tool_calls=len(calls),
@@ -617,6 +667,10 @@ class ApiAgentAdapter(Adapter):
                   "error_items": len(error_types), "model_calls": model_calls, "rate_limit_retries": retries,
                   "tool_use_retries": tool_retries,
                   "completion_review_prompts": completion_reviews,
+                  "verification_status": verification["status"],
+                  "required_verification": verification,
+                  "verification_plan_sha256": self.verification_plan.sha256 if self.verification_plan is not None else None,
+                  "verification_policy_applied": required is not None,
                   "output_review": ("unresolved" if output_review.unresolved else
                                     "resolved" if output_review.records else "no-failure-observed"),
                   "output_review_requirements": len(output_review.records),
@@ -650,7 +704,18 @@ class ApiAgentAdapter(Adapter):
             checks.update(driver.without_isolation_checks(request.project, self.agent_python_without, env))
         else:
             try:
-                checks.update(asyncio.run(asyncio.wait_for(mcp_preflight(request.project), PYTHON_TIMEOUT)))
+                verification = None
+                if self.verification_plan is not None:
+                    try:
+                        names = task.deliverable_names
+                        verification = RequiredVerification(request.project, self.verification_plan.groups(request.task_id, names), names, time.monotonic() + PYTHON_TIMEOUT)
+                        checks["required_verification_coverage"] = True
+                        checks["required_verification_data"] = verification.initial_inputs is not None
+                    except ValueError:
+                        checks["required_verification_coverage"] = False
+                checks.update(asyncio.run(asyncio.wait_for(mcp_preflight(request.project, verification), PYTHON_TIMEOUT)))
             except asyncio.TimeoutError:
                 checks.update({"mcp_tools_served": False, "mcp_instructions_available": False})
+                if self.verification_plan is not None:
+                    checks["required_verification_schema"] = False
         return checks

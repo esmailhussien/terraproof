@@ -627,3 +627,17 @@ repair or post-result artifact alteration occurred. The older negative results,
 frozen source/input hashes and output hashes remain preserved. Private host
 reports and conversations are not committed; this paragraph is the sanitized
 release summary. Usage estimates are not provider invoices or billing guarantees.
+
+
+### Required output policy (unreleased)
+
+Future API experiments can opt into an explicit required-output contract with
+`--verification-plan`; see [the policy guide](../OUTPUT_VERIFICATION.md) and its
+NDVI example. Every selected task's declared deliverables must be covered. The
+with-condition host requires matching current MCP evidence before completion,
+using `verified`, `review-required` and `unverified` states. Source files remain
+bound to their initial content; whole-tree hashes include output masks and
+invalidate evidence after data changes. The without condition receives no policy
+and remains unverified. This is an explicit treatment change, not a replacement
+for independent grading or a retrospective change to the trials above. No paid
+experiment or new release is implied by the offline implementation.

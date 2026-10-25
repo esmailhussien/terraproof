@@ -1,0 +1,16 @@
+{
+  "schema": "terraproof.required-output-verification/1",
+  "tasks": {
+    "indices-ndvi-physical-inputs": [
+      {
+        "paths": ["outputs/ndvi.tif"],
+        "checks": ["rs.index_formula"],
+        "parameters": {
+          "index_formula": "ndvi",
+          "nir": "inputs/nir_dn.tif",
+          "red": "inputs/red_dn.tif"
+        }
+      }
+    ]
+  }
+}

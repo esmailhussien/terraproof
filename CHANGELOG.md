@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Source-checkout API agents accept an opt-in required-output verification plan.
+  Every declared deliverable needs explicit checks; only current matching MCP
+  evidence can yield `verified`. Missing/stale evidence stays `unverified`, while
+  current failures/warnings require review and prevent strict host completion.
+  Whole data-tree content snapshots include masks and preserve original inputs.
+  Existing session limits and the observed-failure guard remain active. The
+  without condition receives no policy and stays unverified; independent artifact
+  acceptance is unchanged. See [the policy guide](docs/OUTPUT_VERIFICATION.md).
+
 ## [0.7.1] — 2026-10-25
 
 ### Fixed
