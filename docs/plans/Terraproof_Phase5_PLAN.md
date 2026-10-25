@@ -651,3 +651,20 @@ exercise those blocked-completion branches. Recorded usage was approximately
 USD 0.058643 cache-aware (USD 0.084723 uncached) under the approved USD 1 ceiling.
 This single directed synthetic-scene result establishes neither general repair
 reliability nor lift. Historical negative outcomes remain unchanged.
+
+
+### Strict slope and raster-source contracts (v0.7.3)
+
+The [policy guide](../OUTPUT_VERIFICATION.md#bundled-task-plans) provides explicit
+slope and COG plans alongside NDVI. These now select new opt-in production checks:
+`terrain.slope_formula` verifies the complete declared central-difference value/
+stencil/edge contract; `raster.source_identity` verifies exact valid data, complete
+band-validity masks and grid/band metadata against the source. The
+[contract guide](../RASTER_CONTRACTS.md) documents CLI/Python/MCP use and limits.
+
+Regressions now reject the extra missing slope cell and altered COG pixel while
+the independent task oracles agree. The original heuristic/check invocations
+remain unchanged in frozen benchmark tasks, so their existing blind-spot counts
+and historical results are preserved. Source identity does not validate full COG
+conformance. This offline batch introduces no paid run or inference authorization,
+nor a general repair reliability or agent-lift claim.

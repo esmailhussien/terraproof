@@ -1,0 +1,22 @@
+{
+  "schema": "terraproof.required-output-verification/1",
+  "tasks": {
+    "raster-cog-delivery": [
+      {
+        "paths": [
+          "outputs/delivery.tif"
+        ],
+        "checks": [
+          "raster.cog_layout",
+          "raster.nodata_declared",
+          "crs.defined",
+          "raster.source_identity"
+        ],
+        "parameters": {
+          "compare_to": "inputs/analysis.tif",
+          "raster_identity": true
+        }
+      }
+    ]
+  }
+}

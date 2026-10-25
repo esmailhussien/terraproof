@@ -96,6 +96,8 @@ def run_checks(
     min_per_class: int | None = None,
     estimates_requested: bool = False,
     dem: str | None = None,
+    slope_method: str | None = None,
+    raster_identity: bool = False,
     index_formula: str | None = None,
     nir: str | None = None,
     red: str | None = None,
@@ -109,14 +111,17 @@ def run_checks(
     data path was verified (decision-grade), needs review, or is advisory only. Pass the
     outputs you produced, plus the inputs they came from, so CRS, geometry, scope, raster,
     and remote-sensing checks can run. `operation` is the metric operation the data will be
-    used for (buffer, distance, area, length); `compare_to` is an input to compare record
-    counts with; `resampling` is the method declared for the rasters and `categorical` says
+    used for (buffer, distance, area, length); `compare_to` is a source for vector record
+    counts or explicit raster identity; `resampling` is the method declared for the rasters and `categorical` says
     they hold class codes; `expect` is the value range the bands should hold (reflectance or
     index). Phase 4 options include `reference_input`/`encoding` for scale/offset checks,
     `qa_path`/`qa_kind` for cloud-mask checks, `time_range` for temporal coverage,
     `sar_expect` for SAR domain checks, and `accuracy_samples`/`class_areas` for accuracy
     assessment. `dem` is the DEM a slope-in-degrees output was derived from; it checks the
-    slope against the DEM's vertical unit and pixel spacing. `index_formula="ndvi"` with
+    slope against the DEM's vertical unit and pixel spacing. Explicit
+    `slope_method="central-difference"` instead verifies all values and the complete
+    stencil/edge mask. `raster_identity=True` with `compare_to` compares all valid
+    samples, masks and grid/band metadata; COG layout remains a separate screen. `index_formula="ndvi"` with
     single-band `nir` and `red` verifies calibrated NDVI values and source support; extra
     output masking warns because its QA policy is not supplied. `manifest` verifies a run manifest and appends `provenance.reproducible`;
     `require_provenance` prevents Decision-grade when no manifest is supplied. `lang`
@@ -176,6 +181,8 @@ def run_checks(
             min_per_class=min_per_class,
             estimates_requested=estimates_requested,
             dem=dem_dataset,
+            slope_method=slope_method,
+            raster_identity=raster_identity,
             index_formula=index_formula,
             nir=nir_dataset,
             red=red_dataset,
@@ -210,6 +217,8 @@ def run_checks(
         "reference_input": reference_input,
         "encoding": encoding,
         "dem": dem,
+        "slope_method": slope_method,
+        "raster_identity": raster_identity,
         "index_formula": index_formula,
         "nir": nir,
         "red": red,

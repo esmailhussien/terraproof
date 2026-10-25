@@ -42,7 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--operation", choices=["buffer", "distance", "area", "length"],
         help="metric operation the data will be used for",
     )
-    check_parser.add_argument("--compare-to", metavar="PATH", help="input dataset to compare record counts with")
+    check_parser.add_argument("--compare-to", metavar="PATH", help="source for vector record counts or explicit --raster-identity")
     check_parser.add_argument("--resampling", metavar="METHOD", help="resampling method declared for the rasters")
     check_parser.add_argument("--categorical", action="store_true", help="rasters hold categorical codes")
     check_parser.add_argument(
@@ -57,6 +57,10 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument("--nir", metavar="PATH", help="single-band NIR source; calibration comes from its scale/offset metadata")
     check_parser.add_argument("--red", metavar="PATH", help="single-band red source; calibration comes from its scale/offset metadata")
     check_parser.add_argument("--dem", metavar="PATH", help="DEM a slope-in-degrees raster was derived from")
+    check_parser.add_argument("--slope-method", choices=["central-difference"],
+                              help="verify every slope value and complete stencil/edge mask from --dem")
+    check_parser.add_argument("--raster-identity", action="store_true",
+                              help="compare all valid raster samples, masks and grid metadata with --compare-to")
     check_parser.add_argument("--qa", metavar="PATH", dest="qa_path", help="QA raster (SCL or Landsat QA_PIXEL)")
     check_parser.add_argument(
         "--qa-kind", choices=["s2-scl", "landsat-qa-pixel"], help="kind of QA raster supplied with --qa"
@@ -176,6 +180,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
         min_per_class=args.min_per_class,
         estimates_requested=args.estimates_requested,
         dem=dem,
+        slope_method=args.slope_method,
+        raster_identity=args.raster_identity,
         index_formula=args.index_formula,
         nir=nir,
         red=red,
@@ -208,6 +214,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
         "reference_input": args.reference_input,
         "encoding": args.encoding,
         "dem": args.dem,
+        "slope_method": args.slope_method,
+        "raster_identity": args.raster_identity,
         "index_formula": args.index_formula,
         "nir": args.nir,
         "red": args.red,

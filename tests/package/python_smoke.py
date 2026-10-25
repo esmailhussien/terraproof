@@ -46,7 +46,28 @@ with contextlib.redirect_stdout(io.StringIO()):
 assert (target / '.agents' / 'skills' / 'gdal' / 'SKILL.md').is_file()
 assert (assets / 'sources' / 'SOURCES.md').is_file()
 assert (assets / 'third_party').is_dir()
-print(json.dumps({'status':'pass','skills':len(skills),'all_sections_loaded':True,'bilingual_routing':True,'eval_tasks':task_count,'false_passes':evaluation['summary']['false_passes'],'checker_blind_spots':evaluation['summary']['wrong_controls_checker_blind_spots'],'installer':True,'uses_checkout_assets':False,'package_assets_modified':False}))
+# Exercise the new runtime modules from the extracted wheel, not checkout imports.
+import math, shutil
+import numpy as np
+from rasterio.transform import from_origin
+from terraproof.evals.fixtures import write_raster_grid
+from terraproof.inspect import inspect_dataset
+from terraproof.checks import run_checks
+contracts = Path.cwd() / 'contract-probes'
+contracts.mkdir()
+row, col = np.indices((7,9))
+dem = write_raster_grid(contracts/'dem.tif', (50+4*col+5*row).astype('float32'),
+                        transform=from_origin(500000,5000000,20,30), unit='m')
+slope = np.full((7,9), -9999, dtype='float32')
+slope[1:-1,1:-1] = math.degrees(math.atan(math.hypot(4/20,5/30)))
+out = write_raster_grid(contracts/'slope.tif', slope, transform=from_origin(500000,5000000,20,30))
+assert next(c.status for c in run_checks([inspect_dataset(out)], dem=inspect_dataset(dem),
+            slope_method='central-difference') if c.id=='terrain.slope_formula') == 'pass'
+copy = contracts/'copy.tif'
+shutil.copyfile(dem, copy)
+assert next(c.status for c in run_checks([inspect_dataset(copy)], compare_to=inspect_dataset(dem),
+            raster_identity=True) if c.id=='raster.source_identity') == 'pass'
+print(json.dumps({'status':'pass','skills':len(skills),'all_sections_loaded':True,'bilingual_routing':True,'eval_tasks':task_count,'false_passes':evaluation['summary']['false_passes'],'checker_blind_spots':evaluation['summary']['wrong_controls_checker_blind_spots'],'installer':True,'uses_checkout_assets':False,'package_assets_modified':False,'strict_raster_contracts':True}))
 '''
 
 

@@ -1,9 +1,37 @@
-# Terraproof Release Checklist — v0.7.2, v0.7.1, v0.7.0, v0.6.0, v0.5.1, v0.5.0, v0.4.1 and v0.4.0
+# Terraproof Release Checklist — v0.7.3, v0.7.2, v0.7.1, v0.7.0, v0.6.0, v0.5.1, v0.5.0, v0.4.1 and v0.4.0
 
-Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 routing measurement that v0.4.1 ships, and the gates that remain open. v0.4.0 was released on 2026-10-23: tag `v0.4.0`, GitHub release *Terraproof v0.4.0*, and `terraproof@0.4.0` on npm as `latest`. v0.4.1 was released on 2026-10-24: tag `v0.4.1` on `f39d342`, GitHub release *Terraproof v0.4.1* (marked Latest), and `terraproof@0.4.1` on npm as `latest`. v0.5.0 (new `geometry.winding` check, COG JPEG warning, Phase 5 agent-lift harness, and the docs/README tidy-up) was released on 2026-10-24: tag `v0.5.0` on `1a33c4c` (part of `main` through merge commit `af66faa`), GitHub release *Terraproof v0.5.0* (marked Latest), and `terraproof@0.5.0` on npm as `latest`, published 04:18 UTC. The published tarball matches the tagged files exactly (plus the built `dist/`). v0.5.1 (fixes for all eight findings of an independent Codex review of v0.5.0 plus two further under-graded lift deliverables; re-grading the 72 saved Phase 5 main-run deliverables changed 0 verdicts) was released on 2026-10-24: tag `v0.5.1` on merge commit `6937a3e`, GitHub release *Terraproof v0.5.1* (marked Latest), and `terraproof@0.5.1` on npm as `latest`. The published tarball matches the tagged files exactly (plus the built `dist/`). v0.6.0 (six harder agent-lift tasks as a separate `harder` cohort, the OpenAI-compatible API agent host for the lift driver, the new `terrain.slope_consistent` check, and the geomaster terrain snippet fix; the benchmark is 33/33 tasks, 0 false passes, 25 checker rejections and 25 checker blind spots) was released on 2026-10-25: tag `v0.6.0` on `e18c143` (part of `main` through merge commit `2f81050`), GitHub release *Terraproof v0.6.0* (marked Latest), and `terraproof@0.6.0` on npm as `latest`, published 00:01 UTC. No version is published to PyPI. Sections 2–5 describe the v0.7.2 release procedure. Historical verification below remains explicitly versioned.
+Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 routing measurement that v0.4.1 ships, and the gates that remain open. v0.4.0 was released on 2026-10-23: tag `v0.4.0`, GitHub release *Terraproof v0.4.0*, and `terraproof@0.4.0` on npm as `latest`. v0.4.1 was released on 2026-10-24: tag `v0.4.1` on `f39d342`, GitHub release *Terraproof v0.4.1* (marked Latest), and `terraproof@0.4.1` on npm as `latest`. v0.5.0 (new `geometry.winding` check, COG JPEG warning, Phase 5 agent-lift harness, and the docs/README tidy-up) was released on 2026-10-24: tag `v0.5.0` on `1a33c4c` (part of `main` through merge commit `af66faa`), GitHub release *Terraproof v0.5.0* (marked Latest), and `terraproof@0.5.0` on npm as `latest`, published 04:18 UTC. The published tarball matches the tagged files exactly (plus the built `dist/`). v0.5.1 (fixes for all eight findings of an independent Codex review of v0.5.0 plus two further under-graded lift deliverables; re-grading the 72 saved Phase 5 main-run deliverables changed 0 verdicts) was released on 2026-10-24: tag `v0.5.1` on merge commit `6937a3e`, GitHub release *Terraproof v0.5.1* (marked Latest), and `terraproof@0.5.1` on npm as `latest`. The published tarball matches the tagged files exactly (plus the built `dist/`). v0.6.0 (six harder agent-lift tasks as a separate `harder` cohort, the OpenAI-compatible API agent host for the lift driver, the new `terrain.slope_consistent` check, and the geomaster terrain snippet fix; the benchmark is 33/33 tasks, 0 false passes, 25 checker rejections and 25 checker blind spots) was released on 2026-10-25: tag `v0.6.0` on `e18c143` (part of `main` through merge commit `2f81050`), GitHub release *Terraproof v0.6.0* (marked Latest), and `terraproof@0.6.0` on npm as `latest`, published 00:01 UTC. No version is published to PyPI. Sections 2–5 describe the v0.7.3 release procedure. Historical verification below remains explicitly versioned.
 
 ---
 
+
+## v0.7.3 grouped release — 2026-10-25
+
+The existing slope/COG plan PR now includes two opt-in production source contracts,
+their CLI/Python/MCP/provenance wiring and English documentation. Explicit
+central-difference slope checking covers every required value, full stencil masks
+and nodata edges, including flat cells. Raster identity compares all bands' valid
+samples and complete validity masks plus grid/band metadata against the source.
+The previously oracle-only missing slope cell and altered COG pixel are rejected
+by the stronger plans. Default heuristic behaviour and historical benchmark
+invocations stay unchanged; no historical blind-spot count or live result is revised.
+
+Final local candidate verification: **1483 passed, 1 skipped**, three expected
+raster warnings; router **87/87**, deterministic; actual packed npm installation
+**8/8**; no-model CLI/installer/official MCP stdio **20/20**. Candidate-wheel smoke
+outside the checkout passed all skills/sections, bilingual routing, installer,
+both new runtime contracts and the unchanged **33/33** scientific benchmark
+(0 false passes, 25 declared checker blind spots). These are offline results,
+not a new live repair or agent-lift experiment.
+
+Ship the full batch and synchronized versions through the same PR #27. Require
+all final-head PR and exact merged-main CI checks. Build from the clean merged
+commit, verify both exact artifacts outside the checkout including new contract
+paths, publish the reviewed npm tarball and attach it and the wheel to the GitHub
+release. No new paid model run or PyPI publication. Full COG conformance, source
+truth and general scientific fitness remain outside these checks. Final test
+counts, CI links, hashes and publication results belong in release notes and the
+local handoff, without another docs-only PR.
 
 ## v0.7.2 grouped release — 2026-10-25
 
@@ -357,7 +385,7 @@ Still declared. In the invocation the spec defines, the checker has no legitimat
 
 - [x] **`package.json` Package Shape**:
   - `name`: `terraproof`
-  - `version`: `0.7.2`
+  - `version`: `0.7.3`
   - `bin`: `{"terraproof": "bin/terraproof.js"}`
   - `main` and `exports`: `./dist/router/index.js` (compiled router)
   - `engines.node`: `>=20`
@@ -377,7 +405,7 @@ Still declared. In the invocation the spec defines, the checker has no legitimat
 ## 3. Package Name & Registry Strategy
 
 The npm identity is the existing unscoped `terraproof` package. Confirm the
-publishing account with `npm whoami` and check that `0.7.2` is unpublished before
+publishing account with `npm whoami` and check that `0.7.3` is unpublished before
 publishing. Use the exact reviewed tarball, keep its version and integrity hash,
 and complete any npm browser/2FA approval through the supported login flow.
 
@@ -387,12 +415,12 @@ and complete any npm browser/2FA approval through the supported login flow.
 
 1. Combine the complete batch and version bump in one PR. Wait for its full CI,
    merge it, and verify CI on the exact merged-main commit.
-2. Tag that commit `v0.7.2` and push the tag (branch-only CI does not rerun for tags).
+2. Tag that commit `v0.7.3` and push the tag (branch-only CI does not rerun for tags).
 3. Build the npm tarball and Python wheel from that clean commit. Verify the npm
    executable uses LF and smoke-test both artifacts outside the checkout.
 4. Publish the reviewed npm tarball with `npm publish <tarball> --access public`.
-5. Create **Terraproof v0.7.2** on GitHub with the tarball and wheel attached. Use
-   the 0.7.2 changelog and record final verification links/hashes and the existing
+5. Create **Terraproof v0.7.3** on GitHub with the tarball and wheel attached. Use
+   the 0.7.3 changelog and record final verification links/hashes and the existing
    scientific/checker limitations. No PyPI publication or new model run is implied.
 6. Verify the published version and routing from a blank directory. Record the
    outcome in the release and local handoff without another PR for this batch.

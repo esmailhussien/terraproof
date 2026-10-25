@@ -1,0 +1,21 @@
+{
+  "schema": "terraproof.required-output-verification/1",
+  "tasks": {
+    "terrain-slope-map": [
+      {
+        "paths": [
+          "outputs/result.tif"
+        ],
+        "checks": [
+          "terrain.slope_formula",
+          "raster.nodata_declared",
+          "crs.defined"
+        ],
+        "parameters": {
+          "dem": "inputs/elevation.tif",
+          "slope_method": "central-difference"
+        }
+      }
+    ]
+  }
+}

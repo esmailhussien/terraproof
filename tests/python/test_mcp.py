@@ -509,3 +509,34 @@ def test_ndvi_cli_mcp_source_contract_parity(tmp_path, capsys, mistake):
     assert cli == payload["report"]
     check=next(c for c in cli["checks"] if c["id"]=="rs.index_formula")
     assert check["status"] == ("fail" if mistake else "pass")
+
+
+@pytest.mark.parametrize('kind',['slope','identity'])
+def test_strict_raster_cli_mcp_parity_and_source_provenance(tmp_path,capsys,kind):
+    from test_strict_raster_contracts import slope_case, identity_case
+    from terraproof.provenance import write_manifest
+    if kind=='slope':
+        source,output=slope_case(tmp_path)
+        flags=['--dem',source,'--slope-method','central-difference']
+        params={'dem':source,'slope_method':'central-difference'}
+        check_id='terrain.slope_formula'; role='dem'
+    else:
+        source,output=identity_case(tmp_path)
+        flags=['--compare-to',source,'--raster-identity']
+        params={'compare_to':source,'raster_identity':True}
+        check_id='raster.source_identity'; role='compare-to'
+    assert main(['check',output,*flags]) in (0,2)
+    cli=json.loads(capsys.readouterr().out)
+    tool=call('run_checks',{'paths':[output],**params}).structured_content['report']
+    assert next(c for c in cli['checks'] if c['id']==check_id)==next(c for c in tool['checks'] if c['id']==check_id)
+    assert all(cli['parameters'][k]==v==tool['parameters'][k] for k,v in params.items())
+    assert any(r['role']==role and r['path']==source for r in cli['inputs'])
+    manifest=tmp_path/'manifest.json'
+    unrelated=tmp_path/'unrelated.txt'; unrelated.write_text('not the source',encoding='utf-8')
+    manifest.write_text(json.dumps(write_manifest(inputs=[unrelated],outputs=[output],root=tmp_path,manifest_path=manifest)),encoding='utf-8')
+    assert main(['check',output,*flags,'--manifest',str(manifest)])==3
+    denied=json.loads(capsys.readouterr().out)
+    assert any(c['id']=='provenance.reproducible' and c['status']=='fail' for c in denied['checks'])
+    manifest.write_text(json.dumps(write_manifest(inputs=[source],outputs=[output],root=tmp_path,manifest_path=manifest)),encoding='utf-8')
+    assert main(['check',output,*flags,'--manifest',str(manifest)]) in (0,2)
+    capsys.readouterr()

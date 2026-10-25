@@ -128,6 +128,14 @@
     "rs.index_formula": {
       "family": "rs",
       "description": "Opt-in NDVI comparison with declared red/NIR sources, their scale/offset and joint valid support; extra masking warns."
+    },
+    "terrain.slope_formula": {
+      "family": "terrain",
+      "description": "Opt-in calibrated central-difference slope comparison: every required value, complete center/four-neighbour support and nodata edges."
+    },
+    "raster.source_identity": {
+      "family": "raster",
+      "description": "Opt-in exact decoded valid-sample and full band-validity comparison with a declared raster source, including grid and band metadata; not COG conformance."
     }
   }
 }

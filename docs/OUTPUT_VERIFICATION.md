@@ -47,6 +47,38 @@ output coverage and invalid schemas are refused. The active MCP `run_checks`
 schema must accept all arguments before a provider call. Plan-only mode validates
 the document and coverage; preflight also checks current data and the MCP schema.
 
+## Bundled task plans
+
+Choose the file matching the selected task. Files are not automatically merged;
+every selected deliverable still needs coverage, and experimental cohorts remain
+separate. The [strict raster contract guide](RASTER_CONTRACTS.md) defines the new
+explicit slope and identity checks in full.
+
+| Plan | Required evidence | Scope |
+| --- | --- | --- |
+| [NDVI source contract](../tests/verification_plans/ndvi-source-contract.json) | `rs.index_formula` with declared NIR/red | Calibrated NDVI relation and support; [limits](INDEX_FORMULA.md). |
+| [Slope source contract](../tests/verification_plans/terrain-slope-source-contract.json) | `terrain.slope_formula`, nodata, CRS; `dem=inputs/elevation.tif`, `slope_method=central-difference` | Every required degree value, full four-neighbour stencil mask and nodata edges on the exact DEM grid; flat cells included. |
+| [COG delivery screen](../tests/verification_plans/cog-delivery-screen.json) | `raster.source_identity`, layout, nodata, CRS; `compare_to=inputs/analysis.tif`, `raster_identity=true` | Exact valid data, all band-validity masks and grid/band metadata, plus the existing layout screen. Full COG conformance remains separate. |
+
+The slope plan now uses the explicit full-value/mask method instead of the
+original 95% heuristic. The COG plan now supplies its source and requires decoded
+identity as well as layout. Omitting or changing those source/options cannot
+satisfy the declared plan, even if another call passes. Original source bytes
+must stay unchanged and every result must be current.
+
+Local regressions retain the previously oracle-only missing slope cell and
+altered COG pixel: both strengthened plans now block them and agree with the
+independent grader. The frozen benchmark still runs its original invocations,
+which remain unchanged. A passing declared plan is not universal scientific
+certification or a substitute for independent task grading.
+
+`tests/python/test_verification_plan_examples.py` uses the actual host and local
+MCP with a scripted provider, blocked HTTP and a dummy key. It covers current,
+missing and stale evidence; rechecking; same-time content changes; immutable
+sources; method/source-context matching; known wrong outputs; unavailable data;
+independent grading; key-free planning; and baseline isolation. No paid run is
+included.
+
 ## Plan without inference
 
 From a source checkout with Python dependencies and the `mcp` extra installed,
@@ -56,6 +88,14 @@ prices before approving any paid run.
 
 ```powershell
 python tests/agent_lift.py --agent-host openai --api-model gpt-4o --runs 1 --task indices-ndvi-physical-inputs --verification-plan tests/verification_plans/ndvi-source-contract.json --usd-per-million-input 1 --usd-per-million-output 1
+```
+
+For the other bundled plans, these commands also only print a plan. The prices
+`1` remain illustrative planning inputs, not verified provider rates:
+
+```powershell
+python tests/agent_lift.py --agent-host openai --runs 1 --task terrain-slope-map --verification-plan tests/verification_plans/terrain-slope-source-contract.json --usd-per-million-input 1 --usd-per-million-output 1
+python tests/agent_lift.py --agent-host openai --runs 1 --task raster-cog-delivery --verification-plan tests/verification_plans/cog-delivery-screen.json --usd-per-million-input 1 --usd-per-million-output 1
 ```
 
 Without `--approve-model-calls`, this only prints the plan: no provider request,

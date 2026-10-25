@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from terraproof.checks import accuracy, crs, geometry, raster, rs, rs_processing, sar, scope, stac, terrain
 from terraproof.checks import index_formula as index_checks
+from terraproof.checks import slope_formula as slope_checks, raster_identity as identity_checks
 from terraproof.checks.base import STATUSES, CheckResult, result
 
 __all__ = ["STATUSES", "CheckResult", "result", "run_checks"]
@@ -28,6 +29,8 @@ def run_checks(
     min_per_class: int | None = None,
     estimates_requested: bool = False,
     dem: dict | None = None,
+    slope_method: str | None = None,
+    raster_identity: bool = False,
     index_formula: str | None = None,
     nir: dict | None = None,
     red: dict | None = None,
@@ -47,7 +50,7 @@ def run_checks(
 
     for dataset in vectors:
         results += geometry.check_geometry(dataset)
-    if compare_to is not None:
+    if compare_to is not None and (vectors or not raster_identity):
         results += scope.check_record_count(vectors, compare_to)
 
     for dataset in rasters:
@@ -81,9 +84,16 @@ def run_checks(
         for dataset in inputs:
             results += index_checks.check_index_formula(dataset, index_formula, nir, red)
 
-    if dem is not None:
+    if slope_method is not None:
+        for dataset in inputs:
+            results += slope_checks.check_slope_formula(dataset, dem, slope_method)
+    elif dem is not None:
         for dataset in rasters:
             results += terrain.check_slope_consistent(dataset, dem)
+
+    if raster_identity:
+        for dataset in inputs:
+            results += identity_checks.check_source_identity(dataset, compare_to)
 
     if sar_expect is not None:
         results += sar.check_value_domain(rasters, sar_expect)
