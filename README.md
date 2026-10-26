@@ -25,7 +25,13 @@ npx terraproof route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL
 npx terraproof route "Download Sentinel-2 from a STAC catalog, compute NDVI, and map the change with MapLibre" --format json
 ```
 
-Then check the data the work produced with the Python package (Python 3.10+, from a clone):
+Then check the data the work produced with the Python package (Python 3.10+). From the first PyPI release (0.8.0) it installs with `pip`:
+
+```bash
+pip install "terraproof[mcp]"
+```
+
+Until then, install it from a clone:
 
 ```bash
 git clone https://github.com/esmailhussien/terraproof.git
@@ -145,13 +151,15 @@ npx terraproof validate
 | Data access | `geospatial-data-discovery`, `stac-and-cloud-access` |
 | Analysis and figures | `statistical-analysis`, `scientific-visualization` |
 
+Skills are **unmeasured**: no study has separated their effect from the MCP checks, and in the Phase 5 Claude Code runs no skill file was read. Their content is frozen during Phase 6 (factual fixes only, no new skills) until the skills decision in the [Phase 6 plan](docs/plans/Terraproof_Phase6_PLAN.md).
+
 Each skill lives in `skills/<name>/` with a `SKILL.md`, references, and a `skill.json` routing manifest. Preset collections (`gis`, `remote-sensing`, `data-analysis`, `production`) are in [`routing/collections.json`](routing/collections.json).
 
 ---
 
 ## Evaluation status
 
-- **Checks:** 33 executable eval tasks with independent oracles pass with 0 false passes. Of 50 seeded wrong outputs, production checks reject 25; the other 25 are caught only by the independent oracle (declared blind spots). Passing the benchmark does not mean the production checks catch every wrong output. See [`evals/README.md`](evals/README.md).
+- **Checks:** 33 executable eval tasks with independent oracles pass with 0 false passes. The benchmark runs from a clone; the Python package does not include it. Of 50 seeded wrong outputs, production checks reject 25; the other 25 are caught only by the independent oracle (declared blind spots). Passing the benchmark does not mean the production checks catch every wrong output. See [`evals/README.md`](evals/README.md).
 - **Routing:** an independent, frozen 160-item set (v5) passed once in both languages: English recall 0.97 with 3.75 wrong picks per 100, Arabic recall 0.96 with 2.5. Earlier independent sets (v3, v4) failed and stay on record. The v5 set was written by an AI agent, not reviewed by an expert.
 - **Agent lift:** in a 54-run Claude Code comparison on 9 tasks, runs with Terraproof passed 27/27 and runs without it 21/27. The pre-specified test is **not significant** (p = 0.125), and five tasks passed either way, so no lift is claimed. The clearest single result is Landsat QA masking (3/3 with, 0/3 without). See [`docs/plans/Terraproof_Phase5_PLAN.md`](docs/plans/Terraproof_Phase5_PLAN.md).
 - **Harder cohort:** a one-repeat Claude Code screen passed all six tasks both with and without Terraproof. That small screen shows no observed benefit and is separate from the original nine-task study. API pilots are exploratory and do not establish lift.

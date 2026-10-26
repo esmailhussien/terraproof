@@ -10,5 +10,5 @@ class BuildPy(build_py):
         super().run()
         root = Path(__file__).resolve().parents[2]
         destination = Path(self.build_lib) / 'terraproof' / 'data'
-        for relative in ('skills', 'routing', 'instructions', 'sources', 'third_party', 'evals/tasks'):
+        for relative in ('skills', 'routing', 'instructions', 'sources', 'third_party'):
             self.copy_tree(str(root / relative), str(destination / relative))

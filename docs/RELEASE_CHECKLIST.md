@@ -409,6 +409,19 @@ publishing account with `npm whoami` and check that `0.7.3` is unpublished befor
 publishing. Use the exact reviewed tarball, keep its version and integrity hash,
 and complete any npm browser/2FA approval through the supported login flow.
 
+**PyPI (Phase 6 B2–B3, first release 0.8.0).** The Python package is published by
+[`.github/workflows/publish-python.yml`](../.github/workflows/publish-python.yml) on a `v*`
+tag whose name matches `pyproject.toml`. It builds the product-only wheel and sdist once,
+installs the wheel cleanly on every OS, publishes to TestPyPI, installs back from TestPyPI,
+then publishes the same files to PyPI and installs from there. One-time maintainer setup,
+before the first tag:
+
+- [ ] Create the `terraproof` project on TestPyPI and on PyPI (the PyPI name returned 404 on 2026-10-27).
+- [ ] On both, add a Trusted Publisher: owner `esmailhussien`, repository `terraproof`,
+  workflow `publish-python.yml`, environment `testpypi` (TestPyPI) or `pypi` (PyPI).
+- [ ] In the GitHub repository, create the `testpypi` and `pypi` environments and protect
+  `pypi` with a required reviewer. No API token is stored.
+
 ---
 
 ## 4. Release Procedure

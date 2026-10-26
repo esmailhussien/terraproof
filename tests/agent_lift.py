@@ -186,12 +186,13 @@ def run_contained(command: list[str], cwd: Path, env: dict, timeout: float):
     return (None if timed_out else process.returncode), lines, "".join(errors), timed_out
 
 
-def host_env(condition: str = WITH, agent_python: str | None = None) -> dict:
+def host_env(condition: str = WITH, agent_python: str | None = None, agent_python_with: str | None = None) -> dict:
     """The agent's interpreter directory first on PATH, so agents compute with numpy/rasterio.
 
-    "with" uses this driver's interpreter (Terraproof installed, as the MCP server runs it).
-    "without" uses `agent_python`, a dependency-only interpreter on a neutral path, and drops
-    PYTHONPATH so a checkout's `src` cannot make Terraproof importable again.
+    "with" uses `agent_python_with`, a venv holding only the published product wheel (Phase 6
+    B6), or else this driver's interpreter. "without" uses `agent_python`, a dependency-only
+    interpreter on a neutral path. Both drop PYTHONPATH when given their own interpreter, so a
+    checkout's `src` cannot add Terraproof or its evals back.
     """
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", DISABLE_AUTOUPDATER="1",
                CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC="1", CLAUDE_CODE_DISABLE_AUTO_MEMORY="1")
@@ -199,6 +200,9 @@ def host_env(condition: str = WITH, agent_python: str | None = None) -> dict:
     if condition != WITH:
         env.pop("PYTHONPATH", None)
         interpreter = agent_python or sys.executable
+    elif agent_python_with:
+        env.pop("PYTHONPATH", None)
+        interpreter = agent_python_with
     env["PATH"] = str(Path(interpreter).parent) + os.pathsep + env.get("PATH", "")
     return env
 
@@ -239,6 +243,29 @@ def without_isolation_checks(project: Path, agent_python: str | None, env: dict)
     return {"without_agent_python_set": bool(agent_python),
             "without_terraproof_not_importable": bool(python) and not importable,
             "without_paths_neutral": paths_neutral(str(project.resolve()), first_path_entry, str(python or ""))}
+
+
+# Exit 0: Terraproof importable and its evals (recipes, oracles, fixtures) not; 3: evals
+# importable; 4: Terraproof missing.
+WITH_PROBE = ("import importlib.util, sys\n"
+              "if not importlib.util.find_spec('terraproof'): sys.exit(4)\n"
+              "sys.exit(3 if importlib.util.find_spec('terraproof.evals') else 0)")
+
+
+def with_isolation_checks(project: Path, agent_python_with: str | None, env: dict) -> dict:
+    """No-model checks that the "with" agent has the product but cannot import the harness or oracles.
+
+    The Antigravity harder-cohort run showed "with" agents importing `terraproof.evals`
+    (oracles, recipes, specs) from the driver's checkout interpreter.
+    """
+    python = shutil.which("python", path=env["PATH"])
+    code = None
+    if python:
+        code = subprocess.run([python, "-c", WITH_PROBE], cwd=project, env=env, capture_output=True,
+                              timeout=60, check=False).returncode
+    return {"with_agent_python_set": bool(agent_python_with),
+            "with_terraproof_importable": code in (0, 3),
+            "with_evals_not_importable": code == 0}
 
 
 def paths_neutral(*paths: str) -> bool:
@@ -461,16 +488,18 @@ class CodexHostAdapter(Adapter):
     model_calls = True
     usd_capped = False
 
-    def __init__(self, executable: str, effort: str, agent_python_without: str | None = None):
+    def __init__(self, executable: str, effort: str, agent_python_without: str | None = None,
+                 agent_python_with: str | None = None):
         self.executable = executable
         self.effort = effort
         self.agent_python_without = agent_python_without
+        self.agent_python_with = agent_python_with
 
     def run(self, request: AgentRequest) -> AgentResult:
         state = request.project.parent / "host-state"
         state.mkdir(exist_ok=True)
         command = codex_lift_command(self.executable, request.project, state, request.condition, self.effort)
-        env = host_env(request.condition, self.agent_python_without)
+        env = host_env(request.condition, self.agent_python_without, self.agent_python_with)
         code, lines, stderr, timed_out = run_contained(command, request.project, env, request.timeout_seconds)
         events, invalid = _json_lines(lines)
         result = codex_trace(events, request.condition, _seeded(request.task_id), timed_out=timed_out)
@@ -490,10 +519,12 @@ class CodexHostAdapter(Adapter):
         task = lift_task(request.task_id)
         state = request.project.parent / "host-state"
         state.mkdir(exist_ok=True)
-        env = host_env(request.condition, self.agent_python_without)
+        env = host_env(request.condition, self.agent_python_without, self.agent_python_with)
         checks: dict = {}
         if request.condition != WITH:
             checks.update(without_isolation_checks(request.project, self.agent_python_without, env))
+        else:
+            checks.update(with_isolation_checks(request.project, self.agent_python_with, env))
         script = request.project.parent / "preflight_probe.py"
         script.write_text(PREFLIGHT_SCRIPT.format(name=task.inputs[0]), encoding="utf-8")
         probe = [self.executable, "sandbox", "-P", ":workspace", "-C", str(request.project),
@@ -693,9 +724,11 @@ class ClaudeHostAdapter(Adapter):
     model_calls = True
     usd_capped = True
 
-    def __init__(self, executable: str, agent_python_without: str | None = None):
+    def __init__(self, executable: str, agent_python_without: str | None = None,
+                 agent_python_with: str | None = None):
         self.executable = executable
         self.agent_python_without = agent_python_without
+        self.agent_python_with = agent_python_with
 
     def _config(self, request: AgentRequest) -> Path:
         """An explicit --mcp-config outside the project.
@@ -714,7 +747,7 @@ class ClaudeHostAdapter(Adapter):
     def run(self, request: AgentRequest) -> AgentResult:
         command = claude_lift_command(self.executable, request.project, self._config(request), request.condition,
                                       request.max_usd)
-        env = host_env(request.condition, self.agent_python_without)
+        env = host_env(request.condition, self.agent_python_without, self.agent_python_with)
         code, lines, _stderr, timed_out = run_contained(command, request.project, env, request.timeout_seconds)
         events, invalid = _json_lines(lines)
         # A timeout reports no spend; the harness charges the full per-run cap.
@@ -726,10 +759,12 @@ class ClaudeHostAdapter(Adapter):
 
     def preflight(self, request: AgentRequest) -> dict:
         """Claude Code has no model-free sandbox runner; Python/IO are probed directly instead."""
-        env = host_env(request.condition, self.agent_python_without)
+        env = host_env(request.condition, self.agent_python_without, self.agent_python_with)
         checks = unsandboxed_probe(request.project, request.task_id, env)
         if request.condition != WITH:
             checks.update(without_isolation_checks(request.project, self.agent_python_without, env))
+        else:
+            checks.update(with_isolation_checks(request.project, self.agent_python_with, env))
         config = self._config(request)
         if request.condition == WITH:
             entry = json.loads(config.read_text(encoding="utf-8")).get("mcpServers", {}).get("terraproof", {})
@@ -979,16 +1014,18 @@ class AntigravityHostAdapter(Adapter):
     usd_capped = False
 
     def __init__(self, executable: str, model: str, effort: str | None = None,
-                 agent_python_without: str | None = None, home: Path | None = None):
+                 agent_python_without: str | None = None, home: Path | None = None,
+                 agent_python_with: str | None = None):
         self.executable = executable
         self.model = model
         self.effort = effort
         self.agent_python_without = agent_python_without
+        self.agent_python_with = agent_python_with
         self.home = home or Path.home() / ".gemini"
 
     def run(self, request: AgentRequest) -> AgentResult:
         command = antigravity_lift_command(self.executable, self.model, self.effort)
-        env = host_env(request.condition, self.agent_python_without)
+        env = host_env(request.condition, self.agent_python_without, self.agent_python_with)
         code, lines, _stderr, timed_out = run_contained(command, request.project, env, request.timeout_seconds)
         events, invalid = _json_lines(lines)
         result = antigravity_trace(events, request.condition, _seeded(request.task_id), project=request.project,
@@ -1000,10 +1037,11 @@ class AntigravityHostAdapter(Adapter):
 
     def preflight(self, request: AgentRequest) -> dict:
         """agy has no model-free sandbox runner; Python/IO are probed directly, as for Claude Code."""
-        env = host_env(request.condition, self.agent_python_without)
+        env = host_env(request.condition, self.agent_python_without, self.agent_python_with)
         checks = unsandboxed_probe(request.project, request.task_id, env)
         checks.update(antigravity_global_checks(self.home))
         if request.condition == WITH:
+            checks.update(with_isolation_checks(request.project, self.agent_python_with, env))
             config = request.project / ".agents" / "mcp_config.json"
             entry = (json.loads(config.read_text(encoding="utf-8")).get("mcpServers", {}).get("terraproof", {})
                      if config.is_file() else {})
@@ -1105,6 +1143,8 @@ def plan(args) -> dict:
             approve += ["--antigravity-effort", args.antigravity_effort]
     if args.agent_python_without:
         approve += ["--agent-python-without", str(args.agent_python_without)]
+    if args.agent_python_with:
+        approve += ["--agent-python-with", str(args.agent_python_with)]
     if args.agent_host in API_HOSTS:
         approve += ["--api-model", str(api_model(args)),
                     "--usd-per-million-input", f"{args.usd_per_million_input:g}",
@@ -1183,6 +1223,9 @@ def main(argv=None) -> int:
     parser.add_argument("--agent-python-without", type=Path,
                         help="dependency-only Python (numpy, rasterio, pyogrio, shapely, pyproj; no Terraproof) "
                              "on a path without 'terraproof', first on PATH for the without agent; required by preflight")
+    parser.add_argument("--agent-python-with", type=Path,
+                        help="Python of a venv holding only the published Terraproof wheel (no terraproof.evals), "
+                             "first on PATH for the with agent; required by preflight")
     parser.add_argument("--preflight-only", action="store_true",
                         help="prepare every project and run the no-model host preflight; start no agent")
     parser.add_argument("--approve-model-calls", type=int, metavar="N",
@@ -1237,15 +1280,18 @@ def main(argv=None) -> int:
         parser.error(f"--approve-model-calls {args.approve_model_calls} does not equal the planned "
                      f"{summary['planned_model_invocations']} invocations; nothing was started")
     agent_python = str(args.agent_python_without) if args.agent_python_without else None
+    agent_python_with = str(args.agent_python_with) if args.agent_python_with else None
     if args.agent_host == "codex":
         executable, reason, version = probe_codex(str(args.codex_executable) if args.codex_executable else None)
-        adapter = (CodexHostAdapter(executable, args.codex_reasoning_effort, agent_python) if executable
+        adapter = (CodexHostAdapter(executable, args.codex_reasoning_effort, agent_python, agent_python_with)
+                   if executable
                    else None)
         budget = Budget(max_runs=args.approve_model_calls, timeout_seconds=args.timeout)
     elif args.agent_host == "antigravity":
         executable, reason, version = probe_antigravity(
             str(args.antigravity_executable) if args.antigravity_executable else None, args.antigravity_model)
-        adapter = (AntigravityHostAdapter(executable, args.antigravity_model, args.antigravity_effort, agent_python)
+        adapter = (AntigravityHostAdapter(executable, args.antigravity_model, args.antigravity_effort, agent_python,
+                                          agent_python_with=agent_python_with)
                    if executable else None)
         budget = Budget(max_runs=args.approve_model_calls, timeout_seconds=args.timeout)
     elif args.agent_host in API_HOSTS:
@@ -1256,6 +1302,7 @@ def main(argv=None) -> int:
                            max_model_calls=args.max_model_calls_per_run, max_tokens=args.max_tokens_per_run,
                            rate_limit_retries=args.rate_limit_retries, max_retry_wait=args.max_retry_wait)
         adapter = ApiAgentAdapter(args.agent_host, api_model(args), limits, agent_python,
+                                  agent_python_with=agent_python_with,
                                   verification_plan=args.verification_policy)
         version = f"{args.agent_host} {adapter.model}"
         reason = "ok" if adapter.key_present() else f"{adapter.key_env} is not set; no request was sent"
@@ -1265,7 +1312,7 @@ def main(argv=None) -> int:
                         timeout_seconds=args.timeout)
     else:
         executable, reason, version = probe_claude(str(args.claude_executable) if args.claude_executable else None)
-        adapter = ClaudeHostAdapter(executable, agent_python) if executable else None
+        adapter = ClaudeHostAdapter(executable, agent_python, agent_python_with) if executable else None
         budget = Budget(max_runs=args.approve_model_calls, per_run_usd=args.max_usd_per_run,
                         total_usd=total_usd_cap(args, summary["planned_model_invocations"]),
                         timeout_seconds=args.timeout)

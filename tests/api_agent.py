@@ -338,7 +338,8 @@ class ApiAgentAdapter(Adapter):
     usd_capped = True
 
     def __init__(self, provider: str, model: str, limits: ApiLimits, agent_python_without: str | None = None,
-                 transport=http_transport, base_url: str | None = None, sleep=None, verification_plan=None):
+                 transport=http_transport, base_url: str | None = None, sleep=None, verification_plan=None,
+                 agent_python_with: str | None = None):
         if provider not in PROVIDERS:
             raise ValueError(f"unknown provider {provider!r}")
         if not model:
@@ -347,6 +348,7 @@ class ApiAgentAdapter(Adapter):
         self.model = model
         self.limits = limits
         self.agent_python_without = agent_python_without
+        self.agent_python_with = agent_python_with
         self.verification_plan = (verification_plan if isinstance(verification_plan, VerificationPlan)
                                   else VerificationPlan(verification_plan) if verification_plan is not None else None)
         self.transport = transport
@@ -424,7 +426,7 @@ class ApiAgentAdapter(Adapter):
     async def _loop(self, request: AgentRequest, mcp_client) -> AgentResult:
         project = request.project
         scripts = project.parent / "agent-scripts"  # neutral name, outside the deliverables
-        env = driver.host_env(request.condition, self.agent_python_without)
+        env = driver.host_env(request.condition, self.agent_python_without, self.agent_python_with)
         seeded = driver._seeded(request.task_id)
         deadline = time.monotonic() + request.timeout_seconds
         per_run_usd = request.max_usd
@@ -687,12 +689,13 @@ class ApiAgentAdapter(Adapter):
     def preflight(self, request: AgentRequest) -> dict:
         """No-model checks: the key variable is set, Python/IO work, and the isolation or MCP setup holds."""
         task = lift_task(request.task_id)
-        env = driver.host_env(request.condition, self.agent_python_without)
+        env = driver.host_env(request.condition, self.agent_python_without, self.agent_python_with)
         checks = driver.unsandboxed_probe(request.project, request.task_id, env)
         checks["api_key_set"] = self.key_present()
         if request.condition != WITH:
             checks.update(driver.without_isolation_checks(request.project, self.agent_python_without, env))
         else:
+            checks.update(driver.with_isolation_checks(request.project, self.agent_python_with, env))
             try:
                 verification = None
                 if self.verification_plan is not None:

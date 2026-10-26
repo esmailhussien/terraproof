@@ -1,9 +1,12 @@
 # Terraproof — Phase 5 Plan: Agent-lift measurement
 
-> Status: **the approved 54-invocation main run on Claude Code is complete (section 16). The pre-specified primary test is not significant (sign-flip p = 0.125), and no lift claim is made.**
-> - **Isolation:** the "without" condition was imperfectly isolated (section 16). The harness now enforces neutral paths and a Terraproof-free interpreter for any future run.
+> Status: **closed 2026-10-27.** The exit criteria (section 10) are met and no lift is claimed: the approved 54-invocation main run on Claude Code (section 16) gave a pre-specified primary test that is not significant (sign-flip p = 0.125). The successor is the [Phase 6 plan](Terraproof_Phase6_PLAN.md).
+> - **Frozen log:** sections 18–19 are a frozen exploratory log. New results are recorded in Phase 6, not appended here.
+> - **Harness freeze:** no new agent hosts, adapter features or treatment variants. Instruction forwarding, the completion review and the required-output policy stay as they are: opt-in and confined to `tests/`. The only later harness change is Phase 6 B6 (a product-only "with" interpreter, `--agent-python-with`).
+> - **Isolation:** the "without" condition was imperfectly isolated (section 16). The harness enforces neutral paths and a Terraproof-free interpreter for any future run.
 > - **Earlier pilots:** sections 13–15.
-> - **Next run:** none is proposed. Any further real run needs the user's explicit approval.
+>
+> **Post-hoc note (not part of the pre-specified analysis).** Five of the nine tasks were at ceiling, so only four task differences could be nonzero. With four nonzero differences, the smallest p the exact two-sided sign-flip test can return is 2/2⁴ = 0.125, which is the observed value. While the ceiling holds, more repeats or more hosts on these tasks cannot change it.
 
 ## 1. Why this phase
 
@@ -514,7 +517,7 @@ An independent review by Codex (a different model family; it disclosed earlier c
 - **Re-grading:** all 72 saved main-run deliverables were scored again with the fixed grader, offline. **0 verdicts changed.** The pre-specified result in section 16 stands (sign-flip p = 0.125, not significant; no lift claimed); only the MDE line changes, to none feasible at 27 pairs and ψ = 0.222.
 - **Two more gaps, fixed in a follow-up:** a generic probe (zeros, +1 and row-flipped outputs per deliverable) found `sr_nir.tif` in `satellite-s2-baseline-offset-mask` ungraded and a row-flipped `composite_counts.tif` in `satellite-seasonal-harmonized-composite` accepted. Both oracles now grade the full delivered file, and the probe is a regression test over every deliverable of all nine tasks. Every saved historical output for both files matches the reference pixel for pixel; re-grading the 72 deliverables again changed 0 verdicts.
 
-## 18. API agent hosts: OpenAI and Groq (2026-10-25)
+## 18. API agent hosts: OpenAI and Groq (2026-10-25) — frozen exploratory log
 
 Claude Code solved all six harder tasks with and without Terraproof in a one-repeat screen (12 runs, $1.74). This small screen has no observed headroom; it does not establish that lift is impossible for that host on other tasks or repetitions. Weaker models may leave room. OpenAI (e.g. GPT-4o) and Groq expose plain chat APIs rather than agents, so `tests/api_agent.py` supplies the agent loop:
 
@@ -670,7 +673,7 @@ conformance. This offline batch introduces no paid run or inference authorizatio
 nor a general repair reliability or agent-lift claim.
 
 
-## 19. Antigravity CLI host (2026-10-26)
+## 19. Antigravity CLI host (2026-10-26) — frozen exploratory log
 
 `tests/agent_lift.py --agent-host antigravity --antigravity-model <id>` drives the
 Antigravity CLI (`agy`, checked against 1.3.0 and 1.4.7) headlessly: flags first, then
