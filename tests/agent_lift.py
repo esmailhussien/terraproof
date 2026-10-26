@@ -34,6 +34,7 @@ import time
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import release_validation as validation  # noqa: E402  (shared host isolation helpers)
+import agent_runtime  # noqa: E402
 
 from terraproof.evals.lift import (  # noqa: E402
     COHORTS, DEFAULT_COHORT, WITH, Adapter, AgentRequest, AgentResult, Budget, LiftError, lift_task, planned_calls,
@@ -186,16 +187,20 @@ def run_contained(command: list[str], cwd: Path, env: dict, timeout: float):
     return (None if timed_out else process.returncode), lines, "".join(errors), timed_out
 
 
-def host_env(condition: str = WITH, agent_python: str | None = None) -> dict:
+def host_env(condition: str = WITH, agent_python: str | None = None, agent_python_with: str | None = None) -> dict:
     """The agent's interpreter directory first on PATH, so agents compute with numpy/rasterio.
 
-    "with" uses this driver's interpreter (Terraproof installed, as the MCP server runs it).
-    "without" uses `agent_python`, a dependency-only interpreter on a neutral path, and drops
-    PYTHONPATH so a checkout's `src` cannot make Terraproof importable again.
+    Real driver runs select `agent_python_with` for production-only compute/MCP and
+    `agent_python` for the dependency-only baseline. Checkout/user-site overrides are removed.
+    The driver's interpreter is retained only as the legacy default for offline unit probes.
     """
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", DISABLE_AUTOUPDATER="1",
                CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC="1", CLAUDE_CODE_DISABLE_AUTO_MEMORY="1")
-    interpreter = sys.executable
+    interpreter = agent_python_with or sys.executable
+    if agent_python_with:
+        for name in ("PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP"):
+            env.pop(name, None)
+        env["PYTHONNOUSERSITE"] = "1"
     if condition != WITH:
         env.pop("PYTHONPATH", None)
         interpreter = agent_python or sys.executable
@@ -289,14 +294,15 @@ CODEX_NON_CALLS = {"agent_message", "reasoning", "todo_list", "error"}
 CODEX_STATUSES = {"in_progress", "completed", "failed", "declined"}
 
 
-def codex_mcp_value(condition: str) -> str:
+def codex_mcp_value(condition: str, python: str | None = None) -> str:
     """The exact `mcp_servers` override: the Terraproof server in "with", explicitly none in "without"."""
     if condition != WITH:
         return "{}"
     tools = ",".join(json.dumps(name) for name in TOOLS)
     approvals = ",".join(f'{name}={{approval_mode="approve"}}' for name in TOOLS)
-    return ("{terraproof={command=" + json.dumps(sys.executable)
-            + ',args=["-m","terraproof.mcp"],enabled_tools=[' + tools + "],"
+    return ("{terraproof={command=" + json.dumps(python or sys.executable)
+            + ',args=' + json.dumps((["-I"] if python else []) + ["-m", "terraproof.mcp"])
+            + ',enabled_tools=[' + tools + "],"
             + "tools={" + approvals + "},"
             + 'env={PYTHONUTF8="1",PYTHONIOENCODING="utf-8"},required=true,'
             + "startup_timeout_sec=30,tool_timeout_sec=120}}")
@@ -311,7 +317,7 @@ def codex_feature_args() -> list[str]:
     return args
 
 
-def codex_config_args(state: Path, condition: str, effort: str) -> list[str]:
+def codex_config_args(state: Path, condition: str, effort: str, python: str | None = None) -> list[str]:
     config = {
         "approval_policy": '"never"', "web_search": '"disabled"',
         "sandbox_workspace_write.network_access": "false",
@@ -321,7 +327,7 @@ def codex_config_args(state: Path, condition: str, effort: str) -> list[str]:
         "suppress_unstable_features_warning": "true",
         "check_for_update_on_startup": "false", "log_dir": json.dumps(str(state / "logs")),
         "sqlite_home": json.dumps(str(state / "sqlite")),
-        "mcp_servers": codex_mcp_value(condition),
+        "mcp_servers": codex_mcp_value(condition, python),
     }
     args = []
     for key, value in config.items():
@@ -329,12 +335,13 @@ def codex_config_args(state: Path, condition: str, effort: str) -> list[str]:
     return args
 
 
-def codex_lift_command(executable: str, project: Path, state: Path, condition: str, effort: str) -> list[str]:
+def codex_lift_command(executable: str, project: Path, state: Path, condition: str, effort: str,
+                       python: str | None = None) -> list[str]:
     """Reviewable argv: workspace-write sandbox, Codex's own exec tools, no network, MCP only in "with"."""
     command = [executable, "--no-daemon", "exec", "--ignore-user-config", "--ignore-rules",
                "--strict-config", "--ephemeral", "--sandbox", "workspace-write", "--json",
                "--skip-git-repo-check", "-C", str(project)]
-    return command + codex_feature_args() + codex_config_args(state, condition, effort) + [PROMPT]
+    return command + codex_feature_args() + codex_config_args(state, condition, effort, python) + [PROMPT]
 
 
 # Codex's built-in MCP *resource* tools are reported as mcp_tool_call items on server "codex"
@@ -461,16 +468,19 @@ class CodexHostAdapter(Adapter):
     model_calls = True
     usd_capped = False
 
-    def __init__(self, executable: str, effort: str, agent_python_without: str | None = None):
+    def __init__(self, executable: str, effort: str, agent_python_without: str | None = None,
+                 agent_python_with: str | None = None):
         self.executable = executable
         self.effort = effort
         self.agent_python_without = agent_python_without
+        self.agent_python_with = agent_python_with
 
     def run(self, request: AgentRequest) -> AgentResult:
         state = request.project.parent / "host-state"
         state.mkdir(exist_ok=True)
-        command = codex_lift_command(self.executable, request.project, state, request.condition, self.effort)
-        env = host_env(request.condition, self.agent_python_without)
+        command = codex_lift_command(self.executable, request.project, state, request.condition, self.effort,
+                                     self.agent_python_with)
+        env = host_env(request.condition, self.agent_python_without, self.agent_python_with)
         code, lines, stderr, timed_out = run_contained(command, request.project, env, request.timeout_seconds)
         events, invalid = _json_lines(lines)
         result = codex_trace(events, request.condition, _seeded(request.task_id), timed_out=timed_out)
@@ -490,8 +500,8 @@ class CodexHostAdapter(Adapter):
         task = lift_task(request.task_id)
         state = request.project.parent / "host-state"
         state.mkdir(exist_ok=True)
-        env = host_env(request.condition, self.agent_python_without)
-        checks: dict = {}
+        env = host_env(request.condition, self.agent_python_without, self.agent_python_with)
+        checks: dict = agent_runtime.validate_pair(self.agent_python_with, self.agent_python_without)
         if request.condition != WITH:
             checks.update(without_isolation_checks(request.project, self.agent_python_without, env))
         script = request.project.parent / "preflight_probe.py"
@@ -508,7 +518,7 @@ class CodexHostAdapter(Adapter):
             checks[check] = marker in seen
         checks["sandbox_exit_zero"] = code == 0 and not timed_out
         listed = subprocess.run([self.executable, "mcp", "list", "--json", "-c",
-                                 f"mcp_servers={codex_mcp_value(request.condition)}"],
+                                 f"mcp_servers={codex_mcp_value(request.condition, self.agent_python_with)}"],
                                 cwd=request.project, env=env, capture_output=True, text=True,
                                 encoding="utf-8", errors="replace", timeout=60, check=False)
         try:
@@ -516,7 +526,7 @@ class CodexHostAdapter(Adapter):
         except (ValueError, AttributeError, TypeError):
             servers = None
         rendered = subprocess.run([self.executable, "debug", "prompt-input", *codex_feature_args(),
-                                   *codex_config_args(state, request.condition, self.effort), PROMPT],
+                                   *codex_config_args(state, request.condition, self.effort, self.agent_python_with), PROMPT],
                                   cwd=request.project, env=env, capture_output=True, text=True,
                                   encoding="utf-8", errors="replace", timeout=60, check=False)
         try:
@@ -539,8 +549,10 @@ class CodexHostAdapter(Adapter):
         if request.condition == WITH:
             entry = (servers or {}).get("terraproof") or {}
             transport = entry.get("transport") or {}
-            checks["mcp_registered_in_codex"] = bool(entry.get("enabled")) and transport.get("args") == ["-m", "terraproof.mcp"]
-            checks["mcp_tools_served"] = mcp_tools_served(sys.executable, ["-m", "terraproof.mcp"], request.project)
+            expected_args = (["-I"] if self.agent_python_with else []) + ["-m", "terraproof.mcp"]
+            checks["mcp_registered_in_codex"] = bool(entry.get("enabled")) and transport.get("args") == expected_args
+            checks["mcp_tools_served"] = mcp_tools_served(self.agent_python_with or sys.executable,
+                (["-I"] if self.agent_python_with else []) + ["-m", "terraproof.mcp"], request.project)
             routed = set(_routed_skills(request.project))
             checks["skills_visible_to_codex"] = bool(routed) and routed <= names
             checks["agents_md_visible_to_codex"] = block
@@ -693,9 +705,11 @@ class ClaudeHostAdapter(Adapter):
     model_calls = True
     usd_capped = True
 
-    def __init__(self, executable: str, agent_python_without: str | None = None):
+    def __init__(self, executable: str, agent_python_without: str | None = None,
+                 agent_python_with: str | None = None):
         self.executable = executable
         self.agent_python_without = agent_python_without
+        self.agent_python_with = agent_python_with
 
     def _config(self, request: AgentRequest) -> Path:
         """An explicit --mcp-config outside the project.
@@ -714,7 +728,7 @@ class ClaudeHostAdapter(Adapter):
     def run(self, request: AgentRequest) -> AgentResult:
         command = claude_lift_command(self.executable, request.project, self._config(request), request.condition,
                                       request.max_usd)
-        env = host_env(request.condition, self.agent_python_without)
+        env = host_env(request.condition, self.agent_python_without, self.agent_python_with)
         code, lines, _stderr, timed_out = run_contained(command, request.project, env, request.timeout_seconds)
         events, invalid = _json_lines(lines)
         # A timeout reports no spend; the harness charges the full per-run cap.
@@ -726,8 +740,9 @@ class ClaudeHostAdapter(Adapter):
 
     def preflight(self, request: AgentRequest) -> dict:
         """Claude Code has no model-free sandbox runner; Python/IO are probed directly instead."""
-        env = host_env(request.condition, self.agent_python_without)
+        env = host_env(request.condition, self.agent_python_without, self.agent_python_with)
         checks = unsandboxed_probe(request.project, request.task_id, env)
+        checks.update(agent_runtime.validate_pair(self.agent_python_with, self.agent_python_without))
         if request.condition != WITH:
             checks.update(without_isolation_checks(request.project, self.agent_python_without, env))
         config = self._config(request)
@@ -853,6 +868,7 @@ def antigravity_trace(events, condition: str, seeded: tuple[str, ...], *, projec
     labels: set[str] = set()
     incidental: set[str] = set()
     workspace_ok = True
+    workspace_observed = project is None
     final: dict = {}
     for stamp, event in _timed(events):
         if not isinstance(event, dict):
@@ -868,6 +884,8 @@ def antigravity_trace(events, condition: str, seeded: tuple[str, ...], *, projec
                 incidental.add("terraproof-tools-not-listed")
             if project is not None and payload.get("cwd") and not _same_path(payload["cwd"], project):
                 workspace_ok = False
+            if project is not None and payload.get("cwd"):
+                workspace_observed = True
         elif kind == "result":
             final = payload
         elif kind == "step_update":
@@ -916,6 +934,8 @@ def antigravity_trace(events, condition: str, seeded: tuple[str, ...], *, projec
         turn_status, reason = "timeout", "per-run timeout; owned process tree terminated"
     elif not workspace_ok:
         turn_status, reason = "error", "host workspace is not the run project"
+    elif status == "SUCCESS" and not workspace_observed:
+        turn_status, reason = "error", "host workspace evidence is missing"
     elif status == "SUCCESS":
         turn_status, reason = "completed", "no tool calls" if not public else "ok"
     elif final:
@@ -959,7 +979,8 @@ def antigravity_global_checks(home: Path) -> dict:
     plugins = home / ANTIGRAVITY_PLUGINS
     skill_roots = [home / relative for relative in ANTIGRAVITY_GLOBAL_SKILLS]
     skill_roots += sorted(plugins.glob("*/skills")) if plugins.is_dir() else []
-    skills_clean = not any(child.is_dir() and (child.name in registry or "terraproof" in child.name.lower())
+    skills_clean = not any(child.is_dir() and (child.name in registry or "terraproof" in child.name.lower()
+                           or any(_mentions_terraproof(path) for path in child.rglob("*") if path.is_file()))
                            for root in skill_roots if root.is_dir() for child in root.iterdir())
     rule_files = []
     for relative in ANTIGRAVITY_GLOBAL_RULES:
@@ -979,29 +1000,33 @@ class AntigravityHostAdapter(Adapter):
     usd_capped = False
 
     def __init__(self, executable: str, model: str, effort: str | None = None,
-                 agent_python_without: str | None = None, home: Path | None = None):
+                 agent_python_without: str | None = None, home: Path | None = None,
+                 agent_python_with: str | None = None):
         self.executable = executable
         self.model = model
         self.effort = effort
         self.agent_python_without = agent_python_without
         self.home = home or Path.home() / ".gemini"
+        self.agent_python_with = agent_python_with
 
     def run(self, request: AgentRequest) -> AgentResult:
         command = antigravity_lift_command(self.executable, self.model, self.effort)
-        env = host_env(request.condition, self.agent_python_without)
+        env = host_env(request.condition, self.agent_python_without, self.agent_python_with)
         code, lines, _stderr, timed_out = run_contained(command, request.project, env, request.timeout_seconds)
         events, invalid = _json_lines(lines)
         result = antigravity_trace(events, request.condition, _seeded(request.task_id), project=request.project,
                                    timed_out=timed_out)
         if (code not in (0, None) or invalid) and result.status == "completed":
             result.status = "failed"
+            result.turn["status"] = "error"
             result.turn["reason"] = "nonzero host exit or invalid JSONL"
         return result
 
     def preflight(self, request: AgentRequest) -> dict:
         """agy has no model-free sandbox runner; Python/IO are probed directly, as for Claude Code."""
-        env = host_env(request.condition, self.agent_python_without)
+        env = host_env(request.condition, self.agent_python_without, self.agent_python_with)
         checks = unsandboxed_probe(request.project, request.task_id, env)
+        checks.update(agent_runtime.validate_pair(self.agent_python_with, self.agent_python_without))
         checks.update(antigravity_global_checks(self.home))
         if request.condition == WITH:
             config = request.project / ".agents" / "mcp_config.json"
@@ -1105,6 +1130,8 @@ def plan(args) -> dict:
             approve += ["--antigravity-effort", args.antigravity_effort]
     if args.agent_python_without:
         approve += ["--agent-python-without", str(args.agent_python_without)]
+    if args.agent_python_with:
+        approve += ["--agent-python-with", str(args.agent_python_with)]
     if args.agent_host in API_HOSTS:
         approve += ["--api-model", str(api_model(args)),
                     "--usd-per-million-input", f"{args.usd_per_million_input:g}",
@@ -1183,6 +1210,8 @@ def main(argv=None) -> int:
     parser.add_argument("--agent-python-without", type=Path,
                         help="dependency-only Python (numpy, rasterio, pyogrio, shapely, pyproj; no Terraproof) "
                              "on a path without 'terraproof', first on PATH for the without agent; required by preflight")
+    parser.add_argument("--agent-python-with", type=Path,
+                        help="production-only runtime prepared by tests/agent_runtime.py; required before host start")
     parser.add_argument("--preflight-only", action="store_true",
                         help="prepare every project and run the no-model host preflight; start no agent")
     parser.add_argument("--approve-model-calls", type=int, metavar="N",
@@ -1237,15 +1266,17 @@ def main(argv=None) -> int:
         parser.error(f"--approve-model-calls {args.approve_model_calls} does not equal the planned "
                      f"{summary['planned_model_invocations']} invocations; nothing was started")
     agent_python = str(args.agent_python_without) if args.agent_python_without else None
+    with_python = str(args.agent_python_with) if args.agent_python_with else None
     if args.agent_host == "codex":
         executable, reason, version = probe_codex(str(args.codex_executable) if args.codex_executable else None)
-        adapter = (CodexHostAdapter(executable, args.codex_reasoning_effort, agent_python) if executable
+        adapter = (CodexHostAdapter(executable, args.codex_reasoning_effort, agent_python, with_python) if executable
                    else None)
         budget = Budget(max_runs=args.approve_model_calls, timeout_seconds=args.timeout)
     elif args.agent_host == "antigravity":
         executable, reason, version = probe_antigravity(
             str(args.antigravity_executable) if args.antigravity_executable else None, args.antigravity_model)
-        adapter = (AntigravityHostAdapter(executable, args.antigravity_model, args.antigravity_effort, agent_python)
+        adapter = (AntigravityHostAdapter(executable, args.antigravity_model, args.antigravity_effort, agent_python,
+                                        agent_python_with=with_python)
                    if executable else None)
         budget = Budget(max_runs=args.approve_model_calls, timeout_seconds=args.timeout)
     elif args.agent_host in API_HOSTS:
@@ -1256,7 +1287,7 @@ def main(argv=None) -> int:
                            max_model_calls=args.max_model_calls_per_run, max_tokens=args.max_tokens_per_run,
                            rate_limit_retries=args.rate_limit_retries, max_retry_wait=args.max_retry_wait)
         adapter = ApiAgentAdapter(args.agent_host, api_model(args), limits, agent_python,
-                                  verification_plan=args.verification_policy)
+                                  verification_plan=args.verification_policy, agent_python_with=with_python)
         version = f"{args.agent_host} {adapter.model}"
         reason = "ok" if adapter.key_present() else f"{adapter.key_env} is not set; no request was sent"
         adapter = adapter if adapter.key_present() else None
@@ -1265,12 +1296,17 @@ def main(argv=None) -> int:
                         timeout_seconds=args.timeout)
     else:
         executable, reason, version = probe_claude(str(args.claude_executable) if args.claude_executable else None)
-        adapter = ClaudeHostAdapter(executable, agent_python) if executable else None
+        adapter = ClaudeHostAdapter(executable, agent_python, with_python) if executable else None
         budget = Budget(max_runs=args.approve_model_calls, per_run_usd=args.max_usd_per_run,
                         total_usd=total_usd_cap(args, summary["planned_model_invocations"]),
                         timeout_seconds=args.timeout)
     if adapter is None:
         print(json.dumps({"status": "unavailable", "reason": reason, "model_called": False}, sort_keys=True))
+        return 1
+    runtime_checks = agent_runtime.validate_pair(with_python, agent_python)
+    if not all(runtime_checks.values()):
+        print(json.dumps({"status": "runtime isolation failed", "checks": runtime_checks, "model_called": False},
+                         sort_keys=True))
         return 1
     # Outside the checkout: no ancestral AGENTS.md/CLAUDE.md/config, and no repository source to read.
     # Neutral prefix: agents see absolute paths (Claude Code's Read/Write take them).
@@ -1286,11 +1322,13 @@ def main(argv=None) -> int:
                           agent="claude" if args.agent_host in API_HOSTS else args.agent_host,
                           budget=budget, work_root=work,
                           allow_model_calls=not args.preflight_only, preflight_only=args.preflight_only,
-                          recordings_out=None if args.preflight_only else args.recordings)
+                          recordings_out=None if args.preflight_only else args.recordings, mcp_python=with_python)
     finally:
         shutil.rmtree(work, ignore_errors=True)
     report["command"] = summary["preflight_command" if args.preflight_only else "command_to_approve"]
     report["host"] = {"name": args.agent_host, "version": version}
+    report["runtime_isolation"] = {"checks": runtime_checks,
+        "scope": "production imports and MCP; native hosts are not a filesystem sandbox"}
     out = args.out.with_name(args.out.stem + "-preflight" + args.out.suffix) if args.preflight_only else args.out
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(to_json(report), encoding="utf-8", newline="\n")

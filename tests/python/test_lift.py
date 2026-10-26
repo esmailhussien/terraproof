@@ -507,6 +507,7 @@ def test_driver_preflight_only_starts_no_agent(tmp_path, monkeypatch):
     monkeypatch.setattr(driver, "probe_codex", lambda executable=None: ("codex.exe", "ok", "codex-cli test"))
     monkeypatch.setattr(driver, "run_lift", fake_run_lift)
     monkeypatch.setattr(driver, "to_json", lambda report: json.dumps(report))
+    monkeypatch.setattr(driver.agent_runtime, "validate_pair", lambda *args: {"offline_test_runtime": True})
     out = tmp_path / "lift.json"
     assert driver.main(["--agent-host", "codex", "--task", FAST[0], "--preflight-only", "--out", str(out)]) == 0
     assert seen["preflight_only"] is True and seen["allow_model_calls"] is False and seen["runs"] == 1

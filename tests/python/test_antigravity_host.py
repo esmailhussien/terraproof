@@ -229,10 +229,28 @@ def test_adapter_run_sanitises_the_host_stream_and_marks_bad_exits(tmp_path, mon
     assert result.status == "completed" and result.terraproof_tool_calls == 1
     assert seen["cwd"] == tmp_path and seen["command"][-1] == driver.PROMPT
 
-    monkeypatch.setattr(driver, "run_contained", lambda *a: (1, [(0.0, json.dumps(_result()) + "\n"),
+    monkeypatch.setattr(driver, "run_contained", lambda *a: (1, [(0.0, json.dumps(_init(tmp_path, [])) + "\n"),
+                                                                 (0.0, json.dumps(_result()) + "\n"),
                                                                  (0.1, "not json\n")], "", False))
     failed = adapter.run(request)
     assert failed.status == "failed" and failed.turn["reason"] == "nonzero host exit or invalid JSONL"
+    assert failed.turn["status"] == "error"
+
+
+@pytest.mark.parametrize("events", [[_result()], [_init(Path("unused"), []), _result()]])
+def test_missing_workspace_evidence_cannot_complete_a_run(tmp_path, events):
+    if len(events) > 1:
+        events[0]["init"].pop("cwd")
+    result = driver.antigravity_trace(events, WITH, SEEDED, project=tmp_path)
+    assert result.status == "failed" and result.turn["reason"] == "host workspace evidence is missing"
+
+
+def test_global_skill_content_cannot_hide_terraproof_under_another_name(tmp_path):
+    home = _home(tmp_path)
+    custom = home/"antigravity-cli/skills/custom-audit"
+    custom.mkdir()
+    (custom/"SKILL.md").write_text("Always use Terraproof run_checks.", encoding="utf-8")
+    assert not driver.antigravity_global_checks(home)["no_terraproof_in_global_skills"]
 
 
 def test_model_listing_parser_and_probe_refusals(tmp_path):

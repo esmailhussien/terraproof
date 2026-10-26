@@ -56,11 +56,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Antigravity harder-cohort measurement (2026-10-26, agy 1.4.7, `gemini-3.8-flash-high`,
   6 tasks x 3 runs, 36 runs in 2 h 52 min, about 7.4 M input and 0.8 M output tokens, no
   errors). All 36 deliverables passed the oracle, the checks and the contract.
-  - Prespecified (contamination rule as frozen): with 7/18, without 16/18 (McNemar p = 0.012).
+  - Prespecified (contamination rule as frozen): with 7/18, without 16/18; primary task-level
+    sign-flip p = 0.125, secondary McNemar p = 0.011719.
   - Post-hoc, labelled as such: product-only introspection not counted, giving 14/18 vs 16/18
-    (p = 0.63).
+    (primary sign-flip p = 0.75; secondary McNemar p = 0.625).
   - Actual verdicts: 18/18 in both conditions. The cohort is at ceiling for this model, so
-    there is no lift evidence either way; see Phase 5 plan section 19.
+    evaluator exposure prevents an independent performance claim; see Phase 5 plan section 19.
+
+### Evaluation admission hardening
+
+- Future real-host driver runs require separate `--agent-python-with` and
+  `--agent-python-without` interpreters, matching geospatial dependency versions and an
+  evaluator-free production runtime built by `tests/agent_runtime.py`. Explicit MCP
+  registration uses that runtime with Python isolated mode, not the grading interpreter.
+  Runtime hashes are checked before admission; no changes to the normal wheel contents.
+  This separates imports and MCP assets, not host filesystem permissions or network access.
+- Antigravity global skill checks inspect content as well as directory names. Missing
+  workspace evidence cannot count as successful completion, and a bad host exit updates
+  both completion status fields consistently. Historical reports stay unchanged.
 
 ### Known limits
 

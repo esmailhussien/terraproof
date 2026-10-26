@@ -370,16 +370,20 @@ def brief(task: LiftTask, spec: TaskSpec) -> str:
     return "\n".join(lines)
 
 
-def _install(project: Path, agent: str, spec: TaskSpec) -> tuple[int, list[str]]:
+def _install(project: Path, agent: str, spec: TaskSpec, mcp_python: str | None = None) -> tuple[int, list[str]]:
     """Install Terraproof exactly as a user would: router-selected skills plus the MCP server."""
     from terraproof.install import main as install_main, resolve_skill_names
 
     with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-        code = install_main(["--agent", agent, "--task", spec.prompt, "--target", str(project), "--with-mcp"])
+        args = ["--agent", agent, "--task", spec.prompt, "--target", str(project), "--with-mcp"]
+        if mcp_python:
+            args += ["--mcp-python", mcp_python]
+        code = install_main(args)
     return code, resolve_skill_names(None, spec.prompt) if code == 0 else []
 
 
-def prepare_project(task: LiftTask, spec: TaskSpec, reference: Path, project: Path, *, condition: str, agent: str) -> dict:
+def prepare_project(task: LiftTask, spec: TaskSpec, reference: Path, project: Path, *, condition: str, agent: str,
+                    mcp_python: str | None = None) -> dict:
     """Create an agent project with inputs, an empty outputs/ and TASK.md; install Terraproof for "with"."""
     if condition not in CONDITIONS:
         raise LiftError(f"unknown condition: {condition!r}")
@@ -390,7 +394,7 @@ def prepare_project(task: LiftTask, spec: TaskSpec, reference: Path, project: Pa
     (project / "TASK.md").write_text(brief(task, spec), encoding="utf-8", newline="\n")
     installed = {"install_exit": None, "skills": []}
     if condition == WITH:
-        code, skills = _install(project, agent, spec)
+        code, skills = _install(project, agent, spec, mcp_python)
         installed = {"install_exit": code, "skills": skills}
     return installed
 
@@ -691,6 +695,7 @@ def run_lift(
     recordings_out: Path | str | None = None,
     preflight_only: bool = False,
     cohort: str = DEFAULT_COHORT,
+    mcp_python: str | None = None,
 ) -> dict:
     """Run the paired with/without experiment and return a deterministic JSON report.
 
@@ -746,7 +751,7 @@ def run_lift(
                 run_dir = base / "runs" / f"{sequence:03d}"
                 project = run_dir / "project"
                 installed = prepare_project(task, specs[task.task_id], references[task.task_id], project,
-                                            condition=condition, agent=agent)
+                                            condition=condition, agent=agent, mcp_python=mcp_python)
                 if condition == WITH:
                     routed[task.task_id] = installed["skills"]
                 if installed["install_exit"] not in (None, 0):

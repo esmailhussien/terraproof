@@ -383,3 +383,11 @@ and COG scope are the [Rasterio nodata-mask documentation](https://rasterio.read
 and [GDAL COG driver documentation](https://gdal.org/en/stable/drivers/raster/cog.html).
 The [versioned contract guide](https://github.com/esmailhussien/terraproof/blob/v0.7.3/docs/RASTER_CONTRACTS.md) describes the implemented
 mathematics, tolerances, validity policy and limits.
+
+## Native evaluation runtime separation
+
+`tests/agent_runtime.py` and its regression tests are original Terraproof/Geova
+code under the repository MIT license. No upstream implementation is copied.
+Staged runtimes retain the production skills' attribution, `sources/` and
+`third_party/` licenses. Evaluation recipes and reference assets are excluded
+from the agent runtime, while the standard release package remains unchanged.

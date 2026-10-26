@@ -738,14 +738,16 @@ rate-limit failures were seen, and agy reports no spend.
 
 | | with | without | paired |
 |---|---|---|---|
-| **Prespecified** (contamination rule as frozen) | **7/18** | **16/18** | both 6, neither 1, with-only 1, without-only 10; McNemar p = 0.012; mean task difference -0.50 (95% CI -0.83 to -0.11) |
-| **Post-hoc** (product-only introspection not counted) | **14/18** | **16/18** | both 13, neither 1, with-only 1, without-only 3; p = 0.63; mean task difference -0.11 |
+| **Prespecified** (contamination rule as frozen) | **7/18** | **16/18** | primary task-level sign-flip p = **0.125**; mean task difference -0.50 (95% task-bootstrap CI -0.83 to -0.11); secondary McNemar p = 0.011719 (both 6, neither 1, with-only 1, without-only 10) |
+| **Post-hoc** (product-only introspection not counted) | **14/18** | **16/18** | primary task-level sign-flip p = **0.75**; mean task difference -0.11; secondary McNemar p = 0.625 (both 13, neither 1, with-only 1, without-only 3) |
 | Underlying verdicts (oracle, checks and contract) | 18/18 | 18/18 | no difference |
 
 Every rejection was a contamination-forced rejection. All 36 deliverables passed the oracle,
-the checks and the deliverable contract. Four tasks were at ceiling (every run accepted
-before contamination). The cohort is at ceiling for this model, so the run gives no lift
-evidence either way.
+the checks and the deliverable contract. All six tasks have 100% observed raw artifact
+acceptance; four have 100% baseline acceptance after contamination rejection. These are
+different ceiling counts. The prespecified primary test does not reach alpha 0.05.
+Evaluator access also prevents treating raw acceptance as independent model performance;
+these observations establish neither general lift nor harm.
 
 In "with" there were 90 Terraproof MCP calls (28 `run_checks`, 30 `inspect_dataset`, 21
 `find_guidance`, 7 `load_section`, 2 `list_skills`, 2 `preflight`) and 22 skill reads.
@@ -769,6 +771,9 @@ paths and the matched snippets were read.
 
 Fixes in the same change: the probe script is removed before any agent starts and both probe
 names are neutral. `python-introspection` now needs harness or oracle vocabulary in the same
-call. Open: the "with" agent can still import `terraproof.evals`. Hiding it would need a
-separate treatment interpreter or package split, and a model with headroom on these tasks
-is needed before any lift claim.
+call. At this run's cutoff, the "with" agent could still import `terraproof.evals`.
+The subsequent [production runtime separation](AGENT_RUNTIME_ISOLATION.md) adds separate
+compute interpreters and evaluator-free product/MCP assets for future driver runs.
+It is not a filesystem sandbox and does not retroactively validate contaminated runs.
+A model/task cohort with headroom and appropriate host containment is needed before
+any lift claim.

@@ -42,6 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
                         help="task description to route instead of naming skills")
     parser.add_argument("--target", required=True, metavar="PROJECT_DIR", help="project directory to install into")
     parser.add_argument("--with-mcp", action="store_true", help="also register the Terraproof MCP server")
+    parser.add_argument("--mcp-python", type=Path, help="explicit Python for the registered MCP server")
     parser.add_argument("--dry-run", action="store_true", help="print the planned writes and change nothing")
     return parser
 
@@ -160,7 +161,10 @@ def main(argv: list[str] | None = None) -> int:
         names = resolve_skill_names(args.skills, args.task)
         registry = _registry()
         skills = [_load_skill(name, registry[name]) for name in names]
-        command = [sys.executable or "python", "-m", "terraproof.mcp"]
+        if args.mcp_python and (not args.with_mcp or not args.mcp_python.is_absolute() or not args.mcp_python.is_file()):
+            raise InstallError("--mcp-python requires --with-mcp and an existing absolute Python path")
+        command = [str(args.mcp_python) if args.mcp_python else sys.executable or "python"]
+        command += (["-I"] if args.mcp_python else []) + ["-m", "terraproof.mcp"]
         writes = PLANNERS[args.agent](target, skills, with_mcp=args.with_mcp, command=command)
         print(f"terraproof install: agent={args.agent} target={target.as_posix()} skills={', '.join(names)}")
         if args.with_mcp:

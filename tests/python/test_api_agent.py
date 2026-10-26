@@ -217,7 +217,7 @@ def test_with_condition_exposes_terraproof_tools_from_the_installed_server(tmp_p
     assert INSTRUCTIONS not in json.dumps(asdict(result))
 
 
-def test_run_lift_integration_with_a_fake_model(tmp_path, monkeypatch):
+def test_run_lift_fake_model_stays_unused_without_a_runtime_pair(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", FAKE_KEY)
     model = FakeModel([[("list_files", {})], []] * 2)
     adapter = api_agent.ApiAgentAdapter("openai", "gpt-4o", PRICES, transport=model)
@@ -225,13 +225,15 @@ def test_run_lift_integration_with_a_fake_model(tmp_path, monkeypatch):
                            budget=Budget(max_runs=2, per_run_usd=1.0, total_usd=2.0), work_root=tmp_path / "work")
     assert report["adapter"] == {"name": "openai-api", "model_calls": True}
     runs = {run["condition"]: run for run in report["tasks"][0]["runs"]}
-    # No dependency-only Python was given, so "without" must not start: the isolation gate holds for API hosts.
+    # Neither production-only nor dependency-only runtime was given: neither condition may start.
     assert runs[WITHOUT]["adapter_status"] == "preflight_failed"
     assert runs[WITHOUT]["preflight"]["checks"]["without_agent_python_set"] is False
-    assert runs[WITH]["verdict"] == "missing" and runs[WITH]["preflight"]["checks"]["mcp_tools_served"] is True, runs[WITH]
+    assert runs[WITH]["adapter_status"] == "preflight_failed"
+    assert runs[WITH]["preflight"]["checks"]["runtime_only_product"] is False
+    assert runs[WITH]["preflight"]["checks"]["mcp_tools_served"] is True
     assert runs[WITH]["preflight"]["checks"]["mcp_instructions_available"] is True
-    assert report["design"]["started_agent_runs"] == 1
-    assert 0 < report["budget"]["spent_usd"] <= 1.0
+    assert report["design"]["started_agent_runs"] == 0 and model.requests == []
+    assert report["budget"]["spent_usd"] == 0
     assert FAKE_KEY not in lift.to_json(report)
 
 
