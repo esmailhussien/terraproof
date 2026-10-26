@@ -687,18 +687,8 @@ class ApiAgentAdapter(Adapter):
     def preflight(self, request: AgentRequest) -> dict:
         """No-model checks: the key variable is set, Python/IO work, and the isolation or MCP setup holds."""
         task = lift_task(request.task_id)
-        script = request.project.parent / "preflight_probe.py"
-        script.write_text(driver.PREFLIGHT_SCRIPT.format(name=task.inputs[0]), encoding="utf-8")
         env = driver.host_env(request.condition, self.agent_python_without)
-        python = shutil.which("python", path=env["PATH"])
-        stdout = ""
-        if python:
-            import subprocess
-
-            stdout = subprocess.run([python, str(script)], cwd=request.project, env=env, capture_output=True,
-                                    text=True, encoding="utf-8", errors="replace", timeout=120, check=False).stdout
-        checks = {check.replace("sandbox_", "unsandboxed_"): marker in stdout
-                  for check, marker in driver.PREFLIGHT_MARKERS if check != "sandbox_shell"}
+        checks = driver.unsandboxed_probe(request.project, request.task_id, env)
         checks["api_key_set"] = self.key_present()
         if request.condition != WITH:
             checks.update(driver.without_isolation_checks(request.project, self.agent_python_without, env))

@@ -852,3 +852,45 @@ def test_driver_derives_the_total_usd_cap_from_the_selected_cohort(capsys, monke
 def test_offline_cli_refuses_task_with_cohort(capsys):
     assert evals_main(["lift", "--cohort", "harder", "--task", FAST[0]]) == 2
     assert "give one of them" in capsys.readouterr().err
+
+
+# -- Antigravity harder-cohort follow-up (2026-10-26): probe leak and introspection scope ----------
+@pytest.mark.parametrize("command, labels", [
+    ("import inspect, terraproof.checks.raster as r\nprint(inspect.getsource(r.check_cog_layout))", set()),
+    ("from terraproof import evidence\nimport inspect\nprint(inspect.getsource(evidence.grade_for))", set()),
+    ("import inspect, numpy\nprint(inspect.getsource(numpy.gradient))", set()),
+    ("from terraproof import evals; import inspect; print(inspect.getsource(evals))", {"python-introspection"}),
+    ("import importlib.resources as r; print(r.files('terraproof') / 'evals' / 'recipes')", {"python-introspection"}),
+    ("import inspect, terraproof.evals.harder_oracles as h; print(inspect.getsource(h))",
+     {"harness-source", "oracle-source", "python-introspection"}),
+])
+def test_introspection_is_contamination_only_when_it_can_reach_harness_or_oracle_code(command, labels):
+    text = json.dumps({"CommandLine": f'python -c "{command}"'})
+    assert driver.contamination_labels(text, WITH, ()) == labels
+
+
+def test_preflight_probe_leaves_nothing_beside_the_project_and_names_no_terraproof(tmp_path):
+    task = lift.lift_task(FAST[0])
+    reference = tmp_path / "reference"
+    lift._generate(task, reference)
+    project = tmp_path / "run" / "project"
+    lift.prepare_project(task, SPECS[task.task_id], reference, project, condition=WITHOUT, agent="claude")
+    before = sorted(path.name for path in project.parent.iterdir())
+    checks = driver.unsandboxed_probe(project, task.task_id, driver.host_env(WITH))
+    assert checks["unsandboxed_python"] and checks["unsandboxed_write_outputs"]
+    assert sorted(path.name for path in project.parent.iterdir()) == before
+    assert "terraproof" not in driver.PREFLIGHT_SCRIPT.lower()
+    lift.project_preflight(task, project, condition=WITHOUT, agent="claude", routed=[])
+    assert not any("terraproof" in path.name.lower() for path in project.rglob("*"))
+
+
+def test_host_preflights_remove_their_probe_scripts(tmp_path):
+    task = lift.lift_task(FAST[0])
+    reference = tmp_path / "reference"
+    lift._generate(task, reference)
+    for adapter in (driver.ClaudeHostAdapter("claude.exe"),
+                    driver.AntigravityHostAdapter("agy.exe", "m", home=tmp_path / "home")):
+        project = tmp_path / adapter.name / "project"
+        lift.prepare_project(task, SPECS[task.task_id], reference, project, condition=WITHOUT, agent="claude")
+        adapter.preflight(lift.AgentRequest(task.task_id, WITHOUT, 0, project, "", 10, 1.0))
+        assert not (project.parent / "preflight_probe.py").exists()

@@ -54,7 +54,11 @@ CLAUDE_TOOLS = ("Bash", "Read", "Write", "Edit", "Glob", "Grep", "Skill")
 FORBIDDEN = (
     ("harness-source", r"terraproof[\\/.]+evals|evals[\\/]+(?:tasks|recipes)|recipes[\\/]+\w+\.py"),
     ("oracle-source", r"oracles(?:\.py)?\b"),
-    ("python-introspection", r"inspect\.getsource|importlib\.resources"),
+    # Introspection is contamination only when it can reach harness or oracle code. The Antigravity
+    # harder-cohort run (2026-10-26) read Terraproof's own product modules this way (checks, report,
+    # mcp.server), which the documented tools already expose and which says nothing about grading.
+    ("python-introspection", r"(?=[\s\S]*(?:inspect\.getsource|importlib\.resources))"
+                             r"(?=[\s\S]*(?:\bevals\b|oracles?\b|\brecipes\b|\bspecs\b|\bfixtures\b))"),
     ("outside-project", r"agent-lift-recordings|\.\.[\\/]\.\."),
 )
 SANDBOX_DENIAL = r"access is denied|permission denied|operation not permitted|sandbox(?:ing)? (?:denied|blocked)"
@@ -68,7 +72,7 @@ print("RASTER-OK", flush=True)
 with rasterio.open(pathlib.Path("inputs") / {name!r}) as source:
     source.read(1)
 print("READ-OK", flush=True)
-probe = pathlib.Path("outputs") / ".terraproof-preflight"
+probe = pathlib.Path("outputs") / ".preflight-probe"
 probe.write_text("probe", encoding="utf-8")
 probe.unlink()
 print("WRITE-OK", flush=True)
@@ -200,6 +204,27 @@ def host_env(condition: str = WITH, agent_python: str | None = None) -> dict:
 
 
 IMPORT_PROBE = "import importlib.util, sys; sys.exit(3 if importlib.util.find_spec('terraproof') else 0)"
+
+
+def unsandboxed_probe(project: Path, task_id: str, env: dict) -> dict:
+    """Run the Python/IO probe with the agent's PATH; the script is removed before any agent starts.
+
+    It lives beside the project, which an agent can list, so it must not outlive the preflight
+    (the Antigravity harder-cohort run read a left-over probe naming Terraproof in "without").
+    """
+    script = project.parent / "preflight_probe.py"
+    script.write_text(PREFLIGHT_SCRIPT.format(name=lift_task(task_id).inputs[0]), encoding="utf-8")
+    try:
+        # Resolve `python` on the agent's PATH; Windows CreateProcess would use this process's PATH.
+        python = shutil.which("python", path=env["PATH"])
+        stdout = ""
+        if python:
+            stdout = subprocess.run([python, str(script)], cwd=project, env=env, capture_output=True,
+                                    text=True, encoding="utf-8", errors="replace", timeout=120, check=False).stdout
+    finally:
+        script.unlink(missing_ok=True)
+    return {check.replace("sandbox_", "unsandboxed_"): marker in stdout
+            for check, marker in PREFLIGHT_MARKERS if check != "sandbox_shell"}
 
 
 def without_isolation_checks(project: Path, agent_python: str | None, env: dict) -> dict:
@@ -474,7 +499,10 @@ class CodexHostAdapter(Adapter):
         probe = [self.executable, "sandbox", "-P", ":workspace", "-C", str(request.project),
                  "-c", "sandbox_workspace_write.network_access=false", "powershell.exe", "-NoProfile",
                  "-NonInteractive", "-Command", f"Write-Output SHELL-OK; python '{script}'; exit $LASTEXITCODE"]
-        code, lines, _stderr, timed_out = run_contained(probe, request.project, env, 120)
+        try:
+            code, lines, _stderr, timed_out = run_contained(probe, request.project, env, 120)
+        finally:
+            script.unlink(missing_ok=True)
         seen = " ".join(line for _, line in lines)
         for check, marker in PREFLIGHT_MARKERS:
             checks[check] = marker in seen
@@ -698,18 +726,8 @@ class ClaudeHostAdapter(Adapter):
 
     def preflight(self, request: AgentRequest) -> dict:
         """Claude Code has no model-free sandbox runner; Python/IO are probed directly instead."""
-        task = lift_task(request.task_id)
-        script = request.project.parent / "preflight_probe.py"
-        script.write_text(PREFLIGHT_SCRIPT.format(name=task.inputs[0]), encoding="utf-8")
         env = host_env(request.condition, self.agent_python_without)
-        # Resolve `python` on the agent's PATH; Windows CreateProcess would use this process's PATH.
-        python = shutil.which("python", path=env["PATH"])
-        stdout = ""
-        if python:
-            stdout = subprocess.run([python, str(script)], cwd=request.project, env=env, capture_output=True,
-                                    text=True, encoding="utf-8", errors="replace", timeout=120, check=False).stdout
-        checks = {check.replace("sandbox_", "unsandboxed_"): marker in stdout
-                  for check, marker in PREFLIGHT_MARKERS if check != "sandbox_shell"}
+        checks = unsandboxed_probe(request.project, request.task_id, env)
         if request.condition != WITH:
             checks.update(without_isolation_checks(request.project, self.agent_python_without, env))
         config = self._config(request)
@@ -982,17 +1000,8 @@ class AntigravityHostAdapter(Adapter):
 
     def preflight(self, request: AgentRequest) -> dict:
         """agy has no model-free sandbox runner; Python/IO are probed directly, as for Claude Code."""
-        task = lift_task(request.task_id)
-        script = request.project.parent / "preflight_probe.py"
-        script.write_text(PREFLIGHT_SCRIPT.format(name=task.inputs[0]), encoding="utf-8")
         env = host_env(request.condition, self.agent_python_without)
-        python = shutil.which("python", path=env["PATH"])
-        stdout = ""
-        if python:
-            stdout = subprocess.run([python, str(script)], cwd=request.project, env=env, capture_output=True,
-                                    text=True, encoding="utf-8", errors="replace", timeout=120, check=False).stdout
-        checks = {check.replace("sandbox_", "unsandboxed_"): marker in stdout
-                  for check, marker in PREFLIGHT_MARKERS if check != "sandbox_shell"}
+        checks = unsandboxed_probe(request.project, request.task_id, env)
         checks.update(antigravity_global_checks(self.home))
         if request.condition == WITH:
             config = request.project / ".agents" / "mcp_config.json"

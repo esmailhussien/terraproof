@@ -727,3 +727,48 @@ from agy's own transcripts of the two pilot conversations, names and key structu
 The trace now labels these calls, and offline tests use this shape. A passive observer meant
 to record the stream's structure crashed on a serialisation bug before saving, so the
 `init` payload's exact shape remains unconfirmed.
+
+### Antigravity harder-cohort measurement (2026-10-26)
+
+The approved full run: the six harder tasks, 3 runs per condition (36 runs), agy 1.4.7,
+`gemini-3.8-flash-high`, 900 s timeout, from `main` at `038339a`. It ran from 23:52 to 02:44
+UTC (2 h 52 min, about 4.8 min per run). No run errored or timed out. Tokens were 3,841,428
+input / 367,696 output in "with" and 3,524,710 / 435,809 in "without". No quota or
+rate-limit failures were seen, and agy reports no spend.
+
+| | with | without | paired |
+|---|---|---|---|
+| **Prespecified** (contamination rule as frozen) | **7/18** | **16/18** | both 6, neither 1, with-only 1, without-only 10; McNemar p = 0.012; mean task difference -0.50 (95% CI -0.83 to -0.11) |
+| **Post-hoc** (product-only introspection not counted) | **14/18** | **16/18** | both 13, neither 1, with-only 1, without-only 3; p = 0.63; mean task difference -0.11 |
+| Underlying verdicts (oracle, checks and contract) | 18/18 | 18/18 | no difference |
+
+Every rejection was a contamination-forced rejection. All 36 deliverables passed the oracle,
+the checks and the deliverable contract. Four tasks were at ceiling (every run accepted
+before contamination). The cohort is at ceiling for this model, so the run gives no lift
+evidence either way.
+
+In "with" there were 90 Terraproof MCP calls (28 `run_checks`, 30 `inspect_dataset`, 21
+`find_guidance`, 7 `load_section`, 2 `list_skills`, 2 `preflight`) and 22 skill reads.
+"without" made no Terraproof calls but used web search 18 times.
+
+Each contaminated run was checked against agy's own transcript. All 36 recordings matched
+their conversations, each within 1.5 s and with equal MCP call counts. Only names, module
+paths and the matched snippets were read.
+
+- **Product-only introspection (7 "with" runs):** `inspect.getsource` on `terraproof.preflight`,
+  `checks`, `checks.raster`, `report`, `evidence`, `grade`, `inspect` and `mcp.server`. No
+  `evals` module was read. These are the runs the post-hoc result counts.
+- **Harness/oracle code (4 "with" runs):** `terrain-slope-map` run 1, `vegetation-change-rate`
+  runs 1 and 2, and `storm-total-rainfall` run 1 read `terraproof.evals` (`harder_oracles`,
+  `recipes.harder`, `specs`, `fixtures`). This is real contamination and is rejected in both
+  results. The "with" interpreter has the whole package, so the oracles can be imported.
+- **Harness leak (2 "without" runs):** `population-grid-transfer` run 1 and `terrain-slope-map`
+  run 1 read the preflight probe the harness had left beside the project. It named
+  `.terraproof-preflight`. The agents then searched the home directory, `site-packages` and
+  the web for Terraproof. This was a harness bug, not agy memory.
+
+Fixes in the same change: the probe script is removed before any agent starts and both probe
+names are neutral. `python-introspection` now needs harness or oracle vocabulary in the same
+call. Open: the "with" agent can still import `terraproof.evals`. Hiding it would need a
+separate treatment interpreter or package split, and a model with headroom on these tasks
+is needed before any lift claim.
