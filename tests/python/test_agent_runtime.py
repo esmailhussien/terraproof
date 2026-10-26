@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import tempfile
 import venv
 
 import pytest
@@ -18,15 +19,19 @@ def python_in(root):
 
 
 @pytest.fixture(scope="module")
-def runtimes(tmp_path_factory):
-    root = tmp_path_factory.mktemp("compute-envs")
-    with_env, without_env = root / "a", root / "b"
-    for env in (with_env, without_env):
-        venv.EnvBuilder(with_pip=False).create(env)
-    with_python, without_python = python_in(with_env), python_in(without_env)
-    result = agent_runtime.prepare(with_python)
-    assert result["prepared"] and result["model_calls"] == 0
-    return with_python, without_python
+def runtimes():
+    # The repository's pytest basetemp intentionally lives inside the checkout.
+    # An evaluation runtime must not: exercise the real admission rule on CI too.
+    with tempfile.TemporaryDirectory(prefix="compute-envs-") as temporary:
+        root = Path(temporary).resolve()
+        assert root != agent_runtime.ROOT and agent_runtime.ROOT not in root.parents
+        with_env, without_env = root / "a", root / "b"
+        for env in (with_env, without_env):
+            venv.EnvBuilder(with_pip=False).create(env)
+        with_python, without_python = python_in(with_env), python_in(without_env)
+        result = agent_runtime.prepare(with_python)
+        assert result["prepared"] and result["model_calls"] == 0
+        yield with_python, without_python
 
 
 def test_prepared_runtime_has_product_and_no_evaluators_or_reference_assets(runtimes):
@@ -56,6 +61,14 @@ def test_preparation_refuses_inherited_system_packages(tmp_path):
     environment = tmp_path/"inherited-env"
     venv.EnvBuilder(with_pip=False, system_site_packages=True).create(environment)
     with pytest.raises(ValueError, match="clean separate"):
+        agent_runtime.prepare(python_in(environment))
+
+
+def test_preparation_refuses_a_clean_venv_inside_the_checkout(tmp_path, monkeypatch):
+    environment = tmp_path/"checkout-env"
+    venv.EnvBuilder(with_pip=False).create(environment)
+    monkeypatch.setattr(agent_runtime, "ROOT", tmp_path)
+    with pytest.raises(ValueError, match="outside the checkout"):
         agent_runtime.prepare(python_in(environment))
 
 
