@@ -391,3 +391,17 @@ code under the repository MIT license. No upstream implementation is copied.
 Staged runtimes retain the production skills' attribution, `sources/` and
 `third_party/` licenses. Evaluation recipes and reference assets are excluded
 from the agent runtime, while the standard release package remains unchanged.
+
+## Exhaustive processing and offline containment
+
+The full calibration/QA checks, checker scorecard and Docker harness/probe are
+original Terraproof/Geova MIT code. No external implementation is vendored.
+Raster validity follows the [Rasterio mask API](https://rasterio.readthedocs.io/en/stable/topics/masks.html).
+The optional local image uses an externally downloaded Antigravity executable
+from Google's [official CLI installation distribution](https://antigravity.google/docs/install/),
+verified against its official manifest hash. This executable is not committed,
+redistributed by the Python/npm packages or relicensed under Terraproof's MIT
+license. Its upstream terms continue to apply. The
+[Google sandbox documentation](https://antigravity.google/docs/sandbox?tab=cli)
+informs the distinction between a native terminal sandbox and the separate
+whole-process Docker boundary. Existing production attribution is preserved.

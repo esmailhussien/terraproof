@@ -55,6 +55,10 @@ make a later version appear to be the original experiment treatment.
 
 ## Limits that remain
 
+An additional [offline Docker process boundary](CONTAINED_RUNTIME.md) is now
+available and locally probed. It is separate from the native paired-run driver;
+it has no authenticated model session and does not remove the native limits below.
+
 This is **package/import and MCP runtime separation, not a security sandbox**.
 Native Antigravity/Claude hosts can still access other filesystem locations or
 the network if their host permissions permit it. A separate Python path alone

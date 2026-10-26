@@ -4,6 +4,9 @@ Current released cohort: six additional tasks bring the catalog to **33 tasks
 in 11 files**, with **25 checker rejections and 25 checker blind spots** (the old 15 plus 10 of the 12 new seeds;
 the two `terrain-slope-map` seeds now fail `terrain.slope_consistent`).
 The original 27-task measurements below remain historical baseline results.
+The separate [full-processing scorecard](../docs/PROCESSING_FULL_SCAN.md) compares
+sampled and exhaustive calibration/QA controls without changing these frozen
+task invocations or relabelling oracle-only rejection as product detection.
 The opt-in `rs.index_formula` check is tested separately; the frozen 33 task
 invocations are unchanged and do not exercise that check. See [the added cohort and its limitations](../docs/HARDER_TASKS.md).
 

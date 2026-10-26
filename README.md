@@ -89,6 +89,8 @@ and nodata edges. Raster identity checks every band's valid samples, complete
 validity masks and grid/band metadata against the declared source. Full COG
 conformance remains separate from this data comparison and the existing layout
 screen. See [supported contracts and limits](docs/RASTER_CONTRACTS.md).
+For final calibration/QA audits, `--processing-full-scan` checks every corresponding
+band and pixel in bounded windows; see [scope, examples and measured controls](docs/PROCESSING_FULL_SCAN.md).
 
 
 ---

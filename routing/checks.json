@@ -63,11 +63,11 @@
     },
     "rs.scale_applied_once": {
       "family": "rs",
-      "description": "Sampled output pixels equal the input DN through the declared calibration (raster scale/offset metadata, or a product encoding such as s2-l2a or landsat-c2-l2) exactly once; raw DN or a twice-applied calibration fails. Comparison is on a fixed stride and says nothing about other processing steps."
+      "description": "Output pixels equal the input DN through the declared calibration exactly once. Default: sampled band-1 screen. processing_full_scan verifies every corresponding band/pixel, finite delivered values and source invalidity, in bounded windows. Additional output-mask policy and other processing steps are not verified."
     },
     "rs.cloud_mask_applied": {
       "family": "rs",
-      "description": "Pixels flagged as cloud or shadow by an aligned QA raster (Sentinel-2 SCL classes 3, 8, 9, 10; Landsat QA_PIXEL bits 1-4) are nodata or NaN in the output; unaligned grids are not-run."
+      "description": "Pixels flagged as cloud or shadow by aligned Sentinel-2 SCL or Landsat QA_PIXEL are nodata or NaN. Default: sampled band-1 screen. processing_full_scan verifies all QA locations and output bands; missing or unsupported QA leaves verification not-run. Cloud detection quality and additional masking policy are not verified."
     },
     "rs.temporal_scope": {
       "family": "rs",

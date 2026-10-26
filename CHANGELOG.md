@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Opt-in `--processing-full-scan` / `processing_full_scan=True` for all-band,
+  windowed calibration and cloud/QA relations. Sampled defaults remain unchanged.
+  A separate offline scorecard covers local pixel/band errors and keeps frozen
+  benchmark blind spots explicit.
+- Offline Docker study-process harness with one active-task mount, no network,
+  nonroot/read-only execution and an outside-mount canary/MCP probe. This does
+  not yet integrate an authenticated live agent into the paired-run coordinator.
+
 - Installer format `--agent antigravity`: workspace skills in `.agents/skills/<skill>/`, an
   `AGENTS.md` block, and with `--with-mcp` a `mcpServers` entry in `.agents/mcp_config.json`
   (the workspace locations in Antigravity's skills, rules and MCP docs). Unit-tested only.
