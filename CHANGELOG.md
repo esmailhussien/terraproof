@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Phase 6 (in progress; see the [Phase 6 plan](docs/plans/Terraproof_Phase6_PLAN.md))
+
+- **Product-only Python distributions.** The wheel and sdist leave out `terraproof.evals`
+  (recipes, oracles, fixtures, the lift harness) and the task specs. The benchmark and lift
+  harness run from a checkout, and an installed product can no longer import the oracles.
+  `tests/package/python_smoke.py` now fails a wheel that contains them.
+- **Clean-install CI.** A new job builds the wheel and installs it with the `mcp` extra into
+  a fresh venv outside the checkout on Ubuntu, Windows and macOS (Python 3.11 and 3.13),
+  then runs `inspect`, runs `check` on a generated raster, lists the six MCP tools through the
+  official client and confirms `terraproof.evals` is absent
+  (`tests/package/clean_install_smoke.py`).
+- **PyPI publish workflow.** `.github/workflows/publish-python.yml` publishes a `v*` tag to
+  TestPyPI and then PyPI with Trusted Publishing, verifying a clean install from each index.
+  It has not run: the maintainer still has to create the projects and trusted publishers.
+- **Lift driver `--agent-python-with`.** The "with" agent can get its own interpreter: a venv
+  holding only the product wheel. Its preflight fails unless that interpreter is set, can
+  import Terraproof and cannot import `terraproof.evals`. This closes the Antigravity
+  finding that "with" agents read the oracles.
+- **Docs.** Phase 5 is closed, with sections 18–19 as a frozen exploratory log and a post-hoc
+  note on the ceiling arithmetic. The README shows the PyPI install for 0.8.0 onwards and
+  labels skills as unmeasured; skill content is frozen during Phase 6.
+
 ### Added
 
 - Installer format `--agent antigravity`: workspace skills in `.agents/skills/<skill>/`, an

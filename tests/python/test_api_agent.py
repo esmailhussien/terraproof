@@ -220,7 +220,13 @@ def test_with_condition_exposes_terraproof_tools_from_the_installed_server(tmp_p
 def test_run_lift_integration_with_a_fake_model(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", FAKE_KEY)
     model = FakeModel([[("list_files", {})], []] * 2)
-    adapter = api_agent.ApiAgentAdapter("openai", "gpt-4o", PRICES, transport=model)
+    # The "with" interpreter is product-only in real runs (Phase 6 B6); its probe is tested in
+    # test_lift.py, so here it is stubbed as passing to reach the rest of the "with" preflight.
+    seen = []
+    monkeypatch.setattr(api_agent.driver, "with_isolation_checks", lambda project, python, env: (
+        seen.append(python) or {"with_agent_python_set": True, "with_terraproof_importable": True,
+                                "with_evals_not_importable": True}))
+    adapter = api_agent.ApiAgentAdapter("openai", "gpt-4o", PRICES, transport=model, agent_python_with=sys.executable)
     report = lift.run_lift(adapter, task_ids=[TASK], runs=1, agent="claude", allow_model_calls=True,
                            budget=Budget(max_runs=2, per_run_usd=1.0, total_usd=2.0), work_root=tmp_path / "work")
     assert report["adapter"] == {"name": "openai-api", "model_calls": True}
@@ -230,6 +236,7 @@ def test_run_lift_integration_with_a_fake_model(tmp_path, monkeypatch):
     assert runs[WITHOUT]["preflight"]["checks"]["without_agent_python_set"] is False
     assert runs[WITH]["verdict"] == "missing" and runs[WITH]["preflight"]["checks"]["mcp_tools_served"] is True, runs[WITH]
     assert runs[WITH]["preflight"]["checks"]["mcp_instructions_available"] is True
+    assert seen == [sys.executable] and runs[WITH]["preflight"]["checks"]["with_evals_not_importable"] is True
     assert report["design"]["started_agent_runs"] == 1
     assert 0 < report["budget"]["spent_usd"] <= 1.0
     assert FAKE_KEY not in lift.to_json(report)

@@ -43,7 +43,7 @@ Write the JSON report to a file, run one task, or keep the generated fixtures:
   invalid status, wrong task count).
 - `--only` is a diagnostic filter; it does not constitute a full pass.
 - `--keep` leaves the temporary fixture tree in place and prints its path to stderr.
-- Generated fixtures use `.terracache/` under the current working directory, so an installed wheel never needs to write beside its packaged assets.
+- Generated fixtures use `.terracache/` under the current working directory. The harness runs from a checkout: since Phase 6 the published wheel and sdist leave out `terraproof.evals` and the task specs, so an installed product never contains the oracles.
 
 The report is deterministic: no timestamps, no absolute paths. Fixture paths inside check
 messages are replaced with `<fixtures>`, so two runs produce byte-identical JSON (the tests

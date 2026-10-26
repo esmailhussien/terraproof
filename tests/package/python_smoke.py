@@ -1,4 +1,8 @@
-"""Run built-wheel APIs outside the checkout, with no install or network access."""
+"""Run built-wheel APIs outside the checkout, with no install or network access.
+
+The wheel is product-only (Phase 6 B1): the benchmark and the lift harness run from a
+checkout, so the wheel must not contain `terraproof.evals` or the task specs.
+"""
 
 import argparse
 import json
@@ -31,13 +35,9 @@ for skill in skills:
 from terraproof.router import find_guidance
 for task in ['Convert GeoTIFF to COG with GDAL.', 'حول GeoTIFF باستخدام GDAL']:
     assert 'gdal' in {skill['name'] for skill in find_guidance(task, semantic=False)['skills']}
-from terraproof.evals import load_specs, run_benchmark
-task_count = len(load_specs())
-assert task_count >= 27
-evaluation = run_benchmark()
-assert evaluation['summary']['exit_code'] == 0
-assert evaluation['summary']['tasks_passed'] == task_count
-assert not (assets / '.terracache').exists()
+import importlib.util
+assert importlib.util.find_spec('terraproof.evals') is None
+assert not (assets / 'evals').exists()
 from terraproof.install import main as install
 target = Path.cwd() / 'installed-agent'
 target.mkdir()
@@ -49,8 +49,15 @@ assert (assets / 'third_party').is_dir()
 # Exercise the new runtime modules from the extracted wheel, not checkout imports.
 import math, shutil
 import numpy as np
+import rasterio
 from rasterio.transform import from_origin
-from terraproof.evals.fixtures import write_raster_grid
+def write_raster_grid(path, data, *, transform, unit=None):
+    with rasterio.open(path, 'w', driver='GTiff', height=data.shape[0], width=data.shape[1], count=1,
+                       dtype=data.dtype.name, crs='EPSG:32636', transform=transform, nodata=-9999.0) as dst:
+        dst.write(data, 1)
+        if unit:
+            dst.set_band_unit(1, unit)
+    return str(path)
 from terraproof.inspect import inspect_dataset
 from terraproof.checks import run_checks
 contracts = Path.cwd() / 'contract-probes'
@@ -67,7 +74,7 @@ copy = contracts/'copy.tif'
 shutil.copyfile(dem, copy)
 assert next(c.status for c in run_checks([inspect_dataset(copy)], compare_to=inspect_dataset(dem),
             raster_identity=True) if c.id=='raster.source_identity') == 'pass'
-print(json.dumps({'status':'pass','skills':len(skills),'all_sections_loaded':True,'bilingual_routing':True,'eval_tasks':task_count,'false_passes':evaluation['summary']['false_passes'],'checker_blind_spots':evaluation['summary']['wrong_controls_checker_blind_spots'],'installer':True,'uses_checkout_assets':False,'package_assets_modified':False,'strict_raster_contracts':True}))
+print(json.dumps({'status':'pass','skills':len(skills),'all_sections_loaded':True,'bilingual_routing':True,'evals_excluded':True,'installer':True,'uses_checkout_assets':False,'package_assets_modified':False,'strict_raster_contracts':True}))
 '''
 
 
@@ -90,6 +97,11 @@ def main():
         missing = [name for name in required if name not in names]
         if missing:
             print(json.dumps({'status': 'fail', 'missing_runtime_assets': missing}))
+            return 1
+        harness = sorted(name for name in names
+                         if name.startswith(('terraproof/evals/', 'terraproof/data/evals/')))
+        if harness:
+            print(json.dumps({'status': 'fail', 'harness_in_wheel': harness[:10]}))
             return 1
         checkout = Path(__file__).resolve().parents[2]
         temp_root = args.temp_root.resolve() if args.temp_root else Path(tempfile.gettempdir()).resolve()

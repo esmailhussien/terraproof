@@ -894,3 +894,35 @@ def test_host_preflights_remove_their_probe_scripts(tmp_path):
         lift.prepare_project(task, SPECS[task.task_id], reference, project, condition=WITHOUT, agent="claude")
         adapter.preflight(lift.AgentRequest(task.task_id, WITHOUT, 0, project, "", 10, 1.0))
         assert not (project.parent / "preflight_probe.py").exists()
+
+
+# -- Phase 6 B6: the "with" agent gets a product-only interpreter -----------------------------------
+def test_with_isolation_probe_needs_terraproof_without_its_evals(tmp_path):
+    env = driver.host_env(WITH)
+    checkout = driver.with_isolation_checks(tmp_path, None, env)
+    # This test environment has the whole checkout, oracles included.
+    assert checkout == {"with_agent_python_set": False, "with_terraproof_importable": True,
+                        "with_evals_not_importable": False}
+    product = tmp_path / "product-only"
+    (product / "terraproof").mkdir(parents=True)
+    (product / "terraproof" / "__init__.py").write_text("", encoding="utf-8")
+    shadowed = dict(env, PYTHONPATH=str(product))
+    assert driver.with_isolation_checks(tmp_path, sys.executable, shadowed) == {
+        "with_agent_python_set": True, "with_terraproof_importable": True, "with_evals_not_importable": True}
+
+
+def test_host_env_puts_the_with_interpreter_first_and_drops_pythonpath(tmp_path, monkeypatch):
+    monkeypatch.setenv("PYTHONPATH", "checkout-src")
+    with_python = tmp_path / "with-venv" / "Scripts" / "python.exe"
+    env = driver.host_env(WITH, None, str(with_python))
+    assert env["PATH"].split(os.pathsep)[0] == str(with_python.parent) and "PYTHONPATH" not in env
+    default = driver.host_env(WITH)
+    assert default["PATH"].split(os.pathsep)[0] == str(Path(sys.executable).parent)
+    assert default["PYTHONPATH"] == "checkout-src"
+
+
+def test_driver_carries_the_with_python_into_the_approved_command(capsys, tmp_path):
+    with_python = tmp_path / "with-venv" / "python.exe"
+    assert driver.main(["--agent-host", "codex", "--runs", "1", "--task", FAST[0],
+                        "--agent-python-with", str(with_python)]) == 0
+    assert f"--agent-python-with {with_python}" in json.loads(capsys.readouterr().out)["command_to_approve"]

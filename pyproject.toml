@@ -40,6 +40,9 @@ Repository = "https://github.com/esmailhussien/terraproof"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+# Product-only distributions: the benchmark and the lift harness (recipes, oracles, fixtures and
+# task specs) run from a checkout and are never installed beside the checks they grade.
+exclude = ["terraproof.evals", "terraproof.evals.*"]
 
 [tool.setuptools.cmdclass]
 build_py = "terraproof._build.BuildPy"

@@ -115,3 +115,26 @@ jobs:
           name: release-validation-${{ matrix.os }}-python-${{ matrix.python }}
           path: .terracache/release-validation.json
           if-no-files-found: warn
+
+  python-clean-install:
+    name: Clean install (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.11", "3.13"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Build the product-only wheel
+        run: python -m pip wheel . --no-deps --wheel-dir .terracache/wheels
+
+      - name: Install it with the mcp extra into a fresh venv and use it
+        run: python tests/package/clean_install_smoke.py --wheel .terracache/wheels
