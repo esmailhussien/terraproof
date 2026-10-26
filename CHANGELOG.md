@@ -39,6 +39,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Terraproof calls where the "with" run made 7 (6 `run_checks`, 1 `inspect_dataset`), and it
   raised the diagnostic falsely. The verdicts did not depend on these labels.
 
+- Lift driver isolation, from the Antigravity harder-cohort run: every host preflight left
+  `preflight_probe.py` beside the run project, with an output probe named
+  `.terraproof-preflight`. Two "without" agents read it, then searched the machine and the
+  web for Terraproof. A shared `unsandboxed_probe` now removes the script before any agent
+  starts (the Codex sandbox probe too), and both probe names are neutral.
+- `python-introspection` contamination now requires the introspection to reach harness or
+  oracle code (`evals`, oracles, recipes, specs or fixtures in the same call). Reading
+  Terraproof's own product modules with `inspect.getsource`, which seven "with" runs did, is
+  no longer contamination. Reading `terraproof.evals` stays contamination through
+  `harness-source`/`oracle-source` too. This applies to future runs only; recorded reports
+  keep their labels and their prespecified results.
+
+### Results
+
+- Antigravity harder-cohort measurement (2026-10-26, agy 1.4.7, `gemini-3.8-flash-high`,
+  6 tasks x 3 runs, 36 runs in 2 h 52 min, about 7.4 M input and 0.8 M output tokens, no
+  errors). All 36 deliverables passed the oracle, the checks and the contract.
+  - Prespecified (contamination rule as frozen): with 7/18, without 16/18 (McNemar p = 0.012).
+  - Post-hoc, labelled as such: product-only introspection not counted, giving 14/18 vs 16/18
+    (p = 0.63).
+  - Actual verdicts: 18/18 in both conditions. The cohort is at ceiling for this model, so
+    there is no lift evidence either way; see Phase 5 plan section 19.
+
 ### Known limits
 
 - agy's built-in tool names are matched by keyword; MCP calls are labelled from

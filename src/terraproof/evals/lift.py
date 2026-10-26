@@ -398,7 +398,7 @@ def prepare_project(task: LiftTask, spec: TaskSpec, reference: Path, project: Pa
 def project_preflight(task: LiftTask, project: Path, *, condition: str, agent: str, routed: list[str]) -> dict:
     """Host-independent checks of a prepared project; no agent is involved."""
     checks = {"inputs_present": all((project / "inputs" / name).is_file() for name in task.inputs)}
-    probe = project / "outputs" / ".terraproof-preflight"
+    probe = project / "outputs" / ".preflight-probe"
     try:
         probe.write_text("probe", encoding="utf-8")
         probe.unlink()
