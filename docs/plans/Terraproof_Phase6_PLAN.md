@@ -1,0 +1,181 @@
+# Terraproof — Phase 6 Plan: Ship the checks, find headroom
+
+> Status: **proposal (2026-10-27)**. Nothing in this document is implemented. It follows the [Phase 5 measurement](Terraproof_Phase5_PLAN.md) and replaces open-ended host and harness work with five bounded workstreams. Every real model call still needs the user's explicit approval with an exact invocation count.
+>
+> Numbering follows the phase documents. The [v1 roadmap](Terraproof_v1_PLAN.md)'s "Phase 6 — Ecosystem" moves later.
+
+## 1. Why this phase
+
+Phase 5 answered its question. On Claude Code the pre-specified test was not significant (sign-flip p = 0.125). The harder cohort was at ceiling on Claude Code and on Antigravity with `gemini-3.8-flash-high`. Three facts shape what comes next.
+
+- **The original cohort could not have shown lift.** Five of nine tasks were at ceiling, so only four task differences could be nonzero. With four nonzero differences, the smallest p the exact sign-flip test can return is 2/2⁴ = 0.125, which is the observed value. This is post-hoc arithmetic, not part of the pre-specified analysis. While the ceiling holds, more repeats or more hosts on these tasks cannot change it.
+- **The tasks give away the method.** To stay gradable, the briefs and `request.json` files state the method. For example, `terrain-slope-map` gives central differences, the edge policy and the stencil. Terraproof is meant to help when a practitioner's prompt leaves a domain trap unstated. The one robust Phase 5 signal came from that kind of task: Landsat QA masking passed 3/3 with Terraproof and 0/3 without, and Terraproof's `rs.cloud_mask_applied` flagged all three "without" outputs.
+- **Agents used the checks, but users cannot install them.** The 27 Claude "with" runs made 92 Terraproof MCP calls, mostly `run_checks` (46) and `inspect_dataset` (29). No skill file was read; skill content reached the agent only through 6 `load_section` calls. Yet the Python package that holds the checks and the MCP server is not on PyPI, so users must clone the repository.
+
+Since the main run, much of the work went to new hosts (OpenAI/Groq, Antigravity) and to agent-loop features that exist only in [`tests/api_agent.py`](../../tests/api_agent.py): the completion review and the required-output policy. This phase stops that and puts the effort where the evidence points.
+
+## 2. Goals
+
+1. Close Phase 5 formally and freeze the lift harness.
+2. Publish the Python package to PyPI as a product-only wheel.
+3. Reduce checker blind spots with source-aware checks, and report them separately from the frozen benchmark.
+4. Decide what happens to the skills, with a rule fixed now and evidence gathered during this phase.
+5. Build a task cohort screened for headroom, with a held-out confirmation run.
+
+## 3. Workstreams
+
+### A. Close Phase 5 (docs only)
+
+- Set the Phase 5 status to **closed 2026-10-27**: exit criteria (§10) met, no lift claimed, successor is this plan.
+- Mark Phase 5 sections 18–19 as a frozen exploratory log. New results are recorded here, not appended there.
+- Add the ceiling arithmetic from section 1 to Phase 5 as a post-hoc note.
+- **Harness freeze.** No new agent hosts, adapter features or treatment variants. Instruction forwarding, the completion review and the required-output policy stay as they are: opt-in and confined to `tests/`. The only allowed harness change is the "with" isolation in B6.
+
+### B. Publish the Python package to PyPI
+
+Today the CI wheel contains the product **and** `terraproof.evals` (recipes, oracles, fixtures), plus the task specs under `terraproof/data/evals/tasks`. This is also the open Phase 5 contamination issue: a "with" agent can import the oracles.
+
+1. **Product-only wheel.** Exclude `terraproof.evals` and `evals/tasks` from the wheel. The benchmark and the lift harness run from a checkout. Update [`tests/package/python_smoke.py`](../../tests/package/python_smoke.py), which runs the evals from the wheel today, and any docs that say the evals run from an installed wheel.
+2. **Name and publisher.** `terraproof` is unclaimed on PyPI (it returned 404 on 2026-10-27). The maintainer creates the PyPI project and configures Trusted Publishing for the GitHub release workflow. No API token is stored in the repository.
+3. **Release path.** Publish to TestPyPI first, then PyPI, from a tag on `main`, using the wheel that CI tested. The first PyPI release is `0.8.0`, in step with npm.
+4. **Clean-install CI.** Install `terraproof[mcp]` from the index into fresh venvs on Ubuntu, Windows and macOS (Python 3.11 and 3.13). Run `inspect`, run `check` on a generated raster, and list the MCP tools through the official client.
+5. **Docs.** The README quick start leads with `pip install "terraproof[mcp]"`. The npm package stays published and unchanged; its retirement is a later decision (v1 plan §4).
+6. **"with" isolation.** Add `--agent-python-with` to `tests/agent_lift.py`. The "with" agent gets a venv that holds only the published wheel, on a neutral path. Preflight fails "with" if `terraproof.evals` can be imported there.
+
+### C. Reduce checker blind spots
+
+Twenty-five seeded wrong outputs are rejected only by the independent oracle: the 15 listed in the [release checklist](../RELEASE_CHECKLIST.md) under "Checker blind spots", plus 10 seeds from the [harder cohort](../HARDER_TASKS.md). Almost all of them need evidence that the frozen invocation does not pass to the checks: the source bands, the per-date stack, the operands, or the method the request declares. A real agent has those inputs, so a source-aware check is legitimate as long as it uses only what a user has.
+
+**Rules**
+
+- A check may use the inputs and the parameters the request declares. It may never use oracle targets, reference outputs or `terraproof.evals` code. Checks and oracles never import each other.
+- Frozen task invocations, specs, oracles and seeds do not change. Their counts (33 tasks, 25 blind spots) remain the historical benchmark.
+- Each task gets an extra **source-aware** invocation that passes the inputs a user would have. Its results are reported next to the frozen counts and never merged into them.
+- Every new check needs a seeded fail fixture, a pass fixture, zero false passes and CLI/MCP parity, as in Phase 4.
+
+**Order by user value, not by count**
+
+| Group | Check work | Blind spots it targets |
+|---|---|---|
+| 1 | Extend `rs.index_formula` beyond NDVI: NBR, dNBR sign, NDWI vs NDMI, EVI with per-band calibration | `unscaled-dn-ratio`, `reversed-dnbr-sign`, `nbr-wrong-swir-band`, `gao-moisture-mislabeled`, both `three-band-vegetation-index` seeds (6) |
+| 2 | Time- and stack-aware checks: per-date QA, observation counts, power-domain SAR mean, date-aware trend and rate integration | `cloudy-dates-included`, `index-of-medians-composite`, `all-invalid-zero-filled`, `naive-db-average`, both `vegetation-change-rate` and both `storm-total-rainfall` seeds (8) |
+| 3 | Operand and coverage contracts | `unsigned-wraparound`, `whole-scene-download`, `dissolve-away-identities`, `foot-radius-unit-confusion` (4) |
+| Later | Grid-transfer contracts, multi-Item orbit and source-date checks | `landcover-summary-grid` and `population-grid-transfer` seeds, `descending-post-event`, `spring-to-summer-difference` (6) |
+
+`swapped-axis-order` stays declared: its only evidence is the oracle's control points.
+
+- **Target:** at least 12 of the 25 rejected under the source-aware invocations, with zero false passes and the frozen counts unchanged.
+- **Timing:** checks are part of the treatment. C lands before the treatment freeze (E3) or waits until E6 ends.
+
+### D. Decide what to do with the skills
+
+**Evidence so far**
+
+- Claude Code read no skill file in 27 "with" runs, and skill delivery under `--restricted` was never verified.
+- Antigravity read skills 22 times in its 18 harder-cohort "with" runs.
+- No measurement separates the skills from the MCP checks.
+- The v1 plan's rule is that a skill without measured lift is revised or removed.
+
+**Plan**
+
+- **Now:** freeze skill content (factual fixes only, no new skills). The README labels skills as unmeasured.
+- **During E2:** the development shakedown must show whether the chosen host reads skills at all (`skill_reads` > 0 in "with").
+- **Measurement:** the skills ablation ("with" minus skills, MCP kept) runs only if E's primary result is significant, as a separately approved follow-up on the same confirmation tasks. Running it in the same study would split an already small task budget.
+- **Default at phase end, if there is no skill evidence:** the installer's default becomes checks, MCP and the short instructions block. Skills move behind an opt-in flag (for example `--with-skills`) and stay published as reference. Any registry or routing change follows [AGENTS.md](../../AGENTS.md) rules 11–17, including `npm run test:router` at 100%.
+
+### E. Headroom-screened cohort with held-out confirmation
+
+**Task design**
+
+- Prompts read like a practitioner's request. They state the goal in domain terms ("cloud-free surface reflectance for June"), not the method.
+- The deliverable contract states format only: file name, grid, dtype, nodata and output units.
+- Every trap must be discoverable from the inputs: metadata, QA bands, STAC properties or units. A task where a reasonable alternative method would also be correct is invalid and is dropped before freeze.
+- Each task ships a recipe, an independent oracle and at least one seeded wrong output per trap, and it passes the Phase 5 calibration gate (§3.4). The template is `satellite-landsat-qa-once`.
+- Trap families come from the v1 vision: QA/SCL masking, scale/offset and processing baselines, nodata stored as zero, dtype overflow, categorical resampling, metric work in a geographic CRS, vertical units, dB vs linear, and temporal scope.
+- This cohort is separate from `original` and `harder` and is never pooled with them.
+
+**Split before any inference.** Author a pool of 36 candidates. A seeded random split, stratified by trap family, gives a **development set** of 12 and a **confirmation set** of 24. Product work (checks, docs, instructions) may use the development set. Before E6, confirmation-set screening is used only for E5's accept/reject counts; its outputs and traces are not inspected.
+
+**Steps** (each live step needs its own approval)
+
+| Step | What runs | Invocations | Expected cost / cap |
+|---|---|---|---|
+| E1 Calibrate and freeze | Calibration gate on all 36 candidates; commit hash recorded | 0 | $0 |
+| E2 Development shakedown | 12 development tasks × 1 pair; checks treatment delivery and skill reads | 24 | ≈ $4 / $24 |
+| E3 Freeze treatment and analysis | Record the Terraproof version (the PyPI wheel), host, model, flags, screening rule and primary analysis in this plan | 0 | $0 |
+| E4 Screen the confirmation set | "without" only, 2 runs per task | 48 | ≈ $6 / $48 |
+| E5 Go/no-go | Keep a task if at least one screening run is rejected on its merits (not for contamination) | 0 | $0 |
+| E6 Confirmation | Kept tasks, paired, 3 runs per condition, fresh runs | 6 per kept task (72 at 12) | ≈ $12 / $1 per run |
+
+Costs scale from Phase 5 on Claude Code: about $0.12 per "without" run and $0.20 per "with" run. New tasks may cost more. With claude.ai sign-in these are Claude Code's reported figures, not necessarily separate charges.
+
+**Rules that keep it honest**
+
+- **Screen "without" only.** Screening "with" would select tasks where Terraproof happens to look good.
+- **Use fresh runs.** Screening runs never enter the analysis, and confirmation uses fresh runs in both conditions. Selection therefore changes which tasks are included (tasks where the baseline sometimes fails), not how they are scored. The fresh baseline will probably pass more often than it did in screening (regression to the mean); that is expected.
+- **Fix the host and model at E3.** Choose them for availability, not outcomes, and do not change them after screening.
+- **Freeze the product after E3.** No product change between E3 and the end of E6. A change invalidates the confirmation set, and a new one must be authored.
+- **Go/no-go.** With fewer than 8 kept tasks, stop and report "insufficient headroom on this host" as the result. That is a finding, not a failure.
+
+**Analysis.** Same as Phase 5 §5:
+
+- **Primary:** the exact two-sided sign-flip test on task-level differences, α = 0.05.
+- **Also reported:** a task-cluster bootstrap CI, exact McNemar as an anti-conservative secondary, and the contamination and treatment-delivery counts.
+
+The table shows what the test can detect. It was computed with `terraproof.evals.lift.sign_flip_p`, assuming every task changes by the same amount:
+
+| Kept tasks | Smallest pattern with p < 0.05 | Next pattern down |
+|---|---|---|
+| 8 | all 8 improve: p = 0.008 | 7 up, 1 down: p = 0.070 |
+| 10 | 9 up, 1 down: p = 0.022 | 8 up, 2 down: p = 0.109 |
+| 12 | 10 up, 2 down: p = 0.039 | 9 up, 3 down: p = 0.146 |
+
+Tasks that show no difference drop out of the test, so 12 kept tasks with 4 flat behave like 8. The target is 12 kept tasks. A 2-run screen keeps a task with a 33% baseline failure rate about 55% of the time, which is why the confirmation pool is 24.
+
+## 4. Order
+
+| # | Workstream | Depends on | Notes |
+|---|---|---|---|
+| A | Close Phase 5 | — | First; docs only |
+| B | PyPI product wheel | A | Packaging, CI, `--agent-python-with` |
+| C | Source-aware checks | A | `src/terraproof/checks` and the separate source-aware report |
+| E1 | Author and calibrate the cohort | A | New cohort files only |
+| D | Skill freeze now; decision after E | — | |
+| E2–E6 | Live steps | B, C, E1 | Each needs approval |
+
+B, C and E1 touch disjoint files and can run in parallel.
+
+## 5. Exit criteria
+
+- Phase 5 is marked closed and its log is frozen.
+- `pip install "terraproof[mcp]"` from PyPI works in clean venvs on Ubuntu, Windows and macOS in CI. The wheel contains no `terraproof.evals` or task specs.
+- The source-aware report rejects at least 12 of the 25 blind spots with 0 false passes. The frozen benchmark is still 33/33 with 25 blind spots and 0 false passes.
+- The cohort's 36 candidates are calibrated and frozen and the screening is reported. The confirmation is reported exactly as pre-specified, or the go/no-go stop is recorded as the result.
+- The skills decision is recorded with its evidence.
+- Suites stay green: `python -m pytest`, `python -m terraproof.evals run`, `npm run test:router` (100%, deterministic) and `python tests/validate_repo.py`.
+
+## 6. Out of scope
+
+- New agent hosts, adapter features or second-host reports.
+- Prose tasks graded by an LLM judge.
+- New skills, or skill rewrites beyond factual fixes.
+- Retiring the npm router.
+
+## 7. Decisions needed
+
+1. **Evals in the wheel:** leave them out (proposed), or publish a separate `terraproof-evals` distribution?
+2. **Host for E:** Claude Code (proposed: the best-tested path, with MCP use verified) or another host, chosen now.
+3. **Pool size:** 36 candidates (proposed), or 24 (cheaper to author, but probably fewer than 12 kept tasks and less power).
+4. **Skills default** if there is no evidence by phase end: an opt-in pack (proposed), or keep them in the default install labelled unmeasured.
+5. **PyPI publisher:** the maintainer creates the project and the Trusted Publisher; confirm which GitHub repository it trusts.
+
+## 8. Risks
+
+| Risk | Mitigation |
+|---|---|
+| Authoring 36 calibrated tasks is the largest cost | Reuse recipe and oracle patterns from Phase 4 and the harder cohort; use the smaller pool if decision 3 says so |
+| Underspecified prompts become ambiguous | Every trap is discoverable from the inputs; each task gets an ambiguity review; a task with two defensible answers is dropped before freeze |
+| The same agent authors the tasks, checks and harness | The split is made before inference; the product is frozen after E3; authorship is recorded; independent review of the briefs is recommended |
+| Source-aware checks become a second oracle | They use only inputs and parameters a user has, share no code with the oracles, and are reported apart from the frozen counts |
+| There is still no headroom | The go/no-go stop is the result. "Frontier agents avoid these traps unaided" is useful for deciding what the product claims |
+| The PyPI name is taken before publication | Claim it first (B2) |
