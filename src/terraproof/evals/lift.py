@@ -35,7 +35,7 @@ from itertools import product
 from pathlib import Path
 from statistics import NormalDist
 
-from terraproof.evals import fixtures
+from terraproof.evals import fixtures, headroom
 from terraproof.evals.harness import CORRECT, _control_record, _sanitize
 from terraproof.evals.specs import SpecError, TaskSpec, load_specs
 from terraproof.evidence.grade import grade_for
@@ -178,7 +178,20 @@ HARDER_LIFT_TASKS: tuple[LiftTask, ...] = (
 )
 
 LIFT_TASKS: tuple[LiftTask, ...] = ORIGINAL_LIFT_TASKS + HARDER_LIFT_TASKS
-COHORTS: dict[str, tuple[LiftTask, ...]] = {"original": ORIGINAL_LIFT_TASKS, "harder": HARDER_LIFT_TASKS}
+
+# The Phase 6 headroom pool (E1, 2026-10-27): 36 tasks with their own specs, recipes and oracles in
+# terraproof.evals.headroom, outside the frozen 33-task benchmark. The seeded split into development
+# (12) and confirmation (24) was fixed before authoring; both are cohorts of their own and are never
+# pooled with "original" or "harder". LIFT_TASKS stays the Phase 5 fifteen.
+_HEADROOM_SPLIT = headroom.frozen_split()
+HEADROOM_DEVELOPMENT_TASKS: tuple[LiftTask, ...] = tuple(
+    LiftTask(*fields) for fields in headroom.lift_task_fields(_HEADROOM_SPLIT["development"]))
+HEADROOM_CONFIRMATION_TASKS: tuple[LiftTask, ...] = tuple(
+    LiftTask(*fields) for fields in headroom.lift_task_fields(_HEADROOM_SPLIT["confirmation"]))
+HEADROOM_LIFT_TASKS: tuple[LiftTask, ...] = HEADROOM_DEVELOPMENT_TASKS + HEADROOM_CONFIRMATION_TASKS
+COHORTS: dict[str, tuple[LiftTask, ...]] = {"original": ORIGINAL_LIFT_TASKS, "harder": HARDER_LIFT_TASKS,
+                                            "headroom-development": HEADROOM_DEVELOPMENT_TASKS,
+                                            "headroom-confirmation": HEADROOM_CONFIRMATION_TASKS}
 DEFAULT_COHORT = "original"
 
 
@@ -322,16 +335,17 @@ class ReplayAdapter(Adapter):
 
 # -- tasks, fixtures and workspaces ------------------------------------------------------
 def lift_task(task_id: str) -> LiftTask:
-    for task in LIFT_TASKS:
+    for task in LIFT_TASKS + HEADROOM_LIFT_TASKS:
         if task.task_id == task_id:
             return task
-    raise LiftError(f"not an agent-lift task: {task_id!r}; choose from {[t.task_id for t in LIFT_TASKS]}")
+    raise LiftError(f"not an agent-lift task: {task_id!r}; choose from "
+                    f"{[t.task_id for t in LIFT_TASKS + HEADROOM_LIFT_TASKS]}")
 
 
 def _registry():
     from terraproof.evals.recipes import REGISTRY
 
-    return REGISTRY
+    return {**REGISTRY, **headroom.recipe_registry()}
 
 
 def _generate(task: LiftTask, root: Path):
@@ -624,7 +638,7 @@ def calibrate(task_ids: list[str] | None = None, *, work_root: Path | str | None
 
 # -- running and statistics --------------------------------------------------------------
 def _specs() -> dict[str, TaskSpec]:
-    return {spec.id: spec for spec in load_specs()}
+    return {**{spec.id: spec for spec in load_specs()}, **headroom.specs()}
 
 
 def _select(task_ids: list[str] | None, cohort: str | None = None) -> list[LiftTask]:
@@ -1064,7 +1078,7 @@ def to_json(report: dict) -> str:
 
 __all__ = [
     "ATTEMPT_CATEGORIES", "AgentRequest", "AgentResult", "Adapter", "NO_ATTEMPT", "PREFLIGHT_FAILED",
-    "PREFLIGHT_ONLY", "classify_attempt", "project_preflight", "Budget", "COHORTS", "DEFAULT_COHORT", "LIFT_TASKS", "LiftError", "LiftTask", "ReplayAdapter",
+    "PREFLIGHT_ONLY", "classify_attempt", "project_preflight", "Budget", "COHORTS", "DEFAULT_COHORT", "HEADROOM_LIFT_TASKS", "LIFT_TASKS", "LiftError", "LiftTask", "ReplayAdapter",
     "ScriptedAdapter", "SpecError", "brief", "calibrate", "exact_mcnemar", "mcnemar_mde", "planned_calls",
     "prepare_project", "run_lift", "schedule", "score_outputs", "sign_flip_p", "summarize", "to_json",
 ]

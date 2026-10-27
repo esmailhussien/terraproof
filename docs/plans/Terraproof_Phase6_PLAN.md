@@ -1,6 +1,6 @@
 # Terraproof — Phase 6 Plan: Ship the checks, find headroom
 
-> Status: **in progress (2026-10-27)**. Implemented: A (Phase 5 closed), B1 (product-only wheel and sdist), B4 (clean-install CI from the built wheel), B5 (README install text), B6 (`--agent-python-with`) and D's "now" step (skills frozen and labelled unmeasured). B2 is done: `terraproof` is registered on PyPI and TestPyPI as pending trusted publishers for `publish-python.yml`, and the `pypi` environment needs the maintainer's review. B3's workflow first runs on the `v0.8.0` tag. C is in progress: the source-aware scorecard rejects 14 of the 25 frozen blind spots (groups 1 and 2) with 0 false passes, past the target of 12; group 3 is not started. E1 is proposed as its own session. It follows the [Phase 5 measurement](Terraproof_Phase5_PLAN.md) and replaces open-ended host and harness work with five bounded workstreams. Every real model call still needs the user's explicit approval with an exact invocation count.
+> Status: **in progress (2026-10-27)**. Implemented: A (Phase 5 closed), B1 (product-only wheel and sdist), B4 (clean-install CI from the built wheel), B5 (README install text), B6 (`--agent-python-with`) and D's "now" step (skills frozen and labelled unmeasured). B2 is done: `terraproof` is registered on PyPI and TestPyPI as pending trusted publishers for `publish-python.yml`, and the `pypi` environment needs the maintainer's review. B3's workflow first ran on the `v0.8.0` tag, and v0.8.0 shipped to PyPI and npm on 2026-10-27. C is in progress: the source-aware scorecard rejects 14 of the 25 frozen blind spots (groups 1 and 2) with 0 false passes, past the target of 12; group 3 is not started. E1 is done (headroom cohort calibrated and split; see the E1 record in §3.E). E2–E6 have not started. It follows the [Phase 5 measurement](Terraproof_Phase5_PLAN.md) and replaces open-ended host and harness work with five bounded workstreams. Every real model call still needs the user's explicit approval with an exact invocation count.
 >
 > Numbering follows the phase documents. The [v1 roadmap](Terraproof_v1_PLAN.md)'s "Phase 6 — Ecosystem" moves later.
 
@@ -145,6 +145,32 @@ The table shows what the test can detect. It was computed with `terraproof.evals
 | 12 | 10 up, 2 down: p = 0.039 | 9 up, 3 down: p = 0.146 |
 
 Tasks that show no difference drop out of the test, so 12 kept tasks with 4 flat behave like 8. The target is 12 kept tasks. A 2-run screen keeps a task with a 33% baseline failure rate about 55% of the time, which is why the confirmation pool is 24.
+
+**E1 record (2026-10-27): done, offline, no model calls.**
+
+- **Pool and split first.** The 36 candidate ids and their trap families were committed in [`evals/headroom/pool.json`](../../evals/headroom/pool.json) together with the split, in commit `38cc35d`, before any recipe, oracle or spec text existed. The split is `make_split` in [`headroom/split.py`](../../src/terraproof/evals/headroom/split.py): **seed 20261027**. Each family's sorted ids are shuffled by one `random.Random(seed)` stream, families in sorted order, and the first third goes to development. A test proves that [`split.json`](../../evals/headroom/split.json) is that function's output.
+- **Per-family counts** (development / confirmation):
+
+  | Family | Dev | Conf |
+  |---|---|---|
+  | QA/SCL masking | 2 | 4 |
+  | Scale/offset and baselines | 2 | 4 |
+  | Nodata stored as zero (and zero that is data) | 2 | 4 |
+  | dtype overflow | 1 | 2 |
+  | Categorical resampling | 1 | 2 |
+  | Metric work in a geographic CRS | 1 | 2 |
+  | Vertical units | 1 | 2 |
+  | dB vs linear | 1 | 2 |
+  | Temporal scope | 1 | 2 |
+  | **Total** | **12** | **24** |
+
+- **Development set:** `hr-dekad-rainfall`, `hr-elevation-change-mixed-units`, `hr-hls-nir-reflectance`, `hr-landcover-shifted-grid`, `hr-landsat-clear-red`, `hr-landsat-red-saturation`, `hr-landsat-undeclared-fill`, `hr-modis-ndvi-scaled`, `hr-rainfall-dry-days`, `hr-sar-boxcar-db`, `hr-station-distance`, `hr-three-date-mean-8bit`. The other 24 are the confirmation set. The lift cohorts are `headroom-development` and `headroom-confirmation`. Neither is pooled with `original` or `harder`.
+- **Where it lives.** Specs and lift contracts are in [`evals/headroom/tasks.json`](../../evals/headroom/tasks.json), outside `evals/tasks`. Array recipes are in `src/terraproof/evals/headroom/recipes.py`, and scalar oracles that import no recipe or check code are in `headroom/oracles.py`. `python -m terraproof.evals run` therefore still reports the frozen 33 tasks, 25 blind spots and 0 false passes. The only `lift.py` change registers the two cohorts and looks up their specs and recipes. Scoring, calibration, the frozen cohorts and `LIFT_TASKS` (15) are unchanged.
+- **Task design.** Prompts state the goal in domain terms. The deliverable contract gives format only (`result.tif`, grid, dtype, nodata, output units). Every trap is discoverable from the inputs: STAC `raster:bands`, `classification:bitfields`/`classes`, `s2:processing_baseline`, GeoTIFF scale/offset, band units and descriptions, CRS, and catalog start/end times.
+- **Ambiguity review.** Each task was checked for a second defensible answer, and the fixtures avoid the cases that would create one. They contain no SCL classes 2 or 7, no ambiguous MODIS data-quality bits, no negative reflectance, no tied 2 × 2 blocks, and no accumulation interval that straddles the requested window. The shifted grid gives the same answer by centre lookup and by largest overlap. Geodesic tasks get tolerances that accept both spherical and ellipsoidal answers (oracle `TOLERANCES`). No task needed to be dropped, so the pool and split stand at 36. The plan still recommends an independent review of the briefs before E2.
+- **Calibration gate.** All 36 tasks are eligible: references accepted, all 64 seeded-wrong outputs rejected by the oracle (21 development, 43 confirmation), echoed inputs rejected, missing outputs reported, and inputs regenerated byte-identically. Further tests reject a one-cell value error and a one-cell mask error for every task. The recipes run only generic `run_checks` (`crs.defined`, `raster.nodata_declared`), so the seeded mistakes are oracle-only for now. This cohort adds nothing to the frozen blind-spot count.
+- **Authorship and blinding.** The same agent authored the tasks, references and seeds, so the confirmation prompts and references have been seen as an author. No confirmation-set agent output or trace exists. The rule that they are never inspected before E6 applies from E4 on.
+- **Freeze commit:** `e839724` holds the calibrated cohort (pool and split from `38cc35d`). A later change to a headroom spec, recipe, oracle or input must be recalibrated and recorded here. A change to a confirmation task after E4 starts invalidates that task.
 
 ## 4. Order
 

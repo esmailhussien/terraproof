@@ -1,0 +1,1355 @@
+{
+  "cohort": "headroom",
+  "tasks": [
+    {
+      "id": "hr-landsat-clear-red",
+      "family": "qa-masking",
+      "skill": "satellite-preprocessing",
+      "prompt": "I need cloud-free red surface reflectance from this June Landsat 9 scene for a lake-shore vegetation study. Anything affected by cloud, cloud shadow, cirrus or snow is no use to me, but I do want the open water.",
+      "inputs": "Landsat Collection 2 Level-2 SR_B4 counts (fill 0) and QA_PIXEL; the STAC Item carries raster:bands scale/offset and the QA classification:bitfields.",
+      "acceptance": [
+        "Decode counts with the Item's scale and offset once.",
+        "Mask fill, dilated cloud, cirrus, cloud, cloud shadow and snow from their own bits; the clear bit alone is not a complete mask.",
+        "Keep water pixels."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "The clear bit is used as the whole mask, the water bit is read as cloud, or counts are delivered undecoded.",
+      "lift": {
+        "inputs": [
+          "red.tif",
+          "qa_pixel.tif",
+          "item.json"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of red.tif (same CRS, transform and shape), nodata -9999, surface reflectance (unitless)"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "clear-bit-only.tif"
+          ],
+          [
+            "result.tif",
+            "water-masked.tif"
+          ],
+          [
+            "result.tif",
+            "unscaled.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-s2-scl-red",
+      "family": "qa-masking",
+      "skill": "satellite-preprocessing",
+      "prompt": "Give me cloud-free red surface reflectance from this Sentinel-2 L2A scene. Clouds, cirrus, cloud shadows and snow must not end up in the layer, and neither should saturated or defective measurements. Water stays in.",
+      "inputs": "Sentinel-2 L2A B04 counts (processing baseline 05.10, fill 0) and the scene classification layer on the same 10 m grid; the Item lists the SCL classes and the band's scale and offset.",
+      "acceptance": [
+        "Keep only SCL vegetation, not-vegetated and water classes.",
+        "Apply the baseline 04.00+ offset of -0.1 after the 0.0001 scale."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Only the cloud classes are removed (shadow and snow stay), or the radiometric offset is ignored.",
+      "lift": {
+        "inputs": [
+          "B04.tif",
+          "SCL.tif",
+          "item.json"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of B04.tif (same CRS, transform and shape), nodata -9999, surface reflectance (unitless)"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "clouds-only.tif"
+          ],
+          [
+            "result.tif",
+            "no-offset.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-hls-fmask-nir",
+      "family": "qa-masking",
+      "skill": "satellite-preprocessing",
+      "prompt": "From this HLS Sentinel-2 granule I need cloud-free NIR (B8A) reflectance. Cloud, cirrus, cloud shadow, snow and ice, and anything the product marks as next to cloud or shadow, count as contaminated. Water is fine.",
+      "inputs": "HLS S30 v2.0 B8A as scaled int16 (fill -9999) and its Fmask quality byte; the Item has the Fmask classification:bitfields and the band scale.",
+      "acceptance": [
+        "Decode Fmask bits 0-4 as contamination; bit 5 is water and is kept; bits 6-7 are aerosol level.",
+        "Scale by 0.0001 with no offset."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "The water bit is treated as contamination, or the adjacency bit is ignored.",
+      "lift": {
+        "inputs": [
+          "B8A.tif",
+          "Fmask.tif",
+          "item.json"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of B8A.tif (same CRS, transform and shape), nodata -9999, surface reflectance (unitless)"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "water-masked.tif"
+          ],
+          [
+            "result.tif",
+            "adjacent-kept.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-modis-lst-quality",
+      "family": "qa-masking",
+      "skill": "satellite-preprocessing",
+      "prompt": "Make a daytime land surface temperature map in degrees Celsius from this MODIS tile, using only pixels the product itself rates as produced at good quality with an LST error of at most 1 K.",
+      "inputs": "MOD11A1 LST_Day_1km as uint16 with a GDAL scale of 0.02 and unit K (0 = not produced), QC_Day quality byte, and the Item's QC classification:bitfields.",
+      "acceptance": [
+        "Scale by 0.02 to kelvin and convert to Celsius.",
+        "Require mandatory QA bits 0-1 = 00 and LST error bits 6-7 = 00."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Kelvin is delivered, or only one of the two QC fields is read.",
+      "lift": {
+        "inputs": [
+          "LST_Day_1km.tif",
+          "QC_Day.tif",
+          "item.json"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of LST_Day_1km.tif (same CRS, transform and shape), nodata -9999, temperature in degrees Celsius"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "kelvin.tif"
+          ],
+          [
+            "result.tif",
+            "mandatory-only.tif"
+          ],
+          [
+            "result.tif",
+            "lst-error-only.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-landsat-red-saturation",
+      "family": "qa-masking",
+      "skill": "satellite-preprocessing",
+      "prompt": "I need red surface reflectance from this Landsat 8 scene with the pixels where the red measurement itself saturated taken out. Saturation in other bands doesn't matter for this layer.",
+      "inputs": "Landsat Collection 2 Level-2 SR_B4 counts (fill 0), QA_RADSAT, and the Item with raster:bands scale/offset and the QA_RADSAT bitfields.",
+      "acceptance": [
+        "Mask only the band 4 saturation bit (bit 3).",
+        "Decode with scale 0.0000275 and offset -0.2."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Any band's saturation is masked, or the wrong bit is read for band 4.",
+      "lift": {
+        "inputs": [
+          "red.tif",
+          "qa_radsat.tif",
+          "item.json"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of red.tif (same CRS, transform and shape), nodata -9999, surface reflectance (unitless)"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "any-band-saturation.tif"
+          ],
+          [
+            "result.tif",
+            "off-by-one-bit.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-s2-scl-20m-nir",
+      "family": "qa-masking",
+      "skill": "satellite-preprocessing",
+      "prompt": "Give me cloud-free NIR surface reflectance at the full 10 m resolution of this Sentinel-2 L2A scene. Clouds, cirrus, cloud shadow and snow must be excluded; water stays.",
+      "inputs": "B08 at 10 m (baseline 05.10) and the scene classification at its native 20 m on an aligned grid; the Item lists the SCL classes and band scale/offset.",
+      "acceptance": [
+        "Bring the class layer to 10 m without inventing classes (each 10 m cell takes its 20 m parent class).",
+        "Keep vegetation, not-vegetated and water only; apply scale and offset."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "The class layer is interpolated, which creates class values that do not exist, or only clouds are removed.",
+      "lift": {
+        "inputs": [
+          "B08.tif",
+          "SCL.tif",
+          "item.json"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of B08.tif (same CRS, transform and shape), nodata -9999, surface reflectance (unitless)"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "bilinear-scl.tif"
+          ],
+          [
+            "result.tif",
+            "clouds-only.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-s2-baseline-nir",
+      "family": "scale-offset",
+      "skill": "satellite-preprocessing",
+      "prompt": "Convert this Sentinel-2 L2A NIR band into surface reflectance for a biomass model.",
+      "inputs": "B08 counts with fill 0; the Item records processing baseline 05.11 and the band's scale and offset.",
+      "acceptance": [
+        "reflectance = DN * 0.0001 - 0.1 for baseline 04.00 and later.",
+        "Fill counts stay nodata."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "The offset is ignored or fill counts are decoded to -0.1.",
+      "lift": {
+        "inputs": [
+          "B08.tif",
+          "item.json"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of B08.tif (same CRS, transform and shape), nodata -9999, surface reflectance (unitless)"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "no-offset.tif"
+          ],
+          [
+            "result.tif",
+            "fill-decoded.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-s2-mixed-baseline-change",
+      "family": "scale-offset",
+      "skill": "time-series-and-change",
+      "prompt": "How much did NIR surface reflectance change between the July 2021 and July 2023 Sentinel-2 scenes? I need the 2023 minus 2021 difference per pixel.",
+      "inputs": "Two B08 count rasters with fill 0 and their Items: processing baselines 03.01 and 05.09 with their own raster:bands offsets.",
+      "acceptance": [
+        "Decode each date with its own baseline: no offset for 03.01, -0.1 for 05.09."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "One radiometric offset is applied to both dates, or to neither.",
+      "lift": {
+        "inputs": [
+          "B08_2021.tif",
+          "B08_2023.tif",
+          "item_2021.json",
+          "item_2023.json"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of B08_2021.tif (same CRS, transform and shape), nodata -9999, reflectance difference (unitless)"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "offset-on-both.tif"
+          ],
+          [
+            "result.tif",
+            "offset-on-neither.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-landsat-surface-temperature",
+      "family": "scale-offset",
+      "skill": "satellite-preprocessing",
+      "prompt": "Map land surface temperature in degrees Celsius from this Landsat 9 Collection 2 Level-2 thermal band for an urban heat study.",
+      "inputs": "ST_B10 counts (fill 0); the Item gives scale 0.00341802, offset 149.0 and unit kelvin.",
+      "acceptance": [
+        "kelvin = DN * 0.00341802 + 149.0; Celsius = kelvin - 273.15."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Kelvin is delivered, or the offset is dropped.",
+      "lift": {
+        "inputs": [
+          "st_b10.tif",
+          "item.json"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of st_b10.tif (same CRS, transform and shape), nodata -9999, temperature in degrees Celsius"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "kelvin.tif"
+          ],
+          [
+            "result.tif",
+            "scale-without-offset.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-reanalysis-air-temperature",
+      "family": "scale-offset",
+      "skill": "raster-processing",
+      "prompt": "I need 2 m air temperature in degrees Celsius from this reanalysis export for a crop heat-stress index.",
+      "inputs": "Packed int16 2 metre temperature with GDAL scale 0.0018, offset 285.0, unit K and fill -32767.",
+      "acceptance": [
+        "Unpack with the file's own scale and offset, then convert kelvin to Celsius."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Packed integers are used as kelvin, or kelvin is delivered.",
+      "lift": {
+        "inputs": [
+          "t2m.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of t2m.tif (same CRS, transform and shape), nodata -9999, temperature in degrees Celsius"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "kelvin.tif"
+          ],
+          [
+            "result.tif",
+            "packed-values.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-modis-ndvi-scaled",
+      "family": "scale-offset",
+      "skill": "spectral-indices",
+      "prompt": "Turn this MODIS 16-day vegetation index tile into ordinary NDVI values for a drought dashboard.",
+      "inputs": "MOD13Q1 NDVI as int16 with GDAL scale 0.0001 and fill -3000.",
+      "acceptance": [
+        "NDVI = stored * 0.0001; fill stays nodata."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Stored integers are delivered, or the fill becomes NDVI -0.3.",
+      "lift": {
+        "inputs": [
+          "ndvi.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of ndvi.tif (same CRS, transform and shape), nodata -9999, NDVI (unitless)"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "unscaled.tif"
+          ],
+          [
+            "result.tif",
+            "fill-as-value.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-hls-nir-reflectance",
+      "family": "scale-offset",
+      "skill": "satellite-preprocessing",
+      "prompt": "Convert the NIR band of this HLS granule to surface reflectance.",
+      "inputs": "HLS S30 v2.0 B8A int16 (fill -9999); the Item gives scale 0.0001 and offset 0 and says the source is Sentinel-2 MSI.",
+      "acceptance": [
+        "reflectance = stored * 0.0001 with no offset: HLS is already harmonized and has no Sentinel-2 L2A baseline offset."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "The Sentinel-2 L2A -0.1 offset is applied to an HLS product, or values are left unscaled.",
+      "lift": {
+        "inputs": [
+          "B8A.tif",
+          "item.json"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of B8A.tif (same CRS, transform and shape), nodata -9999, surface reflectance (unitless)"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "s2-offset-applied.tif"
+          ],
+          [
+            "result.tif",
+            "unscaled.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-landsat-undeclared-fill",
+      "family": "nodata-zero",
+      "skill": "satellite-preprocessing",
+      "prompt": "Convert this Landsat 9 red band to surface reflectance. The tile is on the edge of the path, so part of it is outside the scene.",
+      "inputs": "SR_B4 counts with fill 0 outside the footprint; the GeoTIFF declares no nodata, the Item's raster:bands does (0), with scale/offset.",
+      "acceptance": [
+        "Fill counts (0) are nodata even though the file does not declare it."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Outside-footprint zeros are decoded to reflectance -0.2.",
+      "lift": {
+        "inputs": [
+          "red.tif",
+          "item.json"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of red.tif (same CRS, transform and shape), nodata -9999, surface reflectance (unitless)"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "fill-decoded.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-strip-mosaic",
+      "family": "nodata-zero",
+      "skill": "raster-processing",
+      "prompt": "Combine these two overlapping reflectance strips into one mosaic. Where both strips have data, use their average.",
+      "inputs": "Two float32 reflectance strips on one grid, each with nodata 0 outside its swath.",
+      "acceptance": [
+        "Average only valid observations; a cell covered by one strip takes that strip's value; a cell covered by neither is nodata."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Zero fill is averaged in, halving edge values, or one strip overwrites the other.",
+      "lift": {
+        "inputs": [
+          "strip_a.tif",
+          "strip_b.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of strip_a.tif (same CRS, transform and shape), nodata -9999, surface reflectance (unitless)"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "zeros-averaged.tif"
+          ],
+          [
+            "result.tif",
+            "first-strip-wins.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-rainfall-dry-days",
+      "family": "nodata-zero",
+      "skill": "raster-processing",
+      "prompt": "What was the mean daily rainfall over these three days? I need it per cell in millimetres per day.",
+      "inputs": "Three daily totals in mm with nodata -1 outside radar coverage; many dry cells hold 0.",
+      "acceptance": [
+        "Zero is a valid dry-day observation and enters the mean; only -1 is missing."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Dry days are treated as missing, inflating the mean.",
+      "lift": {
+        "inputs": [
+          "rain_day1.tif",
+          "rain_day2.tif",
+          "rain_day3.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of rain_day1.tif (same CRS, transform and shape), nodata -9999, rainfall in mm per day"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "dry-as-missing.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-landcover-change-fill",
+      "family": "nodata-zero",
+      "skill": "time-series-and-change",
+      "prompt": "Show me where land cover changed between 2019 and 2023: 1 where the class changed, 0 where it stayed the same.",
+      "inputs": "Two uint8 land-cover maps without a declared GeoTIFF nodata; the Items' classification:classes mark value 0 as no data.",
+      "acceptance": [
+        "A cell with no data in either year is nodata, not change."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Value 0 is compared as a class and reported as change.",
+      "lift": {
+        "inputs": [
+          "landcover_2019.tif",
+          "landcover_2023.tif",
+          "item_2019.json",
+          "item_2023.json"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band uint8 GeoTIFF on the grid of landcover_2019.tif (same CRS, transform and shape), nodata 255, 1 = changed, 0 = unchanged"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "fill-as-class.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-s2-ndwi-footprint",
+      "family": "nodata-zero",
+      "skill": "spectral-indices",
+      "prompt": "Make an open-water index (McFeeters NDWI from green and NIR) for this Sentinel-2 L2A scene; part of the tile is outside the orbit swath.",
+      "inputs": "B03 and B08 counts without a declared GeoTIFF nodata; the Item gives fill 0, scale 0.0001, offset -0.1 and baseline 05.10.",
+      "acceptance": [
+        "Decode both bands to reflectance before the ratio.",
+        "Outside-swath zeros are nodata."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Outside-swath cells get index 0, or counts without the offset enter the ratio.",
+      "lift": {
+        "inputs": [
+          "B03.tif",
+          "B08.tif",
+          "item.json"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of B03.tif (same CRS, transform and shape), nodata -9999, NDWI (unitless)"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "fill-as-zero-index.tif"
+          ],
+          [
+            "result.tif",
+            "offset-ignored.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-coarsen-reflectance-fill",
+      "family": "nodata-zero",
+      "skill": "raster-processing",
+      "prompt": "I need a 20 m version of this 10 m red reflectance layer on the grid of target_grid.tif. Each 20 m cell should be the average of the valid 10 m measurements it covers.",
+      "inputs": "Float32 reflectance with nodata 0 for gaps, and an aligned 20 m target grid.",
+      "acceptance": [
+        "Average valid 10 m cells only; a 20 m cell with no valid 10 m cell is nodata."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Zero gaps are averaged into coarse cells.",
+      "lift": {
+        "inputs": [
+          "red_10m.tif",
+          "target_grid.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of target_grid.tif (same CRS, transform and shape), nodata -9999, surface reflectance (unitless)"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "zeros-averaged.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-ndvi-8bit",
+      "family": "dtype-overflow",
+      "skill": "spectral-indices",
+      "prompt": "Compute NDVI directly from these two 8-bit bands; no calibration is available for this sensor.",
+      "inputs": "uint8 red and NIR counts with nodata 0; red exceeds NIR over bare soil and sums exceed 255.",
+      "acceptance": [
+        "Compute differences and sums in a wide or floating type."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "uint8 subtraction and addition wrap around.",
+      "lift": {
+        "inputs": [
+          "red.tif",
+          "nir.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of red.tif (same CRS, transform and shape), nodata -9999, NDVI (unitless)"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "uint8-arithmetic.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-visible-brightness-sum",
+      "family": "dtype-overflow",
+      "skill": "raster-processing",
+      "prompt": "Make a visible brightness layer: the per-pixel total of the blue, green and red raw counts.",
+      "inputs": "Three-band uint16 counts (blue, green, red) with nodata 0; totals exceed 65535.",
+      "acceptance": [
+        "Sum in a type wide enough for the total."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "The sum is accumulated in uint16 and wraps.",
+      "lift": {
+        "inputs": [
+          "visible.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band uint32 GeoTIFF on the grid of visible.tif (same CRS, transform and shape), nodata 0, raw counts"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "wrapped-uint16.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-three-date-mean-8bit",
+      "family": "dtype-overflow",
+      "skill": "raster-processing",
+      "prompt": "Average the brightness of these three acquisitions per pixel.",
+      "inputs": "Three uint8 brightness rasters with nodata 255; totals exceed 255.",
+      "acceptance": [
+        "Accumulate in a wide or floating type before dividing."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "The three values are summed in uint8 and wrap.",
+      "lift": {
+        "inputs": [
+          "brightness_1.tif",
+          "brightness_2.tif",
+          "brightness_3.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of brightness_1.tif (same CRS, transform and shape), nodata -9999, brightness counts"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "uint8-sum.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-landcover-upsample",
+      "family": "categorical-resampling",
+      "skill": "raster-processing",
+      "prompt": "Put this 30 m land-cover map onto our 10 m analysis grid (target_grid.tif) so it lines up with the other layers.",
+      "inputs": "uint8 class codes at 30 m (nodata 255) and an aligned 10 m target grid.",
+      "acceptance": [
+        "Each 10 m cell takes the class of the 30 m cell that contains it; no new codes appear."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Class codes are interpolated into codes that mean something else.",
+      "lift": {
+        "inputs": [
+          "landcover_30m.tif",
+          "target_grid.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band uint8 GeoTIFF on the grid of target_grid.tif (same CRS, transform and shape), nodata 255, land-cover class codes from landcover_30m.tif"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "bilinear.tif"
+          ],
+          [
+            "result.tif",
+            "cubic.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-landcover-shifted-grid",
+      "family": "categorical-resampling",
+      "skill": "raster-processing",
+      "prompt": "Transfer this land-cover map onto the project grid in target_grid.tif, which is offset slightly from the source.",
+      "inputs": "uint8 class codes at 10 m (nodata 255) and a 10 m target grid shifted by 2 m in x and y.",
+      "acceptance": [
+        "Each target cell takes the class of the source cell under its centre (the same class also has the largest overlap)."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Class codes are interpolated.",
+      "lift": {
+        "inputs": [
+          "landcover.tif",
+          "target_grid.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band uint8 GeoTIFF on the grid of target_grid.tif (same CRS, transform and shape), nodata 255, land-cover class codes from landcover.tif"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "bilinear.tif"
+          ],
+          [
+            "result.tif",
+            "cubic.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-landcover-dominant-class",
+      "family": "categorical-resampling",
+      "skill": "raster-processing",
+      "prompt": "Summarise this 10 m land-cover map onto the 20 m grid of target_grid.tif, giving the dominant class in each 20 m cell.",
+      "inputs": "uint8 class codes at 10 m (nodata 255) with no tied 2 x 2 blocks, and an aligned 20 m grid.",
+      "acceptance": [
+        "Each 20 m cell takes the most frequent valid class of its four 10 m cells."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "One sample per block is taken, or codes are averaged.",
+      "lift": {
+        "inputs": [
+          "landcover_10m.tif",
+          "target_grid.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band uint8 GeoTIFF on the grid of target_grid.tif (same CRS, transform and shape), nodata 255, land-cover class codes from landcover_10m.tif"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "nearest.tif"
+          ],
+          [
+            "result.tif",
+            "average-rounded.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-forest-area-geographic",
+      "family": "geographic-metric",
+      "skill": "crs-and-units",
+      "prompt": "How many hectares of forest are in each cell of this tree-canopy fraction map of southern Finland?",
+      "inputs": "Float32 canopy fraction (0-1) on a 0.01 degree EPSG:4326 grid near 61 N, nodata -9999.",
+      "acceptance": [
+        "Use each cell's true ground area at its latitude; spherical or ellipsoidal area agree within 1%."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Degree cells are treated as equal area (or as square degrees).",
+      "lift": {
+        "inputs": [
+          "forest_fraction.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of forest_fraction.tif (same CRS, transform and shape), nodata -9999, forest area in hectares"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "equator-degree-cells.tif"
+          ],
+          [
+            "result.tif",
+            "square-degrees.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-slope-geographic",
+      "family": "geographic-metric",
+      "skill": "crs-and-units",
+      "prompt": "Calculate terrain slope in degrees from this elevation model.",
+      "inputs": "Float32 elevation in metres on an EPSG:4326 grid near 60 N with 0.0005 degree cells.",
+      "acceptance": [
+        "Convert horizontal spacing to metres, with east-west spacing scaled by the cosine of latitude."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Degrees are used as metres, or east-west spacing ignores latitude.",
+      "lift": {
+        "inputs": [
+          "dem.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of dem.tif (same CRS, transform and shape), nodata -9999, slope in degrees; the outermost rows and columns are nodata"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "degrees-as-metres.tif"
+          ],
+          [
+            "result.tif",
+            "no-latitude-scaling.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-station-distance",
+      "family": "geographic-metric",
+      "skill": "crs-and-units",
+      "prompt": "For every cell of grid.tif, give the distance in kilometres to the rain gauge in station.geojson.",
+      "inputs": "A float32 template on a 0.05 degree EPSG:4326 grid near Cairo and one gauge point.",
+      "acceptance": [
+        "Use great-circle or geodesic distance; both agree within 1%."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Euclidean distance in degrees is used, with or without a constant km per degree.",
+      "lift": {
+        "inputs": [
+          "grid.tif",
+          "station.geojson"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of grid.tif (same CRS, transform and shape), nodata -9999, distance in kilometres"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "degree-euclidean.tif"
+          ],
+          [
+            "result.tif",
+            "degrees.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-flood-depth-feet",
+      "family": "vertical-units",
+      "skill": "crs-and-units",
+      "prompt": "If the river reaches a water surface level of 12.0 m, how deep would the water be over the ground? Give flood depth in metres, and 0 where the ground stays dry.",
+      "inputs": "Float32 ground elevation whose band unit is ft, on a UTM grid.",
+      "acceptance": [
+        "Convert the DEM from feet to metres before comparing with the 12.0 m level."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Feet are compared with a metre level, or the depth is delivered in feet.",
+      "lift": {
+        "inputs": [
+          "dem.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of dem.tif (same CRS, transform and shape), nodata -9999, flood depth in metres"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "feet-as-metres.tif"
+          ],
+          [
+            "result.tif",
+            "depth-in-feet.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-orthometric-height",
+      "family": "vertical-units",
+      "skill": "crs-and-units",
+      "prompt": "Convert these GNSS-derived heights to heights above mean sea level for our engineering drawings.",
+      "inputs": "Ellipsoidal heights in metres and an EGM2008 geoid undulation grid in metres, both described in their band descriptions.",
+      "acceptance": [
+        "H = h - N."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "The undulation is added, or ellipsoidal heights are delivered.",
+      "lift": {
+        "inputs": [
+          "heights.tif",
+          "geoid.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of heights.tif (same CRS, transform and shape), nodata -9999, orthometric height in metres"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "undulation-added.tif"
+          ],
+          [
+            "result.tif",
+            "ellipsoidal-unchanged.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-elevation-change-mixed-units",
+      "family": "vertical-units",
+      "skill": "time-series-and-change",
+      "prompt": "How much did the ground surface change between the 2015 and 2023 surveys? I need 2023 minus 2015 in metres.",
+      "inputs": "Two float32 DEMs on one grid; the 2015 band unit is ft and the 2023 band unit is m.",
+      "acceptance": [
+        "Convert the 2015 survey from feet to metres before differencing."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "The units differ between surveys and are ignored, or the change is delivered in feet.",
+      "lift": {
+        "inputs": [
+          "dem_2015.tif",
+          "dem_2023.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of dem_2015.tif (same CRS, transform and shape), nodata -9999, elevation change in metres"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "units-ignored.tif"
+          ],
+          [
+            "result.tif",
+            "change-in-feet.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-sar-change-ratio",
+      "family": "db-linear",
+      "skill": "sar-basics",
+      "prompt": "Quantify how VV backscatter changed from the 2023 to the 2024 acquisition, as the 2024-to-2023 power ratio expressed in dB.",
+      "inputs": "Two float32 sigma0 VV rasters whose band unit is dB.",
+      "acceptance": [
+        "A power ratio in dB is the difference of the dB values."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "dB values are divided, or a linear ratio is delivered.",
+      "lift": {
+        "inputs": [
+          "vv_2023.tif",
+          "vv_2024.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of vv_2023.tif (same CRS, transform and shape), nodata -9999, change in dB"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "ratio-of-db.tif"
+          ],
+          [
+            "result.tif",
+            "linear-ratio.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-sar-boxcar-db",
+      "family": "db-linear",
+      "skill": "sar-basics",
+      "prompt": "Reduce speckle in this VV image with a 3 x 3 mean of the backscattered power, and give me the result in dB.",
+      "inputs": "Float32 sigma0 VV whose band unit is dB.",
+      "acceptance": [
+        "Convert to linear power, average the 3 x 3 window, convert back to dB."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "dB values are averaged directly, or linear power is delivered.",
+      "lift": {
+        "inputs": [
+          "vv_db.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of vv_db.tif (same CRS, transform and shape), nodata -9999, backscatter in dB; the outermost rows and columns are nodata"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "averaged-in-db.tif"
+          ],
+          [
+            "result.tif",
+            "linear-power-delivered.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-sar-amplitude-db",
+      "family": "db-linear",
+      "skill": "sar-basics",
+      "prompt": "Express this VV backscatter in decibels for comparison with our other dB layers.",
+      "inputs": "Float32 sigma0 VV whose band unit and description say linear amplitude.",
+      "acceptance": [
+        "dB = 20 log10(amplitude) (= 10 log10 of power)."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "Amplitude is converted with the power formula, halving the dB values.",
+      "lift": {
+        "inputs": [
+          "vv_amplitude.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of vv_amplitude.tif (same CRS, transform and shape), nodata -9999, backscatter in dB"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "amplitude-as-power.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-july-median-ndvi",
+      "family": "temporal-scope",
+      "skill": "time-series-and-change",
+      "prompt": "Make a median NDVI composite for July 2024 from these scenes.",
+      "inputs": "Five NDVI scenes with neutral file names; their acquisition times are only in the STAC Items (late June to early August).",
+      "acceptance": [
+        "Use only scenes acquired in July 2024."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "All supplied scenes, or June scenes, enter the July median.",
+      "lift": {
+        "inputs": [
+          "scene-1.tif",
+          "scene-2.tif",
+          "scene-3.tif",
+          "scene-4.tif",
+          "scene-5.tif",
+          "scene-1.json",
+          "scene-2.json",
+          "scene-3.json",
+          "scene-4.json",
+          "scene-5.json"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of scene-1.tif (same CRS, transform and shape), nodata -9999, NDVI (unitless)"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "all-scenes.tif"
+          ],
+          [
+            "result.tif",
+            "june-included.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-cairo-day-rainfall",
+      "family": "temporal-scope",
+      "skill": "time-series-and-change",
+      "prompt": "What was the total rainfall on Tuesday 5 March 2024, as a local calendar day in Cairo? Millimetres per cell.",
+      "inputs": "Fifteen 2-hour accumulations in mm; their UTC start and end times are in catalog.json.",
+      "acceptance": [
+        "Cairo is UTC+2 on that date: the local day runs 2024-03-04T22:00Z to 2024-03-05T22:00Z."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "The UTC day is summed instead of the local day.",
+      "lift": {
+        "inputs": [
+          "catalog.json",
+          "rain_20240304T1800.tif",
+          "rain_20240304T2000.tif",
+          "rain_20240304T2200.tif",
+          "rain_20240305T0000.tif",
+          "rain_20240305T0200.tif",
+          "rain_20240305T0400.tif",
+          "rain_20240305T0600.tif",
+          "rain_20240305T0800.tif",
+          "rain_20240305T1000.tif",
+          "rain_20240305T1200.tif",
+          "rain_20240305T1400.tif",
+          "rain_20240305T1600.tif",
+          "rain_20240305T1800.tif",
+          "rain_20240305T2000.tif",
+          "rain_20240305T2200.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of rain_20240304T1800.tif (same CRS, transform and shape), nodata -9999, rainfall total in mm"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "utc-day.tif"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "hr-dekad-rainfall",
+      "family": "temporal-scope",
+      "skill": "time-series-and-change",
+      "prompt": "What was the rainfall total for the second dekad of May 2024 (11-20 May, UTC days)? Millimetres per cell.",
+      "inputs": "Fifteen daily accumulations in mm named by the end of their accumulation period; catalog.json gives start_datetime and end_datetime.",
+      "acceptance": [
+        "Use the accumulations whose intervals fall within 11 May 00:00 to 21 May 00:00 UTC."
+      ],
+      "expected_checks": {
+        "crs.defined": "pass",
+        "raster.nodata_declared": "pass"
+      },
+      "pitfall": "File date labels (period end) are read as the rainfall day, shifting the window by one day.",
+      "lift": {
+        "inputs": [
+          "catalog.json",
+          "precip_20240509.tif",
+          "precip_20240510.tif",
+          "precip_20240511.tif",
+          "precip_20240512.tif",
+          "precip_20240513.tif",
+          "precip_20240514.tif",
+          "precip_20240515.tif",
+          "precip_20240516.tif",
+          "precip_20240517.tif",
+          "precip_20240518.tif",
+          "precip_20240519.tif",
+          "precip_20240520.tif",
+          "precip_20240521.tif",
+          "precip_20240522.tif",
+          "precip_20240523.tif"
+        ],
+        "deliverables": [
+          [
+            "result.tif",
+            "single-band float32 GeoTIFF on the grid of precip_20240509.tif (same CRS, transform and shape), nodata -9999, rainfall total in mm"
+          ]
+        ],
+        "seeded": [
+          [
+            "result.tif",
+            "labels-as-days.tif"
+          ]
+        ]
+      }
+    }
+  ]
+}

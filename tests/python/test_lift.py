@@ -813,7 +813,8 @@ def test_paths_neutral_rule_is_independent_of_the_checkout_location():
 
 
 def test_cohorts_partition_the_registry_and_runs_default_to_the_original_nine():
-    assert set(lift.COHORTS) == {"original", "harder"} and lift.DEFAULT_COHORT == "original"
+    assert set(lift.COHORTS) == {"original", "harder", "headroom-development", "headroom-confirmation"}
+    assert lift.DEFAULT_COHORT == "original"
     original, harder = lift.COHORTS["original"], lift.COHORTS["harder"]
     assert len(original) == 9 and len(harder) == 6
     assert not {t.task_id for t in original} & {t.task_id for t in harder}
