@@ -39,7 +39,10 @@ INSTRUCTIONS = (
     "to validate a declared plan against the real inputs before spending compute. For derived "
     "outputs, supply the relevant source operands and options to `run_checks`; inspection or "
     "a plausible value range alone does not verify the derivation. For NDVI, use "
-    "`index_formula=\"ndvi\"`, `nir` and `red` on the saved output. Respect each band's scale "
+    "`index_formula=\"ndvi\"`, `nir` and `red` on the saved output; for NBR, dNBR, NDWI, MNDWI, "
+    "NDMI, SAVI or EVI pass `bands` by role (and `band_numbers` for multi-band sources). For "
+    "composites, accumulations and trends pass the ordered input layers as `stack` with "
+    "`stack_reduction` (and `stack_weights` for hours or times). Respect each band's scale "
     "and offset, source nodata masks and undefined denominators; valid zero values remain "
     "data. Review extra output masking against the task's QA policy. Read individual check "
     "statuses and limitations: warn and not-run do not establish correctness. Correct failed "
@@ -101,6 +104,12 @@ def run_checks(
     index_formula: str | None = None,
     nir: str | None = None,
     red: str | None = None,
+    bands: dict[str, str] | None = None,
+    band_numbers: dict[str, int] | None = None,
+    stack: list[str] | None = None,
+    stack_reduction: str | None = None,
+    stack_weights: list[float] | None = None,
+    stack_min_count: int | None = None,
     processing_full_scan: bool = False,
     manifest: str | None = None,
     require_provenance: bool = False,
@@ -142,6 +151,9 @@ def run_checks(
         dem_dataset = _inspect_dataset(dem) if dem else None
         nir_dataset = _inspect_dataset(nir) if nir else None
         red_dataset = _inspect_dataset(red) if red else None
+        index_bands = {role: dict(_inspect_dataset(path), band=(band_numbers or {}).get(role))
+                       for role, path in (bands or {}).items()}
+        stack_layers = [_inspect_dataset(path) for path in stack or []]
 
         inputs = [input_record(path, "input", dataset["kind"]) for path, dataset in zip(paths, inspections)]
         if compare is not None:
@@ -154,6 +166,10 @@ def run_checks(
             inputs.append(input_record(nir, "nir", nir_dataset["kind"]))
         if red_dataset is not None:
             inputs.append(input_record(red, "red", red_dataset["kind"]))
+        for role, path in (bands or {}).items():
+            inputs.append(input_record(path, "index-band", index_bands[role]["kind"]))
+        for path, layer in zip(stack or [], stack_layers):
+            inputs.append(input_record(path, "stack-layer", layer["kind"]))
         if qa_path and Path(qa_path).is_file():
             inputs.append(input_record(qa_path, "qa", "raster"))
         if isinstance(accuracy_samples, str) and Path(accuracy_samples).is_file():
@@ -188,13 +204,19 @@ def run_checks(
             slope_method=slope_method,
             raster_identity=raster_identity,
             index_formula=index_formula,
+            index_bands=index_bands or None,
+            stack=stack_layers or None,
+            stack_reduction=stack_reduction,
+            stack_weights=stack_weights,
+            stack_min_count=stack_min_count,
             nir=nir_dataset,
             red=red_dataset,
             processing_full_scan=processing_full_scan,
         )
 
         checked_paths = list(paths)
-        for path in (compare_to, reference_input, dem, nir, red, qa_path, accuracy_samples, class_areas):
+        for path in (compare_to, reference_input, dem, nir, red, *(bands or {}).values(), *(stack or []), qa_path, accuracy_samples,
+                     class_areas):
             if isinstance(path, str):
                 checked_paths.append(path)
 
@@ -225,6 +247,11 @@ def run_checks(
         "slope_method": slope_method,
         "raster_identity": raster_identity,
         "index_formula": index_formula,
+        "index_bands": {role: [path, (band_numbers or {}).get(role)] for role, path in (bands or {}).items()} or None,
+        "stack": stack or None,
+        "stack_reduction": stack_reduction,
+        "stack_weights": stack_weights,
+        "stack_min_count": stack_min_count,
         "nir": nir,
         "red": red,
         "processing_full_scan": processing_full_scan,

@@ -69,7 +69,7 @@ Checks cover CRS and units, geometry validity and GeoJSON winding, record counts
 
 The grade describes the data path and the checks that ran. It is not a certification of survey, engineering, legal, or safety fitness.
 
-### Verify NDVI against its source bands
+### Verify a spectral index against its source bands
 
 ```bash
 python -m terraproof check outputs/ndvi.tif --index-formula ndvi --nir inputs/nir.tif --red inputs/red.tif
@@ -82,6 +82,27 @@ and a zero denominator cannot become valid output values. Extra output masking
 warns because its QA policy is not verified here. Source files are included in the
 evidence report and must be covered when a provenance manifest is supplied.
 See [the full contract and limits](docs/INDEX_FORMULA.md).
+
+The same check covers NBR, dNBR (pre minus post), McFeeters NDWI, MNDWI, Gao's NDMI, SAVI
+and EVI. Name each source band by its role; a multi-band source also needs its band number:
+
+```bash
+python -m terraproof check outputs/evi.tif --index-formula evi --band blue=inputs/bands.tif --band-number blue=1 \
+    --band red=inputs/bands.tif --band-number red=2 --band nir=inputs/bands.tif --band-number nir=3
+```
+
+### Verify a composite, an accumulation or a trend against its input stack
+
+```bash
+python -m terraproof check outputs/storm_total.tif --stack-reduction weighted-sum \
+    --stack inputs/rate1.tif --stack-weight 1 --stack inputs/rate2.tif --stack-weight 4.5
+```
+
+`--stack-reduction` is `median`, `count`, `weighted-sum` (for example rate x hours),
+`mean-power-db` (dB averaged in linear power) or `ols-slope` (against `--stack-weight`
+times, with `--stack-min-count`). Every output cell is compared with that reduction of the
+ordered layers; a cell without enough valid inputs must be nodata. The check does not
+verify how the input layers were made, so pair it with the calibration and QA checks.
 
 ### Verify slope and lossless raster delivery
 

@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added (Phase 6 C: source-aware checks)
+
+- `rs.index_formula` now also verifies NBR, dNBR (pre-fire minus post-fire), McFeeters NDWI,
+  MNDWI, Gao's NDMI, SAVI and EVI, besides NDVI. Source bands are named by role (CLI
+  `--band ROLE=PATH`, `--band-number ROLE=N` for a multi-band source; Python and MCP `bands`
+  and `band_numbers`), and each band's own scale/offset is applied. NDVI keeps its `--nir`
+  and `--red` arguments, messages and evidence.
+- New opt-in `rs.stack_reduction` (CLI `--stack`, `--stack-reduction`, `--stack-weight`,
+  `--stack-min-count`; Python and MCP `stack`, `stack_reduction`, `stack_weights`,
+  `stack_min_count`). It compares every output cell with a declared reduction of an ordered
+  input stack: `median`, `count`, `weighted-sum` (rate x hours), `mean-power-db` or `ols-slope`
+  against declared times. Cells without enough valid inputs must be nodata.
+- Source-aware scorecard (`tests/checker_scorecard.py`, section `source_aware`). It regenerates
+  the frozen task fixtures and runs these checks with the inputs a user would have. It is
+  reported apart from the frozen benchmark, which is unchanged (33/33, 0 false passes,
+  25 rejections, 25 blind spots).
+  - **14 of the 25 frozen blind spots are rejected:** the 6 index seeds and 8 time and stack
+    seeds.
+  - **12 correct outputs pass** and there are **0 false passes**.
+  - Three recipes now also write the source layers that a user would have (water and burn
+    bands, per-date NDVI). Their frozen invocations, oracles and seeds are unchanged.
+
+### Release record
+
+- v0.8.0 shipped on 2026-10-27: tag `v0.8.0` on `9dabd84` (merge `a4ddda6`), PyPI through
+  `publish-python.yml` after review, npm `terraproof@0.8.0` (shasum `27910c5e…`, identical to
+  the tag), and GitHub release *Terraproof v0.8.0* with the npm tarball, wheel and sdist.
+
 ## [0.8.0] — 2026-10-27
 
 ### Phase 6 (in progress; see the [Phase 6 plan](docs/plans/Terraproof_Phase6_PLAN.md))

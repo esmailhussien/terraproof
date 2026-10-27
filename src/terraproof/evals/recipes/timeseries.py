@@ -61,6 +61,9 @@ def ts_monthly_composite(root: Path):
         for index, (red, nir) in enumerate(june_pairs)
     ]
     june_stack = np.stack(june_ndvi)
+    # Per-date NDVI a user would have; only the separate source-aware scorecard reads them.
+    for index, values in enumerate(june_ndvi):
+        _write_ndvi(root / f"ndvi_2024-06_date{index + 1}.tif", values)
     june_counts = np.sum(np.stack(june_valid) & np.isfinite(june_stack), axis=0)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)

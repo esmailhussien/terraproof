@@ -10,6 +10,8 @@ from pathlib import Path
 from terraproof._common import InputError, jsonable
 from terraproof._run_helpers import load_accuracy_samples, load_class_areas, verify_manifest_coverage
 from terraproof.checks import run_checks
+from terraproof.checks.index_formula import FORMULAS
+from terraproof.checks.stack_reduction import REDUCTIONS as STACK_REDUCTIONS
 from terraproof.checks.base import FAIL, result
 from terraproof.evidence import EXIT_CODES, build_report, input_record, render_markdown, to_json
 from terraproof.inspect import inspect_dataset
@@ -53,7 +55,20 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument(
         "--encoding", choices=["s2-l2a", "landsat-c2-l2"], help="known product encoding for scale/offset checks"
     )
-    check_parser.add_argument("--index-formula", choices=["ndvi"], help="verify NDVI from explicitly supplied calibrated source bands")
+    check_parser.add_argument("--index-formula", choices=sorted(FORMULAS),
+                              help="verify a spectral index from explicitly supplied calibrated source bands")
+    check_parser.add_argument("--band", action="append", default=[], metavar="ROLE=PATH",
+                              help="index source band by role (nir, red, green, blue, swir1, swir2, pre_nir, ...); repeatable")
+    check_parser.add_argument("--stack", action="append", default=[], metavar="PATH",
+                              help="ordered input layer for --stack-reduction; repeatable")
+    check_parser.add_argument("--stack-reduction", choices=sorted(STACK_REDUCTIONS),
+                              help="verify every output cell against this reduction of the --stack layers")
+    check_parser.add_argument("--stack-weight", action="append", type=float, default=[], metavar="W",
+                              help="one per --stack layer: hours for weighted-sum, decimal times for ols-slope")
+    check_parser.add_argument("--stack-min-count", type=int, metavar="N",
+                              help="minimum valid layers for a supported cell (default 1)")
+    check_parser.add_argument("--band-number", action="append", default=[], metavar="ROLE=N",
+                              help="1-based band of a multi-band --band source; repeatable")
     check_parser.add_argument("--nir", metavar="PATH", help="single-band NIR source; calibration comes from its scale/offset metadata")
     check_parser.add_argument("--red", metavar="PATH", help="single-band red source; calibration comes from its scale/offset metadata")
     check_parser.add_argument("--processing-full-scan", action="store_true",
@@ -141,6 +156,16 @@ def _cmd_inspect(args: argparse.Namespace) -> int:
     return 0
 
 
+def _role_pairs(values: list[str], flag: str) -> dict[str, str]:
+    pairs = {}
+    for value in values:
+        role, sep, item = value.partition("=")
+        if not sep or not role or not item:
+            raise SystemExit(f"terraproof check: {flag} expects ROLE=VALUE, got {value!r}")
+        pairs[role.strip()] = item
+    return pairs
+
+
 def _cmd_check(args: argparse.Namespace) -> int:
     inspections = [inspect_dataset(path) for path in args.paths]
     compare = _inspect_if_exists(args.compare_to)
@@ -148,6 +173,10 @@ def _cmd_check(args: argparse.Namespace) -> int:
     dem = _inspect_if_exists(args.dem)
     nir = _inspect_if_exists(args.nir)
     red = _inspect_if_exists(args.red)
+    band_paths = _role_pairs(args.band, "--band")
+    band_numbers = {role: int(value) for role, value in _role_pairs(args.band_number, "--band-number").items()}
+    index_bands = {role: dict(inspect_dataset(path), band=band_numbers.get(role)) for role, path in band_paths.items()}
+    stack = [inspect_dataset(path) for path in args.stack]
 
     inputs: list[dict] = [input_record(path, "input", ds["kind"]) for path, ds in zip(args.paths, inspections)]
     _record_input(inputs, args.compare_to, "compare-to", compare["kind"] if compare else "unknown")
@@ -155,6 +184,10 @@ def _cmd_check(args: argparse.Namespace) -> int:
     _record_input(inputs, args.dem, "dem", dem["kind"] if dem else "unknown")
     _record_input(inputs, args.nir, "nir", nir["kind"] if nir else "unknown")
     _record_input(inputs, args.red, "red", red["kind"] if red else "unknown")
+    for role, path in band_paths.items():
+        _record_input(inputs, path, "index-band", index_bands[role]["kind"])
+    for path, layer in zip(args.stack, stack):
+        _record_input(inputs, path, "stack-layer", layer["kind"])
     _record_input(inputs, args.qa_path, "qa", "raster")
     _record_input(inputs, args.accuracy_samples, "accuracy-samples", "accuracy-samples")
     _record_input(inputs, args.class_areas, "class-areas", "class-areas")
@@ -185,13 +218,19 @@ def _cmd_check(args: argparse.Namespace) -> int:
         slope_method=args.slope_method,
         raster_identity=args.raster_identity,
         index_formula=args.index_formula,
+        index_bands=index_bands or None,
+        stack=stack or None,
+        stack_reduction=args.stack_reduction,
+        stack_weights=args.stack_weight or None,
+        stack_min_count=args.stack_min_count,
         nir=nir,
         red=red,
         processing_full_scan=args.processing_full_scan,
     )
 
     checked_paths = list(args.paths)
-    for path in (args.compare_to, args.reference_input, args.dem, args.nir, args.red, args.qa_path, args.accuracy_samples, args.class_areas):
+    for path in (args.compare_to, args.reference_input, args.dem, args.nir, args.red, *band_paths.values(), *args.stack,
+                 args.qa_path, args.accuracy_samples, args.class_areas):
         if path:
             checked_paths.append(path)
 
@@ -220,6 +259,11 @@ def _cmd_check(args: argparse.Namespace) -> int:
         "slope_method": args.slope_method,
         "raster_identity": args.raster_identity,
         "index_formula": args.index_formula,
+        "index_bands": {role: [path, band_numbers.get(role)] for role, path in band_paths.items()} or None,
+        "stack": args.stack or None,
+        "stack_reduction": args.stack_reduction,
+        "stack_weights": args.stack_weight or None,
+        "stack_min_count": args.stack_min_count,
         "nir": args.nir,
         "red": args.red,
         "processing_full_scan": args.processing_full_scan,
