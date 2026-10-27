@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [0.8.0] — 2026-10-27
 
 ### Phase 6 (in progress; see the [Phase 6 plan](docs/plans/Terraproof_Phase6_PLAN.md))
 
@@ -22,7 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`tests/package/clean_install_smoke.py`).
 - **PyPI publish workflow.** `.github/workflows/publish-python.yml` publishes a `v*` tag to
   TestPyPI and then PyPI with Trusted Publishing, verifying a clean install from each index.
-  It has not run: the maintainer still has to create the projects and trusted publishers.
+  The one-time setup is done (pending trusted publishers on PyPI and TestPyPI, and GitHub
+  environments `testpypi` and `pypi` with a required reviewer); the `v0.8.0` tag is its first run.
 - **Lift driver `--agent-python-with`.** The "with" agent can get its own interpreter: a venv
   holding only the product wheel. Its preflight fails unless that interpreter is set, can
   import Terraproof and cannot import `terraproof.evals`. This closes the Antigravity

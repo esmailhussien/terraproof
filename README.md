@@ -12,7 +12,7 @@ Terraproof helps AI coding agents do geospatial work they can prove. It gives an
 
 Everything runs locally and offline. No model API key is needed.
 
-**Status:** experimental (v0.7.3). See [Evaluation status](#evaluation-status) for what has and has not been measured.
+**Status:** experimental (v0.8.0). See [Evaluation status](#evaluation-status) for what has and has not been measured.
 
 ---
 
