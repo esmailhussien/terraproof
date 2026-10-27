@@ -1,0 +1,82 @@
+{
+  "confirmation": [
+    "hr-cairo-day-rainfall",
+    "hr-coarsen-reflectance-fill",
+    "hr-flood-depth-feet",
+    "hr-forest-area-geographic",
+    "hr-hls-fmask-nir",
+    "hr-july-median-ndvi",
+    "hr-landcover-change-fill",
+    "hr-landcover-dominant-class",
+    "hr-landcover-upsample",
+    "hr-landsat-surface-temperature",
+    "hr-modis-lst-quality",
+    "hr-ndvi-8bit",
+    "hr-orthometric-height",
+    "hr-reanalysis-air-temperature",
+    "hr-s2-baseline-nir",
+    "hr-s2-mixed-baseline-change",
+    "hr-s2-ndwi-footprint",
+    "hr-s2-scl-20m-nir",
+    "hr-s2-scl-red",
+    "hr-sar-amplitude-db",
+    "hr-sar-change-ratio",
+    "hr-slope-geographic",
+    "hr-strip-mosaic",
+    "hr-visible-brightness-sum"
+  ],
+  "development": [
+    "hr-dekad-rainfall",
+    "hr-elevation-change-mixed-units",
+    "hr-hls-nir-reflectance",
+    "hr-landcover-shifted-grid",
+    "hr-landsat-clear-red",
+    "hr-landsat-red-saturation",
+    "hr-landsat-undeclared-fill",
+    "hr-modis-ndvi-scaled",
+    "hr-rainfall-dry-days",
+    "hr-sar-boxcar-db",
+    "hr-station-distance",
+    "hr-three-date-mean-8bit"
+  ],
+  "family_counts": {
+    "categorical-resampling": {
+      "confirmation": 2,
+      "development": 1
+    },
+    "db-linear": {
+      "confirmation": 2,
+      "development": 1
+    },
+    "dtype-overflow": {
+      "confirmation": 2,
+      "development": 1
+    },
+    "geographic-metric": {
+      "confirmation": 2,
+      "development": 1
+    },
+    "nodata-zero": {
+      "confirmation": 4,
+      "development": 2
+    },
+    "qa-masking": {
+      "confirmation": 4,
+      "development": 2
+    },
+    "scale-offset": {
+      "confirmation": 4,
+      "development": 2
+    },
+    "temporal-scope": {
+      "confirmation": 2,
+      "development": 1
+    },
+    "vertical-units": {
+      "confirmation": 2,
+      "development": 1
+    }
+  },
+  "method": "per-family shuffle of sorted ids with random.Random(seed), first third to development",
+  "seed": 20261027
+}
