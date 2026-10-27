@@ -556,3 +556,24 @@ def test_strict_raster_cli_mcp_parity_and_source_provenance(tmp_path,capsys,kind
     manifest.write_text(json.dumps(write_manifest(inputs=[source],outputs=[output],root=tmp_path,manifest_path=manifest)),encoding='utf-8')
     assert main(['check',output,*flags,'--manifest',str(manifest)]) in (0,2)
     capsys.readouterr()
+
+
+def test_run_checks_accepts_index_bands_and_stack_reductions(tmp_path):
+    from rasterio.transform import from_origin
+    from terraproof.evals.fixtures import write_raster_grid
+
+    grid = from_origin(500000, 5000000, 20, 20)
+    r, c = np.indices((5, 6))
+    nir, swir2 = 0.3 + 0.02 * c, 0.1 + 0.01 * r
+    paths = {name: write_raster_grid(tmp_path / f"{name}.tif", values.astype("float32"), transform=grid)
+             for name, values in (("nir", nir), ("swir2", swir2))}
+    nbr = write_raster_grid(tmp_path / "nbr.tif", ((nir - swir2) / (nir + swir2)).astype("float32"), transform=grid)
+    payload = call("run_checks", {"paths": [nbr], "index_formula": "nbr", "bands": paths}).structured_content
+    assert {c["id"]: c["status"] for c in payload["report"]["checks"]}["rs.index_formula"] == "pass"
+
+    layers = [write_raster_grid(tmp_path / f"rate{i}.tif", np.full((5, 6), 1.0 + i, dtype="float32"), transform=grid)
+              for i in range(3)]
+    total = write_raster_grid(tmp_path / "total.tif", np.full((5, 6), 1 * 1 + 2 * 2 + 3 * 3, dtype="float32"), transform=grid)
+    payload = call("run_checks", {"paths": [total], "stack": layers, "stack_reduction": "weighted-sum",
+                                  "stack_weights": [1, 2, 3]}).structured_content
+    assert {c["id"]: c["status"] for c in payload["report"]["checks"]}["rs.stack_reduction"] == "pass"

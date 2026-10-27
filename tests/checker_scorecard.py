@@ -1,10 +1,13 @@
-"""Offline checker coverage: unchanged benchmark plus separate exhaustive controls.
+"""Offline checker coverage: unchanged benchmark plus separate exhaustive and source-aware controls.
 
-Never counts oracle-only rejection as product detection or measures agent lift.
+Never counts oracle-only rejection as product detection or measures agent lift. The source-aware
+section (Phase 6 C) regenerates frozen task fixtures and runs extra check invocations that pass
+the source inputs a user would have; its results are reported apart from the frozen counts.
 """
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import hashlib
 import json
 from pathlib import Path
@@ -13,8 +16,10 @@ import numpy as np
 import rasterio
 from rasterio.transform import from_origin
 
+from terraproof.checks import run_checks
 from terraproof.checks.rs_processing import check_cloud_mask_applied, check_scale_applied_once
 from terraproof.evals.harness import run_benchmark
+from terraproof.evals.recipes import REGISTRY
 from terraproof.inspect import inspect_dataset
 
 
@@ -94,6 +99,151 @@ def full_processing(root):
     return {'summary': summary, 'controls': records}
 
 
+def _band(path, number=None):
+    return dict(inspect_dataset(str(path)), band=number)
+
+
+def _index(formula, **roles):
+    """run_checks kwargs for rs.index_formula with role -> path or (path, band)."""
+    bands = {role: _band(*value) if isinstance(value, tuple) else _band(value) for role, value in roles.items()}
+    return 'rs.index_formula', {'index_formula': formula, 'index_bands': bands}
+
+
+def _dnbr_reference(folder):
+    """Independent scalar pre-minus-post NBR from the written source bands (not checker code)."""
+    names = ('pre_nir', 'pre_swir2', 'post_nir', 'post_swir2')
+    bands = []
+    for name in names:
+        with rasterio.open(folder/f'{name}.tif') as src:
+            bands.append(src.read(1).astype('float64'))
+    pn, ps, qn, qs = bands
+    out = np.full(pn.shape, -9999, dtype='float32')
+    for r in range(pn.shape[0]):
+        for c in range(pn.shape[1]):
+            out[r, c] = (pn[r, c]-ps[r, c])/(pn[r, c]+ps[r, c]) - (qn[r, c]-qs[r, c])/(qn[r, c]+qs[r, c])
+    with rasterio.open(folder/'nbr_prefire.tif') as grid:
+        profile = grid.profile
+    with rasterio.open(folder/'dnbr.tif', 'w', **profile) as dst:
+        dst.write(out, 1)
+    return 'dnbr.tif'
+
+
+def _dnbr_roles(f):
+    return _index('dnbr', pre_nir=f/'pre_nir.tif', pre_swir2=f/'pre_swir2.tif',
+                  post_nir=f/'post_nir.tif', post_swir2=f/'post_swir2.tif')
+
+
+def _evi_roles(f):
+    return _index('evi', blue=(f/'bands.tif', 1), red=(f/'bands.tif', 2), nir=(f/'bands.tif', 3))
+
+
+def _stack(reduction, files, weights=None, min_count=None):
+    return 'rs.stack_reduction', {'stack': [inspect_dataset(str(f)) for f in files], 'stack_reduction': reduction,
+                                  'stack_weights': weights, 'stack_min_count': min_count}
+
+
+def _request(folder):
+    return json.loads((folder/'request.json').read_text(encoding='utf-8'))
+
+
+def _storm_roles(f):
+    """Interval hours from the request's own ISO intervals."""
+    request = _request(f)
+    hours = [(datetime.fromisoformat(end) - datetime.fromisoformat(start)).total_seconds() / 3600
+             for start, end in request['intervals']]
+    return _stack('weighted-sum', [f/name for name in request['files']], hours)
+
+
+def _trend_roles(f):
+    """Decimal years from the request's own dates and year length."""
+    request = _request(f)
+    first = datetime.fromisoformat(request['dates'][0])
+    years = [(datetime.fromisoformat(d) - first).days / request['year_days'] for d in request['dates']]
+    return _stack('ols-slope', [f/name for name in request['files']], years, request['minimum_observations'])
+
+
+def _composite_roles(f):
+    return _stack('median', [f/f's2_date{i}_red.tif' for i in (1, 2, 3)])
+
+
+def _monthly_roles(f):
+    return _stack('median', [f/f'ndvi_2024-06_date{i}.tif' for i in (1, 2, 3)])
+
+
+def _sar_roles(f):
+    return _stack('mean-power-db', [f/f'vv_date{i}.tif' for i in (1, 2, 3)])
+
+
+# (task, output file or builder, correct?, frozen blind spot it targets or None, check kwargs builder)
+SOURCE_AWARE = [
+    ('indices-ndvi-physical-inputs', 'ndvi.tif', True, None,
+     lambda f: _index('ndvi', nir=f/'nir_dn.tif', red=f/'red_dn.tif')),
+    ('indices-ndvi-physical-inputs', 'ndvi_dn_ratio.tif', False, 'unscaled-dn-ratio',
+     lambda f: _index('ndvi', nir=f/'nir_dn.tif', red=f/'red_dn.tif')),
+    ('indices-water-definition-grid', 'ndwi_mcfeeters.tif', True, None,
+     lambda f: _index('ndwi', green=f/'green.tif', nir=f/'nir.tif')),
+    ('indices-water-definition-grid', 'mndwi.tif', True, None,
+     lambda f: _index('mndwi', green=f/'green.tif', swir1=f/'swir1.tif')),
+    ('indices-water-definition-grid', 'ndwi_mislabeled.tif', False, 'gao-moisture-mislabeled',
+     lambda f: _index('ndwi', green=f/'green.tif', nir=f/'nir.tif')),
+    ('indices-burn-evi-savi-ranges', 'nbr_prefire.tif', True, None,
+     lambda f: _index('nbr', nir=f/'pre_nir.tif', swir2=f/'pre_swir2.tif')),
+    ('indices-burn-evi-savi-ranges', 'nbr_postfire.tif', True, None,
+     lambda f: _index('nbr', nir=f/'post_nir.tif', swir2=f/'post_swir2.tif')),
+    ('indices-burn-evi-savi-ranges', 'nbr_swir1.tif', False, 'nbr-wrong-swir-band',
+     lambda f: _index('nbr', nir=f/'pre_nir.tif', swir2=f/'pre_swir2.tif')),
+    ('indices-burn-evi-savi-ranges', _dnbr_reference, True, None, _dnbr_roles),
+    ('indices-burn-evi-savi-ranges', 'dnbr_reversed.tif', False, 'reversed-dnbr-sign', _dnbr_roles),
+    ('three-band-vegetation-index', 'result.tif', True, None, _evi_roles),
+    ('three-band-vegetation-index', 'stored-values.tif', False, 'stored-values', _evi_roles),
+    ('three-band-vegetation-index', 'one-band-calibration.tif', False, 'one-band-calibration', _evi_roles),
+    # Group 2: time- and stack-aware reductions.
+    ('satellite-seasonal-harmonized-composite', 'composite.tif', True, None, _composite_roles),
+    ('satellite-seasonal-harmonized-composite', 'composite_cloudy.tif', False, 'cloudy-dates-included', _composite_roles),
+    ('ts-monthly-ndvi-composite-counts', 'ndvi_2024-06.tif', True, None, _monthly_roles),
+    ('ts-monthly-ndvi-composite-counts', 'ndvi_2024-06_index_of_medians.tif', False, 'index-of-medians-composite',
+     _monthly_roles),
+    ('ts-monthly-ndvi-composite-counts', 'ndvi_2024-06_zero_filled.tif', False, 'all-invalid-zero-filled',
+     _monthly_roles),
+    ('sar-db-linear-monthly-mean', 'vv_monthly_mean_db.tif', True, None, _sar_roles),
+    ('sar-db-linear-monthly-mean', 'vv_monthly_mean_naive_db.tif', False, 'naive-db-average', _sar_roles),
+    ('storm-total-rainfall', 'result.tif', True, None, _storm_roles),
+    ('storm-total-rainfall', 'sum-of-rates.tif', False, 'sum-of-rates', _storm_roles),
+    ('storm-total-rainfall', 'equal-duration-mean.tif', False, 'equal-duration-mean', _storm_roles),
+    ('vegetation-change-rate', 'result.tif', True, None, _trend_roles),
+    ('vegetation-change-rate', 'equally-spaced-index.tif', False, 'equally-spaced-index', _trend_roles),
+    ('vegetation-change-rate', 'missing-as-zero.tif', False, 'missing-as-zero', _trend_roles),
+]
+
+
+def source_aware(root, frozen_blind_spots):
+    records = []
+    folders = {}
+    for task, output, correct, target, build in SOURCE_AWARE:
+        if task not in folders:
+            folders[task] = root/task
+            folders[task].mkdir()
+            REGISTRY[task](folders[task])
+        folder = folders[task]
+        name = output(folder) if callable(output) else output
+        check_id, kwargs = build(folder)
+        found = [r for r in run_checks([inspect_dataset(str(folder/name))], **kwargs) if r.id == check_id]
+        status = found[0].status if found else 'missing'
+        if target is not None:
+            assert {'task': task, 'control': target} in frozen_blind_spots, (task, target)
+        records.append({'task': task, 'output': name, 'correct': correct, 'frozen_blind_spot': target,
+                        'check': check_id, 'status': status})
+    wrong = [r for r in records if not r['correct']]
+    correct = [r for r in records if r['correct']]
+    summary = {'frozen_blind_spots': len(frozen_blind_spots),
+               'targeted_blind_spots': len({(r['task'], r['frozen_blind_spot']) for r in wrong}),
+               'rejected_blind_spots': len({(r['task'], r['frozen_blind_spot']) for r in wrong if r['status'] == 'fail'}),
+               'correct_controls': len(correct), 'correct_passes': sum(r['status'] == 'pass' for r in correct),
+               'false_passes': sum(r['status'] == 'pass' for r in wrong)}
+    assert summary['correct_passes'] == len(correct) and summary['false_passes'] == 0, records
+    return {'summary': summary, 'controls': records}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--work', required=True, type=Path)
@@ -103,13 +253,17 @@ def main():
     (args.work/'benchmark.json').write_text(json.dumps(baseline, indent=2, sort_keys=True)+'\n', encoding='utf-8')
     strict = args.work/'full-processing'
     strict.mkdir()
+    aware = args.work/'source-aware'
+    aware.mkdir()
     report = {'schema': 'terraproof.checker-scorecard/1', 'model_calls': 0,
         'unchanged_benchmark': baseline['summary'], 'full_processing': full_processing(strict),
+        'source_aware': source_aware(aware, baseline['summary']['checker_blind_spots']),
         'limitations': ['Synthetic controls chosen to expose sparse-sampling weaknesses; not an error-rate estimate.',
             'The frozen benchmark invocations remain unchanged; the new cohort does not relabel historical blind spots.',
             'No model was run. No agent benefit, token saving or general scientific correctness is established.']}
     (args.work/'scorecard.json').write_text(json.dumps(report, indent=2, sort_keys=True)+'\n', encoding='utf-8')
-    print(json.dumps({'benchmark': baseline['summary'], 'full_processing': report['full_processing']['summary']}, indent=2))
+    print(json.dumps({'benchmark': baseline['summary'], 'full_processing': report['full_processing']['summary'],
+                      'source_aware': report['source_aware']['summary']}, indent=2))
     return baseline['summary']['exit_code']
 
 

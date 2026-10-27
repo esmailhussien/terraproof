@@ -26,6 +26,13 @@ def _write_index(path: Path, values: np.ndarray) -> str:
     return write_raster(path, array, crs=UTM, nodata=FLOAT_NODATA, dtype="float32")
 
 
+def _write_sources(root: Path, **bands: np.ndarray) -> None:
+    """Physical source bands a user would have. Only the separate source-aware scorecard
+    (tests/checker_scorecard.py) reads them; the frozen check invocations and oracles do not."""
+    for name, values in bands.items():
+        write_raster(root / f"{name}.tif", values, crs=UTM, nodata=FLOAT_NODATA, dtype="float32")
+
+
 def _index_ok(steps: list[Step], check_id: str) -> list:
     return results_for(steps, check_id)
 
@@ -160,6 +167,7 @@ def indices_water(root: Path):
     swir1 = _band(0.08, 0.003)
     green[0, 0], nir[0, 0], swir1[0, 0] = 0.15, 0.05, 0.10
     green[1, 1], nir[1, 1], swir1[1, 1] = 0.20, 0.20, 0.20
+    _write_sources(root, green=green, nir=nir, swir1=swir1)
     mcfeeters = _write_index(root / "ndwi_mcfeeters.tif", ndwi_mcfeeters(green, nir))
     mndwi_path = _write_index(root / "mndwi.tif", mndwi(green, swir1))
     steps = [
@@ -242,6 +250,7 @@ def indices_burn_evi(root: Path):
     post_nir = _band(0.30, 0.008)
     post_swir2 = _band(0.14, 0.006)
     post_nir[0, 0], post_swir2[0, 0] = 0.01, 0.60
+    _write_sources(root, pre_nir=pre_nir, pre_swir2=pre_swir2, post_nir=post_nir, post_swir2=post_swir2)
     pre_nbr_values = nbr(pre_nir, pre_swir2)
     post_nbr_values = nbr(post_nir, post_swir2)
     pre_nbr = _write_index(root / "nbr_prefire.tif", pre_nbr_values)

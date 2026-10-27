@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from terraproof.checks import accuracy, crs, geometry, raster, rs, rs_processing, sar, scope, stac, terrain
 from terraproof.checks import index_formula as index_checks
+from terraproof.checks import stack_reduction as stack_checks
 from terraproof.checks import slope_formula as slope_checks, raster_identity as identity_checks
 from terraproof.checks.base import STATUSES, CheckResult, result
 
@@ -32,6 +33,11 @@ def run_checks(
     slope_method: str | None = None,
     raster_identity: bool = False,
     index_formula: str | None = None,
+    index_bands: dict | None = None,
+    stack: list | None = None,
+    stack_reduction: str | None = None,
+    stack_weights: list | None = None,
+    stack_min_count: int | None = None,
     nir: dict | None = None,
     red: dict | None = None,
     processing_full_scan: bool = False,
@@ -82,9 +88,14 @@ def run_checks(
     if time_range is not None:
         results += rs_processing.check_temporal_scope(stac_items, time_range)
 
-    if index_formula is not None or nir is not None or red is not None:
+    if stack_reduction is not None or stack:
         for dataset in inputs:
-            results += index_checks.check_index_formula(dataset, index_formula, nir, red)
+            results += stack_checks.check_stack_reduction(dataset, stack, stack_reduction, stack_weights,
+                                                          stack_min_count)
+
+    if index_formula is not None or nir is not None or red is not None or index_bands:
+        for dataset in inputs:
+            results += index_checks.check_index_formula(dataset, index_formula, nir, red, index_bands)
 
     if slope_method is not None:
         for dataset in inputs:

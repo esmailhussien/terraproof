@@ -16,15 +16,15 @@ The 33-task benchmark is unchanged (0 false passes, 25 checker rejections, 25 bl
 spots). The Antigravity harder-cohort results are recorded with their prespecified and
 post-hoc numbers; no lift is claimed.
 
-- [ ] PR CI green on the release head, then merged with a regular merge commit.
-- [ ] Tag the release commit `v0.8.0` and push the tag. This starts
+- [x] PR CI green on the release head, then merged with a regular merge commit. 2026-10-27: #33, 20/20 on `9dabd84`, merge `a4ddda6`.
+- [x] Tag the release commit `v0.8.0` and push the tag. This starts
   `publish-python.yml`: build, clean install on every OS, TestPyPI publish and
   install, then a wait for the `pypi` environment review.
-- [ ] Publish the reviewed npm tarball (`npm publish --access public`; browser/2FA).
-- [ ] Approve the `pypi` deployment in GitHub only after the TestPyPI install jobs pass;
+- [x] Publish the reviewed npm tarball (`npm publish --access public`; browser/2FA). 2026-10-27: shasum `27910c5e…`, identical to a pack of the tag.
+- [x] Approve the `pypi` deployment in GitHub only after the TestPyPI install jobs pass;
   the workflow then publishes to PyPI and installs from it on every OS.
-- [ ] GitHub release *Terraproof v0.8.0* with the npm tarball and the wheel attached.
-- [ ] Post-release: `npx terraproof@0.8.0 --version` and `route` from a blank directory,
+- [x] GitHub release *Terraproof v0.8.0* with the npm tarball and the wheel attached (and the sdist).
+- [x] Post-release: `npx terraproof@0.8.0 --version` and `route` from a blank directory,
   and `pip install "terraproof[mcp]==0.8.0"` in a fresh venv runs `inspect`, `check` and
   lists the six MCP tools.
 
