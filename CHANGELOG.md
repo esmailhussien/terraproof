@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+- **Phase 6 E1: headroom-screened task cohort.** 36 offline candidate tasks in nine trap
+  families (QA/SCL masking, scale/offset and baselines, nodata stored as zero, dtype overflow,
+  categorical resampling, metric work in a geographic CRS, vertical units, dB vs linear,
+  temporal scope). Prompts state the goal, not the method, and each trap is discoverable from
+  the inputs' metadata. Each task has an array recipe, a separate scalar oracle that reads
+  every delivered cell and mask, and at least one seeded wrong output per trap (64 in all);
+  all 36 pass the calibration gate. A seeded split (seed 20261027, stratified by family),
+  fixed before authoring, gives the `headroom-development` (12) and `headroom-confirmation`
+  (24) lift cohorts. Specs live in `evals/headroom/`, so the frozen benchmark is unchanged
+  (33/33, 0 false passes, 25 blind spots). No model was called.
+
 ## [0.8.0] — 2026-10-27
 
 ### Phase 6 (in progress; see the [Phase 6 plan](docs/plans/Terraproof_Phase6_PLAN.md))
