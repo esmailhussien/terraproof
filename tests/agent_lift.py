@@ -34,6 +34,7 @@ import time
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import release_validation as validation  # noqa: E402  (shared host isolation helpers)
+from runtime_admission import admit_mcp  # noqa: E402
 
 from terraproof.evals.lift import (  # noqa: E402
     COHORTS, DEFAULT_COHORT, WITH, Adapter, AgentRequest, AgentResult, Budget, LiftError, lift_task, planned_calls,
@@ -196,6 +197,8 @@ def host_env(condition: str = WITH, agent_python: str | None = None, agent_pytho
     """
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", DISABLE_AUTOUPDATER="1",
                CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC="1", CLAUDE_CODE_DISABLE_AUTO_MEMORY="1")
+    for key in ("PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP"):
+        env.pop(key, None)
     interpreter = sys.executable
     if condition != WITH:
         env.pop("PYTHONPATH", None)
@@ -322,14 +325,14 @@ CODEX_NON_CALLS = {"agent_message", "reasoning", "todo_list", "error"}
 CODEX_STATUSES = {"in_progress", "completed", "failed", "declined"}
 
 
-def codex_mcp_value(condition: str) -> str:
+def codex_mcp_value(condition: str, python: str | None = None) -> str:
     """The exact `mcp_servers` override: the Terraproof server in "with", explicitly none in "without"."""
     if condition != WITH:
         return "{}"
     tools = ",".join(json.dumps(name) for name in TOOLS)
     approvals = ",".join(f'{name}={{approval_mode="approve"}}' for name in TOOLS)
-    return ("{terraproof={command=" + json.dumps(sys.executable)
-            + ',args=["-m","terraproof.mcp"],enabled_tools=[' + tools + "],"
+    return ("{terraproof={command=" + json.dumps(str(Path(python).resolve()) if python else sys.executable)
+            + ',args=' + json.dumps((["-I"] if python else []) + ["-m", "terraproof.mcp"]) + ',enabled_tools=[' + tools + "],"
             + "tools={" + approvals + "},"
             + 'env={PYTHONUTF8="1",PYTHONIOENCODING="utf-8"},required=true,'
             + "startup_timeout_sec=30,tool_timeout_sec=120}}")
@@ -344,7 +347,7 @@ def codex_feature_args() -> list[str]:
     return args
 
 
-def codex_config_args(state: Path, condition: str, effort: str) -> list[str]:
+def codex_config_args(state: Path, condition: str, effort: str, python: str | None = None) -> list[str]:
     config = {
         "approval_policy": '"never"', "web_search": '"disabled"',
         "sandbox_workspace_write.network_access": "false",
@@ -354,7 +357,7 @@ def codex_config_args(state: Path, condition: str, effort: str) -> list[str]:
         "suppress_unstable_features_warning": "true",
         "check_for_update_on_startup": "false", "log_dir": json.dumps(str(state / "logs")),
         "sqlite_home": json.dumps(str(state / "sqlite")),
-        "mcp_servers": codex_mcp_value(condition),
+        "mcp_servers": codex_mcp_value(condition, python),
     }
     args = []
     for key, value in config.items():
@@ -362,12 +365,13 @@ def codex_config_args(state: Path, condition: str, effort: str) -> list[str]:
     return args
 
 
-def codex_lift_command(executable: str, project: Path, state: Path, condition: str, effort: str) -> list[str]:
+def codex_lift_command(executable: str, project: Path, state: Path, condition: str, effort: str,
+                       python: str | None = None) -> list[str]:
     """Reviewable argv: workspace-write sandbox, Codex's own exec tools, no network, MCP only in "with"."""
     command = [executable, "--no-daemon", "exec", "--ignore-user-config", "--ignore-rules",
                "--strict-config", "--ephemeral", "--sandbox", "workspace-write", "--json",
                "--skip-git-repo-check", "-C", str(project)]
-    return command + codex_feature_args() + codex_config_args(state, condition, effort) + [PROMPT]
+    return command + codex_feature_args() + codex_config_args(state, condition, effort, python) + [PROMPT]
 
 
 # Codex's built-in MCP *resource* tools are reported as mcp_tool_call items on server "codex"
@@ -504,7 +508,8 @@ class CodexHostAdapter(Adapter):
     def run(self, request: AgentRequest) -> AgentResult:
         state = request.project.parent / "host-state"
         state.mkdir(exist_ok=True)
-        command = codex_lift_command(self.executable, request.project, state, request.condition, self.effort)
+        command = codex_lift_command(self.executable, request.project, state, request.condition, self.effort,
+                                     self.agent_python_with)
         env = host_env(request.condition, self.agent_python_without, self.agent_python_with)
         code, lines, stderr, timed_out = run_contained(command, request.project, env, request.timeout_seconds)
         events, invalid = _json_lines(lines)
@@ -544,7 +549,7 @@ class CodexHostAdapter(Adapter):
             checks[check] = marker in seen
         checks["sandbox_exit_zero"] = code == 0 and not timed_out
         listed = subprocess.run([self.executable, "mcp", "list", "--json", "-c",
-                                 f"mcp_servers={codex_mcp_value(request.condition)}"],
+                                 f"mcp_servers={codex_mcp_value(request.condition, self.agent_python_with)}"],
                                 cwd=request.project, env=env, capture_output=True, text=True,
                                 encoding="utf-8", errors="replace", timeout=60, check=False)
         try:
@@ -575,8 +580,13 @@ class CodexHostAdapter(Adapter):
         if request.condition == WITH:
             entry = (servers or {}).get("terraproof") or {}
             transport = entry.get("transport") or {}
-            checks["mcp_registered_in_codex"] = bool(entry.get("enabled")) and transport.get("args") == ["-m", "terraproof.mcp"]
-            checks["mcp_tools_served"] = mcp_tools_served(sys.executable, ["-m", "terraproof.mcp"], request.project)
+            expected_args = ["-I", "-m", "terraproof.mcp"]
+            command = self.agent_python_with or sys.executable
+            admission = admit_mcp(request.project, self.agent_python_with,
+                                  transport.get('command'), transport.get('args', []))
+            checks.update(admission)
+            checks["mcp_registered_in_codex"] = bool(entry.get("enabled")) and transport.get("args") == expected_args
+            checks["mcp_tools_served"] = all(admission.values()) and mcp_tools_served(command, expected_args, request.project)
             routed = set(_routed_skills(request.project))
             checks["skills_visible_to_codex"] = routed <= names
             checks["agents_md_visible_to_codex"] = block
@@ -773,8 +783,10 @@ class ClaudeHostAdapter(Adapter):
         config = self._config(request)
         if request.condition == WITH:
             entry = json.loads(config.read_text(encoding="utf-8")).get("mcpServers", {}).get("terraproof", {})
-            checks["mcp_tools_served"] = bool(entry) and mcp_tools_served(entry["command"], entry.get("args", []),
-                                                                         request.project)
+            admission = admit_mcp(request.project, self.agent_python_with, entry.get("command"), entry.get("args", []))
+            checks.update(admission)
+            checks["mcp_tools_served"] = all(admission.values()) and mcp_tools_served(entry["command"], entry.get("args", []),
+                                                                                    request.project)
         return checks
 
 
@@ -1050,8 +1062,10 @@ class AntigravityHostAdapter(Adapter):
             config = request.project / ".agents" / "mcp_config.json"
             entry = (json.loads(config.read_text(encoding="utf-8")).get("mcpServers", {}).get("terraproof", {})
                      if config.is_file() else {})
-            checks["mcp_tools_served"] = bool(entry) and mcp_tools_served(entry["command"], entry.get("args", []),
-                                                                         request.project)
+            admission = admit_mcp(request.project, self.agent_python_with, entry.get("command"), entry.get("args", []))
+            checks.update(admission)
+            checks["mcp_tools_served"] = all(admission.values()) and mcp_tools_served(entry["command"], entry.get("args", []),
+                                                                                    request.project)
             agents_md = request.project / "AGENTS.md"
             checks["agents_md_block_written"] = (agents_md.is_file() and "terraproof:antigravity:begin"
                                                  in agents_md.read_text(encoding="utf-8"))
@@ -1246,7 +1260,9 @@ class OpenCodeHostAdapter(Adapter):
             entry = (json.loads(config.read_text(encoding="utf-8")).get("mcp", {}).get("terraproof", {})
                      if config.is_file() else {})
             command = entry.get("command") or []
-            checks["mcp_tools_served"] = bool(command) and mcp_tools_served(command[0], command[1:], request.project)
+            admission = admit_mcp(request.project, self.agent_python_with, command[0] if command else None, command[1:])
+            checks.update(admission)
+            checks["mcp_tools_served"] = all(admission.values()) and mcp_tools_served(command[0], command[1:], request.project)
         else:
             checks.update(without_isolation_checks(request.project, self.agent_python_without, env))
         return checks
@@ -1547,7 +1563,8 @@ def main(argv=None) -> int:
                           agent="claude" if args.agent_host in API_HOSTS else args.agent_host,
                           budget=budget, work_root=work,
                           allow_model_calls=not args.preflight_only, preflight_only=args.preflight_only,
-                          recordings_out=None if args.preflight_only else args.recordings)
+                          recordings_out=None if args.preflight_only else args.recordings,
+                          mcp_python=agent_python_with)
     finally:
         shutil.rmtree(work, ignore_errors=True)
     report["command"] = summary["preflight_command" if args.preflight_only else "command_to_approve"]

@@ -28,6 +28,24 @@ def review_case(tmp_path):
         "paths": ["outputs/a.tif"], "index_formula": "ndvi", "nir": "inputs/n.tif", "red": "inputs/r.tif"}
 
 
+def test_contract_outcome_blocks_completion_until_same_context_passes(tmp_path):
+    review, args = review_case(tmp_path)
+    args['contract'] = {'schema': 'terraproof.verification-contract/1'}
+    reply = response('pass')
+    reply.structured_content['report']['verification'] = {'status': 'incomplete', 'grade': 'advisory-only'}
+    review.observe(args, reply)
+    assert review.unresolved == 1
+    finding = review.unresolved_findings()[0]
+    assert finding['check'] == 'verification.contract' and len(finding['context_sha256']) == 64
+    assert 'inputs/n.tif' not in json.dumps(finding)
+    # A pass without the explicit contract outcome cannot erase its pending requirement.
+    review.observe(args, response('pass'))
+    assert review.unresolved == 1
+    reply.structured_content['report']['verification'] = {'status': 'verified', 'grade': 'decision-grade'}
+    review.observe(args, reply)
+    assert review.unresolved == 0 and not review.unresolved_findings()
+
+
 @pytest.mark.parametrize("status", ["warn", "not-run"])
 def test_warnings_and_not_run_do_not_resolve_failures(tmp_path, status):
     review, args = review_case(tmp_path)

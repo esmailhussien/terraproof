@@ -227,6 +227,8 @@ def test_run_lift_integration_with_a_fake_model(tmp_path, monkeypatch):
         seen.append(python) or {"with_agent_python_set": True, "with_terraproof_importable": True,
                                 "with_evals_not_importable": True}))
     adapter = api_agent.ApiAgentAdapter("openai", "gpt-4o", PRICES, transport=model, agent_python_with=sys.executable)
+    # Admission is tested independently; this fake transport exercises the rest of the loop.
+    monkeypatch.setattr(api_agent.driver, 'admit_mcp', lambda *args: {'mcp_runtime_admitted': True})
     report = lift.run_lift(adapter, task_ids=[TASK], runs=1, agent="claude", allow_model_calls=True,
                            budget=Budget(max_runs=2, per_run_usd=1.0, total_usd=2.0), work_root=tmp_path / "work")
     assert report["adapter"] == {"name": "openai-api", "model_calls": True}

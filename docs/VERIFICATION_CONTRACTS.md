@@ -1,0 +1,111 @@
+# Verification contracts and local evidence bundles
+
+A contract declares what a single check invocation must establish. It binds
+required check IDs to output paths and explicit source/parameter values. It does
+not infer the user's task, run processing code or decide which scientific method
+is appropriate. The contract belongs to the caller; retain its digest separately
+and reuse it unchanged after a repair.
+
+## Declare the requirements
+
+For example, save `contract.json` in a project containing `inputs/` and `outputs/`:
+
+```json
+{
+  "schema": "terraproof.verification-contract/1",
+  "requirements": [{
+    "paths": ["outputs/ndvi.tif"],
+    "checks": ["rs.index_formula"],
+    "parameters": {
+      "index_formula": "ndvi",
+      "nir": "inputs/nir.tif",
+      "red": "inputs/red.tif"
+    }
+  }]
+}
+```
+
+```bash
+python -m terraproof check outputs/ndvi.tif --index-formula ndvi --nir inputs/nir.tif --red inputs/red.tif --contract contract.json --out report.json
+```
+
+The actual arguments must supply the evidence and match the contract. Supplying
+only `--contract` does not execute its parameters automatically: a range/metadata
+screen cannot substitute for the missing source relation. Diagnostics identify
+missing checks, missing bindings and parameter mismatches.
+
+Python `build_report(..., contract=...)` and MCP `run_checks(..., contract=...)`
+accept an inline object or a local JSON filename. File-relative paths resolve
+against the contract's directory; inline paths resolve against the current working
+directory. File contracts also retain the digest of the exact JSON bytes parsed,
+so the bundle protects the original policy document as well as its canonical form.
+JSON is limited to 64 KiB; duplicate keys, unknown IDs/parameters,
+nonfinite JSON numbers and conflicting contexts are rejected. Each output must
+be among the inspected primary paths. A pass on another file or an unscoped result
+cannot satisfy a requirement. Multiple groups may share a consistent invocation
+context. Different source contexts require separate contracts/reports.
+
+Use ordinary run-check parameter names. The `bands`/`band_numbers` MCP aliases
+normalize to `index_bands: {"role": ["path", 1]}`. Stack order and weights are
+significant. Source-aware checks require explicit operand bindings; calibration
+and QA contracts also declare `processing_full_scan` as true or false. Choosing
+false explicitly retains the sampled scope; contract success is not an upgrade
+to exhaustive coverage. Check evidence records tolerances and scope limitations.
+
+## Read both outcomes
+
+Without a contract, the existing schema, grade, exit codes and JSON results are
+unchanged. With a contract the report adds:
+
+- `verification`: canonical contract, SHA-256, per-output/check coverage and scan
+  scope, missing/mismatched bindings, status and effective grade.
+- `diagnostics`: observed messages/evidence and bounded next actions. Recheck
+  suggestions use MCP-compatible arguments and identify the unchanged contract
+  digest. Supply the original contract again; suggestions do not replace it.
+
+The old `grade` continues to describe the checks that ran. The CLI/MCP exit code
+uses `verification.grade` when present: missing/not-run requirements or failures
+produce advisory/3, warnings produce review/2, and complete passing evidence
+produces decision/0. Other observed failures/warnings remain material.
+The MCP summary `grade` also uses the effective grade; the nested report's legacy
+`grade` stays unchanged. JSON and
+English/Arabic Markdown display the contract outcome separately. A missing
+requirement is not silently omitted and an automatic patch is never applied.
+
+This does not verify that a caller chose all scientifically necessary requirements,
+the correct band roles, a suitable CRS or trustworthy source data. It verifies
+the declared contract against the observations in this invocation.
+
+## Bind and verify the report
+
+The existing provenance manifest remains available. An additional unsigned bundle
+binds a JSON report, its contract and its recorded input/output hashes:
+
+```bash
+python -m terraproof evidence write report.json --root . --out evidence.json
+python -m terraproof evidence verify evidence.json
+python -m terraproof evidence verify evidence.json --expected-report-sha256 DIGEST_RETAINED_SEPARATELY
+```
+
+Use `--root` for the report's original working directory if recorded data paths
+are relative. Bundles retain absolute local paths and are not portable archives.
+Python exposes `build_bundle(report, root=...)` and `verify_bundle(bundle,
+expected_report_sha256=...)` in `terraproof.evidence.bundle`.
+
+Writing refuses data changed since the report and refuses overwriting recorded
+data or the source report. Verification recomputes report/contract consistency,
+file hashes and known companion membership. It detects changed, missing or newly
+created masks and common Shapefile companions. Known companions include `.msk`,
+`.aux.xml`, `.ovr`, GeoPackage WAL/SHM and common Shapefile component suffixes.
+VRT external dependencies are unsupported and refused.
+Contract reports capture companion hashes as well. A legacy report without that
+snapshot cannot be bundled when companions exist; rerun it with a contract.
+Other external execution or data dependencies are not claimed to be captured. Hashing reads file bytes;
+it is not zero-I/O verification or a filesystem lock.
+
+A self-contained hash is not a signature. A party able to replace the whole
+bundle can recompute it; an externally retained trusted report digest provides
+an independent comparison anchor. Bundle verification proves content binding,
+not source authenticity, that processing actually ran, professional accreditation
+or scientific correctness. A failed/incomplete report can have an intact bundle:
+inspect its verification outcome as well as bundle integrity.

@@ -577,3 +577,21 @@ def test_run_checks_accepts_index_bands_and_stack_reductions(tmp_path):
     payload = call("run_checks", {"paths": [total], "stack": layers, "stack_reduction": "weighted-sum",
                                   "stack_weights": [1, 2, 3]}).structured_content
     assert {c["id"]: c["status"] for c in payload["report"]["checks"]}["rs.stack_reduction"] == "pass"
+
+
+def test_cli_mcp_contract_parity_and_bundle_roundtrip(make_raster, tmp_path, capsys):
+    from terraproof.cli import main
+    from test_verification_contract import contract
+    out = make_raster('contract-out.tif', np.full((4, 4), .2, dtype='float32'), nodata=-9999.)
+    req = contract(out, ['rs.index_formula'], {'index_formula': 'ndvi'})
+    path = tmp_path/'contract.json'; path.write_text(json.dumps(req))
+    assert main(['check', out, '--contract', str(path)]) == 3
+    r = json.loads(capsys.readouterr().out)
+    remote = call('run_checks', {'paths': [out], 'contract': str(path)}).structured_content
+    assert r == remote['report'] and remote['exit_code'] == 3
+    report_path = tmp_path/'report.json'; report_path.write_text(json.dumps(r))
+    bundle_path = tmp_path/'bundle.json'
+    assert main(['evidence', 'write', str(report_path), '--out', str(bundle_path)]) == 0
+    capsys.readouterr()
+    assert main(['evidence', 'verify', str(bundle_path)]) == 0
+    assert json.loads(capsys.readouterr().out)['status'] == 'pass'

@@ -48,6 +48,7 @@ LABELS = {
             "accuracy-samples": "accuracy-samples",
             "class-areas": "class-areas",
             "manifest": "manifest",
+            "contract": "verification contract",
             "plan": "plan",
         },
     },
@@ -79,6 +80,7 @@ LABELS = {
             "accuracy-samples": "عينات الدقة",
             "class-areas": "مساحات الفئات",
             "manifest": "بيان المنشأ",
+            "contract": "عقد التحقق",
             "plan": "خطة",
         },
     },
@@ -113,10 +115,11 @@ def build_report(
     inputs: list[dict],
     results: list[CheckResult],
     parameters: dict,
+    contract: dict | str | None = None,
 ) -> dict:
     """Assemble the report. It holds no timestamps, so identical inputs give identical JSON."""
     ordered = sorted(results, key=lambda result: (result.id, result.message))
-    return {
+    report = {
         "schema_version": SCHEMA_VERSION,
         "grade": grade_for(results),
         "checks": [result.to_dict() for result in ordered],
@@ -125,6 +128,23 @@ def build_report(
         "tool_versions": tool_versions(),
         "limitation": LIMITATION_EN,
     }
+    if contract is not None:
+        from terraproof.evidence.contract import coverage, diagnostics, load_contract
+        from pathlib import Path
+        from terraproof.evidence.bundle import capture_companions
+        normalized, record = load_contract(contract, with_record=True)
+        if record:
+            report['inputs'].append(record)
+            report['inputs'].sort(key=lambda r: (r['role'], r['path']))
+        report['companions'] = capture_companions(report, Path.cwd())
+        report["verification"] = coverage(report, normalized)
+        report["diagnostics"] = diagnostics(report)
+    return report
+
+
+def report_exit_code(report: dict) -> int:
+    from terraproof.evidence.grade import EXIT_CODES
+    return EXIT_CODES[report.get("verification", {}).get("grade", report["grade"])]
 
 
 def to_json(report: dict) -> str:
@@ -159,6 +179,17 @@ def render_markdown(report: dict, lang: str = "en") -> str:
         f"## {labels['checks']}",
         "",
     ]
+
+    if "verification" in report:
+        verification = report["verification"]
+        title = "Verification contract" if lang == "en" else "عقد التحقق"
+        lines[4:4] = [f"## {title}", "", f"**{verification['status']}** — "
+                       f"{verification['passed']}/{verification['required']}; "
+                       f"{labels['grades'][verification['grade']]}", "",
+                       ("| Path | Required check | Status |" if lang == 'en' else
+                        "| المسار | الفحص المطلوب | الحالة |"), "|---|---|---|"] + [
+            f"| {_cell(r['path'])} | {_cell(r['check'])} | {_cell(r['status'])} |"
+            for r in verification['requirements']] + [""]
 
     if report["checks"]:
         lines.append("| " + " | ".join(labels["cols_checks"]) + " |")

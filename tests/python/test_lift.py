@@ -757,7 +757,7 @@ def test_host_env_without_uses_the_agent_python_and_drops_pythonpath(monkeypatch
     without = driver.host_env(WITHOUT, str(agent_python))
     assert "PYTHONPATH" not in without and without["PATH"].split(os.pathsep)[0] == str(agent_python.parent)
     with_env = driver.host_env(WITH, str(agent_python))
-    assert with_env["PYTHONPATH"] == "src" and with_env["PATH"].split(os.pathsep)[0] == str(Path(sys.executable).parent)
+    assert "PYTHONPATH" not in with_env and with_env["PATH"].split(os.pathsep)[0] == str(Path(sys.executable).parent)
 
 
 def _python_shim(directory: Path, *flags: str) -> Path:
@@ -920,7 +920,7 @@ def test_host_env_puts_the_with_interpreter_first_and_drops_pythonpath(tmp_path,
     assert env["PATH"].split(os.pathsep)[0] == str(with_python.parent) and "PYTHONPATH" not in env
     default = driver.host_env(WITH)
     assert default["PATH"].split(os.pathsep)[0] == str(Path(sys.executable).parent)
-    assert default["PYTHONPATH"] == "checkout-src"
+    assert "PYTHONPATH" not in default
 
 
 def test_driver_carries_the_with_python_into_the_approved_command(capsys, tmp_path):

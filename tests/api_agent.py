@@ -286,6 +286,18 @@ class _OutputReview:
     def unresolved(self) -> int:
         return sum(not resolved for resolved in self.records.values())
 
+    def unresolved_findings(self):
+        """Fixed labels only: never persist file contents, paths or arbitrary arguments."""
+        findings = []
+        slots = {path: index for index, path in enumerate(sorted(self.outputs))}
+        for (target, check, context, _), resolved in self.records.items():
+            if not resolved:
+                findings.append({'check': check, 'output_slot': slots[target],
+                    'context_sha256': hashlib.sha256(context.encode('utf-8')).hexdigest(),
+                    'status': 'unresolved',
+                    'meaning': 'no current explicit pass recorded in this verification context'})
+        return sorted(findings, key=lambda f: (f['output_slot'], f['check'], f['context_sha256']))
+
     def invalidate(self):
         for key in self.records:
             self.records[key] = False
@@ -316,6 +328,12 @@ class _OutputReview:
                 self.records[key] = bool(valid)
         if not valid:
             return
+        verification = report.get('verification')
+        if isinstance(verification, dict):
+            for target in targets:
+                key = (target, 'verification.contract', context, group)
+                self.records[key] = (verification.get('status') == 'verified'
+                                     and verification.get('grade') == 'decision-grade')
         for check in checks:
             evidence = check["evidence"]
             references = [evidence.get("input"), evidence.get("output")]
@@ -677,6 +695,7 @@ class ApiAgentAdapter(Adapter):
                                     "resolved" if output_review.records else "no-failure-observed"),
                   "output_review_requirements": len(output_review.records),
                   "output_review_unresolved": output_review.unresolved,
+                  "output_review_findings": output_review.unresolved_findings(),
                   "mcp_instructions_delivered": instructions is not None and model_calls > 0,
                   "mcp_instructions_chars": len(instructions) if instructions is not None else 0,
                   "mcp_instructions_sha256": hashlib.sha256(instructions.encode("utf-8")).hexdigest()
@@ -696,6 +715,15 @@ class ApiAgentAdapter(Adapter):
             checks.update(driver.without_isolation_checks(request.project, self.agent_python_without, env))
         else:
             checks.update(driver.with_isolation_checks(request.project, self.agent_python_with, env))
+            try:
+                entry = json.loads((request.project / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]["terraproof"]
+                admission = driver.admit_mcp(request.project, self.agent_python_with, entry.get("command"), entry.get("args", []))
+            except (OSError, ValueError, KeyError, TypeError):
+                admission = {"mcp_registration_valid": False}
+            checks.update(admission)
+            if not all(admission.values()):
+                checks["mcp_tools_served"] = False
+                return checks
             try:
                 verification = None
                 if self.verification_plan is not None:

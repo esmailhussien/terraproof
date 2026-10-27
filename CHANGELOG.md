@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### E2 runtime correction and verification contracts
+
+- Explicit isolated MCP interpreter registration and real-host admission against
+  the candidate product code/assets; reject harness/evaluator exposure before
+  starting the registered server. This is package separation, not host filesystem containment.
+- Remove stale private evaluator modules/assets from reused wheel build directories,
+  with bounded-output/source-directory guards. Developer tests include the build backend.
+- Optional per-output verification contracts in Python, CLI and MCP, with required
+  check coverage, source/parameter binding, separate effective grade and structured
+  next-step diagnostics. Legacy reports without contracts remain unchanged.
+- Unsigned local evidence bundles bind reports/contracts to recorded file hashes
+  and known companions, with an optional externally trusted report digest.
+- Record the 96-run E2 development result, contamination and the distinction between
+  accepted artifacts and unresolved completion review. Future API reports include
+  fixed unresolved check/context labels without loosening completion rules.
+
 ### Added (Phase 6 C: source-aware checks)
 
 - `rs.index_formula` now also verifies NBR, dNBR (pre-fire minus post-fire), McFeeters NDWI,

@@ -113,6 +113,7 @@ def run_checks(
     processing_full_scan: bool = False,
     manifest: str | None = None,
     require_provenance: bool = False,
+    contract: dict | str | None = None,
     lang: str = "en",
 ) -> dict[str, Any]:
     """Run Terraproof's deterministic evidence checks and return the grade and report.
@@ -139,6 +140,11 @@ def run_checks(
     output masking warns because its QA policy is not supplied. `manifest` verifies a run manifest and appends `provenance.reproducible`;
     `require_provenance` prevents Decision-grade when no manifest is supplied. `lang`
     selects the Markdown language (en or ar). Results match `python -m terraproof check`.
+    Supply `contract` as a verification-contract object or local JSON path to require
+    specific checks on specific outputs with declared source/parameter bindings.
+    Read `report.verification` and `report.diagnostics`: missing required evidence
+    prevents contract success even when the legacy grade passes. Recheck the same
+    contract after correcting a new output; no patch is applied by this tool.
     """
     if not isinstance(paths, list) or not paths or not all(isinstance(path, str) for path in paths):
         raise ToolError("paths must be a non-empty list of file paths")
@@ -266,10 +272,14 @@ def run_checks(
         "manifest": manifest,
         "require_provenance": require_provenance,
     }
-    report = build_report(inputs=inputs, results=results, parameters=parameters)
+    try:
+        report = build_report(inputs=inputs, results=results, parameters=parameters, contract=contract)
+    except (OSError, ValueError, TypeError) as exc:
+        raise ToolError(f"cannot evaluate verification contract: {exc}") from exc
+    from terraproof.evidence.report import report_exit_code
     return {
-        "grade": report["grade"],
-        "exit_code": EXIT_CODES[report["grade"]],
+        "grade": report.get('verification', {}).get('grade', report['grade']),
+        "exit_code": report_exit_code(report),
         "report": json.loads(to_json(report)),
         "markdown": render_markdown(report, lang=lang),
     }

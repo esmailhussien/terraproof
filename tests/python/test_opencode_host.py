@@ -173,11 +173,12 @@ def test_with_project_gets_agents_md_and_opencode_mcp_and_without_gets_none(tmp_
     assert lift.project_preflight(task, project, condition=WITHOUT, agent="opencode", routed=[])["no_terraproof_files"]
 
 
-def test_adapter_preflight_serves_the_installed_mcp_without_a_model(tmp_path):
+def test_adapter_preflight_refuses_harness_mcp_without_a_product_runtime(tmp_path):
     adapter = driver.OpenCodeHostAdapter("opencode.exe", "m/x", config_home=tmp_path / "config")
     task, project, _ = _prepared(tmp_path, WITH)
     checks = adapter.preflight(lift.AgentRequest(task.task_id, WITH, 0, project, "", 10, 1.0))
-    assert checks["mcp_tools_served"] and checks["unsandboxed_python"]
+    assert not checks["mcp_tools_served"] and checks["unsandboxed_python"]
+    assert checks['mcp_python_matches_agent'] is False
     assert checks["no_terraproof_in_opencode_global_config"] and "with_evals_not_importable" in checks
     task, project, _ = _prepared(tmp_path, WITHOUT)
     checks = adapter.preflight(lift.AgentRequest(task.task_id, WITHOUT, 0, project, "", 10, 1.0))

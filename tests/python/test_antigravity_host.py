@@ -203,7 +203,8 @@ def test_adapter_preflight_checks_workspace_and_global_state_without_a_model(tmp
     adapter = driver.AntigravityHostAdapter("agy.exe", "gemini-x", home=home)
     task, project, _ = _prepared(tmp_path, WITH)
     checks = adapter.preflight(lift.AgentRequest(task.task_id, WITH, 0, project, "", 10, 1.0))
-    assert checks["mcp_tools_served"] and checks["agents_md_block_written"]
+    assert not checks["mcp_tools_served"] and checks["agents_md_block_written"]
+    assert checks['mcp_python_matches_agent'] is False
     assert checks["no_terraproof_in_global_mcp"] and checks["unsandboxed_python"]
     (home / "GEMINI.md").write_text("use terraproof\n", encoding="utf-8")
     task, project, _ = _prepared(tmp_path, WITHOUT)
