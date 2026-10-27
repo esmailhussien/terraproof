@@ -34,6 +34,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Opt-in `--processing-full-scan` (Python and MCP `processing_full_scan=True`) for the
+  calibration and cloud/QA relations: every corresponding band and pixel is checked in
+  bounded windows instead of the sampled band-1 screen, which stays the default. A separate
+  offline scorecard (`tests/checker_scorecard.py`) shows it rejecting single-pixel and
+  other-band errors the sampled screen misses, without changing the frozen benchmark
+  invocations or counts. See `docs/PROCESSING_FULL_SCAN.md`. Taken from PR #31 without its
+  runtime-isolation and Docker harness parts, which the Phase 6 harness freeze leaves out.
 - Installer format `--agent antigravity`: workspace skills in `.agents/skills/<skill>/`, an
   `AGENTS.md` block, and with `--with-mcp` a `mcpServers` entry in `.agents/mcp_config.json`
   (the workspace locations in Antigravity's skills, rules and MCP docs). Unit-tested only.
@@ -79,9 +86,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Antigravity harder-cohort measurement (2026-10-26, agy 1.4.7, `gemini-3.8-flash-high`,
   6 tasks x 3 runs, 36 runs in 2 h 52 min, about 7.4 M input and 0.8 M output tokens, no
   errors). All 36 deliverables passed the oracle, the checks and the contract.
-  - Prespecified (contamination rule as frozen): with 7/18, without 16/18 (McNemar p = 0.012).
+  - Prespecified (contamination rule as frozen): with 7/18, without 16/18. Primary task-level
+    sign-flip p = 0.125 (not significant); secondary, anti-conservative McNemar p = 0.012.
   - Post-hoc, labelled as such: product-only introspection not counted, giving 14/18 vs 16/18
-    (p = 0.63).
+    (primary sign-flip p = 0.75; McNemar p = 0.63).
   - Actual verdicts: 18/18 in both conditions. The cohort is at ceiling for this model, so
     there is no lift evidence either way; see Phase 5 plan section 19.
 

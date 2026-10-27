@@ -34,6 +34,7 @@ def run_checks(
     index_formula: str | None = None,
     nir: dict | None = None,
     red: dict | None = None,
+    processing_full_scan: bool = False,
 ) -> list[CheckResult]:
     """Run every check that applies to the inspected inputs, in a fixed order."""
     vectors = [d for d in inputs if d["kind"] == "vector"]
@@ -73,10 +74,11 @@ def run_checks(
     # a check that applies but cannot run reports not-run itself rather than being omitted.
     if reference_input is not None or encoding is not None:
         for dataset in rasters:
-            results += rs_processing.check_scale_applied_once(dataset, reference_input, encoding)
+            results += rs_processing.check_scale_applied_once(dataset, reference_input, encoding,
+                                                              full_scan=processing_full_scan)
     if qa_path is not None or qa_kind is not None:
         for dataset in rasters:
-            results += rs_processing.check_cloud_mask_applied(dataset, qa_path, qa_kind)
+            results += rs_processing.check_cloud_mask_applied(dataset, qa_path, qa_kind, full_scan=processing_full_scan)
     if time_range is not None:
         results += rs_processing.check_temporal_scope(stac_items, time_range)
 

@@ -383,3 +383,10 @@ and COG scope are the [Rasterio nodata-mask documentation](https://rasterio.read
 and [GDAL COG driver documentation](https://gdal.org/en/stable/drivers/raster/cog.html).
 The [versioned contract guide](https://github.com/esmailhussien/terraproof/blob/v0.7.3/docs/RASTER_CONTRACTS.md) describes the implemented
 mathematics, tolerances, validity policy and limits.
+
+## Exhaustive processing checks
+
+The full calibration/QA checks (`src/terraproof/checks/processing_full.py`) and the offline
+checker scorecard (`tests/checker_scorecard.py`) are original Terraproof/Geova MIT code. No
+external implementation is vendored. Raster validity follows the
+[Rasterio mask API](https://rasterio.readthedocs.io/en/stable/topics/masks.html).
