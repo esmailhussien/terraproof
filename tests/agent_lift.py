@@ -1084,6 +1084,195 @@ def probe_antigravity(executable: str | None = None, model: str | None = None) -
     return executable, "ok", f"agy {version.stdout.strip()} {model}"
 
 
+# -- OpenCode ----------------------------------------------------------------------------
+# opencode-ai 1.19.4, packages/cli/src/run/noninteractive.ts: `run --format json` writes one JSON
+# object per line, `{"type", "timestamp", "sessionID", ...}`: `step_start`, `text`, `reasoning`,
+# `tool_use` (part.tool, part.state.status "completed"|"error", part.state.input, part.state.time),
+# `step_finish` (part.reason, part.tokens, part.cost) and `error` (error.name, error.data).
+# MCP tools are named `<server>_<tool>`.
+OPENCODE_REQUIRED_FLAGS = ("--format", "--auto", "--pure", "--dir", "--model")
+OPENCODE_CATEGORIES = {"bash": "shell", "write": "file_edit", "edit": "file_edit", "patch": "file_edit",
+                       "multiedit": "file_edit", "apply_patch": "file_edit", "read": "file_read",
+                       "glob": "file_read", "grep": "file_read", "list": "file_read", "webfetch": "web",
+                       "websearch": "web", "codesearch": "web", "task": "agent", "skill": "skill"}
+# Each run sees only its own workspace: no skills from `.claude` or `.agents` outside it, no Claude
+# Code prompt files, no external plugins and no self-update (https://opencode.ai/docs/cli/).
+OPENCODE_ENV = {"OPENCODE_DISABLE_EXTERNAL_SKILLS": "1", "OPENCODE_DISABLE_CLAUDE_CODE": "1",
+                "OPENCODE_PURE": "1", "OPENCODE_DISABLE_AUTOUPDATE": "1"}
+# What every workspace still sees (https://opencode.ai/docs/config/, /docs/skills/): the global
+# config, rules, skills, agents, commands and plugins. Terraproof must be absent from all of them.
+OPENCODE_GLOBAL_FILES = ("opencode.json", "opencode.jsonc", "AGENTS.md")
+OPENCODE_GLOBAL_DIRS = ("skills", "skill", "agents", "agent", "commands", "command", "plugins", "plugin")
+OPENCODE_PROJECT_FILES = ("AGENTS.md", "opencode.json", "opencode.jsonc")  # CLAUDE.md is off via OPENCODE_ENV
+
+
+def opencode_lift_command(executable: str, project: Path, model: str, variant: str | None) -> list[str]:
+    command = [executable, "run", "--format", "json", "--pure", "--auto", "--model", model, "--dir", str(project)]
+    if variant:
+        command += ["--variant", variant]
+    return command + [PROMPT]
+
+
+def _opencode_label(name: str) -> tuple[str, str]:
+    if name.startswith("terraproof_") and name.removeprefix("terraproof_") in TOOLS:
+        tool = name.removeprefix("terraproof_")
+        return f"terraproof.{tool}", f"mcp:{tool}"
+    if name in OPENCODE_CATEGORIES:
+        return name, OPENCODE_CATEGORIES[name]
+    if "_" in name:
+        return "mcp", "mcp:other"
+    return (name if SHORT_LABEL.fullmatch(name) else "other"), "other"
+
+
+def opencode_trace(events, condition: str, seeded: tuple[str, ...], *, timed_out: bool = False) -> AgentResult:
+    """Sanitise `opencode run --format json` into per-call labels, a turn status and counts."""
+    public, labels, incidental = [], set(), set()
+    skill_reads = steps = 0
+    input_tokens = output_tokens = 0
+    errors: list[str] = []
+    for _stamp, event in _timed(events):
+        if not isinstance(event, dict):
+            continue
+        kind = event.get("type")
+        part = event.get("part") if isinstance(event.get("part"), dict) else {}
+        if kind == "tool_use":
+            name = str(part.get("tool") or "")
+            state = part.get("state") if isinstance(part.get("state"), dict) else {}
+            tool, category = _opencode_label(name)
+            text = json.dumps({"name": name, "input": state.get("input")}, default=str)
+            skill_reads += category == "skill" or _is_skill_read(text)
+            labels |= contamination_labels(text, condition, seeded)
+            if condition != WITH and tool.startswith("terraproof."):
+                labels.add("terraproof-in-without:mcp")
+                labels.discard("terraproof-in-without:mention")
+            incidental |= incidental_labels(text, condition)
+            times = state.get("time") if isinstance(state.get("time"), dict) else {}
+            start, end = times.get("start"), times.get("end")
+            duration = (max(0, int(end - start)) if isinstance(start, (int, float)) and isinstance(end, (int, float))
+                        else None)
+            public.append({"tool": tool, "category": category,
+                           "status": "failed" if state.get("status") == "error" else "completed",
+                           "exit_code": None, "duration_ms": duration})
+        elif kind == "step_finish":
+            steps += 1
+            tokens = part.get("tokens") if isinstance(part.get("tokens"), dict) else {}
+            input_tokens += int(tokens.get("input") or 0)
+            output_tokens += int(tokens.get("output") or 0) + int(tokens.get("reasoning") or 0)
+        elif kind == "error":
+            error = event.get("error") if isinstance(event.get("error"), dict) else {}
+            name = str(error.get("name") or "").lower()
+            errors.append(name if re.fullmatch(r"[a-z0-9_.-]{1,40}", name) else "unclassified")
+    if timed_out:
+        turn_status, reason = "timeout", "per-run timeout; owned process tree terminated"
+    elif errors:
+        turn_status, reason = "error", "session error event"
+    elif steps:
+        turn_status, reason = "completed", "no tool calls" if not public else "ok"
+    else:
+        turn_status, reason = "aborted", "stream ended without a finished step"
+    return AgentResult(status="completed" if turn_status == "completed" else ("timeout" if timed_out else "failed"),
+                       cost_usd=None, tool_calls=len(public),
+                       terraproof_tool_calls=sum(1 for call in public if call["tool"].startswith("terraproof.")),
+                       skill_reads=skill_reads, input_tokens=input_tokens, output_tokens=output_tokens,
+                       contamination=sorted(labels), diagnostics=sorted(incidental), calls=public,
+                       turn={"status": turn_status, "reason": reason, "error_types": sorted(set(errors)),
+                             "error_items": len(errors)})
+
+
+def opencode_global_checks(config_home: Path, project: Path) -> dict:
+    """No-model checks that nothing every OpenCode workspace sees carries Terraproof.
+
+    `config_home` is OpenCode's global directory (`~/.config/opencode`). OpenCode also walks up
+    from the run directory for project config and rules, so every ancestor of the run project
+    is checked too. Only booleans are returned; no file content leaves this function.
+    """
+    registry = set(_registry_names())
+    global_files = [config_home / name for name in OPENCODE_GLOBAL_FILES if (config_home / name).is_file()]
+    dirs = [config_home / name for name in OPENCODE_GLOBAL_DIRS if (config_home / name).is_dir()]
+    named = any(child.name in registry or "terraproof" in child.name.lower()
+                for root in dirs for child in root.iterdir())
+    dir_files = [path for root in dirs for path in root.rglob("*") if path.is_file() and path.suffix in (".md", ".json", ".jsonc", ".js", ".ts")]
+    ancestors = [path / name for path in project.resolve().parents for name in OPENCODE_PROJECT_FILES
+                 if (path / name).is_file()]
+    ancestors += [path for parent in project.resolve().parents if (parent / ".opencode").is_dir()
+                  for path in (parent / ".opencode").rglob("*") if path.is_file()]
+    return {"no_terraproof_in_opencode_global_config": not any(_mentions_terraproof(path) for path in global_files),
+            "no_terraproof_in_opencode_global_dirs": not named and not any(_mentions_terraproof(path) for path in dir_files),
+            "no_terraproof_in_opencode_config_above_project": not any(_mentions_terraproof(path) for path in ancestors)}
+
+
+class OpenCodeHostAdapter(Adapter):
+    name = "opencode-host"
+    model_calls = True
+    usd_capped = False
+
+    def __init__(self, executable: str, model: str, variant: str | None = None,
+                 agent_python_without: str | None = None, agent_python_with: str | None = None,
+                 config_home: Path | None = None):
+        self.executable = executable
+        self.model = model
+        self.variant = variant
+        self.agent_python_without = agent_python_without
+        self.agent_python_with = agent_python_with
+        self.config_home = config_home or Path.home() / ".config" / "opencode"
+
+    def _env(self, condition: str) -> dict:
+        return dict(host_env(condition, self.agent_python_without, self.agent_python_with), **OPENCODE_ENV)
+
+    def run(self, request: AgentRequest) -> AgentResult:
+        command = opencode_lift_command(self.executable, request.project, self.model, self.variant)
+        code, lines, _stderr, timed_out = run_contained(command, request.project, self._env(request.condition),
+                                                        request.timeout_seconds)
+        events, invalid = _json_lines(lines)
+        result = opencode_trace(events, request.condition, _seeded(request.task_id), timed_out=timed_out)
+        if (code not in (0, None) or invalid) and result.status == "completed":
+            result.status = "failed"
+            result.turn["status"], result.turn["reason"] = "error", "nonzero host exit or invalid JSONL"
+        return result
+
+    def preflight(self, request: AgentRequest) -> dict:
+        """OpenCode has no model-free sandbox runner; Python/IO are probed directly, as for Claude Code."""
+        env = self._env(request.condition)
+        checks = unsandboxed_probe(request.project, request.task_id, env)
+        checks.update(opencode_global_checks(self.config_home, request.project))
+        if request.condition == WITH:
+            checks.update(with_isolation_checks(request.project, self.agent_python_with, env))
+            config = request.project / "opencode.json"
+            entry = (json.loads(config.read_text(encoding="utf-8")).get("mcp", {}).get("terraproof", {})
+                     if config.is_file() else {})
+            command = entry.get("command") or []
+            checks["mcp_tools_served"] = bool(command) and mcp_tools_served(command[0], command[1:], request.project)
+        else:
+            checks.update(without_isolation_checks(request.project, self.agent_python_without, env))
+        return checks
+
+
+def opencode_models(output: str) -> list[str]:
+    """Model ids from `opencode models` (one `provider/model` per line)."""
+    return [line.strip() for line in output.splitlines() if re.fullmatch(r"[\w.-]+/[\w.:-]+", line.strip())]
+
+
+def probe_opencode(executable: str | None = None, model: str | None = None) -> tuple[str | None, str, str | None]:
+    """Resolve a native opencode binary; `opencode models` (no inference) confirms the model is configured."""
+    executable = executable or shutil.which("opencode")
+    if not executable or not Path(executable).is_file():
+        return None, "opencode executable not found", None
+    if os.name == "nt" and Path(executable).suffix.lower() != ".exe":
+        return None, "OpenCode CLI must be a native .exe (npm puts it under node_modules/opencode-ai/bin)", None
+    with tempfile.TemporaryDirectory(prefix="terraproof-lift-probe-") as directory:
+        cwd = Path(directory)
+        version = validation.run([executable, "--version"], cwd=cwd)
+        help_result = validation.run([executable, "run", "--help"], cwd=cwd)
+        if version.returncode or not all(flag in help_result.stdout + help_result.stderr
+                                         for flag in OPENCODE_REQUIRED_FLAGS):
+            return None, "opencode lacks a required headless flag", None
+        provider = (model or "").split("/", 1)[0]
+        listed = validation.run([executable, "models", provider], cwd=cwd, timeout=120)
+        if listed.returncode or model not in opencode_models(listed.stdout):
+            return None, "the requested model is not listed by opencode models; no credentials logged", None
+    return executable, "ok", f"opencode {version.stdout.strip()} {model}"
+
+
 # -- plan and main -----------------------------------------------------------------------
 def total_usd_cap(args, calls: int) -> float:
     """An explicit --max-usd-total, or by default every planned run at its full per-run cap."""
@@ -1098,6 +1287,8 @@ BILLING = {
     "claude": "Claude API spend, capped per run by --max-budget-usd and in total by the harness",
     "antigravity": "Antigravity (Google account) quota; agy exposes no USD cap, so the approved invocation count "
                    "and timeout are the hard limits",
+    "opencode": "the configured OpenCode provider (OpenCode Go subscription quota, or the provider's API spend); "
+                "the harness sets no USD cap, so the approved invocation count and timeout are the hard limits",
     "openai": "OpenAI API spend from OPENAI_API_KEY, computed from returned token usage at the given prices; "
               "locally limited by conservative request reservations and reported usage, not a provider-side invoice cap",
     "groq": "Groq API spend from GROQ_API_KEY, computed from returned token usage at the given prices; "
@@ -1135,6 +1326,12 @@ def plan(args) -> dict:
         approve += ["--codex-executable", str(args.codex_executable)]
     if args.agent_host == "claude" and args.claude_executable:
         approve += ["--claude-executable", str(args.claude_executable)]
+    if args.agent_host == "opencode":
+        if args.opencode_executable:
+            approve += ["--opencode-executable", str(args.opencode_executable)]
+        approve += ["--opencode-model", str(args.opencode_model)]
+        if args.opencode_variant:
+            approve += ["--opencode-variant", args.opencode_variant]
     if args.agent_host == "antigravity":
         if args.antigravity_executable:
             approve += ["--antigravity-executable", str(args.antigravity_executable)]
@@ -1186,7 +1383,7 @@ def plan(args) -> dict:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--agent-host", choices=["codex", "claude", "antigravity", *API_HOSTS], required=True,
+    parser.add_argument("--agent-host", choices=["codex", "claude", "antigravity", "opencode", *API_HOSTS], required=True,
                         help="openai/groq use tests/api_agent.py; keys come only from OPENAI_API_KEY / GROQ_API_KEY")
     parser.add_argument("--runs", type=int, default=3, help="runs per condition and task (default 3)")
     parser.add_argument("--task", action="append", help="lift task id (repeatable; not with --cohort)")
@@ -1220,6 +1417,10 @@ def main(argv=None) -> int:
     parser.add_argument("--antigravity-model", help="agy model id from `agy models` (required for antigravity)")
     parser.add_argument("--antigravity-effort", choices=["low", "medium", "high", "xhigh", "max"],
                         help="agy reasoning effort (default: the host's own)")
+    parser.add_argument("--opencode-executable", type=Path,
+                        help="native opencode.exe to use (default: PATH; the npm opencode.cmd wrapper is refused)")
+    parser.add_argument("--opencode-model", help="provider/model from `opencode models` (required for opencode)")
+    parser.add_argument("--opencode-variant", help="provider-specific reasoning variant (default: the model's own)")
     parser.add_argument("--agent-python-without", type=Path,
                         help="dependency-only Python (numpy, rasterio, pyogrio, shapely, pyproj; no Terraproof) "
                              "on a path without 'terraproof', first on PATH for the without agent; required by preflight")
@@ -1240,6 +1441,8 @@ def main(argv=None) -> int:
         parser.error("--runs, --timeout and the USD caps must be positive")
     if args.task and args.cohort:
         parser.error("--task and --cohort select tasks in different ways; give one of them")
+    if args.agent_host == "opencode" and not args.opencode_model:
+        parser.error("--opencode-model is required for opencode (see `opencode models`)")
     if args.agent_host == "antigravity" and not args.antigravity_model:
         parser.error("--antigravity-model is required for antigravity (see `agy models`)")
     if args.agent_host in API_HOSTS:
@@ -1286,6 +1489,12 @@ def main(argv=None) -> int:
         adapter = (CodexHostAdapter(executable, args.codex_reasoning_effort, agent_python, agent_python_with)
                    if executable
                    else None)
+        budget = Budget(max_runs=args.approve_model_calls, timeout_seconds=args.timeout)
+    elif args.agent_host == "opencode":
+        executable, reason, version = probe_opencode(
+            str(args.opencode_executable) if args.opencode_executable else None, args.opencode_model)
+        adapter = (OpenCodeHostAdapter(executable, args.opencode_model, args.opencode_variant, agent_python,
+                                       agent_python_with) if executable else None)
         budget = Budget(max_runs=args.approve_model_calls, timeout_seconds=args.timeout)
     elif args.agent_host == "antigravity":
         executable, reason, version = probe_antigravity(

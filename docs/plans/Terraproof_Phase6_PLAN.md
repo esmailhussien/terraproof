@@ -14,6 +14,20 @@ Phase 5 answered its question. On Claude Code the pre-specified test was not sig
 
 Since the main run, much of the work went to new hosts (OpenAI/Groq, Antigravity) and to agent-loop features that exist only in [`tests/api_agent.py`](../../tests/api_agent.py): the completion review and the required-output policy. This phase stops that and puts the effort where the evidence points.
 
+### Amendment 1 (2026-10-27): hosts for E
+
+Decided by the maintainer before any E inference. It replaces decision 2 (§7) and narrows the harness freeze (A).
+
+- **E is measured on open and lower-cost models, not on Claude Code.** Claude Code and Gemini Flash were at ceiling on the current tasks, and most people using a tool like Terraproof for GIS work will use cheaper or open models. Claude is excluded from E for cost and representativeness.
+- **Candidate hosts:**
+  - **OpenCode CLI** on the maintainer's OpenCode Go subscription with an open model (for example `opencode-go/glm-5.3` or `opencode-go/deepseek-v4.1-flash`). Its provider API stays a fallback.
+  - **Antigravity** with Gemini.
+  - **The API host** with GPT-4o.
+- **One primary host and model.** E2's development shakedown runs the candidates. Before E4, E3 fixes **one** primary host and model, chosen for treatment delivery and availability, not outcomes. Any other host is a separately reported secondary and never pooled.
+- **Harness freeze exception:** the OpenCode CLI host (`--agent-host opencode`) is the only new host. It runs `opencode run --format json --pure --auto` with the condition in the workspace (`AGENTS.md` and `opencode.json`). It disables skills from `.claude`/`.agents`, Claude Code prompt files, external plugins and self-update. Preflight fails a run if OpenCode's global config, rules, skills, agents, commands or plugins, or any config above the run project, mention Terraproof.
+- **Product side:** OpenCode is also the main open-model path for users. The `--agent opencode` installer format is checked end to end by the host's no-model preflight. A real MCP call is first seen in E2.
+- **Costs:** OpenCode Go and Antigravity runs use subscription quota, so the harness limits are the approved run count and timeout. GPT-4o runs keep the API host's USD caps. The cost column below was written for Claude Code and is indicative only.
+
 ## 2. Goals
 
 1. Close Phase 5 formally and freeze the lift harness.
@@ -29,7 +43,7 @@ Since the main run, much of the work went to new hosts (OpenAI/Groq, Antigravity
 - Set the Phase 5 status to **closed 2026-10-27**: exit criteria (§10) met, no lift claimed, successor is this plan.
 - Mark Phase 5 sections 18–19 as a frozen exploratory log. New results are recorded here, not appended there.
 - Add the ceiling arithmetic from section 1 to Phase 5 as a post-hoc note.
-- **Harness freeze.** No new agent hosts, adapter features or treatment variants. Instruction forwarding, the completion review and the required-output policy stay as they are: opt-in and confined to `tests/`. The only allowed harness change is the "with" isolation in B6.
+- **Harness freeze.** No new agent hosts, adapter features or treatment variants. Instruction forwarding, the completion review and the required-output policy stay as they are: opt-in and confined to `tests/`. The only allowed harness changes are the "with" isolation in B6 and the OpenCode host in Amendment 1.
 
 ### B. Publish the Python package to PyPI
 
@@ -156,7 +170,7 @@ B, C and E1 touch disjoint files and can run in parallel.
 
 ## 6. Out of scope
 
-- New agent hosts, adapter features or second-host reports.
+- New agent hosts other than OpenCode (Amendment 1), new adapter features, or pooling second-host reports with the primary.
 - Prose tasks graded by an LLM judge.
 - New skills, or skill rewrites beyond factual fixes.
 - Retiring the npm router.
@@ -164,7 +178,7 @@ B, C and E1 touch disjoint files and can run in parallel.
 ## 7. Decisions needed
 
 1. **Evals in the wheel:** leave them out (proposed), or publish a separate `terraproof-evals` distribution?
-2. **Host for E:** Claude Code (proposed: the best-tested path, with MCP use verified) or another host, chosen now.
+2. **Host for E:** decided in Amendment 1. Candidates are OpenCode (open model, Go subscription), Antigravity (Gemini) and the API host (GPT-4o), with one primary fixed at E3. Claude Code is not used for E.
 3. **Pool size:** 36 candidates (proposed), or 24 (cheaper to author, but probably fewer than 12 kept tasks and less power).
 4. **Skills default** if there is no evidence by phase end: an opt-in pack (proposed), or keep them in the default install labelled unmeasured.
 5. **PyPI publisher:** the maintainer creates the project and the Trusted Publisher; confirm which GitHub repository it trusts.

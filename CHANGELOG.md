@@ -34,6 +34,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Lift driver host `--agent-host opencode` for the OpenCode CLI (checked against opencode-ai
+  1.19.4), the one new host Phase 6 Amendment 1 allows. It runs `opencode run --format json
+  --pure --auto --model <provider/model> --dir <project>` with the condition in the workspace
+  (`AGENTS.md` and `opencode.json` from `--agent opencode`). Skills from `.claude`/`.agents`,
+  Claude Code prompt files, external plugins and self-update are disabled. Preflight fails a
+  run if OpenCode's global config, rules, skills, agents, commands or plugins, or any config
+  above the run project, mention Terraproof. `opencode models` (no inference) confirms the model
+  is configured. The trace keeps fixed labels from `tool_use` and `step_finish` events, with MCP
+  tools named `terraproof_<tool>`. No USD cap; the approved run count and timeout are the limits.
+  Tested offline with fake streams; no OpenCode model call was made.
+- Phase 6 Amendment 1: E is measured on open and lower-cost models (OpenCode with an open model,
+  Antigravity with Gemini, or GPT-4o), with one primary host and model fixed at E3. Claude Code
+  is not used for E.
 - Opt-in `--processing-full-scan` (Python and MCP `processing_full_scan=True`) for the
   calibration and cloud/QA relations: every corresponding band and pixel is checked in
   bounded windows instead of the sampled band-1 screen, which stays the default. A separate
