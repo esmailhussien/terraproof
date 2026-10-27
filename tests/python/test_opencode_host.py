@@ -9,6 +9,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import tempfile
 
 import pytest
 
@@ -55,8 +56,10 @@ def test_command_is_headless_pure_auto_and_pinned_to_the_model_and_project(tmp_p
     assert command[command.index("--variant") + 1] == "high"
     assert "--pure" in command and "--auto" in command
     assert "--variant" not in driver.opencode_lift_command("opencode.exe", tmp_path, "m/x", None)
-    # The condition lives in the workspace files, never in per-condition flags.
-    assert not any("terraproof" in part.lower() for part in command)
+    # The condition lives in the workspace files, never in per-condition flags (the --dir value is
+    # the run project's own path).
+    flags = [part for part in command if part != str(tmp_path)]
+    assert not any("terraproof" in part.lower() for part in flags)
 
 
 @pytest.mark.parametrize("name, label", [
@@ -122,7 +125,14 @@ def test_turn_status_labels(events, kwargs, status, turn):
     assert "quota text" not in json.dumps(result.__dict__)
 
 
-def test_global_and_ancestor_checks(tmp_path):
+def test_global_and_ancestor_checks():
+    # Real runs live outside the checkout; pytest's tmp_path may sit inside it, below this
+    # repository's own AGENTS.md, so this test uses the system temp directory.
+    with tempfile.TemporaryDirectory(prefix="opencode-ancestors-") as directory:
+        _global_and_ancestor_checks(Path(directory))
+
+
+def _global_and_ancestor_checks(tmp_path):
     home = tmp_path / "config"
     project = tmp_path / "work" / "run" / "project"
     project.mkdir(parents=True)
