@@ -127,7 +127,11 @@
     },
     "rs.index_formula": {
       "family": "rs",
-      "description": "Opt-in NDVI comparison with declared red/NIR sources, their scale/offset and joint valid support; extra masking warns."
+      "description": "Opt-in spectral-index comparison (NDVI, NBR, dNBR, McFeeters NDWI, MNDWI, Gao NDMI, SAVI, EVI) with declared source-band roles, each band's scale/offset and joint valid support; unsupported cells must be nodata and extra masking warns."
+    },
+    "rs.stack_reduction": {
+      "family": "rs",
+      "description": "Opt-in per-pixel reduction of an ordered input stack (median, count, weighted sum such as rate x hours, mean in linear power for dB, OLS slope against declared times) on the output grid; cells without enough valid inputs must be nodata, extra masking warns, and how the inputs were made is not checked."
     },
     "terrain.slope_formula": {
       "family": "terrain",
