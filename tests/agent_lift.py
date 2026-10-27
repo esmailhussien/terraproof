@@ -210,6 +210,12 @@ def host_env(condition: str = WITH, agent_python: str | None = None, agent_pytho
 IMPORT_PROBE = "import importlib.util, sys; sys.exit(3 if importlib.util.find_spec('terraproof') else 0)"
 
 
+def _probe_input(task_id: str) -> str:
+    """The first raster input of a task (some list a STAC catalog or a request first)."""
+    inputs = lift_task(task_id).inputs
+    return next((name for name in inputs if name.lower().endswith((".tif", ".tiff"))), inputs[0])
+
+
 def unsandboxed_probe(project: Path, task_id: str, env: dict) -> dict:
     """Run the Python/IO probe with the agent's PATH; the script is removed before any agent starts.
 
@@ -217,7 +223,7 @@ def unsandboxed_probe(project: Path, task_id: str, env: dict) -> dict:
     (the Antigravity harder-cohort run read a left-over probe naming Terraproof in "without").
     """
     script = project.parent / "preflight_probe.py"
-    script.write_text(PREFLIGHT_SCRIPT.format(name=lift_task(task_id).inputs[0]), encoding="utf-8")
+    script.write_text(PREFLIGHT_SCRIPT.format(name=_probe_input(task_id)), encoding="utf-8")
     try:
         # Resolve `python` on the agent's PATH; Windows CreateProcess would use this process's PATH.
         python = shutil.which("python", path=env["PATH"])
@@ -516,7 +522,6 @@ class CodexHostAdapter(Adapter):
 
     def preflight(self, request: AgentRequest) -> dict:
         """No-model checks: sandboxed shell/Python/IO, MCP registration and tools, prompt-visible skills."""
-        task = lift_task(request.task_id)
         state = request.project.parent / "host-state"
         state.mkdir(exist_ok=True)
         env = host_env(request.condition, self.agent_python_without, self.agent_python_with)
@@ -526,7 +531,7 @@ class CodexHostAdapter(Adapter):
         else:
             checks.update(with_isolation_checks(request.project, self.agent_python_with, env))
         script = request.project.parent / "preflight_probe.py"
-        script.write_text(PREFLIGHT_SCRIPT.format(name=task.inputs[0]), encoding="utf-8")
+        script.write_text(PREFLIGHT_SCRIPT.format(name=_probe_input(request.task_id)), encoding="utf-8")
         probe = [self.executable, "sandbox", "-P", ":workspace", "-C", str(request.project),
                  "-c", "sandbox_workspace_write.network_access=false", "powershell.exe", "-NoProfile",
                  "-NonInteractive", "-Command", f"Write-Output SHELL-OK; python '{script}'; exit $LASTEXITCODE"]
@@ -573,7 +578,7 @@ class CodexHostAdapter(Adapter):
             checks["mcp_registered_in_codex"] = bool(entry.get("enabled")) and transport.get("args") == ["-m", "terraproof.mcp"]
             checks["mcp_tools_served"] = mcp_tools_served(sys.executable, ["-m", "terraproof.mcp"], request.project)
             routed = set(_routed_skills(request.project))
-            checks["skills_visible_to_codex"] = bool(routed) and routed <= names
+            checks["skills_visible_to_codex"] = routed <= names
             checks["agents_md_visible_to_codex"] = block
         else:
             checks["no_terraproof_mcp_in_codex"] = servers is not None and "terraproof" not in servers

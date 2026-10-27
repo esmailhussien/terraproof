@@ -103,9 +103,9 @@ def resolve_skill_names(skills: str | None, task: str | None) -> list[str]:
             guidance = find_guidance(task)
         except Exception as exc:
             raise InstallError(f"cannot route the task {task!r}: {exc}") from exc
+        # A task the router does not recognise routes to no skill; the caller decides whether the
+        # checks and MCP server are still worth installing (main() does that with --with-mcp).
         names = [skill["name"] for skill in guidance["skills"]]
-        if not names:
-            raise InstallError(f"the router ranked no skills for the task {task!r}; name skills with --skills")
     else:
         names = []
         for item in (skills or "").split(","):
@@ -158,11 +158,15 @@ def main(argv: list[str] | None = None) -> int:
             raise InstallError(f"target is not a directory: {target}")
         target = target.resolve()
         names = resolve_skill_names(args.skills, args.task)
+        if not names and not args.with_mcp:
+            raise InstallError(f"the router ranked no skills for the task {args.task!r}; name skills with --skills, "
+                               "or add --with-mcp to install the checks and MCP server only")
         registry = _registry()
         skills = [_load_skill(name, registry[name]) for name in names]
         command = [sys.executable or "python", "-m", "terraproof.mcp"]
         writes = PLANNERS[args.agent](target, skills, with_mcp=args.with_mcp, command=command)
-        print(f"terraproof install: agent={args.agent} target={target.as_posix()} skills={', '.join(names)}")
+        listed = ", ".join(names) or "none (the router ranked no skills for this task; checks and MCP server only)"
+        print(f"terraproof install: agent={args.agent} target={target.as_posix()} skills={listed}")
         if args.with_mcp:
             print("terraproof install: MCP server command: " + " ".join(command))
         changed = apply(writes, target, dry_run=args.dry_run)

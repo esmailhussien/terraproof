@@ -44,6 +44,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (24) lift cohorts. Specs live in `evals/headroom/`, so the frozen benchmark is unchanged
   (33/33, 0 false passes, 25 blind spots). No model was called.
 
+### Fixed (before E2)
+
+- `terraproof install --task ... --with-mcp` no longer fails when the router ranks no skill for
+  the task; it installs the checks and the MCP server with no skills and says so. Without
+  `--with-mcp` it still stops, now suggesting `--with-mcp`. Three of the twelve Phase 6
+  development tasks are worded like this ("How much did the ground surface change between
+  the 2015 and 2023 surveys?"), so a real user asking that way got an error instead of the
+  checks. The lift preflight still requires the MCP server in "with" and records the routed
+  skill count.
+- The lift driver's Python/IO preflight probe reads the task's first raster input, not
+  whichever input comes first (some tasks list a STAC catalog first).
+
 ### Release record
 
 - v0.8.0 shipped on 2026-10-27: tag `v0.8.0` on `9dabd84` (merge `a4ddda6`), PyPI through

@@ -258,3 +258,14 @@ def test_legacy_terraproof_block_is_migrated(tmp_path, capsys):
     assert text.count("<!-- terraproof:codex:end -->") == 1
     assert "Keep this paragraph." in text
     assert "migrated legacy terraproof block to terraproof:codex scope" in capsys.readouterr().out
+
+
+def test_a_task_the_router_does_not_recognise_installs_checks_only_with_mcp(tmp_path, capsys):
+    task = "How much did the ground surface change between the 2015 and 2023 surveys?"
+    assert main(["--agent", "opencode", "--task", task, "--target", str(tmp_path)]) != 0
+    assert "add --with-mcp" in capsys.readouterr().err
+    assert main(["--agent", "opencode", "--task", task, "--target", str(tmp_path), "--with-mcp"]) == 0
+    assert "skills=none (the router ranked no skills" in capsys.readouterr().out
+    servers = json.loads((tmp_path / "opencode.json").read_text(encoding="utf-8"))["mcp"]
+    assert servers["terraproof"]["command"][1:] == ["-m", "terraproof.mcp"]
+    assert "<!-- terraproof:opencode:begin -->" in (tmp_path / "AGENTS.md").read_text(encoding="utf-8")

@@ -425,11 +425,14 @@ def project_preflight(task: LiftTask, project: Path, *, condition: str, agent: s
             # OpenCode's installer format inlines each skill into the AGENTS.md block.
             agents_md = project / "AGENTS.md"
             text = agents_md.read_text(encoding="utf-8") if agents_md.is_file() else ""
-            checks["skills_installed"] = bool(routed) and "<!-- terraproof:opencode:begin -->" in text and all(
+            checks["skills_installed"] = "<!-- terraproof:opencode:begin -->" in text and all(
                 f"### {name}\n" in text for name in routed)
         else:
-            checks["skills_installed"] = bool(routed) and skills_dir is not None and all(
+            checks["skills_installed"] = skills_dir is not None and all(
                 (project / skills_dir / name / "SKILL.md").is_file() for name in routed)
+        # A task the router does not recognise routes to no skill: "with" is then the checks and
+        # MCP server only, which the next check still requires. Recorded, not gating.
+        checks["routed_skill_count"] = len(routed)
         if agent == "opencode":
             config = project / "opencode.json"
             servers = json.loads(config.read_text(encoding="utf-8")).get("mcp", {}) if config.is_file() else {}

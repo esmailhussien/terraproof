@@ -482,7 +482,8 @@ def test_project_preflight_checks_treatment_files(tmp_path):
     installed = lift.prepare_project(task, SPECS[task.task_id], reference, with_project, condition=WITH, agent="codex")
     lift.prepare_project(task, SPECS[task.task_id], reference, without_project, condition=WITHOUT, agent="codex")
     checks = lift.project_preflight(task, with_project, condition=WITH, agent="codex", routed=installed["skills"])
-    assert checks == {"inputs_present": True, "outputs_writable": True, "skills_installed": True, "mcp_registered": True}
+    assert checks == {"inputs_present": True, "outputs_writable": True, "skills_installed": True, "mcp_registered": True,
+                      "routed_skill_count": len(installed["skills"])}
     assert lift.project_preflight(task, without_project, condition=WITHOUT, agent="codex", routed=[]) == {
         "inputs_present": True, "outputs_writable": True, "no_terraproof_files": True}
     (with_project / "AGENTS.md").unlink()
@@ -927,3 +928,21 @@ def test_driver_carries_the_with_python_into_the_approved_command(capsys, tmp_pa
     assert driver.main(["--agent-host", "codex", "--runs", "1", "--task", FAST[0],
                         "--agent-python-with", str(with_python)]) == 0
     assert f"--agent-python-with {with_python}" in json.loads(capsys.readouterr().out)["command_to_approve"]
+
+
+def test_preflight_probe_reads_a_raster_input_even_when_a_catalog_comes_first():
+    assert lift.lift_task("hr-dekad-rainfall").inputs[0] == "catalog.json"
+    assert driver._probe_input("hr-dekad-rainfall").endswith(".tif")
+
+
+def test_with_project_for_an_unrouted_task_still_needs_the_checks(tmp_path):
+    task = lift.lift_task("hr-elevation-change-mixed-units")
+    from terraproof.evals import headroom
+    spec = headroom.specs()[task.task_id]
+    reference = tmp_path / "reference"
+    lift._generate(task, reference)
+    project = tmp_path / "with" / "project"
+    installed = lift.prepare_project(task, spec, reference, project, condition=WITH, agent="opencode")
+    assert installed == {"install_exit": 0, "skills": []}
+    checks = lift.project_preflight(task, project, condition=WITH, agent="opencode", routed=[])
+    assert checks["skills_installed"] and checks["mcp_registered"] and checks["routed_skill_count"] == 0
