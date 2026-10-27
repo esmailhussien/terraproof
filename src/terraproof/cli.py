@@ -56,6 +56,8 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument("--index-formula", choices=["ndvi"], help="verify NDVI from explicitly supplied calibrated source bands")
     check_parser.add_argument("--nir", metavar="PATH", help="single-band NIR source; calibration comes from its scale/offset metadata")
     check_parser.add_argument("--red", metavar="PATH", help="single-band red source; calibration comes from its scale/offset metadata")
+    check_parser.add_argument("--processing-full-scan", action="store_true",
+                              help="verify every corresponding band/pixel for supplied calibration and QA relations")
     check_parser.add_argument("--dem", metavar="PATH", help="DEM a slope-in-degrees raster was derived from")
     check_parser.add_argument("--slope-method", choices=["central-difference"],
                               help="verify every slope value and complete stencil/edge mask from --dem")
@@ -185,6 +187,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         index_formula=args.index_formula,
         nir=nir,
         red=red,
+        processing_full_scan=args.processing_full_scan,
     )
 
     checked_paths = list(args.paths)
@@ -219,6 +222,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         "index_formula": args.index_formula,
         "nir": args.nir,
         "red": args.red,
+        "processing_full_scan": args.processing_full_scan,
         "qa_path": args.qa_path,
         "qa_kind": args.qa_kind,
         "time_range": time_range,

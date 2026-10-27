@@ -12,7 +12,7 @@ Terraproof helps AI coding agents do geospatial work they can prove. It gives an
 
 Everything runs locally and offline. No model API key is needed.
 
-**Status:** experimental (v0.7.3). See [Evaluation status](#evaluation-status) for what has and has not been measured.
+**Status:** experimental (v0.8.0). See [Evaluation status](#evaluation-status) for what has and has not been measured.
 
 ---
 
@@ -95,6 +95,8 @@ and nodata edges. Raster identity checks every band's valid samples, complete
 validity masks and grid/band metadata against the declared source. Full COG
 conformance remains separate from this data comparison and the existing layout
 screen. See [supported contracts and limits](docs/RASTER_CONTRACTS.md).
+For final calibration/QA audits, `--processing-full-scan` checks every corresponding
+band and pixel in bounded windows; see [scope, examples and measured controls](docs/PROCESSING_FULL_SCAN.md).
 
 
 ---
@@ -163,7 +165,7 @@ Each skill lives in `skills/<name>/` with a `SKILL.md`, references, and a `skill
 - **Routing:** an independent, frozen 160-item set (v5) passed once in both languages: English recall 0.97 with 3.75 wrong picks per 100, Arabic recall 0.96 with 2.5. Earlier independent sets (v3, v4) failed and stay on record. The v5 set was written by an AI agent, not reviewed by an expert.
 - **Agent lift:** in a 54-run Claude Code comparison on 9 tasks, runs with Terraproof passed 27/27 and runs without it 21/27. The pre-specified test is **not significant** (p = 0.125), and five tasks passed either way, so no lift is claimed. The clearest single result is Landsat QA masking (3/3 with, 0/3 without). See [`docs/plans/Terraproof_Phase5_PLAN.md`](docs/plans/Terraproof_Phase5_PLAN.md).
 - **Harder cohort:** a one-repeat Claude Code screen passed all six tasks both with and without Terraproof. That small screen shows no observed benefit and is separate from the original nine-task study. API pilots are exploratory and do not establish lift.
-- **Real hosts:** tool use through MCP has been verified with Codex and Claude Code. Antigravity, Cursor, Copilot and OpenCode are unit-tested against their documented layouts only.
+- **Real hosts:** tool use through MCP has been verified with Codex, Claude Code and Antigravity (Gemini). OpenCode's install format passes a no-model check with the real CLI, but no real tool call has been recorded yet. Cursor and Copilot are unit-tested against their documented layouts only.
 
 ---
 

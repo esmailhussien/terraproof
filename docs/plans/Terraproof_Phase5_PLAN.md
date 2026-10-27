@@ -741,9 +741,11 @@ rate-limit failures were seen, and agy reports no spend.
 
 | | with | without | paired |
 |---|---|---|---|
-| **Prespecified** (contamination rule as frozen) | **7/18** | **16/18** | both 6, neither 1, with-only 1, without-only 10; McNemar p = 0.012; mean task difference -0.50 (95% CI -0.83 to -0.11) |
-| **Post-hoc** (product-only introspection not counted) | **14/18** | **16/18** | both 13, neither 1, with-only 1, without-only 3; p = 0.63; mean task difference -0.11 |
+| **Prespecified** (contamination rule as frozen) | **7/18** | **16/18** | primary sign-flip p = 0.125 (not significant); McNemar (secondary) both 6, neither 1, with-only 1, without-only 10, p = 0.012; mean task difference -0.50 (95% CI -0.83 to -0.11) |
+| **Post-hoc** (product-only introspection not counted) | **14/18** | **16/18** | primary sign-flip p = 0.75; McNemar both 13, neither 1, with-only 1, without-only 3, p = 0.63; mean task difference -0.11 |
 | Underlying verdicts (oracle, checks and contract) | 18/18 | 18/18 | no difference |
+
+Correction (2026-10-27): this table first gave the secondary McNemar p as the result. The pre-specified primary test is the task-level sign-flip, p = 0.125, so even the prespecified difference is not significant.
 
 Every rejection was a contamination-forced rejection. All 36 deliverables passed the oracle,
 the checks and the deliverable contract. Four tasks were at ceiling (every run accepted

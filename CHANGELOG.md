@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [0.8.0] — 2026-10-27
 
 ### Phase 6 (in progress; see the [Phase 6 plan](docs/plans/Terraproof_Phase6_PLAN.md))
 
@@ -22,7 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`tests/package/clean_install_smoke.py`).
 - **PyPI publish workflow.** `.github/workflows/publish-python.yml` publishes a `v*` tag to
   TestPyPI and then PyPI with Trusted Publishing, verifying a clean install from each index.
-  It has not run: the maintainer still has to create the projects and trusted publishers.
+  The one-time setup is done (pending trusted publishers on PyPI and TestPyPI, and GitHub
+  environments `testpypi` and `pypi` with a required reviewer); the `v0.8.0` tag is its first run.
 - **Lift driver `--agent-python-with`.** The "with" agent can get its own interpreter: a venv
   holding only the product wheel. Its preflight fails unless that interpreter is set, can
   import Terraproof and cannot import `terraproof.evals`. This closes the Antigravity
@@ -33,6 +34,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Lift driver host `--agent-host opencode` for the OpenCode CLI (checked against opencode-ai
+  1.19.4), the one new host Phase 6 Amendment 1 allows. It runs `opencode run --format json
+  --pure --auto --model <provider/model> --dir <project>` with the condition in the workspace
+  (`AGENTS.md` and `opencode.json` from `--agent opencode`). Skills from `.claude`/`.agents`,
+  Claude Code prompt files, external plugins and self-update are disabled. Preflight fails a
+  run if OpenCode's global config, rules, skills, agents, commands or plugins, or any config
+  above the run project, mention Terraproof. `opencode models` (no inference) confirms the model
+  is configured. The trace keeps fixed labels from `tool_use` and `step_finish` events, with MCP
+  tools named `terraproof_<tool>`. No USD cap; the approved run count and timeout are the limits.
+  Tested offline with fake streams; no OpenCode model call was made.
+- Phase 6 Amendment 1: E is measured on open and lower-cost models (OpenCode with an open model,
+  Antigravity with Gemini, or GPT-4o), with one primary host and model fixed at E3. Claude Code
+  is not used for E.
+- Opt-in `--processing-full-scan` (Python and MCP `processing_full_scan=True`) for the
+  calibration and cloud/QA relations: every corresponding band and pixel is checked in
+  bounded windows instead of the sampled band-1 screen, which stays the default. A separate
+  offline scorecard (`tests/checker_scorecard.py`) shows it rejecting single-pixel and
+  other-band errors the sampled screen misses, without changing the frozen benchmark
+  invocations or counts. See `docs/PROCESSING_FULL_SCAN.md`. Taken from PR #31 without its
+  runtime-isolation and Docker harness parts, which the Phase 6 harness freeze leaves out.
 - Installer format `--agent antigravity`: workspace skills in `.agents/skills/<skill>/`, an
   `AGENTS.md` block, and with `--with-mcp` a `mcpServers` entry in `.agents/mcp_config.json`
   (the workspace locations in Antigravity's skills, rules and MCP docs). Unit-tested only.
@@ -78,9 +99,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Antigravity harder-cohort measurement (2026-10-26, agy 1.4.7, `gemini-3.8-flash-high`,
   6 tasks x 3 runs, 36 runs in 2 h 52 min, about 7.4 M input and 0.8 M output tokens, no
   errors). All 36 deliverables passed the oracle, the checks and the contract.
-  - Prespecified (contamination rule as frozen): with 7/18, without 16/18 (McNemar p = 0.012).
+  - Prespecified (contamination rule as frozen): with 7/18, without 16/18. Primary task-level
+    sign-flip p = 0.125 (not significant); secondary, anti-conservative McNemar p = 0.012.
   - Post-hoc, labelled as such: product-only introspection not counted, giving 14/18 vs 16/18
-    (p = 0.63).
+    (primary sign-flip p = 0.75; McNemar p = 0.63).
   - Actual verdicts: 18/18 in both conditions. The cohort is at ceiling for this model, so
     there is no lift evidence either way; see Phase 5 plan section 19.
 

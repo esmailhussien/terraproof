@@ -407,9 +407,20 @@ def project_preflight(task: LiftTask, project: Path, *, condition: str, agent: s
         checks["outputs_writable"] = False
     if condition == WITH:
         skills_dir = {"codex": ".agents/skills", "antigravity": ".agents/skills", "claude": ".claude/skills"}.get(agent)
-        checks["skills_installed"] = bool(routed) and skills_dir is not None and all(
-            (project / skills_dir / name / "SKILL.md").is_file() for name in routed)
-        if agent in ("claude", "antigravity"):
+        if agent == "opencode":
+            # OpenCode's installer format inlines each skill into the AGENTS.md block.
+            agents_md = project / "AGENTS.md"
+            text = agents_md.read_text(encoding="utf-8") if agents_md.is_file() else ""
+            checks["skills_installed"] = bool(routed) and "<!-- terraproof:opencode:begin -->" in text and all(
+                f"### {name}\n" in text for name in routed)
+        else:
+            checks["skills_installed"] = bool(routed) and skills_dir is not None and all(
+                (project / skills_dir / name / "SKILL.md").is_file() for name in routed)
+        if agent == "opencode":
+            config = project / "opencode.json"
+            servers = json.loads(config.read_text(encoding="utf-8")).get("mcp", {}) if config.is_file() else {}
+            checks["mcp_registered"] = "terraproof" in servers
+        elif agent in ("claude", "antigravity"):
             config = project / (".mcp.json" if agent == "claude" else ".agents/mcp_config.json")
             servers = json.loads(config.read_text(encoding="utf-8")).get("mcpServers", {}) if config.is_file() else {}
             checks["mcp_registered"] = "terraproof" in servers
@@ -418,7 +429,8 @@ def project_preflight(task: LiftTask, project: Path, *, condition: str, agent: s
             checks["mcp_registered"] = agents_md.is_file() and "terraproof.mcp" in agents_md.read_text(encoding="utf-8")
     else:
         checks["no_terraproof_files"] = not any(
-            (project / name).exists() for name in ("AGENTS.md", ".agents", ".claude", ".mcp.json", ".codex"))
+            (project / name).exists() for name in ("AGENTS.md", ".agents", ".claude", ".mcp.json", ".codex",
+                                                   "opencode.json", ".opencode"))
     return checks
 
 

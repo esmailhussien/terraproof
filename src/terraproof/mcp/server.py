@@ -101,6 +101,7 @@ def run_checks(
     index_formula: str | None = None,
     nir: str | None = None,
     red: str | None = None,
+    processing_full_scan: bool = False,
     manifest: str | None = None,
     require_provenance: bool = False,
     lang: str = "en",
@@ -115,8 +116,11 @@ def run_checks(
     counts or explicit raster identity; `resampling` is the method declared for the rasters and `categorical` says
     they hold class codes; `expect` is the value range the bands should hold (reflectance or
     index). Phase 4 options include `reference_input`/`encoding` for scale/offset checks,
-    `qa_path`/`qa_kind` for cloud-mask checks, `time_range` for temporal coverage,
-    `sar_expect` for SAR domain checks, and `accuracy_samples`/`class_areas` for accuracy
+    `qa_path`/`qa_kind` for cloud-mask checks, `time_range` for temporal coverage.
+    For final calibration/QA audits, set `processing_full_scan=True`: this checks
+    every corresponding band and pixel in bounded windows; the default remains
+    a sampled screen. This option does not expand other checks' scope.
+    Use `sar_expect` for SAR domain checks, and `accuracy_samples`/`class_areas` for accuracy
     assessment. `dem` is the DEM a slope-in-degrees output was derived from; it checks the
     slope against the DEM's vertical unit and pixel spacing. Explicit
     `slope_method="central-difference"` instead verifies all values and the complete
@@ -186,6 +190,7 @@ def run_checks(
             index_formula=index_formula,
             nir=nir_dataset,
             red=red_dataset,
+            processing_full_scan=processing_full_scan,
         )
 
         checked_paths = list(paths)
@@ -222,6 +227,7 @@ def run_checks(
         "index_formula": index_formula,
         "nir": nir,
         "red": red,
+        "processing_full_scan": processing_full_scan,
         "qa_path": qa_path,
         "qa_kind": qa_kind,
         "time_range": time_tuple,

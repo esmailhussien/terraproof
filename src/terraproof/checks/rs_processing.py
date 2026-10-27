@@ -112,6 +112,7 @@ def check_scale_applied_once(
     encoding: str | None = None,
     scale: float | None = None,
     offset: float | None = None,
+    full_scan: bool = False,
 ) -> list:
     """Compare output pixels with `reference_input` DN through one declared calibration.
 
@@ -120,6 +121,9 @@ def check_scale_applied_once(
     (s2-l2a, landsat-c2-l2). The output is compared against that formula once, against the
     raw DN (decoding not applied), and against the formula applied twice.
     """
+    if full_scan:
+        from terraproof.checks.processing_full import calibration
+        return calibration(output, reference_input, encoding, scale, offset)
     if reference_input is None:
         return [
             result(
@@ -327,12 +331,15 @@ def _flagged(qa_path: str, qa_kind: str) -> tuple[np.ndarray, np.ndarray]:
     return sample, flagged
 
 
-def check_cloud_mask_applied(output: dict, qa_path: str | None, qa_kind: str | None) -> list:
+def check_cloud_mask_applied(output: dict, qa_path: str | None, qa_kind: str | None, *, full_scan: bool = False) -> list:
     """Every cloud/shadow-flagged pixel of the QA raster must be nodata in the output.
 
     Masked pixels are those that are nodata in the output, or NaN, or outside the declared
     scale/offset reading: the check cannot claim a pixel was masked when it holds a value.
     """
+    if full_scan:
+        from terraproof.checks.processing_full import cloud_mask
+        return cloud_mask(output, qa_path, qa_kind)
     if qa_path is None or qa_kind is None:
         return [
             result(

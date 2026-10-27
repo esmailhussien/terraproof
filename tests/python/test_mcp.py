@@ -21,6 +21,22 @@ from terraproof.mcp.server import mcp  # noqa: E402
 TOOL_NAMES = ["find_guidance", "inspect_dataset", "list_skills", "load_section", "preflight", "run_checks"]
 
 
+def test_full_processing_cli_mcp_parity_for_an_off_stride_error(make_raster, capsys):
+    raw = np.full((129, 131), 2500, dtype="uint16")
+    values = raw.astype("float32")*.0001-.1
+    values[1, 1] += .125
+    source = make_raster("full_source.tif", raw, nodata=65535)
+    output = make_raster("full_output.tif", values, nodata=-9999.)
+    assert main(["check", output, "--reference-input", source, "--encoding", "s2-l2a",
+                 "--processing-full-scan"]) == 3
+    cli = json.loads(capsys.readouterr().out)
+    payload = call("run_checks", {"paths": [output], "reference_input": source,
+        "encoding": "s2-l2a", "processing_full_scan": True}).structured_content
+    a = next(c for c in cli["checks"] if c["id"] == "rs.scale_applied_once")
+    b = next(c for c in payload["report"]["checks"] if c["id"] == "rs.scale_applied_once")
+    assert a == b and a["status"] == "fail" and a["evidence"]["mismatched_pixels"] == 1
+
+
 def square(x: float, y: float, size: float = 10.0) -> Polygon:
     return Polygon([(x, y), (x + size, y), (x + size, y + size), (x, y + size)])
 
