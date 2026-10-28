@@ -198,7 +198,7 @@ async def validate_stdio(report, work, paths, timeout):
         payload = await call("preflight", {"paths": [paths["clean"]], "plan": paths["plan"]})
         report.check("parity.preflight", payload["report"] == document(cli("preflight", paths["clean"], "--plan", paths["plan"]))
                      and payload["exit_code"] == 0, "CLI/stdio preflight reports match with exit 0")
-        for name, code, grade, extra in (("clean", 0, "decision-grade", []),
+        for name, code, grade, extra in (("clean", 0, "checks-passed", []),
                                          ("review", 2, "review-required", []),
                                          ("clean", 3, "advisory-only", ["--require-provenance"])):
             options = {"paths": [paths[name]], "operation": "area"}
@@ -223,7 +223,7 @@ async def validate_stdio(report, work, paths, timeout):
         evidence = document(cli("check", paths["clean"], "--operation", "area", "--manifest", manifest, "--require-provenance"))
         report.check("manifest.required", payload["report"] == evidence and payload["exit_code"] == 0
                      and check_status(evidence, "provenance.reproducible") == "pass",
-                     "verified provenance permits decision-grade in both transports")
+                     "verified provenance permits a clean exit in both transports")
         samples, areas = paths["samples"], paths["areas"]
         evidence = document(cli("check", paths["clean"], "--accuracy-samples", samples,
                                 "--class-areas", areas, "--min-per-class", "4", "--estimates-requested"))

@@ -35,6 +35,9 @@ MIN_MATCH_FRACTION = 0.99
 
 # Sentinel-2 L2A: (DN - 1000) / 10000, i.e. DN * 0.0001 with offset -0.1.
 # Landsat 8/9 Collection 2 Level-2 surface reflectance: DN * 0.0000275 - 0.2.
+# A declared unit change after decoding, as an additive constant.
+UNIT_CONVERSIONS = {"kelvin-to-celsius": -273.15}
+
 ENCODINGS = {
     "s2-l2a": {"scale": 0.0001, "offset": -0.1},
     "landsat-c2-l2": {"scale": 0.0000275, "offset": -0.2},
@@ -113,17 +116,23 @@ def check_scale_applied_once(
     scale: float | None = None,
     offset: float | None = None,
     full_scan: bool = False,
+    unit_conversion: str | None = None,
 ) -> list:
     """Compare output pixels with `reference_input` DN through one declared calibration.
 
-    The expected value is DN * scale + offset. `scale`/`offset` come from the input's own
-    raster metadata unless `encoding` names a product whose calibration is documented
-    (s2-l2a, landsat-c2-l2). The output is compared against that formula once, against the
-    raw DN (decoding not applied), and against the formula applied twice.
+    The expected value is DN * scale + offset, plus a declared `unit_conversion` (for example
+    kelvin-to-celsius). `scale`/`offset` come from the input's own raster metadata unless the
+    caller declares them (for example from a STAC item) or `encoding` names a product whose
+    calibration is documented (s2-l2a, landsat-c2-l2). The output is compared against that
+    formula once, against the raw DN (decoding not applied), and against the formula applied twice.
     """
+    if unit_conversion is not None and unit_conversion not in UNIT_CONVERSIONS:
+        return [result("rs.scale_applied_once", NOT_RUN, f"Unknown unit_conversion '{unit_conversion}'. Known: "
+                       f"{', '.join(UNIT_CONVERSIONS)}.", output=output["path"], unit_conversion=unit_conversion)]
+    add = UNIT_CONVERSIONS.get(unit_conversion, 0.0)
     if full_scan:
         from terraproof.checks.processing_full import calibration
-        return calibration(output, reference_input, encoding, scale, offset)
+        return calibration(output, reference_input, encoding, scale, offset, add=add, unit_conversion=unit_conversion)
     if reference_input is None:
         return [
             result(
@@ -179,9 +188,10 @@ def check_scale_applied_once(
         scale_source = f"encoding '{encoding}'"
     else:
         band = (reference_input.get("bands") or [{}])[0]
+        declared = scale is not None or offset is not None
         scale = band.get("scale") if scale is None else scale
         offset = band.get("offset") if offset is None else offset
-        scale_source = "input raster metadata"
+        scale_source = "declared calibration" if declared else "input raster metadata"
 
     if not all(isinstance(v, (int, float)) and math.isfinite(v) for v in (scale, offset)):
         return [
@@ -243,6 +253,7 @@ def check_scale_applied_once(
         "offset": offset,
         "scale_source": scale_source,
         "encoding": encoding,
+        "unit_conversion": unit_conversion,
         "stride": STRIDE,
         "tolerance": {"rtol": RTOL, "atol": ATOL},
         "min_match_fraction": MIN_MATCH_FRACTION,
@@ -261,8 +272,9 @@ def check_scale_applied_once(
 
     dn_k, out_k = dn[keep], out[keep]
     with np.errstate(over="ignore", invalid="ignore"):
-        once = dn_k * scale + offset
-        twice = once * scale + offset
+        decoded = dn_k * scale + offset
+        once = decoded + add
+        twice = decoded * scale + offset + add
     if not np.all(np.isfinite(once)):
         return [result(
             "rs.scale_applied_once", NOT_RUN,
@@ -331,7 +343,8 @@ def _flagged(qa_path: str, qa_kind: str) -> tuple[np.ndarray, np.ndarray]:
     return sample, flagged
 
 
-def check_cloud_mask_applied(output: dict, qa_path: str | None, qa_kind: str | None, *, full_scan: bool = False) -> list:
+def check_cloud_mask_applied(output: dict, qa_path: str | None, qa_kind: str | None, *, full_scan: bool = False,
+                             keep_codes: list | None = None, qa_source: str | None = None) -> list:
     """Every cloud/shadow-flagged pixel of the QA raster must be nodata in the output.
 
     Masked pixels are those that are nodata in the output, or NaN, or outside the declared
@@ -339,7 +352,10 @@ def check_cloud_mask_applied(output: dict, qa_path: str | None, qa_kind: str | N
     """
     if full_scan:
         from terraproof.checks.processing_full import cloud_mask
-        return cloud_mask(output, qa_path, qa_kind)
+        return cloud_mask(output, qa_path, qa_kind, keep_codes, qa_source)
+    if qa_kind == "keep-codes":
+        return [result("rs.cloud_mask_applied", NOT_RUN, "Declared keep-codes QA rules are checked with "
+                       "processing_full_scan.", output=output["path"], qa_path=qa_path, qa_kind=qa_kind)]
     if qa_path is None or qa_kind is None:
         return [
             result(

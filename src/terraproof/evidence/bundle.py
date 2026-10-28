@@ -65,18 +65,32 @@ def file_records(report, root):
 
 
 def _verify_report(report, root):
-    from terraproof.evidence.grade import grade_for
+    from terraproof.evidence.grade import CHECKS_PASSED, DECISION, grade_for
     from terraproof.checks.base import CheckResult
-    if report.get('schema_version') != 'terraproof.evidence/0.1':
+    schema = report.get('schema_version')
+    if schema not in ('terraproof.evidence/0.1', 'terraproof.evidence/0.2'):
         raise InputError('unsupported evidence report schema')
     checks = [CheckResult(c['id'], c['family'], c['status'], c['message'], c['evidence']) for c in report['checks']]
-    if grade_for(checks) != report['grade']:
-        raise InputError('report grade disagrees with its checks')
+    observed = grade_for(checks)
     if 'verification' in report:
         previous = report['verification']
         contract = load_contract(previous['contract'])
         if canonical(coverage(report, contract, base=root)) != canonical(previous):
             raise InputError('report contract coverage disagrees with its evidence')
+    if schema == 'terraproof.evidence/0.1':
+        # 0.1 reports graded passing checks decision-grade, with any contract grade kept apart.
+        expected = DECISION if observed == CHECKS_PASSED else observed
+    else:
+        expected = report['verification']['grade'] if 'verification' in report else observed
+        # The not-checked list follows the catalogue of the version that wrote it, so only its consistency
+        # with the report is verified here: a later catalogue may know more checks.
+        recorded = report.get('coverage') or {}
+        ran = {check.id for check in checks}
+        if (recorded.get('assessed') != ('verification' in report)
+                or any(item.get('check') in ran for item in recorded.get('not_checked', []))):
+            raise InputError('report coverage disagrees with its checks and contract')
+    if expected != report['grade']:
+        raise InputError('report grade disagrees with its checks')
 
 
 def build_bundle(report, root=None):

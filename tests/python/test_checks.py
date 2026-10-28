@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 from shapely.geometry import Polygon
 
-from terraproof.evidence import ADVISORY, DECISION, REVIEW
+from terraproof.evidence import ADVISORY, CHECKS_PASSED, REVIEW
 from terraproof.inspect import inspect_stac_item
 
 
@@ -27,7 +27,7 @@ def test_clean_projected_polygons_are_decision_grade(make_vector, evaluate):
     assert one(results, "crs.metric_operation").status == "pass"
     assert one(results, "crs.defined").status == "pass"
     assert one(results, "geometry.valid").status == "pass"
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_vector_without_crs_fails_and_metric_operation_not_run(make_vector, evaluate):
@@ -135,7 +135,7 @@ def test_categorical_bilinear_resampling_fails_and_nearest_passes(make_raster, e
 
     results, grade = evaluate([landcover], resampling="nearest", categorical=True)
     assert one(results, "raster.resampling").status == "pass"
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_half_pixel_offset_fails_grid_alignment(make_raster, evaluate):
@@ -155,7 +155,7 @@ def test_identical_grids_pass_grid_alignment(make_raster, evaluate):
     results, grade = evaluate([first, second])
 
     assert one(results, "raster.grid_alignment").status == "pass"
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_striped_geotiff_without_overviews_warns_cog_layout(make_raster, evaluate):
@@ -173,7 +173,7 @@ def test_tiled_geotiff_with_overviews_passes_cog_layout(make_raster, evaluate):
     results, grade = evaluate([path])
 
     assert one(results, "raster.cog_layout").status == "pass"
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_reflectance_stored_as_dn_fails(make_raster, evaluate):
@@ -194,7 +194,7 @@ def test_reflectance_scaled_to_unit_range_passes(make_raster, evaluate):
     results, grade = evaluate([scaled], expect="reflectance")
 
     assert one(results, "rs.reflectance_range").status == "pass"
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_index_values_above_one_fail(make_raster, evaluate):
@@ -212,7 +212,7 @@ def test_index_values_within_range_pass(make_raster, evaluate):
     results, grade = evaluate([index], expect="index")
 
     assert one(results, "rs.index_range").status == "pass"
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_stac_item_missing_datetime_warns_and_complete_item_passes(make_stac_item, evaluate):
@@ -237,7 +237,7 @@ def test_stac_item_missing_datetime_warns_and_complete_item_passes(make_stac_ite
 
     results, grade = evaluate([complete])
     assert one(results, "stac.provenance").status == "pass"
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_inspect_stac_item_returns_asset_scale_and_offset(make_stac_item):

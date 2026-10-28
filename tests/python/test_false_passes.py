@@ -8,7 +8,7 @@ import numpy as np
 from shapely.geometry import Polygon
 
 from terraproof.cli import main
-from terraproof.evidence import ADVISORY, DECISION, REVIEW
+from terraproof.evidence import ADVISORY, CHECKS_PASSED, REVIEW
 from terraproof.inspect import inspect_raster
 
 
@@ -53,7 +53,7 @@ def test_projected_plus_vertical_compound_passes_metric_operation(make_vector, e
     result = one(results, "crs.metric_operation")
     assert result.status == "pass"
     assert result.evidence["horizontal_kind"] == "projected"
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_geographic_plus_vertical_compound_fails_metric_operation(make_vector, evaluate):
@@ -168,7 +168,7 @@ def test_finite_scaled_reflectance_still_passes(make_raster, evaluate):
     results, grade = evaluate([path], expect="reflectance")
 
     assert one(results, "rs.reflectance_range").status == "pass"
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 # --- raster.cog_layout: a layout heuristic that does not declare COG validity ---
@@ -183,7 +183,7 @@ def test_small_tiled_raster_without_overviews_passes_cog_layout(make_raster, eva
     assert result.status == "pass"
     assert result.evidence["fits_one_block"] is True
     assert "not Cloud Optimized GeoTIFF validation" in result.message
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_large_striped_raster_warns_cog_layout_with_heuristic_wording(make_raster, evaluate):
@@ -295,7 +295,7 @@ def test_right_hand_rule_geojson_passes_winding(make_geojson, evaluate):
     results, grade = evaluate([path])
 
     assert one(results, "geometry.winding").status == "pass"
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_winding_is_not_checked_outside_geojson(make_vector, evaluate):

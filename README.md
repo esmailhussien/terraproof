@@ -8,7 +8,7 @@ Terraproof helps AI coding agents do geospatial work they can prove. It gives an
 
 - **Skills.** 24 focused guides (GDAL, CRS and units, satellite preprocessing, SAR, spectral indices, time series, accuracy assessment, and more), split into sections an agent can load one at a time.
 - **A router.** It picks the smallest useful set of skills for a task, in English or Arabic, and explains why.
-- **Checks with an evidence grade.** They inspect the real datasets an agent produced (CRS, nodata, value ranges, geometry, COG layout, provenance) and grade the result as decision-grade, review required, or advisory only.
+- **Checks with an evidence grade.** They inspect the real datasets an agent produced (CRS, nodata, value ranges, geometry, COG layout, provenance) and grade the result as decision-grade (only against a declared verification contract), checks passed, review required, or advisory only. Every report lists the applicable checks that did not run.
 
 Everything runs locally and offline. No model API key is needed.
 
@@ -43,7 +43,7 @@ python -m terraproof check ndvi.tif --expect index --format md
 python -m terraproof check outputs/clip.gpkg --compare-to data/parcels.gpkg --format md --lang ar --out report_ar.md
 ```
 
-The exit code is the grade: `0` decision-grade, `2` review required, `3` advisory only, `1` usage error.
+The exit code is the grade: `0` decision-grade or checks passed, `2` review required, `3` advisory only, `1` usage error. Without a contract, a clean run is **checks passed**, not decision-grade: read the report's coverage section for what was not checked.
 
 ---
 
@@ -59,19 +59,21 @@ The exit code is the grade: `0` decision-grade, `2` review required, `3` advisor
 | `manifest write` / `manifest verify` | Record and verify a deterministic run manifest (inputs, outputs, parameters). |
 | `route "TASK" [--data PATH]` | Retrieve the skill sections worth reading, using the task text and inspected datasets. |
 
-Checks cover CRS and units, geometry validity and GeoJSON winding, record counts, raster nodata, resampling, grid alignment and COG layout, reflectance and index ranges, scale/offset applied once, cloud masking, temporal scope, SAR domain, area-adjusted accuracy, and STAC provenance. A check that does not apply is left out; one that applies but cannot run is reported as `not-run`.
+Checks cover CRS and units, geometry validity and GeoJSON winding, record counts, raster nodata and valid support, vertical units, resampling, grid alignment and COG layout, reflectance and index ranges, scale/offset applied once, cloud masking, temporal scope, SAR domain, area-adjusted accuracy, and STAC provenance. A check that does not apply is left out; one that applies but cannot run is reported as `not-run`.
 
 | Grade | Arabic label | Meaning |
 |---|---|---|
-| Decision-grade | جاهز للقرار | Every check that ran passed. |
+| Decision-grade | جاهز للقرار | A declared verification contract was fully verified, and every check that ran passed. |
+| Checks passed | الفحوصات نجحت (التغطية غير مُقيَّمة) | Every check that ran passed, but no contract was declared, so coverage was not assessed. The report lists applicable checks that did not run and what enables them. |
 | Review required | يحتاج مراجعة | At least one check warned; none failed or could not run. |
 | Advisory only | استرشادي فقط | At least one check failed or could not run, or no check ran. |
 
 The grade describes the data path and the checks that ran. It is not a certification of survey, engineering, legal, or safety fitness.
 
 For explicit task requirements, add `--contract contract.json` (MCP: `contract`).
-The additional contract outcome prevents success when a required output check or
-source/parameter binding is missing, while preserving the legacy grade. See
+The contract's outcome becomes the report's grade: it is decision-grade only when every
+required check on every required output ran and passed with its declared sources and
+parameters, and any other failure or warning still counts. See
 [verification contracts, diagnostics and unsigned evidence bundles](docs/VERIFICATION_CONTRACTS.md).
 
 ### Verify a spectral index against its source bands

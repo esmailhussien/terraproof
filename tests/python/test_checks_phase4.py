@@ -16,7 +16,7 @@ from rasterio.control import GroundControlPoint
 from rasterio.crs import CRS as RasterCRS
 
 from terraproof.checks import accuracy, sar
-from terraproof.evidence import ADVISORY, DECISION, REVIEW
+from terraproof.evidence import ADVISORY, CHECKS_PASSED, REVIEW
 
 SIDE = 64
 STRIDE = 8
@@ -135,7 +135,7 @@ def test_s2_l2a_decoding_matches_the_published_formula(make_raster, evaluate):
     assert result.evidence["expected_min"] == pytest.approx((1500 - 1000) / 10000.0, abs=1e-12)
     assert result.evidence["expected_max"] == pytest.approx((1500 - 1000) / 10000.0, abs=1e-12)
     assert result.evidence["matched_once_fraction"] == pytest.approx(1.0, abs=1e-9)
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_landsat_c2_l2_decoding_matches_the_published_formula(make_raster, evaluate):
@@ -235,7 +235,7 @@ def test_s2_decoded_once_passes_scale_applied_once(make_raster, evaluate):
     assert result.evidence["matched_once_fraction"] >= 0.99
     assert result.evidence["sampled_pixels"] > 0
 
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_landsat_decoded_once_passes_scale_applied_once(make_raster, evaluate):
@@ -291,7 +291,7 @@ def test_scale_applied_once_without_input_is_not_emitted(make_raster, evaluate):
     results, grade = evaluate([out])
 
     assert "rs.scale_applied_once" not in {result.id for result in results}
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_scale_applied_once_unaligned_grids_is_not_run(make_raster, evaluate):
@@ -560,7 +560,7 @@ def test_cloud_mask_applied_without_qa_is_not_emitted(make_raster, evaluate):
     results, grade = evaluate([out])
 
     assert "rs.cloud_mask_applied" not in {result.id for result in results}
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_cloud_mask_applied_with_a_missing_qa_file_is_not_run(make_raster, evaluate):
@@ -686,8 +686,8 @@ def test_items_inside_time_range_pass(make_stac_item, evaluate):
     result = one(results, "rs.temporal_scope")
     assert result.status == "pass"
     assert result.evidence["out_of_range"] == []
-    # A STAC-only run has no raster, so no raster checks run at all: decision-grade.
-    assert grade == DECISION
+    # A STAC-only run has no raster, so no raster checks run at all: checks passed.
+    assert grade == CHECKS_PASSED
 
 
 def test_interval_spanning_outside_the_range_fails(make_stac_item, evaluate):
@@ -708,7 +708,7 @@ def test_temporal_scope_without_time_range_is_not_emitted(make_stac_item, evalua
     results, grade = evaluate([item])
 
     assert "rs.temporal_scope" not in {result.id for result in results}
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_temporal_scope_without_any_item_is_not_run(evaluate):
@@ -836,7 +836,7 @@ def test_db_values_declared_db_pass(make_raster, evaluate):
     result = one(results, "sar.value_domain")
     assert result.status == "pass"
 
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_linear_values_declared_linear_pass(make_raster, evaluate):
@@ -848,7 +848,7 @@ def test_linear_values_declared_linear_pass(make_raster, evaluate):
 
     result = one(results, "sar.value_domain")
     assert result.status == "pass"
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_db_values_are_applied_with_scale_metadata(make_raster, evaluate):
@@ -858,7 +858,7 @@ def test_db_values_are_applied_with_scale_metadata(make_raster, evaluate):
     results, grade = evaluate([path], sar_expect="sigma0-db")
 
     assert one(results, "sar.value_domain").status == "pass"
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_value_domain_without_declaration_is_not_emitted(make_raster, evaluate):
@@ -868,7 +868,7 @@ def test_value_domain_without_declaration_is_not_emitted(make_raster, evaluate):
     results, grade = evaluate([path])
 
     assert "sar.value_domain" not in {result.id for result in results}
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_value_domain_with_unknown_declaration_is_not_run(make_raster, evaluate):
@@ -956,7 +956,7 @@ def test_properly_geocoded_raster_passes_geocoded(make_raster, evaluate):
     assert result.evidence["crs_defined"] is True
     assert result.evidence["identity_transform"] is False
 
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_geocoded_without_raster_is_not_run():
@@ -1163,7 +1163,7 @@ def test_accuracy_estimates_reproduce_the_published_olofsson_example(tmp_path, e
     }
     assert evidence["sample_count"] == 640
     assert one(results, "accuracy.sample_design").status == "pass"
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED
 
 
 def test_olofsson_areas_are_not_the_mapped_areas(tmp_path, evaluate):
@@ -1393,4 +1393,4 @@ def test_run_checks_defaults_are_unchanged_without_new_kwargs(make_raster, evalu
     assert statuses["crs.defined"] == "pass"
     assert statuses["raster.nodata_declared"] == "pass"
     assert statuses["raster.cog_layout"] == "pass"
-    assert grade == DECISION
+    assert grade == CHECKS_PASSED

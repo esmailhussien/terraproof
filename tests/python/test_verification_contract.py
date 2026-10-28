@@ -30,9 +30,10 @@ def data(tmp_path):
     return path
 
 
-def test_omitted_scientific_check_blocks_contract_but_preserves_legacy_grade(data):
+def test_omitted_scientific_check_blocks_contract_and_sets_the_report_grade(data):
     r = report(data, required=contract(data, ['rs.index_formula'], {'index_formula': 'ndvi'}))
-    assert r['grade'] == 'decision-grade' and r['verification']['grade'] == 'advisory-only'
+    assert r['grade'] == r['verification']['grade'] == 'advisory-only'
+    assert r['coverage']['assessed'] is True
     assert r['verification']['status'] == 'incomplete' and report_exit_code(r) == 3
     assert r['diagnostics'][0]['missing_bindings'] == ['source_band:nir', 'source_band:red']
     assert r['diagnostics'][0]['automatic_patch'] is False
@@ -147,6 +148,26 @@ def test_bundle_detects_changes(data, mutation):
         bundle['report']['verification']['status'] = 'incomplete'
         bundle['report_sha256'] = digest(bundle['report'])
     assert verify_bundle(bundle)['status'] == 'fail'
+
+
+def test_only_a_verified_contract_is_decision_grade(data):
+    assert report(data)['grade'] == 'checks-passed' and report_exit_code(report(data)) == 0
+    assert report(data, required=contract(data))['grade'] == 'decision-grade'
+
+
+def test_bundle_refuses_decision_grade_forged_without_a_contract(data):
+    forged = copy.deepcopy(report(data)); forged['grade'] = 'decision-grade'
+    with pytest.raises(InputError, match='grade'): build_bundle(forged)
+    claimed = copy.deepcopy(report(data)); claimed['coverage']['assessed'] = True
+    with pytest.raises(InputError, match='coverage'): build_bundle(claimed)
+
+
+def test_bundle_of_a_0_1_report_still_verifies_under_its_own_grading(data):
+    legacy = copy.deepcopy(report(data))
+    legacy.update(schema_version='terraproof.evidence/0.1', grade='decision-grade'); del legacy['coverage']
+    assert verify_bundle(build_bundle(legacy))['status'] == 'pass'
+    legacy['grade'] = 'checks-passed'
+    with pytest.raises(InputError, match='grade'): build_bundle(legacy)
 
 
 def test_bundle_refuses_data_changed_since_report_and_grade_forgery(data):

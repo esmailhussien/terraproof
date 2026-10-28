@@ -316,7 +316,7 @@ class _OutputReview:
         report = payload.get("report") if isinstance(payload, dict) else None
         checks = report.get("checks") if isinstance(report, dict) else None
         valid = (not response.is_error and isinstance(report, dict)
-                 and report.get("schema_version") == "terraproof.evidence/0.1"
+                 and report.get("schema_version") in ("terraproof.evidence/0.1", "terraproof.evidence/0.2")
                  and isinstance(checks, list) and bool(checks)
                  and all(isinstance(check, dict) and isinstance(check.get("id"), str)
                          and re.fullmatch(r"[a-z_]+\.[a-z_]+", check["id"])

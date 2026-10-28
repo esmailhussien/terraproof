@@ -55,10 +55,61 @@ and QA contracts also declare `processing_full_scan` as true or false. Choosing
 false explicitly retains the sampled scope; contract success is not an upgrade
 to exhaustive coverage. Check evidence records tolerances and scope limitations.
 
+## Declare a goal profile
+
+A goal profile is shorthand for the checks a declared goal requires
+(`routing/profiles.json`): `vertical-units`, `nodata-support`, `qa-masked`,
+`scaled-reflectance`, `metric-operation` and `slope-from-dem`. Use `profiles`
+in a requirement instead of, or as well as, `checks`. From the CLI,
+`--profile NAME` builds the contract from the arguments you gave (MCP:
+`profiles`):
+
+```bash
+python -m terraproof check outputs/change.tif --profile vertical-units   --vertical-operation difference   --vertical-source inputs/dem_2023.tif --vertical-source-unit metre   --vertical-source inputs/dem_2015.tif --vertical-source-unit foot   --vertical-unit metre
+```
+
+A profile never guesses its bindings. Without `--vertical-unit`, for example,
+the requirement is `incomplete` and the diagnostics name what to declare.
+
+- `raster.vertical_units` compares every cell with the declared `convert`,
+  `difference` or `depth-below-level` (with `--vertical-level`, in the output
+  unit) of the sources, done in metres and converted to the output unit. It also
+  fails when the output band's unit label contradicts its declared unit. It does
+  not cover vertical datum differences.
+- `raster.nodata_support` requires the output to be valid exactly where its
+  sources are valid under `--support-rule all` or `any`. A source's fill can be
+  declared with `--support-source-nodata`, for example `0` when a product stores
+  fill as zero without saying so in the file. Values where the sources hold only
+  fill, and nodata where they hold valid values such as real zeros, both fail.
+
+Other declarations that close a gap rather than guess one:
+
+- `--qa-kind keep-codes --qa-keep-code N ...` with `--processing-full-scan`
+  states which QA codes your quality rule accepts; every other code must be
+  nodata in the output.
+- `--decode-scale` and `--decode-offset` give a calibration the file lacks (for
+  example one declared only in a STAC item), and `--unit-conversion
+  kelvin-to-celsius` a unit change after decoding.
+- `--dem` on a geographic DEM works when the DEM's vertical unit is known, from the
+  file label or `--dem-vertical-unit`; the spacing is converted to metres on the
+  ellipsoid for each row.
+- `--metric-quantity area|length` with `--metric-property` and `--metric-unit`, or
+  `--metric-quantity buffer` with `--buffer-distance-m` and `--buffer-source`,
+  verifies delivered vector measurements geodesically in any CRS (profile
+  `metric-values`). `crs.metric_operation` (profile `metric-operation`) is for data
+  that is still to be measured.
+- `--qa-source` names the band a keep-codes QA rule masks, so masking a code the
+  rule keeps fails instead of only warning.
+- Vertical operations also include `minus-level` (for example a constant geoid
+  separation) and `depth-to-elevation`; `fathom` is a supported unit.
+
 ## Read both outcomes
 
-Without a contract, the existing schema, grade, exit codes and JSON results are
-unchanged. With a contract the report adds:
+Every report (schema `terraproof.evidence/0.2`) has a `coverage` block:
+`assessed` is true only with a contract, and `not_checked` lists catalogue checks
+that apply to the checked inputs but did not run, with the parameters that enable
+them. Without a contract, passing checks grade `checks-passed` (exit 0), never
+`decision-grade`. With a contract the report adds:
 
 - `verification`: canonical contract, SHA-256, per-output/check coverage and scan
   scope, missing/mismatched bindings, status and effective grade.
@@ -66,12 +117,12 @@ unchanged. With a contract the report adds:
   suggestions use MCP-compatible arguments and identify the unchanged contract
   digest. Supply the original contract again; suggestions do not replace it.
 
-The old `grade` continues to describe the checks that ran. The CLI/MCP exit code
-uses `verification.grade` when present: missing/not-run requirements or failures
-produce advisory/3, warnings produce review/2, and complete passing evidence
-produces decision/0. Other observed failures/warnings remain material.
-The MCP summary `grade` also uses the effective grade; the nested report's legacy
-`grade` stays unchanged. JSON and
+With a contract, the report's `grade` is `verification.grade`, and the CLI/MCP
+exit code follows it: missing/not-run requirements or failures produce advisory/3,
+warnings produce review/2, and complete passing evidence produces decision/0.
+Other observed failures/warnings remain material. (In `terraproof.evidence/0.1`
+reports, `grade` described only the checks that ran and graded them
+decision-grade when all passed; evidence bundles of either version still verify.) JSON and
 English/Arabic Markdown display the contract outcome separately. A missing
 requirement is not silently omitted and an automatic patch is never applied.
 

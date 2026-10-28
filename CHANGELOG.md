@@ -9,6 +9,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Goal profiles and two declared-source checks (Phase 7 V2/V3)
+
+- `raster.vertical_units`: a height output against its sources' declared vertical
+  units (`--vertical-operation convert|difference`, `--vertical-source`,
+  `--vertical-source-unit`, `--vertical-unit`), plus contradicting unit labels.
+- `raster.nodata_support`: the output must be valid exactly where its declared
+  sources are (`--support-source`, `--support-source-nodata`, `--support-rule all|any`).
+- `raster.vertical_units` also checks `depth-below-level` against a declared
+  `--vertical-level`.
+- `rs.cloud_mask_applied`: `--qa-kind keep-codes` with declared `--qa-keep-code`s,
+  and a full scan no longer reports QA nodata as unverifiable where the output is
+  already nodata.
+- `rs.scale_applied_once`: declared `--decode-scale`/`--decode-offset` and
+  `--unit-conversion kelvin-to-celsius`; correct outputs of products whose
+  calibration lives only in STAC, or that change unit, no longer fail.
+- `terrain.slope_consistent` supports geographic DEMs with a declared vertical unit,
+  and `--dem-vertical-unit` declares it when the file has no label.
+- New `geometry.metric_values` (profile `metric-values`): delivered area/length
+  properties and buffer ground distances are verified geodesically in any CRS.
+- Keep-codes QA rules detect over-masking (fail with `--qa-source`, warn without).
+- Vertical operations `minus-level` and `depth-to-elevation`; `fathom` unit.
+- Goal profiles (`routing/profiles.json`) expand to required checks in a
+  contract (`profiles`), or from `--profile NAME` / MCP `profiles`. A binding a
+  profile needs but the caller did not give leaves the requirement incomplete.
+
+### Breaking: decision-grade needs declared coverage (Phase 7 V1)
+
+- Passing checks without a verification contract now grade `checks-passed`
+  (exit 0), not `decision-grade`. `decision-grade` means a declared contract was
+  fully verified. In Phase 6, wrong outputs passed the three generic checks that
+  ran and were graded decision-grade; the grade described the checks, not the output.
+- Reports move to `terraproof.evidence/0.2`. Every report has a `coverage` block:
+  `assessed`, and `not_checked`, the catalogue checks that apply to the checked
+  inputs but did not run, with the parameters that enable them. With a contract,
+  the report's `grade` is the contract grade.
+- `routing/checks.json` records `applies_to` and `enabled_by` for parameter-enabled checks.
+- Evidence bundles from 0.1 reports still verify under their original grading.
+- Migration: a pipeline that treated exit 0 as "verified" should declare a contract
+  (see `docs/CONTRACT_TEMPLATES.md`) and read `grade == "decision-grade"`.
+
 ### Phase 6 readiness (Amendment 3) and contract templates
 
 - Tested contract templates for four workflows (vector area, categorical raster grid,

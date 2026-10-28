@@ -89,5 +89,5 @@ def test_markdown_out_file_is_written_as_utf8(make_vector, tmp_path):
     assert main(["check", path, "--operation", "area", "--format", "md", "--lang", "ar", "--out", str(out)]) == 0
 
     text = out.read_text(encoding="utf-8")
-    assert "جاهز للقرار" in text
+    assert "الفحوصات نجحت (التغطية غير مُقيَّمة)" in text
     assert "`crs.defined`" in text

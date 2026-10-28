@@ -78,16 +78,20 @@ def test_a_dem_without_a_vertical_unit_is_read_in_horizontal_units(tmp_path):
     assert found.status == "pass" and found.evidence["vertical_unit"] is None
 
 
-def test_unknown_units_geographic_and_unaligned_grids_are_not_run(tmp_path):
+def test_unknown_units_undeclared_geographic_units_and_unaligned_grids_are_not_run(tmp_path):
     dem, z = _dem(tmp_path, unit="furlong")
     assert _check(tmp_path, _slope(z, 1.0, 30, 60), dem).status == "not-run"
 
     geographic = tmp_path / "geo"
     geographic.mkdir()
     transform = from_origin(30, 10, 0.001, 0.001)
+    dem, z = _dem(geographic, unit="", transform=transform, crs="EPSG:4326")
+    found = _check(geographic, _slope(z, 0.3048, 30, 60), dem, transform=transform, crs="EPSG:4326")
+    assert found.status == "not-run" and "vertical unit" in found.message  # never assumed for degrees
+
     dem, z = _dem(geographic, transform=transform, crs="EPSG:4326")
     found = _check(geographic, _slope(z, 0.3048, 30, 60), dem, transform=transform, crs="EPSG:4326")
-    assert found.status == "not-run" and "projected" in found.message
+    assert found.status != "not-run" and found.evidence["geographic"] is True  # declared unit: ellipsoidal spacing
 
     dem, z = _dem(tmp_path)
     shifted = from_origin(500015, 5000000, 30, 60)

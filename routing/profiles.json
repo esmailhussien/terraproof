@@ -1,0 +1,49 @@
+{
+  "version": "1.0.0",
+  "note": "A goal profile names the checks a declared goal requires. Each check still needs its own declared bindings; a missing one makes the requirement incomplete. Nothing is inferred from task text.",
+  "profiles": {
+    "vertical-units": {
+      "description": "A height, depth or elevation-change output made from sources with declared vertical units.",
+      "checks": [
+        "raster.vertical_units"
+      ]
+    },
+    "nodata-support": {
+      "description": "An output whose valid cells must follow its sources' declared fill and support rule.",
+      "checks": [
+        "raster.nodata_support"
+      ]
+    },
+    "qa-masked": {
+      "description": "An optical output that must exclude cells flagged by a declared QA layer.",
+      "checks": [
+        "rs.cloud_mask_applied"
+      ]
+    },
+    "scaled-reflectance": {
+      "description": "Surface reflectance decoded once from a declared integer product encoding.",
+      "checks": [
+        "rs.reflectance_range",
+        "rs.scale_applied_once"
+      ]
+    },
+    "metric-operation": {
+      "description": "A dataset about to be used for a distance, area, length or buffer operation must be in a metric CRS. For measurements already delivered, use metric-values.",
+      "checks": [
+        "crs.metric_operation"
+      ]
+    },
+    "slope-from-dem": {
+      "description": "A slope-in-degrees output derived from a declared DEM.",
+      "checks": [
+        "terrain.slope_consistent"
+      ]
+    },
+    "metric-values": {
+      "description": "Vector measurements already delivered (area or length properties, or a buffer), in any CRS.",
+      "checks": [
+        "geometry.metric_values"
+      ]
+    }
+  }
+}

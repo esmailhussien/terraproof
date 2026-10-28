@@ -141,7 +141,7 @@ def test_run_checks_matches_the_cli_grade_and_report(make_vector, capsys):
 
     assert payload["report"] == cli_report
     assert payload["report"]["parameters"]["categorical"] is False
-    assert payload["grade"] == cli_report["grade"] == "decision-grade"
+    assert payload["grade"] == cli_report["grade"] == "checks-passed"
     assert payload["exit_code"] == 0
     assert payload["markdown"].startswith("# Terraproof evidence report")
 

@@ -7,3 +7,7 @@ evals/routing/heldout_v5.jsonl -text
 
 # Keep executable shebangs LF so the packed CLI runs on macOS and Linux.
 bin/* text eol=lf
+
+# Phase 7 held-out verification cases V0b (preserve exact LF hashes across platforms)
+evals/verification-heldout-v0b/* text eol=lf
+tests/python/test_verification_heldout_v0b.py text eol=lf

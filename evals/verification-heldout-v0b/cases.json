@@ -1,0 +1,809 @@
+[
+  {
+    "id": "heldout-v0b-geom-01-wrong",
+    "family": "geographic_metric_work",
+    "kind": "wrong",
+    "scenario": "A forestry manager in northern Scotland (latitude 57.0 N) requested parcel boundary metrics for woodland grant eligibility. Deliverables were specified in WGS 84 (EPSG:4326). The analyst computed polygon area using planar Cartesian coordinates directly on degree coordinates (delta_lon * delta_lat = 0.00025 sq deg) and stored the result in attribute area_m2 as 0.00025, rather than computing geodesic ground area (~1,700,000 m2).",
+    "declared": {
+      "primary_source": "heldout-v0b-geom-01-wrong/sources/highland_estate.geojson",
+      "source_crs": "EPSG:4326",
+      "delivery_crs": "EPSG:4326",
+      "metric_property_name": "area_m2",
+      "metric_unit": "square_metre",
+      "operation": "polygon_area_calculation"
+    },
+    "output": "heldout-v0b-geom-01-wrong/output/highland_estate_measured.geojson",
+    "oracle": "Delivered area_m2 is 0.00025 m2 (planar square degrees stored as square metres); differs from true WGS84 geodesic area of 1,704,600 m2 by a factor of 6.8 x 10^9."
+  },
+  {
+    "id": "heldout-v0b-geom-02-wrong",
+    "family": "geographic_metric_work",
+    "kind": "wrong",
+    "scenario": "A fisheries authority in northern Norway (latitude 68.0 N) required a 500-metre protective riparian buffer along an Arctic char migration river. The river centerline was delivered in EPSG:4326. The contractor buffered the line using an isotropic degree radius of delta = 500 / 111320 = 0.00449 deg, ignoring that at 68 N one degree of longitude is only 41,700 metres. The resulting buffer expands to 1,334 metres wide east-west, distorting the mandated buffer distance by 167%.",
+    "declared": {
+      "primary_source": "heldout-v0b-geom-02-wrong/sources/arctic_river.geojson",
+      "source_crs": "EPSG:4326",
+      "delivery_crs": "EPSG:4326",
+      "buffer_distance_m": 500.0,
+      "metric_unit": "metre",
+      "operation": "line_buffer_generation"
+    },
+    "output": "heldout-v0b-geom-02-wrong/output/arctic_river_buffer.geojson",
+    "oracle": "Buffer was generated with isotropic degree radius 0.00449 deg at 68 N; ground width reaches 1,334.5 m instead of mandated 500.0 m (166.9% distortion error)."
+  },
+  {
+    "id": "heldout-v0b-geom-03-wrong",
+    "family": "geographic_metric_work",
+    "kind": "wrong",
+    "scenario": "A transit logistics consortium measured trunk road network lengths across central Germany (latitude 50.0 N) in EPSG:4326. The contractor computed length using Euclidean degree distance multiplied by the equatorial constant 111,319.5 m/deg. Because longitude convergence at 50 N (cos 50 = 0.6428) was ignored, east-west road segments were severely overestimated.",
+    "declared": {
+      "primary_source": "heldout-v0b-geom-03-wrong/sources/germany_corridor.geojson",
+      "source_crs": "EPSG:4326",
+      "delivery_crs": "EPSG:4326",
+      "metric_property_name": "length_m",
+      "metric_unit": "metre",
+      "operation": "geodesic_length_calculation"
+    },
+    "output": "heldout-v0b-geom-03-wrong/output/germany_corridor_measured.geojson",
+    "oracle": "Reported length_m is 11,132.0 m instead of true WGS84 geodesic length 7,156.4 m; overestimated by +55.5% due to ignoring latitude convergence."
+  },
+  {
+    "id": "heldout-v0b-geom-04-wrong",
+    "family": "geographic_metric_work",
+    "kind": "wrong",
+    "scenario": "An electricity transmission grid operator in southern New Zealand (latitude 44.0 S) required a 100-metre vegetation clearance buffer along a high-voltage transmission line. The delivery was specified in EPSG:4326. The analyst naively executed buffer(100.0) directly on degree coordinates, producing an absurd corridor polygon spanning 100 degrees of latitude and longitude.",
+    "declared": {
+      "primary_source": "heldout-v0b-geom-04-wrong/sources/nz_powerline.geojson",
+      "source_crs": "EPSG:4326",
+      "delivery_crs": "EPSG:4326",
+      "buffer_distance_m": 100.0,
+      "metric_unit": "metre",
+      "operation": "line_buffer_generation"
+    },
+    "output": "heldout-v0b-geom-04-wrong/output/nz_powerline_buffer.geojson",
+    "oracle": "Buffer was executed as buffer(100.0) in degree space; buffer extends thousands of kilometers across the Pacific Ocean instead of 100 ground metres."
+  },
+  {
+    "id": "heldout-v0b-geom-05-correct",
+    "family": "geographic_metric_work",
+    "kind": "correct",
+    "scenario": "A provincial timber conservation department in Alberta (latitude 54.0 N) required forest compartment parcel areas delivered in EPSG:4326. The contractor evaluated parcel areas using true ellipsoidal geodesic geometry on WGS 84, writing measured ground area into attribute area_m2 as 3,450,200 m2. The delivered geometry remains properly encoded in EPSG:4326.",
+    "declared": {
+      "primary_source": "heldout-v0b-geom-05-correct/sources/alberta_compartment.geojson",
+      "source_crs": "EPSG:4326",
+      "delivery_crs": "EPSG:4326",
+      "metric_property_name": "area_m2",
+      "metric_unit": "square_metre",
+      "operation": "polygon_area_calculation"
+    },
+    "output": "heldout-v0b-geom-05-correct/output/alberta_compartment_measured.geojson",
+    "oracle": "Delivered area_m2 (3,450,200.0 m2) matches true WGS84 geodesic area (3,450,180.2 m2) within 0.001% relative difference while delivered geometry is valid EPSG:4326."
+  },
+  {
+    "id": "heldout-v0b-geom-06-correct",
+    "family": "geographic_metric_work",
+    "kind": "correct",
+    "scenario": "A coastal conservation agency in northern Iceland (latitude 65.0 N) mandated a 250-metre no-take sanctuary buffer around an offshore bird nesting skerry. Coordinates were required in EPSG:4326. The contractor transformed the centerline to a local conformal projection, constructed an exact 250-metre uniform metric buffer, and reprojected the resulting polygon back to EPSG:4326 for delivery.",
+    "declared": {
+      "primary_source": "heldout-v0b-geom-06-correct/sources/iceland_skerry.geojson",
+      "source_crs": "EPSG:4326",
+      "delivery_crs": "EPSG:4326",
+      "buffer_distance_m": 250.0,
+      "metric_unit": "metre",
+      "operation": "line_buffer_generation"
+    },
+    "output": "heldout-v0b-geom-06-correct/output/iceland_skerry_buffer.geojson",
+    "oracle": "Delivered buffer polygon in EPSG:4326 has verified uniform ground offset of 250.0 m across all directions (maximum ground distance deviation < 0.5%)."
+  },
+  {
+    "id": "heldout-v0b-geom-07-correct",
+    "family": "geographic_metric_work",
+    "kind": "correct",
+    "scenario": "A mining railway feasibility study in northern Chile (latitude 33.0 S) mapped proposed rail alignment alternatives in EPSG:4326. The contractor computed segment lengths using WGS 84 ellipsoidal geodesics (pyproj Geod), recording true ground distance in attribute length_m. The delivered vector remains in EPSG:4326 as requested.",
+    "declared": {
+      "primary_source": "heldout-v0b-geom-07-correct/sources/chile_railway.geojson",
+      "source_crs": "EPSG:4326",
+      "delivery_crs": "EPSG:4326",
+      "metric_property_name": "length_m",
+      "metric_unit": "metre",
+      "operation": "geodesic_length_calculation"
+    },
+    "output": "heldout-v0b-geom-07-correct/output/chile_railway_measured.geojson",
+    "oracle": "Delivered length_m matches true WGS84 geodesic length (93,245.8 m) within 0.001% relative discrepancy while delivered in EPSG:4326."
+  },
+  {
+    "id": "heldout-v0b-geom-08-correct",
+    "family": "geographic_metric_work",
+    "kind": "correct",
+    "scenario": "An environmental risk review for the Trans-Alaska Pipeline corridor (latitude 61.0 N) required a 1,000-metre safety exclusion zone delivered in EPSG:4326. The analyst reprojected the line to Alaska Albers Equal Area (EPSG:3338), executed an exact 1,000.0 metre metric buffer, and reprojected the buffer back to EPSG:4326. Ground offsets in all directions verify at 1,000 m.",
+    "declared": {
+      "primary_source": "heldout-v0b-geom-08-correct/sources/alaska_pipe_centerline.geojson",
+      "source_crs": "EPSG:4326",
+      "delivery_crs": "EPSG:4326",
+      "buffer_distance_m": 1000.0,
+      "metric_unit": "metre",
+      "operation": "line_buffer_generation"
+    },
+    "output": "heldout-v0b-geom-08-correct/output/alaska_pipe_buffer.geojson",
+    "oracle": "Delivered buffer polygon in EPSG:4326 has verified uniform ground offset of 1,000.0 m (maximum ground distance deviation < 0.3%)."
+  },
+  {
+    "id": "heldout-v0b-qa-01-wrong",
+    "family": "qa_masking",
+    "kind": "wrong",
+    "scenario": "An agricultural research station in Ukraine mapped wheat NDVI from Sentinel-2 MSI. The SCL layer defines classes 4 (vegetation) and 5 (bare soil) as valid, while cloud shadows (3), medium cloud (8), and high cloud (9) must be masked to nodata. The contractor omitted QA masking entirely, delivering raw NDVI containing bright cloud tops and shadows across 22% of the scene.",
+    "declared": {
+      "primary_source": "heldout-v0b-qa-01-wrong/sources/ukraine_raw_ndvi.tif",
+      "qa_layer": "heldout-v0b-qa-01-wrong/sources/ukraine_scl.tif",
+      "valid_qa_classes": [
+        4,
+        5
+      ],
+      "invalid_qa_classes": [
+        3,
+        8,
+        9
+      ],
+      "declared_nodata_value": -9999.0,
+      "operation": "qa_class_masking"
+    },
+    "output": "heldout-v0b-qa-01-wrong/output/ukraine_masked_ndvi.tif",
+    "oracle": "Deliverable has zero masked pixels; 3,600 cloud and shadow pixels (22.0% of scene) belonging to invalid SCL classes 3, 8, 9 are left completely unmasked."
+  },
+  {
+    "id": "heldout-v0b-qa-02-wrong",
+    "family": "qa_masking",
+    "kind": "wrong",
+    "scenario": "A limnological institute monitored lake water quality in Minnesota using Landsat 8 surface reflectance. The pixel quality rule documents clear land (class 4) and clear water (class 6) as valid surfaces. The contractor mistakenly assumed water was invalid and over-masked the scene, retaining only class 4 and stripping out all clear lake water pixels to nodata.",
+    "declared": {
+      "primary_source": "heldout-v0b-qa-02-wrong/sources/minnesota_ndwi.tif",
+      "qa_layer": "heldout-v0b-qa-02-wrong/sources/minnesota_qa.tif",
+      "valid_qa_classes": [
+        4,
+        6
+      ],
+      "invalid_qa_classes": [
+        3,
+        8,
+        9
+      ],
+      "declared_nodata_value": -9999.0,
+      "operation": "qa_class_masking"
+    },
+    "output": "heldout-v0b-qa-02-wrong/output/minnesota_ndwi_masked.tif",
+    "oracle": "Deliverable over-masked all 4,200 clear lake water pixels (class 6); the lake water bodies are entirely missing from the deliverable."
+  },
+  {
+    "id": "heldout-v0b-qa-03-wrong",
+    "family": "qa_masking",
+    "kind": "wrong",
+    "scenario": "A seasonal snow cover assessment in the Spanish Pyrenees analyzed Sentinel-2 MSI. The documented QA rule explicitly designates class 11 (snow/ice) as valid. The contractor treated snow as cloud and masked out all class 11 snowpack pixels, delivering an empty mountain snow assessment with all winter snowpack converted to nodata.",
+    "declared": {
+      "primary_source": "heldout-v0b-qa-03-wrong/sources/pyrenees_snow_ndsi.tif",
+      "qa_layer": "heldout-v0b-qa-03-wrong/sources/pyrenees_scl.tif",
+      "valid_qa_classes": [
+        5,
+        11
+      ],
+      "invalid_qa_classes": [
+        3,
+        8,
+        9
+      ],
+      "declared_nodata_value": -9999.0,
+      "operation": "qa_class_masking"
+    },
+    "output": "heldout-v0b-qa-03-wrong/output/pyrenees_snow_masked.tif",
+    "oracle": "Deliverable over-masked all 5,100 valid snow/ice pixels (class 11); snow cover extent was erroneously rejected as cloud."
+  },
+  {
+    "id": "heldout-v0b-qa-04-wrong",
+    "family": "qa_masking",
+    "kind": "wrong",
+    "scenario": "A regional climate center evaluated daily MODIS snow cover fraction in the Rocky Mountains. The QA layer documents cloud obstruction in bit 0 (bit 0 == 1 means cloud). The contractor failed to filter on bit 0, keeping cloudy pixels with fictitious snow fraction values in the output.",
+    "declared": {
+      "primary_source": "heldout-v0b-qa-04-wrong/sources/rockies_snow_fraction.tif",
+      "qa_layer": "heldout-v0b-qa-04-wrong/sources/rockies_qc_bits.tif",
+      "invalid_bit_indices": [
+        0
+      ],
+      "declared_nodata_value": -9999.0,
+      "operation": "qa_bitmask_filtering"
+    },
+    "output": "heldout-v0b-qa-04-wrong/output/rockies_snow_fraction_clean.tif",
+    "oracle": "Deliverable failed to mask pixels where QA bit 0 == 1; 3,850 cloudy pixels (23.5% of grid) remain unmasked."
+  },
+  {
+    "id": "heldout-v0b-qa-05-correct",
+    "family": "qa_masking",
+    "kind": "correct",
+    "scenario": "A Mediterranean agricultural survey mapped Sentinel-2 NDVI across Thessaly, Greece. The SCL layer declares classes 4 (vegetation), 5 (soil), and 6 (water) as valid. The source reflectance contains an authentic sensor swath nodata gap (-9999.0) crossing the corner of the scene. The deliverable masks clouds/shadows (3, 8, 9) and preserves the swath nodata gap as nodata, following both the QA rule and source valid data domain.",
+    "declared": {
+      "primary_source": "heldout-v0b-qa-05-correct/sources/thessaly_raw_ndvi.tif",
+      "qa_layer": "heldout-v0b-qa-05-correct/sources/thessaly_scl.tif",
+      "valid_qa_classes": [
+        4,
+        5,
+        6
+      ],
+      "invalid_qa_classes": [
+        3,
+        8,
+        9
+      ],
+      "declared_nodata_value": -9999.0,
+      "operation": "qa_class_masking"
+    },
+    "output": "heldout-v0b-qa-05-correct/output/thessaly_masked_ndvi.tif",
+    "oracle": "Clouds and shadows are masked; source swath edge nodata (-9999.0) is preserved as nodata; 100% agreement with expected QA and sensor boundary mask."
+  },
+  {
+    "id": "heldout-v0b-qa-06-correct",
+    "family": "qa_masking",
+    "kind": "correct",
+    "scenario": "An Everglades wetland monitoring project mapped Landsat 9 surface reflectance. Declared valid surface classes include clear water (class 6). Clear water bodies exhibit legitimate negative NDVI values (-0.35 to -0.15). The deliverable correctly preserves water pixels with negative NDVI while properly setting clouds and shadows to nodata.",
+    "declared": {
+      "primary_source": "heldout-v0b-qa-06-correct/sources/everglades_raw_ndvi.tif",
+      "qa_layer": "heldout-v0b-qa-06-correct/sources/everglades_scl.tif",
+      "valid_qa_classes": [
+        4,
+        5,
+        6
+      ],
+      "invalid_qa_classes": [
+        3,
+        8,
+        9
+      ],
+      "declared_nodata_value": -9999.0,
+      "operation": "qa_class_masking"
+    },
+    "output": "heldout-v0b-qa-06-correct/output/everglades_masked_ndvi.tif",
+    "oracle": "All cloud/shadow pixels masked to -9999.0; all 2,800 clear water pixels with legitimate negative NDVI are preserved with zero corruption."
+  },
+  {
+    "id": "heldout-v0b-qa-07-correct",
+    "family": "qa_masking",
+    "kind": "correct",
+    "scenario": "A glaciological glacier survey in the Swiss Alps mapped snow and ice cover with Sentinel-2. The QA rule distinguishes atmospheric clouds (classes 3, 8, 9) from alpine snow/glacier (class 11) and bare rock (class 5). The deliverable correctly retains 100% of class 11 snow and class 5 rock while masking atmospheric clouds.",
+    "declared": {
+      "primary_source": "heldout-v0b-qa-07-correct/sources/alps_snow_ndsi.tif",
+      "qa_layer": "heldout-v0b-qa-07-correct/sources/alps_scl.tif",
+      "valid_qa_classes": [
+        5,
+        11
+      ],
+      "invalid_qa_classes": [
+        3,
+        8,
+        9
+      ],
+      "declared_nodata_value": -9999.0,
+      "operation": "qa_class_masking"
+    },
+    "output": "heldout-v0b-qa-07-correct/output/alps_snow_clean.tif",
+    "oracle": "All atmospheric cloud pixels masked; 100% of alpine snow/ice (class 11) and rock (class 5) pixels preserved with exact values."
+  },
+  {
+    "id": "heldout-v0b-qa-08-correct",
+    "family": "qa_masking",
+    "kind": "correct",
+    "scenario": "A geothermal exploration survey in Death Valley mapped thermal infrared radiance using Landsat 8 TIRS Band 10. The QA_PIXEL bitmask encodes cloud (bit 3) and shadow (bit 4). The source thermal band contains an unmeasured instrument scan border (-9999.0). The deliverable masks cloudy pixels, preserves instrument nodata borders, and preserves extreme desert ground temperatures (>335 K).",
+    "declared": {
+      "primary_source": "heldout-v0b-qa-08-correct/sources/death_valley_tirs.tif",
+      "qa_layer": "heldout-v0b-qa-08-correct/sources/death_valley_qa.tif",
+      "invalid_bit_indices": [
+        3,
+        4
+      ],
+      "declared_nodata_value": -9999.0,
+      "operation": "qa_bitmask_filtering"
+    },
+    "output": "heldout-v0b-qa-08-correct/output/death_valley_tirs_clean.tif",
+    "oracle": "Cloud and shadow pixels masked; instrument scan border nodata preserved; all extreme hot playa pixels (>335 K) preserved without false alarm."
+  },
+  {
+    "id": "heldout-v0b-slope-01-wrong",
+    "family": "terrain_slope_unlabeled",
+    "kind": "wrong",
+    "scenario": "A landslide hazard office mapped slope in the Japanese Alps (latitude 36.0 N). The source DEM is in WGS 84 geographic coordinates (EPSG:4326) with cell step 0.001 deg and contains no vertical unit metadata tag; the declared vertical unit is metre. The contractor computed gradient delta_z / delta_d treating degree spacing 0.001 as 0.001 metres, generating terrain slopes exceeding 89.9 degrees.",
+    "declared": {
+      "primary_source": "heldout-v0b-slope-01-wrong/sources/japan_dem_deg.tif",
+      "source_crs": "EPSG:4326",
+      "declared_vertical_unit": "metre",
+      "metric_unit": "degrees_slope",
+      "declared_nodata_value": -9999.0,
+      "operation": "terrain_slope_calculation"
+    },
+    "output": "heldout-v0b-slope-01-wrong/output/japan_slope_deg.tif",
+    "oracle": "Slope was computed with degree spacing dx = 0.001 as metres without metric scaling; delivered mean slope is 89.91 deg instead of true terrain mean slope of 24.35 deg."
+  },
+  {
+    "id": "heldout-v0b-slope-02-wrong",
+    "family": "terrain_slope_unlabeled",
+    "kind": "wrong",
+    "scenario": "A ski resort expansion project in the Colorado Rockies analyzed terrain slope from a 10m DEM in UTM Zone 13N (EPSG:32613). The GeoTIFF file carries no vertical unit tag, but the metadata declares vertical unit: foot. The contractor ignored the declared unit and computed slope as delta_z / 10m directly, inflating elevation gradients by a factor of 3.28084.",
+    "declared": {
+      "primary_source": "heldout-v0b-slope-02-wrong/sources/colorado_dtm_ft.tif",
+      "source_crs": "EPSG:32613",
+      "declared_vertical_unit": "foot",
+      "metric_unit": "degrees_slope",
+      "declared_nodata_value": -9999.0,
+      "operation": "terrain_slope_calculation"
+    },
+    "output": "heldout-v0b-slope-02-wrong/output/colorado_slope_deg.tif",
+    "oracle": "Declared vertical unit 'foot' was treated as metres against a metric 10m grid; delivered mean slope is 58.4 deg instead of true terrain slope of 26.2 deg."
+  },
+  {
+    "id": "heldout-v0b-slope-03-wrong",
+    "family": "terrain_slope_unlabeled",
+    "kind": "wrong",
+    "scenario": "A coastal geohazards group analyzed fjord slope stability in western Norway (latitude 62.0 N) from an unlabeled DEM in EPSG:4326 (cell size 0.0005 deg). Declared vertical unit is metre. The analyst applied a single uniform scale factor 1 deg = 111,320 m to both X and Y, ignoring that at 62 N longitude spacing is only 52,260 m (cos 62 = 0.4695). East-west slope gradients were underestimated by more than 2x.",
+    "declared": {
+      "primary_source": "heldout-v0b-slope-03-wrong/sources/norway_fjord_dem.tif",
+      "source_crs": "EPSG:4326",
+      "declared_vertical_unit": "metre",
+      "metric_unit": "degrees_slope",
+      "declared_nodata_value": -9999.0,
+      "operation": "terrain_slope_calculation"
+    },
+    "output": "heldout-v0b-slope-03-wrong/output/norway_fjord_slope.tif",
+    "oracle": "Analyst used uniform equatorial scaling dx = 0.0005 * 111320 m ignoring cos(62 N); delivered east-west gradient is underestimated by 53.0% (mean slope 18.2 deg vs true 29.8 deg)."
+  },
+  {
+    "id": "heldout-v0b-slope-04-wrong",
+    "family": "terrain_slope_unlabeled",
+    "kind": "wrong",
+    "scenario": "An erosion assessment in the Appalachian Mountains (latitude 38.0 N) processed a county DEM in EPSG:4326 (cell size 0.0005 deg). The declared vertical unit is foot. The contractor ignored the declared vertical unit AND treated degree cell spacing as 0.0005 metres, producing meaningless slopes above 89.95 degrees.",
+    "declared": {
+      "primary_source": "heldout-v0b-slope-04-wrong/sources/appalachian_dem_ft.tif",
+      "source_crs": "EPSG:4326",
+      "declared_vertical_unit": "foot",
+      "metric_unit": "degrees_slope",
+      "declared_nodata_value": -9999.0,
+      "operation": "terrain_slope_calculation"
+    },
+    "output": "heldout-v0b-slope-04-wrong/output/appalachian_slope_deg.tif",
+    "oracle": "Contractor treated feet as metres and degree steps as metres; delivered mean slope is 89.94 deg instead of true slope 19.50 deg."
+  },
+  {
+    "id": "heldout-v0b-slope-05-correct",
+    "family": "terrain_slope_unlabeled",
+    "kind": "correct",
+    "scenario": "A watershed engineering firm mapped slope in the Italian Apennines (latitude 42.0 N) from a 0.001 deg DEM in EPSG:4326 without embedded unit tags. Declared vertical unit is metre. The deliverable correctly computed metric grid spacing using latitude (dx = 0.001 * 111320 * cos 42 = 82.72 m, dy = 0.001 * 111320 = 111.32 m), generating realistic mountain slope angles [0 deg to 36 deg].",
+    "declared": {
+      "primary_source": "heldout-v0b-slope-05-correct/sources/apennines_dem_deg.tif",
+      "source_crs": "EPSG:4326",
+      "declared_vertical_unit": "metre",
+      "metric_unit": "degrees_slope",
+      "declared_nodata_value": -9999.0,
+      "operation": "terrain_slope_calculation"
+    },
+    "output": "heldout-v0b-slope-05-correct/output/apennines_slope_deg.tif",
+    "oracle": "Delivered slope was evaluated with metric grid steps dx=82.72m, dy=111.32m; matches true terrain slope with max absolute difference < 0.01 deg."
+  },
+  {
+    "id": "heldout-v0b-slope-06-correct",
+    "family": "terrain_slope_unlabeled",
+    "kind": "correct",
+    "scenario": "A wildfire evacuation study in California's Sierra Nevada processed a 30m DEM in UTM Zone 11N (EPSG:32611). The GeoTIFF carries no vertical unit tag; declared vertical unit is foot. The deliverable properly multiplied vertical values by 0.3048 before computing gradients against the 30m horizontal grid, producing accurate terrain slope angles.",
+    "declared": {
+      "primary_source": "heldout-v0b-slope-06-correct/sources/sierra_nevada_dtm_ft.tif",
+      "source_crs": "EPSG:32611",
+      "declared_vertical_unit": "foot",
+      "metric_unit": "degrees_slope",
+      "declared_nodata_value": -9999.0,
+      "operation": "terrain_slope_calculation"
+    },
+    "output": "heldout-v0b-slope-06-correct/output/sierra_nevada_slope_deg.tif",
+    "oracle": "Delivered slope correctly converted vertical feet to metres (ft * 0.3048) against 30m metric grid; matches true terrain slope with max absolute difference < 0.01 deg."
+  },
+  {
+    "id": "heldout-v0b-slope-07-correct",
+    "family": "terrain_slope_unlabeled",
+    "kind": "correct",
+    "scenario": "An avalanche modeling project on the Kenai Peninsula in Alaska (latitude 60.0 N) used a 0.0008 deg DEM in EPSG:4326 with declared vertical unit metre. The deliverable properly scaled longitude spacing by cos(60 N) = 0.5000 (dx = 44.53 m, dy = 89.06 m), producing valid alpine avalanche slope angles.",
+    "declared": {
+      "primary_source": "heldout-v0b-slope-07-correct/sources/kenai_dem_deg.tif",
+      "source_crs": "EPSG:4326",
+      "declared_vertical_unit": "metre",
+      "metric_unit": "degrees_slope",
+      "declared_nodata_value": -9999.0,
+      "operation": "terrain_slope_calculation"
+    },
+    "output": "heldout-v0b-slope-07-correct/output/kenai_slope_deg.tif",
+    "oracle": "Delivered slope correctly accounted for high-latitude convergence cos(60 N) = 0.5000; matches true terrain slope with max absolute difference < 0.01 deg."
+  },
+  {
+    "id": "heldout-v0b-slope-08-correct",
+    "family": "terrain_slope_unlabeled",
+    "kind": "correct",
+    "scenario": "A volcanic glacier hazard study on Mt. Rainier processed a DEM in Washington State Plane South (EPSG:2927, horizontal grid 100 ft). The raster has no vertical tag; declared vertical unit is metre. The deliverable correctly converted horizontal feet to metres (dx = dy = 30.48 m) before gradient calculation, capturing summit crater slopes up to 41.5 degrees.",
+    "declared": {
+      "primary_source": "heldout-v0b-slope-08-correct/sources/rainier_dem_m.tif",
+      "source_crs": "EPSG:2927",
+      "declared_vertical_unit": "metre",
+      "metric_unit": "degrees_slope",
+      "declared_nodata_value": -9999.0,
+      "operation": "terrain_slope_calculation"
+    },
+    "output": "heldout-v0b-slope-08-correct/output/rainier_slope_deg.tif",
+    "oracle": "Delivered slope correctly harmonized horizontal US feet with vertical metres; matches true terrain slope with max absolute difference < 0.01 deg."
+  },
+  {
+    "id": "heldout-v0b-datum-01-wrong",
+    "family": "vertical_datums_and_units",
+    "kind": "wrong",
+    "scenario": "A wetlands drainage survey in the Florida Everglades measured GNSS ellipsoidal heights h (-25.0 m to -20.0 m) referenced to WGS84 ellipsoid. The declared GEOID18 undulation N is a constant -28.4 m (true orthometric height H = h - N = +3.4 m to +8.4 m). The analyst inverted the formula to h + N = -25.0 + (-28.4) = -53.4 m, submerging dry Florida agricultural land 53 metres below sea level.",
+    "declared": {
+      "primary_source": "heldout-v0b-datum-01-wrong/sources/everglades_ellips_h.tif",
+      "source_datum": "WGS84_ellipsoidal",
+      "target_datum": "NAVD88_orthometric",
+      "geoid_undulation_m": -28.4,
+      "declared_nodata_value": -9999.0,
+      "operation": "geoid_height_correction"
+    },
+    "output": "heldout-v0b-datum-01-wrong/output/everglades_ortho_h.tif",
+    "oracle": "Analyst inverted geoid correction (computed h + N instead of h - N); delivered elevations have a constant bias of -56.80 m (delivered mean -51.2 m vs true +5.6 m)."
+  },
+  {
+    "id": "heldout-v0b-datum-02-wrong",
+    "family": "vertical_datums_and_units",
+    "kind": "wrong",
+    "scenario": "A port navigation dredging study in Boston Harbor recorded multibeam acoustic soundings with positive-down sign convention (depths 8.0 m to 24.0 m below chart datum). The contract mandated delivery as vertical terrain elevations (positive-up, elevations -8.0 m to -24.0 m). The contractor delivered positive numbers (+8.0 m to +24.0 m), treating the seabed channel as a mountain.",
+    "declared": {
+      "primary_source": "heldout-v0b-datum-02-wrong/sources/boston_soundings_down.tif",
+      "source_convention": "positive_down_depth",
+      "target_convention": "positive_up_elevation",
+      "target_vertical_unit": "metre",
+      "declared_nodata_value": -9999.0,
+      "operation": "sounding_to_elevation"
+    },
+    "output": "heldout-v0b-datum-02-wrong/output/boston_elevation_up.tif",
+    "oracle": "Contractor failed to invert positive-down soundings to negative elevations; delivered mean elevation is +16.0 m instead of true -16.0 m (32.0 m sign inversion error)."
+  },
+  {
+    "id": "heldout-v0b-datum-03-wrong",
+    "family": "vertical_datums_and_units",
+    "kind": "wrong",
+    "scenario": "A continental shelf bathymetry survey in the Bering Sea converted legacy NOAA soundings in fathoms (-20 to -100 fathoms). The declared target vertical unit is metre (1 fathom = 1.8288 m). The contractor accidentally used the foot conversion factor 0.3048 m/ft instead of 1.8288 m/fathom, making the ocean 6 times shallower than reality (-6.1 m instead of -36.6 m).",
+    "declared": {
+      "primary_source": "heldout-v0b-datum-03-wrong/sources/bering_shelf_fathoms.tif",
+      "source_vertical_unit": "fathom",
+      "target_vertical_unit": "metre",
+      "conversion_factor": 1.8288,
+      "declared_nodata_value": -9999.0,
+      "operation": "unit_conversion"
+    },
+    "output": "heldout-v0b-datum-03-wrong/output/bering_shelf_metres.tif",
+    "oracle": "Contractor converted fathoms using 0.3048 instead of 1.8288; delivered depths are 6.0x shallower than true bathymetry (mean -18.3 m vs true -109.7 m)."
+  },
+  {
+    "id": "heldout-v0b-datum-04-wrong",
+    "family": "vertical_datums_and_units",
+    "kind": "wrong",
+    "scenario": "A flood resilience team in Houston, Texas processed airborne LiDAR ellipsoidal heights h (-15.0 m to +30.0 m) for FEMA flood map revision. The declared GEOID18 undulation grid averages N = -27.2 m. The contractor delivered the raw ellipsoidal heights without applying the geoid grid, leaving all flood zone elevations shifted downwards by 27.2 metres.",
+    "declared": {
+      "primary_source": "heldout-v0b-datum-04-wrong/sources/houston_ellips_h.tif",
+      "secondary_source": "heldout-v0b-datum-04-wrong/sources/houston_geoid18_n.tif",
+      "source_datum": "WGS84_ellipsoidal",
+      "target_datum": "NAVD88_orthometric",
+      "declared_nodata_value": -9999.0,
+      "operation": "geoid_height_correction"
+    },
+    "output": "heldout-v0b-datum-04-wrong/output/houston_ortho_h.tif",
+    "oracle": "Contractor omitted the declared GEOID18 undulation grid; delivered raster has a constant datum offset of -27.20 m relative to NAVD88."
+  },
+  {
+    "id": "heldout-v0b-datum-05-correct",
+    "family": "vertical_datums_and_units",
+    "kind": "correct",
+    "scenario": "A bathymetric chart update in San Francisco Bay recorded multibeam acoustic depths positive-down (depths 4.0 m to 38.0 m). The deliverable correctly applied the sign inversion z = -depth, producing valid negative vertical elevations (-4.0 m to -38.0 m) referenced to datum.",
+    "declared": {
+      "primary_source": "heldout-v0b-datum-05-correct/sources/sf_bay_soundings_down.tif",
+      "source_convention": "positive_down_depth",
+      "target_convention": "positive_up_elevation",
+      "target_vertical_unit": "metre",
+      "declared_nodata_value": -9999.0,
+      "operation": "sounding_to_elevation"
+    },
+    "output": "heldout-v0b-datum-05-correct/output/sf_bay_elevation_up.tif",
+    "oracle": "Delivered elevations match -depth with zero error; seabed channel depths correctly represented as negative elevations."
+  },
+  {
+    "id": "heldout-v0b-datum-06-correct",
+    "family": "vertical_datums_and_units",
+    "kind": "correct",
+    "scenario": "A coastal levee monitoring project in the Mississippi Delta converted airborne LiDAR ellipsoidal heights h (-22.0 m to -5.0 m) using a declared 2D GEOID18 undulation grid (N between -26.5 m and -27.8 m). The deliverable correctly computed H = h - N, yielding accurate orthometric elevations +1.5 m to +22.0 m.",
+    "declared": {
+      "primary_source": "heldout-v0b-datum-06-correct/sources/delta_ellips_h.tif",
+      "secondary_source": "heldout-v0b-datum-06-correct/sources/delta_geoid18_n.tif",
+      "source_datum": "WGS84_ellipsoidal",
+      "target_datum": "NAVD88_orthometric",
+      "declared_nodata_value": -9999.0,
+      "operation": "geoid_height_correction"
+    },
+    "output": "heldout-v0b-datum-06-correct/output/delta_ortho_h.tif",
+    "oracle": "Delivered orthometric height equals h - N across all pixels; levee crests verified at +3.2 m to +5.5 m NAVD88 (max absolute difference < 1e-5 m)."
+  },
+  {
+    "id": "heldout-v0b-datum-07-correct",
+    "family": "vertical_datums_and_units",
+    "kind": "correct",
+    "scenario": "A North Sea offshore platform navigation channel survey converted legacy UKHO sounding charts in fathoms (-15.0 to -80.0 fathoms). The deliverable correctly multiplied by 1.8288, preserving negative signs and delivering accurate negative metric elevations (-27.432 m to -146.304 m).",
+    "declared": {
+      "primary_source": "heldout-v0b-datum-07-correct/sources/north_sea_fathoms.tif",
+      "source_vertical_unit": "fathom",
+      "target_vertical_unit": "metre",
+      "conversion_factor": 1.8288,
+      "declared_nodata_value": -9999.0,
+      "operation": "unit_conversion"
+    },
+    "output": "heldout-v0b-datum-07-correct/output/north_sea_metres.tif",
+    "oracle": "Delivered bathymetry equals fathoms * 1.8288; negative signs and continental shelf depths faithfully preserved with zero error."
+  },
+  {
+    "id": "heldout-v0b-datum-08-correct",
+    "family": "vertical_datums_and_units",
+    "kind": "correct",
+    "scenario": "A highway grade survey in Puerto Rico converted total station elevations in US survey feet (elevations 10.0 to 125.0 US ft). The deliverable applied the exact US survey foot factor (1200 / 3937 = 0.3048006096 m/ft), preserving sub-millimeter geodetic precision.",
+    "declared": {
+      "primary_source": "heldout-v0b-datum-08-correct/sources/pr_highway_us_ft.tif",
+      "source_vertical_unit": "us_survey_foot",
+      "target_vertical_unit": "metre",
+      "conversion_factor": 0.3048006096,
+      "declared_nodata_value": -9999.0,
+      "operation": "unit_conversion"
+    },
+    "output": "heldout-v0b-datum-08-correct/output/pr_highway_metres.tif",
+    "oracle": "Delivered elevations equal source * (1200/3937) exactly; sub-millimeter precision preserved across all survey benchmarks."
+  },
+  {
+    "id": "heldout-v0b-reg-01-wrong",
+    "family": "nodata_and_scale_regression",
+    "kind": "wrong",
+    "scenario": "An offshore wind development survey mapped foundation seabed depths off Rhode Island. Unmeasured rocky islands were assigned fill value 0.0, declared as fill_value: 0.0 (nodata). The contractor delivered summary bathymetry and statistics that included all fill zeros as 0.0 m depth, pulling average seabed depth from -32.4 m down to -8.8 m.",
+    "declared": {
+      "primary_source": "heldout-v0b-reg-01-wrong/sources/windfarm_bathymetry_raw.tif",
+      "fill_value": 0.0,
+      "zero_is_valid": false,
+      "declared_nodata_value": 0.0,
+      "operation": "nodata_handling"
+    },
+    "output": "heldout-v0b-reg-01-wrong/output/windfarm_valid_bathymetry.tif",
+    "oracle": "Deliverable kept 2,400 fill zeros as valid depth data; delivered mean depth is -8.82 m instead of the true valid mean of -32.40 m (72.8% dilution error)."
+  },
+  {
+    "id": "heldout-v0b-reg-02-wrong",
+    "family": "nodata_and_scale_regression",
+    "kind": "wrong",
+    "scenario": "A topographic study mapped the Death Valley depression and coastal base level. Genuine elevations cross exactly 0.0 m along sea-level contours, while true nodata outside the study area is -9999.0. The contractor assumed zero is nodata and evicted all 0.0 m pixels to NaN, punching holes in valid terrain.",
+    "declared": {
+      "primary_source": "heldout-v0b-reg-02-wrong/sources/death_valley_dem.tif",
+      "fill_value": -9999.0,
+      "zero_is_valid": true,
+      "declared_nodata_value": -9999.0,
+      "operation": "nodata_handling"
+    },
+    "output": "heldout-v0b-reg-02-wrong/output/death_valley_clean_dem.tif",
+    "oracle": "Deliverable erroneously evicted 320 genuine sea-level base level pixels (0.0 m) by treating zero as nodata when declared nodata is -9999.0."
+  },
+  {
+    "id": "heldout-v0b-reg-03-wrong",
+    "family": "nodata_and_scale_regression",
+    "kind": "wrong",
+    "scenario": "An agricultural consultant ordered MODIS 250m Surface Reflectance Band 1 (Red). Raw data is stored as uint16 with scale factor 0.0001 and offset 0.0. Physical reflectance is in range [0.05, 0.60]. The contractor delivered raw unscaled digital numbers (values from 500 to 6,000) without scaling.",
+    "declared": {
+      "primary_source": "heldout-v0b-reg-03-wrong/sources/modis_b1_raw_uint16.tif",
+      "raw_data_type": "uint16",
+      "scale_factor": 0.0001,
+      "add_offset": 0.0,
+      "physical_quantity": "surface_reflectance",
+      "physical_unit": "ratio",
+      "declared_nodata_value": -9999.0,
+      "operation": "scale_and_offset_unpacking"
+    },
+    "output": "heldout-v0b-reg-03-wrong/output/modis_b1_reflectance.tif",
+    "oracle": "Delivered values are unscaled raw integers (mean 3,250.0) instead of physical reflectance (true mean 0.325); values are 10,000x larger than declared physical range."
+  },
+  {
+    "id": "heldout-v0b-reg-04-wrong",
+    "family": "nodata_and_scale_regression",
+    "kind": "wrong",
+    "scenario": "A marine research station ordered Sentinel-3 SLSTR Land Surface Temperature. Packed as int16 with scale factor 0.01 and add offset 273.15 (physical LST = DN * 0.01 + 273.15). The analyst inverted the offset sign to DN * 0.01 - 273.15, producing impossible negative absolute temperatures (-245 K).",
+    "declared": {
+      "primary_source": "heldout-v0b-reg-04-wrong/sources/slstr_lst_raw_int16.tif",
+      "raw_data_type": "int16",
+      "scale_factor": 0.01,
+      "add_offset": 273.15,
+      "physical_quantity": "land_surface_temperature_k",
+      "physical_unit": "kelvin",
+      "declared_nodata_value": -9999.0,
+      "operation": "scale_and_offset_unpacking"
+    },
+    "output": "heldout-v0b-reg-04-wrong/output/slstr_lst_kelvin.tif",
+    "oracle": "Offset sign was subtracted instead of added; delivered values have a constant negative bias of 546.30 K (delivered mean -245.2 K vs true mean +301.1 K)."
+  },
+  {
+    "id": "heldout-v0b-reg-05-correct",
+    "family": "nodata_and_scale_regression",
+    "kind": "correct",
+    "scenario": "A coral reef bathymetry survey in Belize mapped lagoon depths (-2.0 m to -28.0 m). Surrounding cayes and mainland are filled with 0.0 (declared fill_value: 0.0). The deliverable correctly masks fill zeros to NaN, computing lagoon bathymetry and slope exclusively on valid marine pixels.",
+    "declared": {
+      "primary_source": "heldout-v0b-reg-05-correct/sources/belize_reef_raw.tif",
+      "fill_value": 0.0,
+      "zero_is_valid": false,
+      "declared_nodata_value": 0.0,
+      "operation": "nodata_handling"
+    },
+    "output": "heldout-v0b-reg-05-correct/output/belize_reef_clean.tif",
+    "oracle": "All 2,600 caye fill zeros correctly masked to NaN; 100% of lagoon bathymetry cells preserved with exact values."
+  },
+  {
+    "id": "heldout-v0b-reg-06-correct",
+    "family": "nodata_and_scale_regression",
+    "kind": "correct",
+    "scenario": "A drought monitoring service mapped daily precipitation across the Namib Desert. Rainless days legitimately measured 0.0 mm (65% of stations). Unmonitored grid cells are encoded as -999.0. The deliverable correctly preserves legitimate 0.0 mm dry observations while masking true nodata.",
+    "declared": {
+      "primary_source": "heldout-v0b-reg-06-correct/sources/namib_rain_raw.tif",
+      "fill_value": -999.0,
+      "zero_is_valid": true,
+      "declared_nodata_value": -999.0,
+      "operation": "nodata_handling"
+    },
+    "output": "heldout-v0b-reg-06-correct/output/namib_rain_clean.tif",
+    "oracle": "Nodata (-999.0) masked while all 2,600 legitimate 0.0 mm dry weather observations are preserved without false eviction."
+  },
+  {
+    "id": "heldout-v0b-reg-07-correct",
+    "family": "nodata_and_scale_regression",
+    "kind": "correct",
+    "scenario": "A vegetation health study analyzed Landsat 9 Band 3 (Green). Data is packed into uint16 with scale 0.0000275 and offset -0.2. The deliverable correctly unpacks DN * 0.0000275 - 0.2, yielding physical surface reflectance values within the realistic range [0.02, 0.45].",
+    "declared": {
+      "primary_source": "heldout-v0b-reg-07-correct/sources/landsat9_b3_raw_uint16.tif",
+      "raw_data_type": "uint16",
+      "scale_factor": 2.75e-05,
+      "add_offset": -0.2,
+      "physical_quantity": "surface_reflectance",
+      "physical_unit": "ratio",
+      "declared_nodata_value": -9999.0,
+      "operation": "scale_and_offset_unpacking"
+    },
+    "output": "heldout-v0b-reg-07-correct/output/landsat9_b3_reflectance.tif",
+    "oracle": "Delivered raster matches raw * 0.0000275 - 0.2 exactly across all cells (max absolute error < 1e-6)."
+  },
+  {
+    "id": "heldout-v0b-reg-08-correct",
+    "family": "nodata_and_scale_regression",
+    "kind": "correct",
+    "scenario": "A permafrost degradation study analyzed winter 2m air temperature in central Siberia using ERA5-Land. Data is stored as int16 with scale factor 0.002 and offset 250.0 K. The deliverable correctly applies DN * 0.002 + 250.0, accurately preserving sub-zero winter temperatures down to 232.5 K.",
+    "declared": {
+      "primary_source": "heldout-v0b-reg-08-correct/sources/siberia_t2m_raw_int16.tif",
+      "raw_data_type": "int16",
+      "scale_factor": 0.002,
+      "add_offset": 250.0,
+      "physical_quantity": "air_temperature_k",
+      "physical_unit": "kelvin",
+      "declared_nodata_value": -9999.0,
+      "operation": "scale_and_offset_unpacking"
+    },
+    "output": "heldout-v0b-reg-08-correct/output/siberia_t2m_kelvin.tif",
+    "oracle": "Delivered temperatures match raw * 0.002 + 250.0 exactly across all cells; sub-freezing conditions (min 232.5 K) faithfully unpacked."
+  },
+  {
+    "id": "heldout-v0b-plain-01-correct",
+    "family": "plain",
+    "kind": "correct",
+    "scenario": "A regional planning agency requested a standard digital elevation model in UTM Zone 32N (EPSG:32632) in SI metres. The delivered raster is a clean, standard float32 elevation model ranging from 220 m in valleys to 850 m on ridges, with declared nodata -9999.0, tiled with overviews.",
+    "declared": {
+      "primary_source": "heldout-v0b-plain-01-correct/sources/bavaria_dem_utm32.tif",
+      "source_crs": "EPSG:32632",
+      "vertical_unit": "metre",
+      "declared_nodata_value": -9999.0,
+      "operation": "pass_through_verification"
+    },
+    "output": "heldout-v0b-plain-01-correct/output/bavaria_dem_delivered.tif",
+    "oracle": "Standard terrain raster in EPSG:32632; values between 220m and 850m; valid tiled GeoTIFF with overviews and correct nodata declaration."
+  },
+  {
+    "id": "heldout-v0b-plain-02-correct",
+    "family": "plain",
+    "kind": "correct",
+    "scenario": "A conservation non-profit mapped Sentinel-2 NDVI over a wildlife corridor in UTM Zone 18N (EPSG:32618). The delivered raster is a standard float32 NDVI with values from -0.10 to +0.82, with nodata declared as -9999.0, tiled with overviews.",
+    "declared": {
+      "primary_source": "heldout-v0b-plain-02-correct/sources/corridor_ndvi_raw.tif",
+      "source_crs": "EPSG:32618",
+      "declared_nodata_value": -9999.0,
+      "operation": "pass_through_verification"
+    },
+    "output": "heldout-v0b-plain-02-correct/output/corridor_ndvi_delivered.tif",
+    "oracle": "Standard NDVI raster in EPSG:32618; values within legitimate range [-0.10, +0.82]; valid tiled GeoTIFF with overviews."
+  },
+  {
+    "id": "heldout-v0b-plain-03-correct",
+    "family": "plain",
+    "kind": "correct",
+    "scenario": "An urban heat island study generated a Land Surface Temperature map in Kelvin in UTM Zone 31N (EPSG:32631). The delivered product is a float32 raster with temperatures between 285.0 K and 312.0 K, clean nodata -9999.0, tiled with overviews.",
+    "declared": {
+      "primary_source": "heldout-v0b-plain-03-correct/sources/paris_lst_raw.tif",
+      "source_crs": "EPSG:32631",
+      "physical_quantity": "land_surface_temperature_k",
+      "physical_unit": "kelvin",
+      "declared_nodata_value": -9999.0,
+      "operation": "pass_through_verification"
+    },
+    "output": "heldout-v0b-plain-03-correct/output/paris_lst_delivered.tif",
+    "oracle": "Standard temperature raster in EPSG:32631; physical temperatures in Kelvin [285K, 312K]; valid tiled GeoTIFF with overviews."
+  },
+  {
+    "id": "heldout-v0b-plain-04-correct",
+    "family": "plain",
+    "kind": "correct",
+    "scenario": "An urban forestry team mapped LiDAR canopy height model (CHM) in metres in British National Grid (EPSG:27700). The delivered raster has heights from 0.0 m (streets) to 32.5 m (tall trees), nodata -9999.0, tiled with overviews.",
+    "declared": {
+      "primary_source": "heldout-v0b-plain-04-correct/sources/london_chm_raw.tif",
+      "source_crs": "EPSG:27700",
+      "vertical_unit": "metre",
+      "declared_nodata_value": -9999.0,
+      "operation": "pass_through_verification"
+    },
+    "output": "heldout-v0b-plain-04-correct/output/london_chm_delivered.tif",
+    "oracle": "Standard CHM raster in EPSG:27700; canopy heights from 0.0m to 32.5m; valid tiled GeoTIFF with overviews."
+  },
+  {
+    "id": "heldout-v0b-plain-05-correct",
+    "family": "plain",
+    "kind": "correct",
+    "scenario": "A municipal GIS department mapped building footprint polygons in UTM Zone 10N (EPSG:32610). The delivered GeoJSON features clean building polygon boundaries with attribute fields building_id and height_m.",
+    "declared": {
+      "primary_source": "heldout-v0b-plain-05-correct/sources/seattle_buildings_raw.geojson",
+      "source_crs": "EPSG:32610",
+      "delivery_crs": "EPSG:32610",
+      "operation": "pass_through_verification"
+    },
+    "output": "heldout-v0b-plain-05-correct/output/seattle_buildings_delivered.geojson",
+    "oracle": "Standard vector polygon dataset in EPSG:32610; clean closed geometries and valid attributes."
+  },
+  {
+    "id": "heldout-v0b-plain-06-correct",
+    "family": "plain",
+    "kind": "correct",
+    "scenario": "A hydrological modeling team mapped river network centerlines in UTM Zone 33N (EPSG:32633). The delivered GeoJSON features clean LineStrings with attribute fields reach_id and stream_order.",
+    "declared": {
+      "primary_source": "heldout-v0b-plain-06-correct/sources/danube_reaches_raw.geojson",
+      "source_crs": "EPSG:32633",
+      "delivery_crs": "EPSG:32633",
+      "operation": "pass_through_verification"
+    },
+    "output": "heldout-v0b-plain-06-correct/output/danube_reaches_delivered.geojson",
+    "oracle": "Standard vector LineString network in EPSG:32633; valid geometries and stream attributes."
+  },
+  {
+    "id": "heldout-v0b-plain-07-correct",
+    "family": "plain",
+    "kind": "correct",
+    "scenario": "An environmental health monitoring network mapped air quality sampling stations in WGS 84 (EPSG:4326). The delivered GeoJSON contains station Points with attributes station_id and pm25_ugm3.",
+    "declared": {
+      "primary_source": "heldout-v0b-plain-07-correct/sources/air_stations_raw.geojson",
+      "source_crs": "EPSG:4326",
+      "delivery_crs": "EPSG:4326",
+      "operation": "pass_through_verification"
+    },
+    "output": "heldout-v0b-plain-07-correct/output/air_stations_delivered.geojson",
+    "oracle": "Standard vector Point dataset in EPSG:4326; valid station points and atmospheric readings."
+  },
+  {
+    "id": "heldout-v0b-plain-08-correct",
+    "family": "plain",
+    "kind": "correct",
+    "scenario": "A land administration bureau delivered a categorical Land Cover raster in UTM Zone 16N (EPSG:32616) using standard classes: 1=Water, 2=Forest, 3=Cropland, 4=Urban, 5=Wetland, encoded as uint8 with declared nodata 255, tiled with overviews.",
+    "declared": {
+      "primary_source": "heldout-v0b-plain-08-correct/sources/illinois_landcover_raw.tif",
+      "source_crs": "EPSG:32616",
+      "declared_nodata_value": 255,
+      "operation": "pass_through_verification"
+    },
+    "output": "heldout-v0b-plain-08-correct/output/illinois_landcover_delivered.tif",
+    "oracle": "Standard categorical uint8 raster in EPSG:32616; valid class codes 1-5; clean tiled GeoTIFF with overviews and nodata 255."
+  }
+]

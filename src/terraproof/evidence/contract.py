@@ -7,14 +7,18 @@ import os
 from pathlib import Path
 
 from terraproof._common import InputError, assets_root, jsonable
-from terraproof.evidence.grade import ADVISORY, DECISION, REVIEW
+from terraproof.checks.base import CheckResult
+from terraproof.evidence.grade import ADVISORY, CHECKS_PASSED, DECISION, REVIEW, grade_for
 
 SCHEMA = 'terraproof.verification-contract/1'
-FILE_PARAMETERS = {'compare_to', 'reference_input', 'dem', 'nir', 'red', 'qa_path',
+FILE_PARAMETERS = {'compare_to', 'reference_input', 'dem', 'nir', 'red', 'qa_path', 'qa_source', 'buffer_source',
                    'accuracy_samples', 'class_areas', 'manifest'}
 PARAMETERS = FILE_PARAMETERS | set('operation resampling categorical expect encoding slope_method raster_identity '
-    'index_formula index_bands stack stack_reduction stack_weights stack_min_count processing_full_scan qa_kind '
-    'time_range sar_expect min_per_class estimates_requested require_provenance'.split())
+    'index_formula index_bands stack stack_reduction stack_weights stack_min_count processing_full_scan qa_kind qa_keep_codes qa_source dem_vertical_unit metric_quantity metric_property '
+    'metric_unit buffer_distance_m buffer_source '
+    'time_range sar_expect min_per_class estimates_requested require_provenance vertical_operation vertical_sources '
+    'decode_scale decode_offset unit_conversion vertical_source_units vertical_unit vertical_level support_sources support_source_nodata support_rule'.split())
+LIST_FILE_PARAMETERS = ('stack', 'vertical_sources', 'support_sources')
 
 
 def canonical(value):
@@ -56,10 +60,11 @@ def parameters(values, base):
     for key in FILE_PARAMETERS:
         if isinstance(values.get(key), str):
             values[key] = path_key(values[key], base)
-    if values.get('stack') is not None:
-        if not isinstance(values['stack'], list):
-            raise InputError('stack must be an ordered list of local paths')
-        values['stack'] = [path_key(p, base) for p in values['stack']]
+    for key in LIST_FILE_PARAMETERS:
+        if values.get(key) is not None:
+            if not isinstance(values[key], list):
+                raise InputError(key+' must be an ordered list of local paths')
+            values[key] = [path_key(p, base) for p in values[key]]
     if values.get('index_bands') is not None:
         if not isinstance(values['index_bands'], dict):
             raise InputError('index_bands must map roles to [path, band number or null]')
@@ -92,20 +97,33 @@ def load_contract(value, *, with_record=False):
         if len(json.dumps(value, allow_nan=False).encode('utf-8')) > 65536:
             raise InputError('verification contract exceeds 64 KiB')
         catalog = json.loads((assets_root()/'routing/checks.json').read_text(encoding='utf-8'))['checks']
+        goal_profiles = profiles()
         groups = []
         for group in value['requirements']:
-            if (not isinstance(group, dict) or set(group) != {'paths', 'checks', 'parameters'}
+            if (not isinstance(group, dict) or not {'paths', 'parameters'} <= set(group)
+                    or not set(group) <= {'paths', 'checks', 'profiles', 'parameters'}
+                    or not ('checks' in group or 'profiles' in group)
                     or not isinstance(group['paths'], list) or not group['paths']
-                    or not isinstance(group['checks'], list) or not group['checks']
-                    or not all(isinstance(c, str) and c in catalog for c in group['checks'])
-                    or len(set(group['checks'])) != len(group['checks'])
+                    or not isinstance(group.get('checks', []), list)
+                    or not all(isinstance(c, str) and c in catalog for c in group.get('checks', []))
+                    or len(set(group.get('checks', []))) != len(group.get('checks', []))
+                    or not isinstance(group.get('profiles', []), list)
+                    or not all(isinstance(p, str) and p in goal_profiles for p in group.get('profiles', []))
+                    or len(set(group.get('profiles', []))) != len(group.get('profiles', []))
                     or not isinstance(group['parameters'], dict)):
                 raise InputError('invalid verification requirement')
             paths = sorted(path_key(p, base) for p in group['paths'])
             if len(set(paths)) != len(paths):
                 raise InputError('duplicate verification path')
-            groups.append({'paths': paths, 'checks': sorted(group['checks']),
-                           'parameters': parameters(group['parameters'], base)})
+            # A profile is shorthand for its checks; it is kept so the report shows the declared goal.
+            checks = set(group.get('checks', [])).union(*(goal_profiles[p]['checks'] for p in group.get('profiles', [])))
+            if not checks:
+                raise InputError('invalid verification requirement')
+            normalized_group = {'paths': paths, 'checks': sorted(checks),
+                                'parameters': parameters(group['parameters'], base)}
+            if group.get('profiles'):
+                normalized_group['profiles'] = sorted(group['profiles'])
+            groups.append(normalized_group)
         if len({canonical(g) for g in groups}) != len(groups):
             raise InputError('duplicate verification requirement')
         shared = {}
@@ -122,6 +140,24 @@ def load_contract(value, *, with_record=False):
         raise InputError(f'cannot read verification contract ({type(error).__name__})') from error
 
 
+def profiles():
+    """Declared goal profiles: each names the checks its goal requires."""
+    return json.loads((assets_root()/'routing/profiles.json').read_text(encoding='utf-8'))['profiles']
+
+
+def profile_contract(paths, names, arguments):
+    """A contract requiring the named goal profiles on every output, bound to the arguments actually given.
+
+    Only supplied arguments are bound; one a profile needs but the caller did not give stays missing,
+    so the requirement is incomplete rather than guessed."""
+    unknown = sorted(set(names) - set(profiles()))
+    if unknown:
+        raise InputError('unknown goal profile: '+', '.join(unknown))
+    bound = {key: value for key, value in arguments.items() if value is not None and key in PARAMETERS}
+    return {'schema': SCHEMA, 'requirements': [{'paths': list(paths), 'profiles': sorted(set(names)),
+                                                'parameters': bound}]}
+
+
 def _missing_bindings(check, values):
     needed = {
         'crs.metric_operation': ['operation'], 'raster.resampling': ['resampling', 'categorical'],
@@ -132,6 +168,10 @@ def _missing_bindings(check, values):
         'terrain.slope_formula': ['dem', 'slope_method'],
         'raster.source_identity': ['compare_to', 'raster_identity'],
         'provenance.reproducible': ['manifest'],
+        'rs.reflectance_range': ['expect'], 'rs.index_range': ['expect'],
+        'raster.vertical_units': ['vertical_operation', 'vertical_sources', 'vertical_source_units', 'vertical_unit'],
+        'raster.nodata_support': ['support_sources', 'support_rule'],
+        'geometry.metric_values': ['metric_quantity'],
     }.get(check, [])
     missing = [key for key in needed if key not in values or values[key] is None]
     if check == 'rs.index_formula':
@@ -139,6 +179,14 @@ def _missing_bindings(check, values):
         roles = FORMULAS.get(values.get('index_formula'), ((),))[0]
         bound = set(values.get('index_bands') or {}) | {r for r in ('nir', 'red') if values.get(r)}
         missing += ['source_band:'+role for role in roles if role not in bound]
+    if check == 'rs.cloud_mask_applied' and values.get('qa_kind') == 'keep-codes' and not values.get('qa_keep_codes'):
+        missing.append('qa_keep_codes')
+    if check == 'geometry.metric_values':
+        missing += [key for key in (('buffer_distance_m', 'buffer_source') if values.get('metric_quantity') == 'buffer'
+                                    else ('metric_property', 'metric_unit')) if values.get(key) is None]
+    if check == 'raster.vertical_units' and values.get('vertical_operation') in ('depth-below-level', 'minus-level'):
+        if values.get('vertical_level') is None:
+            missing.append('vertical_level')
     if check == 'rs.stack_reduction' and values.get('stack_reduction') in ('weighted-sum', 'ols-slope'):
         if not values.get('stack_weights'):
             missing.append('stack_weights')
@@ -205,14 +253,18 @@ def coverage(report, contract, base=None):
     statuses = {r['status'] for r in rows}
     status = ('failed' if 'fail' in statuses else 'incomplete' if statuses & {'missing', 'not-run'}
               else 'review-required' if 'warn' in statuses else 'verified')
-    if status == 'verified' and report['grade'] != DECISION:
+    # The grade of every check that ran, required or not; the stored report grade may already include coverage.
+    observed = grade_for([CheckResult(c['id'], c['family'], c['status'], c['message'], c['evidence'])
+                          for c in report['checks']])
+    if status == 'verified' and observed != CHECKS_PASSED:
         status = ('failed' if any(c['status'] == 'fail' for c in report['checks']) else
-                  'incomplete' if report['grade'] == ADVISORY else 'review-required')
-    grade = ADVISORY if status in ('failed', 'incomplete') else REVIEW if status == 'review-required' else report['grade']
+                  'incomplete' if observed == ADVISORY else 'review-required')
+    # Only fully verified declared coverage is decision-grade.
+    grade = ADVISORY if status in ('failed', 'incomplete') else REVIEW if status == 'review-required' else DECISION
     # Any other observed failure/warning remains material; a contract cannot bypass it.
-    if report['grade'] == ADVISORY:
+    if observed == ADVISORY:
         grade = ADVISORY
-    elif report['grade'] == REVIEW and grade == DECISION:
+    elif observed == REVIEW and grade == DECISION:
         grade = REVIEW
     return {'status': status, 'grade': grade, 'contract': contract, 'contract_sha256': digest(contract),
             'required': len(rows), 'passed': sum(r['status'] == 'pass' for r in rows), 'requirements': rows}

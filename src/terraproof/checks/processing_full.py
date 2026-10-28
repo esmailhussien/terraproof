@@ -10,7 +10,7 @@ import numpy as np
 import rasterio
 from rasterio.windows import Window
 
-from terraproof.checks.base import FAIL, NOT_RUN, PASS, result
+from terraproof.checks.base import FAIL, NOT_RUN, PASS, WARN, result
 from terraproof.checks.rs_processing import ENCODINGS, RTOL, ATOL, SCL_CLOUD_CLASSES, LANDSAT_QA_MASK, _grid_problems
 from terraproof.inspect.raster import inspect_raster
 
@@ -23,9 +23,9 @@ def windows(dataset):
             yield Window(col, row, min(WINDOW_SIZE, dataset.width-col), min(WINDOW_SIZE, dataset.height-row))
 
 
-def calibration(output, reference, encoding=None, scale=None, offset=None):
+def calibration(output, reference, encoding=None, scale=None, offset=None, add=0.0, unit_conversion=None):
     evidence = {"output": output.get("path"), "reference_input": reference.get("path") if reference else None,
-                "encoding": encoding, "processing_full_scan": True, "stride": 1,
+                "encoding": encoding, "unit_conversion": unit_conversion, "processing_full_scan": True, "stride": 1,
                 "scan_scope": "all corresponding bands and pixels", "window_size": WINDOW_SIZE,
                 "tolerance": {"rtol": RTOL, "atol": ATOL}, "min_match_fraction": 1.0}
     def answer(status, message):
@@ -77,8 +77,9 @@ def calibration(output, reference, encoding=None, scale=None, offset=None):
                     nonfinite += int(np.count_nonzero(unmasked & ~finite))
                     extra_masked += int(np.count_nonzero(source_valid & ~unmasked))
                     with np.errstate(over="ignore", invalid="ignore"):
-                        expected = stored*s+o
-                        twice = expected*s+o
+                        decoded = stored*s+o
+                        expected = decoded+add
+                        twice = decoded*s+o+add
                     if np.any(source_valid & ~np.isfinite(expected)):
                         return answer(NOT_RUN, "Calibration overflow prevents reliable arithmetic.")
                     keep = source_valid & unmasked & finite
@@ -110,14 +111,22 @@ def calibration(output, reference, encoding=None, scale=None, offset=None):
                   "Additional output masks are counted but their scientific policy is not verified.")
 
 
-def cloud_mask(output, qa_path, qa_kind):
-    evidence = {"output": output.get("path"), "qa_path": qa_path, "qa_kind": qa_kind,
+def cloud_mask(output, qa_path, qa_kind, keep_codes=None, qa_source=None):
+    """Every flagged QA location must be invalid in every output band. With qa_kind "keep-codes" the
+    caller declares the acceptable QA codes, and every other code is flagged; a kept code that is
+    nodata in the output is over-masking. With the declared source band (qa_source) over-masking fails
+    where the source holds a value; without it, it warns, because a source gap cannot be told apart."""
+    evidence = {"output": output.get("path"), "qa_path": qa_path, "qa_kind": qa_kind, "qa_keep_codes": keep_codes,
+                "qa_source": qa_source,
                 "processing_full_scan": True, "stride": 1, "scan_scope": "all output bands and QA pixels",
                 "window_size": WINDOW_SIZE}
     def answer(status, message):
         return [result("rs.cloud_mask_applied", status, message, **evidence)]
-    if not qa_path or qa_kind not in ("s2-scl", "landsat-qa-pixel") or output.get("kind") != "raster":
+    if not qa_path or qa_kind not in ("s2-scl", "landsat-qa-pixel", "keep-codes") or output.get("kind") != "raster":
         return answer(NOT_RUN, "Supply an output raster and known QA raster/kind.")
+    if qa_kind == "keep-codes" and (not keep_codes or not all(type(code) is int and code >= 0 for code in keep_codes)):
+        evidence["missing_bindings"] = ["qa_keep_codes"]
+        return answer(NOT_RUN, "Declare qa_keep_codes, the QA codes your quality rule accepts; nothing is inferred.")
     try:
         qa = inspect_raster(qa_path)
         if _grid_problems(qa, output) or not qa.get("crs"):
@@ -127,23 +136,40 @@ def cloud_mask(output, qa_path, qa_kind):
                 return answer(NOT_RUN, "QA must be one integer band of unscaled categorical/bit codes.")
             if any(np.dtype(dtype).kind not in "iuf" for dtype in dst.dtypes):
                 return answer(NOT_RUN, "Cloud-mask verification needs real-valued output bands.")
-            flagged_count = unmasked_count = band_count = unavailable = 0
+            source = rasterio.open(qa_source) if qa_source and qa_kind == "keep-codes" else None
+            flagged_count = unmasked_count = band_count = unavailable = over_masked = 0
             for window in windows(src):
                 codes = src.read(1, window=window)
                 known = src.read_masks(1, window=window) > 0
                 in_range = (codes >= 0) & (codes <= (11 if qa_kind == "s2-scl" else 65535))
-                unavailable += int(np.count_nonzero(~known | ~in_range))
                 known &= in_range
-                flagged = known & (np.isin(codes, SCL_CLOUD_CLASSES) if qa_kind == "s2-scl"
-                                   else (codes.astype("uint64") & LANDSAT_QA_MASK) != 0)
+                if qa_kind == "keep-codes":
+                    flagged = known & ~np.isin(codes, keep_codes)
+                else:
+                    flagged = known & (np.isin(codes, SCL_CLOUD_CLASSES) if qa_kind == "s2-scl"
+                                       else (codes.astype("uint64") & LANDSAT_QA_MASK) != 0)
                 flagged_count += int(np.count_nonzero(flagged))
                 any_band_unmasked = np.zeros(codes.shape, dtype=bool)
+                any_band_valid = np.zeros(codes.shape, dtype=bool)
                 for band in dst.indexes:
                     values = dst.read(band, window=window)
-                    bad = flagged & (dst.read_masks(band, window=window) > 0) & ~np.isnan(values)
+                    valid = (dst.read_masks(band, window=window) > 0) & ~np.isnan(values)
+                    bad = flagged & valid
                     band_count += int(np.count_nonzero(bad))
                     any_band_unmasked |= bad
+                    any_band_valid |= valid
                 unmasked_count += int(np.count_nonzero(any_band_unmasked))
+                # Missing QA is unverifiable only where the output still holds a value there.
+                unavailable += int(np.count_nonzero(~known & any_band_valid))
+                if qa_kind == "keep-codes":
+                    kept = known & np.isin(codes, keep_codes) & ~any_band_valid
+                    if source is not None:
+                        raw = source.read(1, window=window).astype("float64")
+                        kept &= (source.read_masks(1, window=window) > 0) & np.isfinite(raw)
+                    over_masked += int(np.count_nonzero(kept))
+            if source is not None:
+                source.close()
+            evidence.update(over_masked_kept_pixels=over_masked if qa_kind == "keep-codes" else None)
             evidence.update(flagged_pixels=flagged_count, unmasked_flagged_pixels=unmasked_count,
                 unmasked_flagged_band_pixels=band_count, unavailable_qa_pixels=unavailable, bands=dst.count,
                 unmasked_fraction=unmasked_count/flagged_count if flagged_count else None)
@@ -151,9 +177,15 @@ def cloud_mask(output, qa_path, qa_kind):
         return answer(NOT_RUN, f"Cannot compare QA ({type(error).__name__}).")
     if unmasked_count:
         return answer(FAIL, "At least one QA-flagged location still has a value in an output band.")
+    if over_masked and qa_source:
+        return answer(FAIL, "Locations whose QA code the declared rule keeps, and whose source holds a value, "
+                      "are nodata in the output: valid data was masked.")
     if unavailable:
         return answer(NOT_RUN, "Missing or unsupported QA codes leave part of the output unverifiable.")
     if not flagged_count:
         return answer(NOT_RUN, "QA flags no cloud/shadow locations; masking cannot be confirmed.")
+    if over_masked:
+        return answer(WARN, "Flagged locations are masked, but some locations the declared rule keeps are nodata; "
+                      "declare qa_source to tell over-masking from source gaps.")
     return answer(PASS, "Every QA-flagged location is invalid or NaN in every output band. "
                   "This does not validate cloud detection, dilation or additional output masking.")
