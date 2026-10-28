@@ -110,5 +110,5 @@ V0 is sealed first. V1 and V2 come next, together, because the grade needs the c
 
 ## 6. Decisions needed
 
-1. **Name and exit code of the undeclared top grade.** The proposal is `checks-passed` with exit 0, so CI pipelines keep running. The report and the Markdown summary then state that coverage was not assessed. The alternative is a nonzero exit, which makes declaring a contract mandatory for a clean CI pass.
-2. **Who authors V0.** The preference is an independent agent working from a brief, with the result sealed by hash before V2.
+1. **Decided (2026-10-28): `checks-passed`, exit 0.** CI pipelines keep running. The report, the MCP response and the Markdown summary state that coverage was not assessed and list what was not checked. `decision-grade` keeps exit 0 and is reserved for fully verified declared coverage.
+2. **Decided (2026-10-28): an independent agent authors V0.** It works from a brief without check sources, and the result is sealed by hash before V2.

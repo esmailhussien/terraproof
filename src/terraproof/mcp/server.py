@@ -118,8 +118,10 @@ def run_checks(
 ) -> dict[str, Any]:
     """Run Terraproof's deterministic evidence checks and return the grade and report.
 
-    Call this before you claim a geospatial result is correct: the grade says whether the
-    data path was verified (decision-grade), needs review, or is advisory only. Pass the
+    Call this before you claim a geospatial result is correct. The grade is decision-grade only
+    when a declared `contract` was fully verified; without one, passing checks give checks-passed,
+    which does not show the output is fit for a decision. Otherwise it needs review or is advisory
+    only. Read `report.coverage.not_checked` for applicable checks that did not run. Pass the
     outputs you produced, plus the inputs they came from, so CRS, geometry, scope, raster,
     and remote-sensing checks can run. `operation` is the metric operation the data will be
     used for (buffer, distance, area, length); `compare_to` is a source for vector record
@@ -143,7 +145,7 @@ def run_checks(
     Supply `contract` as a verification-contract object or local JSON path to require
     specific checks on specific outputs with declared source/parameter bindings.
     Read `report.verification` and `report.diagnostics`: missing required evidence
-    prevents contract success even when the legacy grade passes. Recheck the same
+    prevents contract success even when every check that ran passes. Recheck the same
     contract after correcting a new output; no patch is applied by this tool.
     """
     if not isinstance(paths, list) or not paths or not all(isinstance(path, str) for path in paths):
@@ -278,7 +280,7 @@ def run_checks(
         raise ToolError(f"cannot evaluate verification contract: {exc}") from exc
     from terraproof.evidence.report import report_exit_code
     return {
-        "grade": report.get('verification', {}).get('grade', report['grade']),
+        "grade": report["grade"],
         "exit_code": report_exit_code(report),
         "report": json.loads(to_json(report)),
         "markdown": render_markdown(report, lang=lang),

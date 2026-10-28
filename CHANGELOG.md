@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking: decision-grade needs declared coverage (Phase 7 V1)
+
+- Passing checks without a verification contract now grade `checks-passed`
+  (exit 0), not `decision-grade`. `decision-grade` means a declared contract was
+  fully verified. In Phase 6, wrong outputs passed the three generic checks that
+  ran and were graded decision-grade; the grade described the checks, not the output.
+- Reports move to `terraproof.evidence/0.2`. Every report has a `coverage` block:
+  `assessed`, and `not_checked`, the catalogue checks that apply to the checked
+  inputs but did not run, with the parameters that enable them. With a contract,
+  the report's `grade` is the contract grade.
+- `routing/checks.json` records `applies_to` and `enabled_by` for parameter-enabled checks.
+- Evidence bundles from 0.1 reports still verify under their original grading.
+- Migration: a pipeline that treated exit 0 as "verified" should declare a contract
+  (see `docs/CONTRACT_TEMPLATES.md`) and read `grade == "decision-grade"`.
+
 ### Phase 6 readiness (Amendment 3) and contract templates
 
 - Tested contract templates for four workflows (vector area, categorical raster grid,

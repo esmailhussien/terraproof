@@ -11,7 +11,14 @@
     },
     "crs.metric_operation": {
       "family": "crs",
-      "description": "A distance, area, or buffer operation runs in a projected horizontal CRS with metre or foot units, not in degrees or geocentric coordinates."
+      "description": "A distance, area, or buffer operation runs in a projected horizontal CRS with metre or foot units, not in degrees or geocentric coordinates.",
+      "applies_to": [
+        "raster",
+        "vector"
+      ],
+      "enabled_by": [
+        "operation"
+      ]
     },
     "geometry.valid": {
       "family": "geometry",
@@ -31,7 +38,13 @@
     },
     "scope.record_count": {
       "family": "scope",
-      "description": "The output feature count is compared with a reference dataset's count."
+      "description": "The output feature count is compared with a reference dataset's count.",
+      "applies_to": [
+        "vector"
+      ],
+      "enabled_by": [
+        "compare_to"
+      ]
     },
     "raster.nodata_declared": {
       "family": "raster",
@@ -39,7 +52,14 @@
     },
     "raster.resampling": {
       "family": "raster",
-      "description": "The resampling method suits categorical data (nearest or mode)."
+      "description": "The resampling method suits categorical data (nearest or mode).",
+      "applies_to": [
+        "raster"
+      ],
+      "enabled_by": [
+        "resampling",
+        "categorical"
+      ]
     },
     "raster.grid_alignment": {
       "family": "raster",
@@ -51,11 +71,23 @@
     },
     "rs.reflectance_range": {
       "family": "rs",
-      "description": "Sampled plausibility screen: reflectance values lie within [-0.5, 1.5]; non-finite scale, offset, or values fail. Not a calibration check."
+      "description": "Sampled plausibility screen: reflectance values lie within [-0.5, 1.5]; non-finite scale, offset, or values fail. Not a calibration check.",
+      "applies_to": [
+        "raster"
+      ],
+      "enabled_by": [
+        "expect"
+      ]
     },
     "rs.index_range": {
       "family": "rs",
-      "description": "Sampled plausibility screen: spectral index values lie within [-1, 1]; non-finite scale, offset, or values fail."
+      "description": "Sampled plausibility screen: spectral index values lie within [-1, 1]; non-finite scale, offset, or values fail.",
+      "applies_to": [
+        "raster"
+      ],
+      "enabled_by": [
+        "expect"
+      ]
     },
     "stac.provenance": {
       "family": "stac",
@@ -63,27 +95,65 @@
     },
     "rs.scale_applied_once": {
       "family": "rs",
-      "description": "Output pixels equal the input DN through the declared calibration exactly once. Default: sampled band-1 screen. processing_full_scan verifies every corresponding band/pixel, finite delivered values and source invalidity, in bounded windows. Additional output-mask policy and other processing steps are not verified."
+      "description": "Output pixels equal the input DN through the declared calibration exactly once. Default: sampled band-1 screen. processing_full_scan verifies every corresponding band/pixel, finite delivered values and source invalidity, in bounded windows. Additional output-mask policy and other processing steps are not verified.",
+      "applies_to": [
+        "raster"
+      ],
+      "enabled_by": [
+        "reference_input",
+        "encoding"
+      ]
     },
     "rs.cloud_mask_applied": {
       "family": "rs",
-      "description": "Pixels flagged as cloud or shadow by aligned Sentinel-2 SCL or Landsat QA_PIXEL are nodata or NaN. Default: sampled band-1 screen. processing_full_scan verifies all QA locations and output bands; missing or unsupported QA leaves verification not-run. Cloud detection quality and additional masking policy are not verified."
+      "description": "Pixels flagged as cloud or shadow by aligned Sentinel-2 SCL or Landsat QA_PIXEL are nodata or NaN. Default: sampled band-1 screen. processing_full_scan verifies all QA locations and output bands; missing or unsupported QA leaves verification not-run. Cloud detection quality and additional masking policy are not verified.",
+      "applies_to": [
+        "raster"
+      ],
+      "enabled_by": [
+        "qa_path",
+        "qa_kind"
+      ]
     },
     "rs.temporal_scope": {
       "family": "rs",
-      "description": "Every STAC item datetime, or the whole start/end interval, falls inside a declared time range; items without a usable acquisition time are not-run."
+      "description": "Every STAC item datetime, or the whole start/end interval, falls inside a declared time range; items without a usable acquisition time are not-run.",
+      "applies_to": [
+        "stac"
+      ],
+      "enabled_by": [
+        "time_range"
+      ]
     },
     "terrain.slope_consistent": {
       "family": "terrain",
-      "description": "A slope-in-degrees raster matches central differences on its DEM (passed with --dem) using the DEM's declared vertical unit and real pixel spacing; matching the slope with vertical units ignored or square pixels assumed fails, matching neither warns, and geographic or unaligned grids are not-run."
+      "description": "A slope-in-degrees raster matches central differences on its DEM (passed with --dem) using the DEM's declared vertical unit and real pixel spacing; matching the slope with vertical units ignored or square pixels assumed fails, matching neither warns, and geographic or unaligned grids are not-run.",
+      "applies_to": [
+        "raster"
+      ],
+      "enabled_by": [
+        "dem"
+      ]
     },
     "sar.value_domain": {
       "family": "sar",
-      "description": "Sampled backscatter values lie in the domain declared by the expected scale (sigma0-db within [-50, 15] dB; sigma0-linear non-negative with p99 <= 5). Flags decibel/linear confusion as one possible cause; not a calibration check."
+      "description": "Sampled backscatter values lie in the domain declared by the expected scale (sigma0-db within [-50, 15] dB; sigma0-linear non-negative with p99 <= 5). Flags decibel/linear confusion as one possible cause; not a calibration check.",
+      "applies_to": [
+        "raster"
+      ],
+      "enabled_by": [
+        "sar_expect"
+      ]
     },
     "sar.geocoded": {
       "family": "sar",
-      "description": "A raster carries both a CRS and a non-identity geotransform; GCP-only geometry or an identity transform fails as not geocoded."
+      "description": "A raster carries both a CRS and a non-identity geotransform; GCP-only geometry or an identity transform fails as not geocoded.",
+      "applies_to": [
+        "raster"
+      ],
+      "enabled_by": [
+        "sar_expect"
+      ]
     },
     "accuracy.sample_design": {
       "family": "accuracy",
@@ -95,7 +165,15 @@
     },
     "provenance.reproducible": {
       "family": "provenance",
-      "description": "A written run manifest verifies: recorded input/output files re-hash identically and recorded tool versions still match; warns on tool-version drift, fails on changed or missing files, an edited manifest core, or a recorded path outside the workspace."
+      "description": "A written run manifest verifies: recorded input/output files re-hash identically and recorded tool versions still match; warns on tool-version drift, fails on changed or missing files, an edited manifest core, or a recorded path outside the workspace.",
+      "applies_to": [
+        "raster",
+        "vector",
+        "stac"
+      ],
+      "enabled_by": [
+        "manifest"
+      ]
     },
     "preflight.metric_crs": {
       "family": "preflight",
@@ -127,19 +205,49 @@
     },
     "rs.index_formula": {
       "family": "rs",
-      "description": "Opt-in spectral-index comparison (NDVI, NBR, dNBR, McFeeters NDWI, MNDWI, Gao NDMI, SAVI, EVI) with declared source-band roles, each band's scale/offset and joint valid support; unsupported cells must be nodata and extra masking warns."
+      "description": "Opt-in spectral-index comparison (NDVI, NBR, dNBR, McFeeters NDWI, MNDWI, Gao NDMI, SAVI, EVI) with declared source-band roles, each band's scale/offset and joint valid support; unsupported cells must be nodata and extra masking warns.",
+      "applies_to": [
+        "raster"
+      ],
+      "enabled_by": [
+        "index_formula",
+        "nir",
+        "red",
+        "index_bands"
+      ]
     },
     "rs.stack_reduction": {
       "family": "rs",
-      "description": "Opt-in per-pixel reduction of an ordered input stack (median, count, weighted sum such as rate x hours, mean in linear power for dB, OLS slope against declared times) on the output grid; cells without enough valid inputs must be nodata, extra masking warns, and how the inputs were made is not checked."
+      "description": "Opt-in per-pixel reduction of an ordered input stack (median, count, weighted sum such as rate x hours, mean in linear power for dB, OLS slope against declared times) on the output grid; cells without enough valid inputs must be nodata, extra masking warns, and how the inputs were made is not checked.",
+      "applies_to": [
+        "raster"
+      ],
+      "enabled_by": [
+        "stack",
+        "stack_reduction"
+      ]
     },
     "terrain.slope_formula": {
       "family": "terrain",
-      "description": "Opt-in calibrated central-difference slope comparison: every required value, complete center/four-neighbour support and nodata edges."
+      "description": "Opt-in calibrated central-difference slope comparison: every required value, complete center/four-neighbour support and nodata edges.",
+      "applies_to": [
+        "raster"
+      ],
+      "enabled_by": [
+        "slope_method",
+        "dem"
+      ]
     },
     "raster.source_identity": {
       "family": "raster",
-      "description": "Opt-in exact decoded valid-sample and full band-validity comparison with a declared raster source, including grid and band metadata; not COG conformance."
+      "description": "Opt-in exact decoded valid-sample and full band-validity comparison with a declared raster source, including grid and band metadata; not COG conformance.",
+      "applies_to": [
+        "raster"
+      ],
+      "enabled_by": [
+        "raster_identity",
+        "compare_to"
+      ]
     }
   }
 }

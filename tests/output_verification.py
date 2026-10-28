@@ -199,7 +199,7 @@ class RequiredVerification:
                 return
             payload = getattr(response, "structured_content", None)
             report = payload.get("report") if isinstance(payload, dict) else None
-            if (not isinstance(report, dict) or report.get("schema_version") != "terraproof.evidence/0.1"
+            if (not isinstance(report, dict) or report.get("schema_version") not in ("terraproof.evidence/0.1", "terraproof.evidence/0.2")
                     or not isinstance(report.get("inputs"), list) or not isinstance(report.get("parameters"), dict)
                     or not isinstance(report.get("checks"), list)):
                 return

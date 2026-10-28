@@ -7,9 +7,9 @@ import json
 from terraproof import __version__
 from terraproof._common import jsonable, sha256_and_size
 from terraproof.checks.base import CheckResult
-from terraproof.evidence.grade import ADVISORY, DECISION, REVIEW, grade_for
+from terraproof.evidence.grade import ADVISORY, CHECKS_PASSED, DECISION, REVIEW, grade_for
 
-SCHEMA_VERSION = "terraproof.evidence/0.1"
+SCHEMA_VERSION = "terraproof.evidence/0.2"
 LIMITATION_EN = (
     "The grade describes the data path and the checks that ran. "
     "It is not a certification of survey, engineering, legal, or safety fitness."
@@ -23,7 +23,8 @@ LABELS = {
     "en": {
         "title": "Terraproof evidence report",
         "grade": "Grade",
-        "grades": {DECISION: "Decision-grade", REVIEW: "Review required", ADVISORY: "Advisory only"},
+        "grades": {DECISION: "Decision-grade", CHECKS_PASSED: "Checks passed (coverage not assessed)",
+                   REVIEW: "Review required", ADVISORY: "Advisory only"},
         "statuses": {"pass": "pass", "warn": "warn", "fail": "fail", "not-run": "not-run"},
         "checks": "Checks",
         "inputs": "Inputs",
@@ -33,6 +34,12 @@ LABELS = {
         "limitation_text": LIMITATION_EN,
         "no_checks": "No checks ran.",
         "none": "none",
+        "coverage": "Coverage",
+        "assessed": "Assessed against the declared verification contract.",
+        "unassessed": ("Not assessed: no verification contract was declared, so passing checks do not show that "
+                       "the output is fit for a decision."),
+        "not_checked": "Applicable checks that did not run, and what would enable them:",
+        "all_ran": "Every applicable catalogue check ran.",
         "cols_checks": ("Check", "Status", "Input", "Message"),
         "cols_inputs": ("Role", "Path", "Kind", "SHA-256", "Bytes"),
         "roles": {
@@ -55,7 +62,8 @@ LABELS = {
     "ar": {
         "title": "تقرير أدلة Terraproof",
         "grade": "الدرجة",
-        "grades": {DECISION: "جاهز للقرار", REVIEW: "يحتاج مراجعة", ADVISORY: "استرشادي فقط"},
+        "grades": {DECISION: "جاهز للقرار", CHECKS_PASSED: "الفحوصات نجحت (التغطية غير مُقيَّمة)",
+                   REVIEW: "يحتاج مراجعة", ADVISORY: "استرشادي فقط"},
         "statuses": {"pass": "ناجح", "warn": "تحذير", "fail": "فشل", "not-run": "لم يُنفَّذ"},
         "checks": "الفحوصات",
         "inputs": "المدخلات",
@@ -65,6 +73,12 @@ LABELS = {
         "limitation_text": LIMITATION_AR,
         "no_checks": "لم يُنفَّذ أي فحص.",
         "none": "لا شيء",
+        "coverage": "التغطية",
+        "assessed": "قُيِّمت مقابل عقد التحقق المُعلَن.",
+        "unassessed": ("غير مُقيَّمة: لم يُعلَن عقد تحقق، لذا نجاح الفحوصات لا يُثبت أن المُخرَج صالح "
+                       "لاتخاذ قرار."),
+        "not_checked": "فحوصات تنطبق ولم تُنفَّذ، وما يلزم لتشغيلها:",
+        "all_ran": "نُفِّذ كل فحص منطبق من الكتالوج.",
         "cols_checks": ("الفحص", "الحالة", "المدخل", "الرسالة"),
         "cols_inputs": ("الدور", "المسار", "النوع", "SHA-256", "الحجم (بايت)"),
         "roles": {
@@ -117,7 +131,11 @@ def build_report(
     parameters: dict,
     contract: dict | str | None = None,
 ) -> dict:
-    """Assemble the report. It holds no timestamps, so identical inputs give identical JSON."""
+    """Assemble the report. It holds no timestamps, so identical inputs give identical JSON.
+
+    `grade` is the grade to act on: the contract's grade when one is declared, otherwise the grade the
+    checks support on their own, which is never decision-grade. `coverage` says whether coverage was
+    assessed and lists the applicable checks that did not run."""
     ordered = sorted(results, key=lambda result: (result.id, result.message))
     report = {
         "schema_version": SCHEMA_VERSION,
@@ -139,12 +157,28 @@ def build_report(
         report['companions'] = capture_companions(report, Path.cwd())
         report["verification"] = coverage(report, normalized)
         report["diagnostics"] = diagnostics(report)
+        report["grade"] = report["verification"]["grade"]
+    report["coverage"] = coverage_summary(report)
     return report
+
+
+def coverage_summary(report: dict) -> dict:
+    """Whether coverage was assessed, and the catalogue checks that apply to the checked inputs but did not run."""
+    from terraproof._common import assets_root
+    catalog = json.loads((assets_root() / "routing" / "checks.json").read_text(encoding="utf-8"))["checks"]
+    kinds = {record["kind"] for record in report["inputs"] if record["role"] == "input"}
+    ran = {check["id"] for check in report["checks"]}
+    if "plan" in report["parameters"]:  # a plan preflight has no output whose coverage it could assess
+        return {"assessed": False, "not_checked": []}
+    not_checked = [{"check": check_id, "description": entry["description"], "enabled_by": entry["enabled_by"]}
+                   for check_id, entry in sorted(catalog.items())
+                   if entry.get("enabled_by") and kinds & set(entry["applies_to"]) and check_id not in ran]
+    return {"assessed": "verification" in report, "not_checked": not_checked}
 
 
 def report_exit_code(report: dict) -> int:
     from terraproof.evidence.grade import EXIT_CODES
-    return EXIT_CODES[report.get("verification", {}).get("grade", report["grade"])]
+    return EXIT_CODES[report["grade"]]
 
 
 def to_json(report: dict) -> str:
@@ -190,6 +224,17 @@ def render_markdown(report: dict, lang: str = "en") -> str:
                         "| المسار | الفحص المطلوب | الحالة |"), "|---|---|---|"] + [
             f"| {_cell(r['path'])} | {_cell(r['check'])} | {_cell(r['status'])} |"
             for r in verification['requirements']] + [""]
+
+    if "coverage" in report:
+        coverage = report["coverage"]
+        section = [f"## {labels['coverage']}", "", labels["assessed" if coverage["assessed"] else "unassessed"], ""]
+        if coverage["not_checked"]:
+            section += [labels["not_checked"], ""] + [
+                f"- {_code(item['check'])}: " + ", ".join(_code(name) for name in item["enabled_by"])
+                for item in coverage["not_checked"]] + [""]
+        else:
+            section += [labels["all_ran"], ""]
+        lines[lines.index(f"## {labels['checks']}"):lines.index(f"## {labels['checks']}")] = section
 
     if report["checks"]:
         lines.append("| " + " | ".join(labels["cols_checks"]) + " |")

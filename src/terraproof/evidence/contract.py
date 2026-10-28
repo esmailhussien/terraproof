@@ -7,7 +7,8 @@ import os
 from pathlib import Path
 
 from terraproof._common import InputError, assets_root, jsonable
-from terraproof.evidence.grade import ADVISORY, DECISION, REVIEW
+from terraproof.checks.base import CheckResult
+from terraproof.evidence.grade import ADVISORY, CHECKS_PASSED, DECISION, REVIEW, grade_for
 
 SCHEMA = 'terraproof.verification-contract/1'
 FILE_PARAMETERS = {'compare_to', 'reference_input', 'dem', 'nir', 'red', 'qa_path',
@@ -205,14 +206,18 @@ def coverage(report, contract, base=None):
     statuses = {r['status'] for r in rows}
     status = ('failed' if 'fail' in statuses else 'incomplete' if statuses & {'missing', 'not-run'}
               else 'review-required' if 'warn' in statuses else 'verified')
-    if status == 'verified' and report['grade'] != DECISION:
+    # The grade of every check that ran, required or not; the stored report grade may already include coverage.
+    observed = grade_for([CheckResult(c['id'], c['family'], c['status'], c['message'], c['evidence'])
+                          for c in report['checks']])
+    if status == 'verified' and observed != CHECKS_PASSED:
         status = ('failed' if any(c['status'] == 'fail' for c in report['checks']) else
-                  'incomplete' if report['grade'] == ADVISORY else 'review-required')
-    grade = ADVISORY if status in ('failed', 'incomplete') else REVIEW if status == 'review-required' else report['grade']
+                  'incomplete' if observed == ADVISORY else 'review-required')
+    # Only fully verified declared coverage is decision-grade.
+    grade = ADVISORY if status in ('failed', 'incomplete') else REVIEW if status == 'review-required' else DECISION
     # Any other observed failure/warning remains material; a contract cannot bypass it.
-    if report['grade'] == ADVISORY:
+    if observed == ADVISORY:
         grade = ADVISORY
-    elif report['grade'] == REVIEW and grade == DECISION:
+    elif observed == REVIEW and grade == DECISION:
         grade = REVIEW
     return {'status': status, 'grade': grade, 'contract': contract, 'contract_sha256': digest(contract),
             'required': len(rows), 'passed': sum(r['status'] == 'pass' for r in rows), 'requirements': rows}

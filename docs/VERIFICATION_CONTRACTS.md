@@ -57,8 +57,11 @@ to exhaustive coverage. Check evidence records tolerances and scope limitations.
 
 ## Read both outcomes
 
-Without a contract, the existing schema, grade, exit codes and JSON results are
-unchanged. With a contract the report adds:
+Every report (schema `terraproof.evidence/0.2`) has a `coverage` block:
+`assessed` is true only with a contract, and `not_checked` lists catalogue checks
+that apply to the checked inputs but did not run, with the parameters that enable
+them. Without a contract, passing checks grade `checks-passed` (exit 0), never
+`decision-grade`. With a contract the report adds:
 
 - `verification`: canonical contract, SHA-256, per-output/check coverage and scan
   scope, missing/mismatched bindings, status and effective grade.
@@ -66,12 +69,12 @@ unchanged. With a contract the report adds:
   suggestions use MCP-compatible arguments and identify the unchanged contract
   digest. Supply the original contract again; suggestions do not replace it.
 
-The old `grade` continues to describe the checks that ran. The CLI/MCP exit code
-uses `verification.grade` when present: missing/not-run requirements or failures
-produce advisory/3, warnings produce review/2, and complete passing evidence
-produces decision/0. Other observed failures/warnings remain material.
-The MCP summary `grade` also uses the effective grade; the nested report's legacy
-`grade` stays unchanged. JSON and
+With a contract, the report's `grade` is `verification.grade`, and the CLI/MCP
+exit code follows it: missing/not-run requirements or failures produce advisory/3,
+warnings produce review/2, and complete passing evidence produces decision/0.
+Other observed failures/warnings remain material. (In `terraproof.evidence/0.1`
+reports, `grade` described only the checks that ran and graded them
+decision-grade when all passed; evidence bundles of either version still verify.) JSON and
 English/Arabic Markdown display the contract outcome separately. A missing
 requirement is not silently omitted and an automatic patch is never applied.
 

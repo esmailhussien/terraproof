@@ -102,7 +102,7 @@ def test_report_records_automated_scope_and_remaining_requirements(report):
     for task in report["tasks"]:
         assert task["automated_scope"], task["id"]
         assert task["remaining_requirements"], task["id"]
-        assert task["evidence_grade"] in {"decision-grade", "review-required", "advisory-only"}
+        assert task["evidence_grade"] in {"checks-passed", "review-required", "advisory-only"}
         assert task["grade_rule_matches"] is True, task["id"]
 
 

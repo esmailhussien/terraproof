@@ -24,7 +24,7 @@ from terraproof._common import crs_summary
 from terraproof.checks.base import CheckResult
 from terraproof.checks.base import FAIL, NOT_RUN, WARN, PASS as CHECK_PASS
 from terraproof.preflight import run_preflight
-from terraproof.evidence.grade import ADVISORY, DECISION, REVIEW, grade_for
+from terraproof.evidence.grade import ADVISORY, CHECKS_PASSED, REVIEW, grade_for
 from terraproof.evals.oracles import Oracle
 from terraproof.evals.specs import SpecError, TaskSpec, catalog_check_ids, load_specs
 
@@ -136,7 +136,7 @@ def _grade_from_statuses(statuses) -> str:
         return ADVISORY
     if WARN in values:
         return REVIEW
-    return DECISION
+    return CHECKS_PASSED
 
 
 def _sanitize(value, root: Path):

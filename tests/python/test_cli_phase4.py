@@ -56,7 +56,7 @@ def test_preflight_command_exits_zero_for_passing_plan(make_raster, tmp_path):
 
     report = json.loads(stdout)
     assert code == 0
-    assert report["grade"] == "decision-grade"
+    assert report["grade"] == "checks-passed"
 
 
 def test_preflight_rejects_invalid_plan(make_raster, tmp_path):
@@ -346,5 +346,5 @@ def test_check_without_phase4_options_still_works(make_vector, capsys):
     assert main(["check", str(path), "--operation", "area"]) == 0
 
     report = json.loads(capsys.readouterr().out)
-    assert report["grade"] == "decision-grade"
+    assert report["grade"] == "checks-passed"
     assert report["parameters"]["categorical"] is False

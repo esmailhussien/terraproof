@@ -38,7 +38,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     check_parser = subparsers.add_parser(
         "check",
-        help="run checks and write an evidence report (exit 0 decision-grade, 2 review, 3 advisory)",
+        help=("run checks and write an evidence report (exit 0 decision-grade or checks-passed, 2 review, "
+              "3 advisory; decision-grade needs a verification contract)"),
     )
     check_parser.add_argument("paths", nargs="+", metavar="PATH", help="input datasets")
     check_parser.add_argument(

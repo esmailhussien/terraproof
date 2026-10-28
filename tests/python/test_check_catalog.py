@@ -91,3 +91,17 @@ def test_family_and_description_are_consistent():
         assert entry["family"] == check_id.split(".", 1)[0], f"family mismatch for {check_id}"
         assert entry["description"].strip(), f"empty description for {check_id}"
         assert "\n" not in entry["description"], f"description must be one line: {check_id}"
+
+def test_enabling_parameters_are_real_run_checks_arguments():
+    """`coverage.not_checked` tells users which arguments enable a check; each must exist and apply to a real kind."""
+    import inspect
+
+    from terraproof.checks import run_checks
+
+    arguments = set(inspect.signature(run_checks).parameters) | {"manifest"}  # manifest is a check/MCP option
+    checks = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))["checks"]
+    enabled = {check_id: entry for check_id, entry in checks.items() if "enabled_by" in entry}
+    assert {"rs.cloud_mask_applied", "rs.scale_applied_once", "crs.metric_operation"} <= set(enabled)
+    for check_id, entry in enabled.items():
+        assert entry["enabled_by"] and set(entry["enabled_by"]) <= arguments, check_id
+        assert entry["applies_to"] and set(entry["applies_to"]) <= {"raster", "vector", "stac"}, check_id
