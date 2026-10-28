@@ -28,6 +28,22 @@ Decided by the maintainer before any E inference. It replaces decision 2 (§7) a
 - **Product side:** OpenCode is also the main open-model path for users. The `--agent opencode` installer format is checked end to end by the host's no-model preflight. A real MCP call is first seen in E2.
 - **Costs:** OpenCode Go and Antigravity runs use subscription quota, so the harness limits are the approved run count and timeout. GPT-4o runs keep the API host's USD caps. The cost column below was written for Claude Code and is indicative only.
 
+### Amendment 2 (2026-10-28): the primary is a mid-sized flash model
+
+Decided by the maintainer before E3, with no confirmation-set inference. It narrows Amendment 1's primary choice; Amendment 1's host rules and harness freeze are unchanged.
+
+- **Primary model class.** The E primary is a mid-sized, competitively priced flash model on OpenCode Go. The candidates are `opencode-go/glm-5.3-flash`, `opencode-go/deepseek-v4.1-flash` and `opencode-go/mimo-v2.6-flash`. This is the class of model most GIS users of a tool like Terraproof will run. GPT-4o (API host) and Gemini (Antigravity) are no longer primary candidates. If they are run at all, they are separately reported secondaries and never pooled.
+- **Selection rule, fixed now and applied at E3:**
+  1. **Delivery.** Terraproof MCP calls in at least 11 of 12 development "with" runs, with no evaluator-exposure finding left open.
+  2. **Baseline headroom.** Among the candidates that pass (1), choose the lowest development acceptance rate in the "without" condition.
+  3. **Tie-break.** More development "with" runs with Terraproof calls, then the lexically first model id.
+
+  Rule 2 uses only the "without" condition. "With" acceptance and with-minus-without differences are not selection inputs, so this is not choosing a host by its observed effect.
+- **Development evidence so far (E2, before the corrective batch).** GLM 5.3 Flash: 11/12 accepted without Terraproof, with Terraproof calls in all 12 "with" runs. DeepSeek 4.1 Flash: 12/12 without, Terraproof calls in all 12 "with" runs, and one "with" run that read evaluator sources. MiMo-V2.6-Flash was not in E2.
+- **Proposed MiMo shakedown (not approved).** Run 12 development tasks × 1 pair = 24 invocations of `opencode-go/mimo-v2.6-flash` on OpenCode Go quota, with a 900 s timeout and the setup from the E2 corrective batch. It gives MiMo the delivery and baseline evidence that rules 1–2 need. GLM and DeepSeek delivery was measured before that correction, so their "with" delivery is rechecked on the corrected setup only if a separate readiness check is approved. Their "without" baselines stand, because the "without" condition has no MCP and was not affected by the correction. The shakedown needs the user's separate approval with that exact count.
+- **Headroom risk, stated before E4.** On this development sample, the flash models pass almost every task without Terraproof. At an 11/12 baseline, the 2-run screen (E4) is expected to keep only about 3–6 of the 24 confirmation tasks, and fewer at 12/12. The go/no-go needs at least 8. These are rough estimates from 12 tasks with one run each. **A stop at E5 is a valid result:** it would mean these flash models avoid the cohort's traps unaided. It is not rescued by switching models on the same screened set.
+- **Open option, decided at E3 or not at all:** pre-register screening two candidate models (96 "without" invocations) and confirm on the one that keeps more tasks. Confirmation uses fresh runs, so this selection does not bias the paired comparison. It is allowed only if it is written into the E3 freeze before E4 starts.
+
 ## 2. Goals
 
 1. Close Phase 5 formally and freeze the lift harness.
@@ -204,7 +220,7 @@ B, C and E1 touch disjoint files and can run in parallel.
 ## 7. Decisions needed
 
 1. **Evals in the wheel:** leave them out (proposed), or publish a separate `terraproof-evals` distribution?
-2. **Host for E:** decided in Amendment 1. Candidates are OpenCode (open model, Go subscription), Antigravity (Gemini) and the API host (GPT-4o), with one primary fixed at E3. Claude Code is not used for E.
+2. **Host for E:** decided in Amendments 1 and 2. The primary is a mid-sized flash model on OpenCode Go (GLM 5.3 Flash, DeepSeek 4.1 Flash or MiMo-V2.6-Flash), chosen at E3 by Amendment 2's selection rule. Claude Code is not used for E. Still open: whether to approve the MiMo shakedown, and whether to pre-register a two-model screen.
 3. **Pool size:** 36 candidates (proposed), or 24 (cheaper to author, but probably fewer than 12 kept tasks and less power).
 4. **Skills default** if there is no evidence by phase end: an opt-in pack (proposed), or keep them in the default install labelled unmeasured.
 5. **PyPI publisher:** the maintainer creates the project and the Trusted Publisher; confirm which GitHub repository it trusts.
