@@ -1,6 +1,6 @@
 # Terraproof — Phase 7 Plan: Say what was verified
 
-> Status: **in progress (2026-10-28)**. V0 is sealed, and V1 (grade and coverage) and V2/V3 (goal profiles, `raster.vertical_units`, `raster.nodata_support`) are implemented; known gaps are listed in the V2/V3 record. V4 was measured once on the sealed cases (acceptance not met; see the V4 record). It follows the [Phase 6 stop](Terraproof_Phase6_PLAN.md#e4-and-e5-record-2026-10-28-stop) and its [verification audit](../PHASE6_VERIFICATION_AUDIT.md). No model calls are planned.
+> Status: **in progress (2026-10-28)**. V0 is sealed, and V1 (grade and coverage) and V2/V3 (goal profiles, `raster.vertical_units`, `raster.nodata_support`) are implemented; known gaps are listed in the V2/V3 record. V4 was measured once (acceptance not met); after fixes, V4b on fresh sealed cases met acceptance (see the V4b record). It follows the [Phase 6 stop](Terraproof_Phase6_PLAN.md#e4-and-e5-record-2026-10-28-stop) and its [verification audit](../PHASE6_VERIFICATION_AUDIT.md). No model calls are planned.
 
 ## 1. Why this phase
 
@@ -238,6 +238,52 @@ Each V4 finding is fixed from declared inputs only, and pinned as a regression t
   | `evals/verification-heldout-v0b/README.md` | `aa8cbc85875aac102c4e996bf028840370a526f71f4324b29dd234b7c3d934a6` |
 
 - **Acceptance (unchanged).** Within declared coverage: zero false assurance and zero confirmed false alarms. Detection is reported, not thresholded.
+
+#### V4b record (2026-10-28): measured once; acceptance met
+
+**Run.**
+
+- The 48 sealed V0b cases were generated with their own generator, and their own oracle agreed with all 48.
+- [`tests/phase7_v4b.py`](../../tests/phase7_v4b.py) translated each declaration, with one rule per operation, committed (`9f740c8`) before any result existed. It never supplies an undeclared fact; in particular, it never assumes a height's vertical unit.
+- It ran each case once declared and once undeclared, on the product at `94e2fa3`.
+- Result: `.terracache/phase7-v4b.json`, SHA-256 `adc6e34b01d7e992ea84de8f536086a2fc4e3fddaefe0e19a6a9061476874de4`.
+- These cases are now spent.
+
+**Declared configuration (primary).**
+
+| Measure | Result |
+| --- | --- |
+| Wrong cases with a failing required check (all also separate wrong from correct) | **17/20** |
+| Wrong cases graded `decision-grade` (false assurance) | **0/20** |
+| `decision-grade` outputs, and how many were wrong | **13**, none wrong |
+| Correct cases graded `decision-grade` | 13/28 |
+| Correct cases graded `checks-passed` | 8/28: the `plain` family, which declares no requirement; none was flagged |
+| Correct cases graded `review-required` | 2/28: slope from another stencil |
+| Correct cases graded `advisory-only` | 5/28 |
+| Confirmed false alarms | **0** |
+| Incomplete requirements | 6 |
+
+The 5 advisory correct cases have three causes:
+
+- **Ring orientation (geom-06, geom-08).** `geometry.winding` fails 2 correct buffers. Their exterior rings were verified to be clockwise, against RFC 7946's ring rule. The finding is real, not contradicted, so it is review burden, not a false alarm.
+- **Undeclared height units (datum-05, datum-06).**
+- **QA metadata (qa-08).** The QA file declares `nodata=0` while 0 is its clear code, so the check reports the QA as unavailable rather than guessing.
+
+**The 3 misses** (datum-01, datum-02, datum-04) are requirements left `incomplete` because the declarations do not state the heights' vertical unit. They are `advisory-only`, never assured.
+
+**Undeclared configuration.** No case was graded `decision-grade`. 18 of 20 wrong outputs and 26 of 28 correct ones were graded `checks-passed`, and their reports name the unchecked coverage.
+
+**Acceptance (fixed in §3 V4): met on V0b.**
+
+- **Zero false assurance within declared coverage: met**, this time with 13 real `decision-grade` results, all correct.
+- **Zero confirmed false alarms: met.**
+
+**Limits.**
+
+- This is one sealed set of 48 synthetic cases, written by one independent agent. A zero numerator is not proof of zero risk.
+- Detection depends on what the user declares, and three wrong outputs went undetected because units were missing.
+- Over-masking without `qa_source` only warns.
+- `geometry.winding` turns format violations into failures on otherwise correct buffers.
 
 ## 4. Order
 
