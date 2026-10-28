@@ -6,6 +6,7 @@ from terraproof.checks import accuracy, crs, geometry, raster, rs, rs_processing
 from terraproof.checks import index_formula as index_checks
 from terraproof.checks import stack_reduction as stack_checks
 from terraproof.checks import slope_formula as slope_checks, raster_identity as identity_checks
+from terraproof.checks import nodata_support as support_checks, vertical_units as vertical_checks
 from terraproof.checks.base import STATUSES, CheckResult, result
 
 __all__ = ["STATUSES", "CheckResult", "result", "run_checks"]
@@ -41,6 +42,13 @@ def run_checks(
     nir: dict | None = None,
     red: dict | None = None,
     processing_full_scan: bool = False,
+    vertical_operation: str | None = None,
+    vertical_sources: list | None = None,
+    vertical_source_units: list | None = None,
+    vertical_unit: str | None = None,
+    support_sources: list | None = None,
+    support_source_nodata: list | None = None,
+    support_rule: str | None = None,
 ) -> list[CheckResult]:
     """Run every check that applies to the inspected inputs, in a fixed order."""
     vectors = [d for d in inputs if d["kind"] == "vector"]
@@ -107,6 +115,16 @@ def run_checks(
     if raster_identity:
         for dataset in inputs:
             results += identity_checks.check_source_identity(dataset, compare_to)
+
+    if vertical_operation is not None or vertical_sources or vertical_unit is not None:
+        for dataset in rasters:
+            results += vertical_checks.check_vertical_units(dataset, vertical_sources, vertical_source_units,
+                                                            vertical_operation, vertical_unit)
+
+    if support_rule is not None or support_sources:
+        for dataset in rasters:
+            results += support_checks.check_nodata_support(dataset, support_sources, support_source_nodata,
+                                                           support_rule)
 
     if sar_expect is not None:
         results += sar.check_value_domain(rasters, sar_expect)

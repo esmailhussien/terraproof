@@ -59,7 +59,7 @@ The exit code is the grade: `0` decision-grade or checks passed, `2` review requ
 | `manifest write` / `manifest verify` | Record and verify a deterministic run manifest (inputs, outputs, parameters). |
 | `route "TASK" [--data PATH]` | Retrieve the skill sections worth reading, using the task text and inspected datasets. |
 
-Checks cover CRS and units, geometry validity and GeoJSON winding, record counts, raster nodata, resampling, grid alignment and COG layout, reflectance and index ranges, scale/offset applied once, cloud masking, temporal scope, SAR domain, area-adjusted accuracy, and STAC provenance. A check that does not apply is left out; one that applies but cannot run is reported as `not-run`.
+Checks cover CRS and units, geometry validity and GeoJSON winding, record counts, raster nodata and valid support, vertical units, resampling, grid alignment and COG layout, reflectance and index ranges, scale/offset applied once, cloud masking, temporal scope, SAR domain, area-adjusted accuracy, and STAC provenance. A check that does not apply is left out; one that applies but cannot run is reported as `not-run`.
 
 | Grade | Arabic label | Meaning |
 |---|---|---|

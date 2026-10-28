@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Goal profiles and two declared-source checks (Phase 7 V2/V3)
+
+- `raster.vertical_units`: a height output against its sources' declared vertical
+  units (`--vertical-operation convert|difference`, `--vertical-source`,
+  `--vertical-source-unit`, `--vertical-unit`), plus contradicting unit labels.
+- `raster.nodata_support`: the output must be valid exactly where its declared
+  sources are (`--support-source`, `--support-source-nodata`, `--support-rule all|any`).
+- Goal profiles (`routing/profiles.json`) expand to required checks in a
+  contract (`profiles`), or from `--profile NAME` / MCP `profiles`. A binding a
+  profile needs but the caller did not give leaves the requirement incomplete.
+
 ### Breaking: decision-grade needs declared coverage (Phase 7 V1)
 
 - Passing checks without a verification contract now grade `checks-passed`

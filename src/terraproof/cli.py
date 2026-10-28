@@ -12,8 +12,10 @@ from terraproof._run_helpers import load_accuracy_samples, load_class_areas, ver
 from terraproof.checks import run_checks
 from terraproof.checks.index_formula import FORMULAS
 from terraproof.checks.stack_reduction import REDUCTIONS as STACK_REDUCTIONS
+from terraproof.checks.vertical_units import OPERATIONS as VERTICAL_OPERATIONS
 from terraproof.checks.base import FAIL, result
 from terraproof.evidence import EXIT_CODES, build_report, input_record, render_markdown, to_json
+from terraproof.evidence.contract import profile_contract
 from terraproof.evidence.report import report_exit_code
 from terraproof.inspect import inspect_dataset
 from terraproof.preflight import run_preflight
@@ -80,6 +82,19 @@ def build_parser() -> argparse.ArgumentParser:
                               help="verify every slope value and complete stencil/edge mask from --dem")
     check_parser.add_argument("--raster-identity", action="store_true",
                               help="compare all valid raster samples, masks and grid metadata with --compare-to")
+    check_parser.add_argument("--vertical-operation", choices=sorted(VERTICAL_OPERATIONS),
+                              help="how the height output was made from --vertical-source: convert (one) or difference (first minus second)")
+    check_parser.add_argument("--vertical-source", action="append", default=[], metavar="PATH",
+                              help="ordered source surface for --vertical-operation; repeatable")
+    check_parser.add_argument("--vertical-source-unit", action="append", default=[], metavar="UNIT",
+                              help="declared vertical unit of each --vertical-source (metre, foot, us-survey-foot); repeatable")
+    check_parser.add_argument("--vertical-unit", metavar="UNIT", help="declared vertical unit of the output")
+    check_parser.add_argument("--support-source", action="append", default=[], metavar="PATH",
+                              help="source raster whose valid cells define the output's support; repeatable")
+    check_parser.add_argument("--support-source-nodata", action="append", default=[], metavar="VALUE",
+                              help="declared fill value of each --support-source, or 'file' to use its own mask; repeatable")
+    check_parser.add_argument("--support-rule", choices=["all", "any"],
+                              help="output valid where all (or any) --support-source cells are valid")
     check_parser.add_argument("--qa", metavar="PATH", dest="qa_path", help="QA raster (SCL or Landsat QA_PIXEL)")
     check_parser.add_argument(
         "--qa-kind", choices=["s2-scl", "landsat-qa-pixel"], help="kind of QA raster supplied with --qa"
@@ -107,6 +122,9 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument("--lang", choices=["en", "ar"], default="en", help="language of the Markdown report")
     check_parser.add_argument("--out", metavar="FILE", help="write the report to FILE instead of stdout")
     check_parser.add_argument("--contract", metavar="FILE", help="explicit required checks, output paths and source/parameter bindings")
+    check_parser.add_argument("--profile", action="append", default=[], metavar="NAME",
+                              help="declared goal profile for every PATH, from routing/profiles.json; builds a contract "
+                                   "from the arguments given (not with --contract); repeatable")
 
     preflight_parser = subparsers.add_parser(
         "preflight",
@@ -172,6 +190,13 @@ def _role_pairs(values: list[str], flag: str) -> dict[str, str]:
     return pairs
 
 
+def _float_arg(value: str, flag: str) -> float:
+    try:
+        return float(value)
+    except ValueError:
+        raise SystemExit(f"terraproof check: {flag} expects a number or 'file', got {value!r}") from None
+
+
 def _cmd_check(args: argparse.Namespace) -> int:
     inspections = [inspect_dataset(path) for path in args.paths]
     compare = _inspect_if_exists(args.compare_to)
@@ -183,6 +208,10 @@ def _cmd_check(args: argparse.Namespace) -> int:
     band_numbers = {role: int(value) for role, value in _role_pairs(args.band_number, "--band-number").items()}
     index_bands = {role: dict(inspect_dataset(path), band=band_numbers.get(role)) for role, path in band_paths.items()}
     stack = [inspect_dataset(path) for path in args.stack]
+    vertical_sources = [inspect_dataset(path) for path in args.vertical_source]
+    support_sources = [inspect_dataset(path) for path in args.support_source]
+    support_nodata = [None if value == "file" else _float_arg(value, "--support-source-nodata")
+                      for value in args.support_source_nodata] or None
 
     inputs: list[dict] = [input_record(path, "input", ds["kind"]) for path, ds in zip(args.paths, inspections)]
     _record_input(inputs, args.compare_to, "compare-to", compare["kind"] if compare else "unknown")
@@ -194,6 +223,10 @@ def _cmd_check(args: argparse.Namespace) -> int:
         _record_input(inputs, path, "index-band", index_bands[role]["kind"])
     for path, layer in zip(args.stack, stack):
         _record_input(inputs, path, "stack-layer", layer["kind"])
+    for path, layer in zip(args.vertical_source, vertical_sources):
+        _record_input(inputs, path, "vertical-source", layer["kind"])
+    for path, layer in zip(args.support_source, support_sources):
+        _record_input(inputs, path, "support-source", layer["kind"])
     _record_input(inputs, args.qa_path, "qa", "raster")
     _record_input(inputs, args.accuracy_samples, "accuracy-samples", "accuracy-samples")
     _record_input(inputs, args.class_areas, "class-areas", "class-areas")
@@ -232,10 +265,18 @@ def _cmd_check(args: argparse.Namespace) -> int:
         nir=nir,
         red=red,
         processing_full_scan=args.processing_full_scan,
+        vertical_operation=args.vertical_operation,
+        vertical_sources=vertical_sources or None,
+        vertical_source_units=args.vertical_source_unit or None,
+        vertical_unit=args.vertical_unit,
+        support_sources=support_sources or None,
+        support_source_nodata=support_nodata,
+        support_rule=args.support_rule,
     )
 
     checked_paths = list(args.paths)
     for path in (args.compare_to, args.reference_input, args.dem, args.nir, args.red, *band_paths.values(), *args.stack,
+                 *args.vertical_source, *args.support_source,
                  args.qa_path, args.accuracy_samples, args.class_areas):
         if path:
             checked_paths.append(path)
@@ -283,8 +324,18 @@ def _cmd_check(args: argparse.Namespace) -> int:
         "estimates_requested": args.estimates_requested,
         "manifest": args.manifest,
         "require_provenance": args.require_provenance,
+        "vertical_operation": args.vertical_operation,
+        "vertical_sources": args.vertical_source or None,
+        "vertical_source_units": args.vertical_source_unit or None,
+        "vertical_unit": args.vertical_unit,
+        "support_sources": args.support_source or None,
+        "support_source_nodata": support_nodata,
+        "support_rule": args.support_rule,
     }
-    report = build_report(inputs=inputs, results=results, parameters=parameters, contract=args.contract)
+    if args.profile and args.contract:
+        raise SystemExit("terraproof check: give --profile or --contract, not both")
+    contract = profile_contract(args.paths, args.profile, parameters) if args.profile else args.contract
+    report = build_report(inputs=inputs, results=results, parameters=parameters, contract=contract)
     text = to_json(report) if args.format == "json" else render_markdown(report, lang=args.lang)
 
     if args.out:

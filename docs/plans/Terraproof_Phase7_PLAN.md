@@ -1,6 +1,6 @@
 # Terraproof — Phase 7 Plan: Say what was verified
 
-> Status: **in progress (2026-10-28)**. V1 (grade and coverage) is implemented and V0 is sealed; V2–V4 have not started. It follows the [Phase 6 stop](Terraproof_Phase6_PLAN.md#e4-and-e5-record-2026-10-28-stop) and its [verification audit](../PHASE6_VERIFICATION_AUDIT.md). No model calls are planned.
+> Status: **in progress (2026-10-28)**. V0 is sealed, and V1 (grade and coverage) and V2/V3 (goal profiles, `raster.vertical_units`, `raster.nodata_support`) are implemented; known gaps are listed in the V2/V3 record. V4 has not started. It follows the [Phase 6 stop](Terraproof_Phase6_PLAN.md#e4-and-e5-record-2026-10-28-stop) and its [verification audit](../PHASE6_VERIFICATION_AUDIT.md). No model calls are planned.
 
 ## 1. Why this phase
 
@@ -98,6 +98,35 @@ The aim of this phase is narrow: a Terraproof report should never imply more ver
   - zero false passes on the regression set;
   - CLI and MCP parity;
   - checks and oracles never import each other.
+
+#### V2/V3 record (2026-10-28)
+
+- **Implemented.**
+  - `raster.vertical_units`: `convert` or `difference` of declared sources, compared in metres, plus contradicting unit labels.
+  - `raster.nodata_support`: declared sources and fill, under a rule of `all` or `any`.
+  - Goal profiles in `routing/profiles.json`: `vertical-units`, `nodata-support`, `qa-masked`, `scaled-reflectance`, `metric-operation` and `slope-from-dem`. They work in contracts, through `--profile` and through MCP `profiles`.
+  - Parity: CLI and MCP take the same arguments.
+- **Regression set.** With declared arguments, these development seeds fail and every reference keeps `checks-passed` (`tests/python/test_phase7_regression.py`):
+  - both elevation unit seeds;
+  - Landsat fill decoded as data;
+  - MODIS fill as value;
+  - MODIS unscaled;
+  - rainfall dry days treated as missing, through `rs.stack_reduction` `weighted-sum`.
+
+  That is 6 of the 21 development seeds.
+- **Live artifacts.** Run locally, because the recordings are not committed. The new checks fail:
+  - both R3 elevation artifacts, with and without;
+  - the wrong E4 `hr-landcover-change-fill` artifact.
+
+  The accepted E4 run of that task stays clean.
+- **Gaps found, not fixed in this step.**
+  - **Depth below a constant level.** `hr-flood-depth-feet`, 2 E4 artifacts. `raster.vertical_units` has no operation for a depth below a constant water level.
+  - **QA layers with few flagged pixels.** `rs.cloud_mask_applied` is `not-run` when the sampled stride finds no flagged pixel: Sentinel-2 SCL in `hr-s2-scl-red`, Landsat QA_PIXEL in `hr-landsat-clear-red`. `hr-modis-lst-quality`'s MODIS QC layer has no supported kind.
+  - **Scale with a declared unit change, or STAC-only scale.** `rs.scale_applied_once` fails *correct* outputs when the output also changes unit, as in reanalysis kelvin to °C. It also fails them when the scale is declared only in STAC, as in HLS, because there is no encoding preset. Without a way to declare that, the `scaled-reflectance` profile would raise false alarms on such products.
+  - **Slope on a geographic DEM.** `terrain.slope_consistent` is `not-run` for a geographic DEM (`hr-slope-geographic`). The task's trap is exactly that the DEM is geographic.
+  - **Not attempted here.** Categorical resampling, dB against linear, dtype overflow, distance in a geographic CRS and temporal labels: 10 of the 21 development seeds.
+
+  Each gap is either a new check, or an existing check extended to accept a declaration. The V4 measurement reports detection over all five families, so these gaps count against it.
 
 ### V4. Measure the configuration (offline, no model calls)
 

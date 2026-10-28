@@ -55,6 +55,33 @@ and QA contracts also declare `processing_full_scan` as true or false. Choosing
 false explicitly retains the sampled scope; contract success is not an upgrade
 to exhaustive coverage. Check evidence records tolerances and scope limitations.
 
+## Declare a goal profile
+
+A goal profile is shorthand for the checks a declared goal requires
+(`routing/profiles.json`): `vertical-units`, `nodata-support`, `qa-masked`,
+`scaled-reflectance`, `metric-operation` and `slope-from-dem`. Use `profiles`
+in a requirement instead of, or as well as, `checks`. From the CLI,
+`--profile NAME` builds the contract from the arguments you gave (MCP:
+`profiles`):
+
+```bash
+python -m terraproof check outputs/change.tif --profile vertical-units   --vertical-operation difference   --vertical-source inputs/dem_2023.tif --vertical-source-unit metre   --vertical-source inputs/dem_2015.tif --vertical-source-unit foot   --vertical-unit metre
+```
+
+A profile never guesses its bindings. Without `--vertical-unit`, for example,
+the requirement is `incomplete` and the diagnostics name what to declare.
+
+- `raster.vertical_units` compares every cell with the declared `convert` or
+  `difference` of the sources, done in metres and converted to the output unit.
+  It also fails when the output band's unit label contradicts its declared unit.
+  It does not cover vertical datum differences, or depths from a constant water
+  level.
+- `raster.nodata_support` requires the output to be valid exactly where its
+  sources are valid under `--support-rule all` or `any`. A source's fill can be
+  declared with `--support-source-nodata`, for example `0` when a product stores
+  fill as zero without saying so in the file. Values where the sources hold only
+  fill, and nodata where they hold valid values such as real zeros, both fail.
+
 ## Read both outcomes
 
 Every report (schema `terraproof.evidence/0.2`) has a `coverage` block:

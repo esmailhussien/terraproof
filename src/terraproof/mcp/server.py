@@ -113,7 +113,15 @@ def run_checks(
     processing_full_scan: bool = False,
     manifest: str | None = None,
     require_provenance: bool = False,
+    vertical_operation: str | None = None,
+    vertical_sources: list[str] | None = None,
+    vertical_source_units: list[str] | None = None,
+    vertical_unit: str | None = None,
+    support_sources: list[str] | None = None,
+    support_source_nodata: list[float | None] | None = None,
+    support_rule: str | None = None,
     contract: dict | str | None = None,
+    profiles: list[str] | None = None,
     lang: str = "en",
 ) -> dict[str, Any]:
     """Run Terraproof's deterministic evidence checks and return the grade and report.
@@ -142,6 +150,13 @@ def run_checks(
     output masking warns because its QA policy is not supplied. `manifest` verifies a run manifest and appends `provenance.reproducible`;
     `require_provenance` prevents Decision-grade when no manifest is supplied. `lang`
     selects the Markdown language (en or ar). Results match `python -m terraproof check`.
+    `vertical_operation` (convert or difference) with ordered `vertical_sources`, one
+    declared unit each in `vertical_source_units`, and the output's `vertical_unit` checks
+    height values for mixed or mislabelled units. `support_sources` with `support_rule`
+    (all or any), and optionally each source's declared fill in `support_source_nodata`,
+    checks that the output is valid exactly where its sources are. `profiles` names declared
+    goal profiles (routing/profiles.json) required on every path, bound to the arguments
+    given; a binding a profile needs but you did not give leaves it incomplete.
     Supply `contract` as a verification-contract object or local JSON path to require
     specific checks on specific outputs with declared source/parameter bindings.
     Read `report.verification` and `report.diagnostics`: missing required evidence
@@ -162,6 +177,8 @@ def run_checks(
         index_bands = {role: dict(_inspect_dataset(path), band=(band_numbers or {}).get(role))
                        for role, path in (bands or {}).items()}
         stack_layers = [_inspect_dataset(path) for path in stack or []]
+        vertical_layers = [_inspect_dataset(path) for path in vertical_sources or []]
+        support_layers = [_inspect_dataset(path) for path in support_sources or []]
 
         inputs = [input_record(path, "input", dataset["kind"]) for path, dataset in zip(paths, inspections)]
         if compare is not None:
@@ -178,6 +195,10 @@ def run_checks(
             inputs.append(input_record(path, "index-band", index_bands[role]["kind"]))
         for path, layer in zip(stack or [], stack_layers):
             inputs.append(input_record(path, "stack-layer", layer["kind"]))
+        for path, layer in zip(vertical_sources or [], vertical_layers):
+            inputs.append(input_record(path, "vertical-source", layer["kind"]))
+        for path, layer in zip(support_sources or [], support_layers):
+            inputs.append(input_record(path, "support-source", layer["kind"]))
         if qa_path and Path(qa_path).is_file():
             inputs.append(input_record(qa_path, "qa", "raster"))
         if isinstance(accuracy_samples, str) and Path(accuracy_samples).is_file():
@@ -220,10 +241,18 @@ def run_checks(
             nir=nir_dataset,
             red=red_dataset,
             processing_full_scan=processing_full_scan,
+            vertical_operation=vertical_operation,
+            vertical_sources=vertical_layers or None,
+            vertical_source_units=vertical_source_units or None,
+            vertical_unit=vertical_unit,
+            support_sources=support_layers or None,
+            support_source_nodata=support_source_nodata or None,
+            support_rule=support_rule,
         )
 
         checked_paths = list(paths)
-        for path in (compare_to, reference_input, dem, nir, red, *(bands or {}).values(), *(stack or []), qa_path, accuracy_samples,
+        for path in (compare_to, reference_input, dem, nir, red, *(bands or {}).values(), *(stack or []),
+                     *(vertical_sources or []), *(support_sources or []), qa_path, accuracy_samples,
                      class_areas):
             if isinstance(path, str):
                 checked_paths.append(path)
@@ -273,8 +302,20 @@ def run_checks(
         "estimates_requested": estimates_requested,
         "manifest": manifest,
         "require_provenance": require_provenance,
+        "vertical_operation": vertical_operation,
+        "vertical_sources": vertical_sources or None,
+        "vertical_source_units": vertical_source_units or None,
+        "vertical_unit": vertical_unit,
+        "support_sources": support_sources or None,
+        "support_source_nodata": support_source_nodata or None,
+        "support_rule": support_rule,
     }
     try:
+        if profiles and contract is not None:
+            raise ValueError("give profiles or contract, not both")
+        if profiles:
+            from terraproof.evidence.contract import profile_contract
+            contract = profile_contract(paths, profiles, parameters)
         report = build_report(inputs=inputs, results=results, parameters=parameters, contract=contract)
     except (OSError, ValueError, TypeError) as exc:
         raise ToolError(f"cannot evaluate verification contract: {exc}") from exc

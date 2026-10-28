@@ -248,6 +248,30 @@
         "raster_identity",
         "compare_to"
       ]
+    },
+    "raster.vertical_units": {
+      "family": "raster",
+      "description": "A height or height-difference output matches its declared sources' vertical units converted to the declared output unit, and its unit label does not contradict it.",
+      "applies_to": [
+        "raster"
+      ],
+      "enabled_by": [
+        "vertical_operation",
+        "vertical_sources",
+        "vertical_source_units",
+        "vertical_unit"
+      ]
+    },
+    "raster.nodata_support": {
+      "family": "raster",
+      "description": "The output is valid exactly where its declared sources are valid under the declared rule, so fill is not treated as data and valid values are not treated as fill.",
+      "applies_to": [
+        "raster"
+      ],
+      "enabled_by": [
+        "support_sources",
+        "support_rule"
+      ]
     }
   }
 }
