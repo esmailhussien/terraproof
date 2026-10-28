@@ -1,6 +1,6 @@
 # Terraproof — Phase 7 Plan: Say what was verified
 
-> Status: **proposed (2026-10-28)**. Nothing is implemented yet. It follows the [Phase 6 stop](Terraproof_Phase6_PLAN.md#e4-and-e5-record-2026-10-28-stop) and its [verification audit](../PHASE6_VERIFICATION_AUDIT.md). No model calls are planned.
+> Status: **in progress (2026-10-28)**. V1 (grade and coverage) is implemented and V0 is sealed; V2–V4 have not started. It follows the [Phase 6 stop](Terraproof_Phase6_PLAN.md#e4-and-e5-record-2026-10-28-stop) and its [verification audit](../PHASE6_VERIFICATION_AUDIT.md). No model calls are planned.
 
 ## 1. Why this phase
 
@@ -43,6 +43,20 @@ The aim of this phase is narrow: a Terraproof report should never imply more ver
   - Each correct case is checked by the oracle.
 - **Author.** If possible, someone who does not build the checks. An independent agent (for example Gemini or Codex) can work from a brief that contains the five families and the case format, but no check source.
 - **Sealing.** Before V2 starts, record the file list and SHA-256 of the cases in this plan. They are not opened for product tuning. They are run once, for V4.
+- **Seal record (2026-10-28).** An independent agent authored the cases from the brief, on branch `geova/verification-heldout-v0`, commit `5088a79`. It reported 40 cases: 4 wrong and 4 correct in each of the five families.
+  - **Its own checks.** It reported that two generator runs were byte-identical across 92 files, and that the oracle agreed with all 40 cases.
+  - **What the maintainer side did.** It verified the hashes and import lines, and ran the cases' own test (3 passed). The case content was not read.
+
+  SHA-256 of the committed files (LF):
+
+  | File | SHA-256 |
+  | --- | --- |
+  | `evals/verification-heldout/cases.json` | `83cb9e0ff78f603d4e4a0e6202f8a7d4d8a87ac480602c35bbe6cf30d6bcfd19` |
+  | `evals/verification-heldout/generate.py` | `a6b7e4ed93b921698a79414c3d277fee821b15308e5d55d19c6c3f2e98ce5f96` |
+  | `evals/verification-heldout/oracle.py` | `1247b8c78b833ededf6b9707e71599935fe18c29e3f090a175518035dba92b1e` |
+  | `evals/verification-heldout/README.md` | `70ba34d4cba080f7c2d6351cc77b2026920926d6e87ea954bd50b23438ce5883` |
+
+  The author's report gave `c43f49…` for `cases.json`, which is its CRLF working copy. Git normalises it to the committed blob. The neither-imports-`terraproof` rule holds by inspection of the import lines. `tests/python/test_heldout_seal.py` fails if any sealed file changes.
 - **Regression set (separate).** Known cases become ordinary tests. They must keep being caught, and the correct outputs from the same runs must not regress:
   - the 21 development seeded cases;
   - the 2 R3 elevation artifacts;
