@@ -65,7 +65,8 @@ CASES = {
     "qa-pixel-clear-bit-only": ("hr-landsat-clear-red", "clear-bit-only.tif", "rs.cloud_mask_applied", QA_PIXEL,
                                 CHECKS_PASSED),
     "radsat-off-by-one-bit": ("hr-landsat-red-saturation", "off-by-one-bit.tif", "rs.cloud_mask_applied", dict(
-        qa_path="qa_radsat.tif", qa_kind="keep-codes", qa_keep_codes=[0, 4, 16], processing_full_scan=True),
+        qa_path="qa_radsat.tif", qa_kind="keep-codes", qa_keep_codes=[0, 4, 16], processing_full_scan=True,
+        qa_source="red.tif"),
         CHECKS_PASSED),
     "slope-degrees-as-metres": ("hr-slope-geographic", "degrees-as-metres.tif", "terrain.slope_consistent", dict(
         dem="dem.tif"), REVIEW),  # the reference uses another stencil, which warns
@@ -89,7 +90,7 @@ def _declare(root: Path, arguments: dict) -> dict:
             value = [inspect_dataset(str(root / name)) for name in value]
         elif key in ("reference_input", "dem"):
             value = inspect_dataset(str(root / value))
-        elif key == "qa_path":
+        elif key in ("qa_path", "qa_source"):
             value = str(root / value)
         declared[key] = value
     return declared

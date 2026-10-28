@@ -6,6 +6,11 @@ made from the sources:
 - ``convert``      one source, the output is that surface in the output's unit
 - ``difference``   two sources, the output is the first minus the second (for example a change or
                    a height above a surface), in the output's unit
+- ``minus-level``  one source and a declared level in the output's unit; the output is the source
+                   minus the level (for example orthometric height from an ellipsoidal height and a
+                   constant geoid separation; use ``difference`` with a geoid grid instead)
+- ``depth-to-elevation``  one source of depths (positive down); the output is the same surface as
+                   elevations (positive up) in the output's unit
 - ``depth-below-level``  one source surface and a declared level in the output's unit; the output is
                    the level minus the surface where the surface is below it, and 0 elsewhere (for
                    example flood depth for a water-surface level)
@@ -28,12 +33,12 @@ from terraproof.checks.base import FAIL, NOT_RUN, PASS, result
 from terraproof.checks.rs_processing import _grid_problems
 
 CHECK_ID = "raster.vertical_units"
-OPERATIONS = {"convert": 1, "difference": 2, "depth-below-level": 1}
-METRES = {"metre": 1.0, "foot": 0.3048, "us-survey-foot": 1200.0 / 3937.0}
+OPERATIONS = {"convert": 1, "difference": 2, "depth-below-level": 1, "minus-level": 1, "depth-to-elevation": 1}
+METRES = {"metre": 1.0, "foot": 0.3048, "us-survey-foot": 1200.0 / 3937.0, "fathom": 1.8288}
 ALIASES = {"m": "metre", "meter": "metre", "meters": "metre", "metres": "metre", "metre": "metre",
            "ft": "foot", "feet": "foot", "foot": "foot", "international-foot": "foot",
            "us-ft": "us-survey-foot", "us-survey-foot": "us-survey-foot", "us-survey-feet": "us-survey-foot",
-           "ftus": "us-survey-foot"}
+           "ftus": "us-survey-foot", "fathom": "fathom", "fathoms": "fathom", "fm": "fathom"}
 RTOL = 1e-4
 ATOL = 1e-3
 WINDOW_SIZE = 256
@@ -57,12 +62,12 @@ def check_vertical_units(output: dict, sources: list | None, source_units: list 
         return [result(CHECK_ID, NOT_RUN, "Declare " + ", ".join(missing) + " to check vertical units; units are "
                        "never inferred.", missing_bindings=missing, **evidence)]
     if operation not in OPERATIONS or len(sources) != OPERATIONS[operation] or len(source_units) != len(sources):
-        return [result(CHECK_ID, NOT_RUN, "convert and depth-below-level take one source and difference takes two, "
-                       "each with one declared unit.", **evidence)]
-    if operation == "depth-below-level" and not (isinstance(level, (int, float)) and not isinstance(level, bool)
+        return [result(CHECK_ID, NOT_RUN, "difference takes two sources and every other operation one, each "
+                       "with one declared unit.", **evidence)]
+    if operation in ("depth-below-level", "minus-level") and not (isinstance(level, (int, float)) and not isinstance(level, bool)
                                                  and np.isfinite(level)):
-        return [result(CHECK_ID, NOT_RUN, "Declare vertical_level, the level in the output unit, for "
-                       "depth-below-level.", missing_bindings=["vertical_level"], **evidence)]
+        return [result(CHECK_ID, NOT_RUN, f"Declare vertical_level, the level in the output unit, for "
+                       f"{operation}.", missing_bindings=["vertical_level"], **evidence)]
     units = [unit_name(value) for value in (*source_units, unit)]
     if None in units:
         return [result(CHECK_ID, NOT_RUN, f"Declared units must be one of {', '.join(METRES)}.", **evidence)]
@@ -97,6 +102,10 @@ def check_vertical_units(output: dict, sources: list | None, source_units: list 
                     expected = metres / METRES[output_canonical]
                     if operation == "depth-below-level":
                         expected = np.maximum(level - expected, 0.0)
+                    elif operation == "minus-level":
+                        expected = expected - level
+                    elif operation == "depth-to-elevation":
+                        expected = -expected
                     observed = values[-1]
                     wrong = valid & ~np.isclose(observed, expected, rtol=RTOL, atol=ATOL)
                     compared += int(np.count_nonzero(valid))

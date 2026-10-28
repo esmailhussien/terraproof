@@ -24,7 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `rs.scale_applied_once`: declared `--decode-scale`/`--decode-offset` and
   `--unit-conversion kelvin-to-celsius`; correct outputs of products whose
   calibration lives only in STAC, or that change unit, no longer fail.
-- `terrain.slope_consistent` supports geographic DEMs with a declared vertical unit.
+- `terrain.slope_consistent` supports geographic DEMs with a declared vertical unit,
+  and `--dem-vertical-unit` declares it when the file has no label.
+- New `geometry.metric_values` (profile `metric-values`): delivered area/length
+  properties and buffer ground distances are verified geodesically in any CRS.
+- Keep-codes QA rules detect over-masking (fail with `--qa-source`, warn without).
+- Vertical operations `minus-level` and `depth-to-elevation`; `fathom` unit.
 - Goal profiles (`routing/profiles.json`) expand to required checks in a
   contract (`profiles`), or from `--profile NAME` / MCP `profiles`. A binding a
   profile needs but the caller did not give leaves the requirement incomplete.

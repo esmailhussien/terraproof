@@ -90,8 +90,18 @@ Other declarations that close a gap rather than guess one:
 - `--decode-scale` and `--decode-offset` give a calibration the file lacks (for
   example one declared only in a STAC item), and `--unit-conversion
   kelvin-to-celsius` a unit change after decoding.
-- `--dem` on a geographic DEM works when the DEM declares its vertical unit; the
-  spacing is converted to metres on the ellipsoid for each row.
+- `--dem` on a geographic DEM works when the DEM's vertical unit is known, from the
+  file label or `--dem-vertical-unit`; the spacing is converted to metres on the
+  ellipsoid for each row.
+- `--metric-quantity area|length` with `--metric-property` and `--metric-unit`, or
+  `--metric-quantity buffer` with `--buffer-distance-m` and `--buffer-source`,
+  verifies delivered vector measurements geodesically in any CRS (profile
+  `metric-values`). `crs.metric_operation` (profile `metric-operation`) is for data
+  that is still to be measured.
+- `--qa-source` names the band a keep-codes QA rule masks, so masking a code the
+  rule keeps fails instead of only warning.
+- Vertical operations also include `minus-level` (for example a constant geoid
+  separation) and `depth-to-elevation`; `fathom` is a supported unit.
 
 ## Read both outcomes
 

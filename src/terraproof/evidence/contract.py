@@ -11,10 +11,11 @@ from terraproof.checks.base import CheckResult
 from terraproof.evidence.grade import ADVISORY, CHECKS_PASSED, DECISION, REVIEW, grade_for
 
 SCHEMA = 'terraproof.verification-contract/1'
-FILE_PARAMETERS = {'compare_to', 'reference_input', 'dem', 'nir', 'red', 'qa_path',
+FILE_PARAMETERS = {'compare_to', 'reference_input', 'dem', 'nir', 'red', 'qa_path', 'qa_source', 'buffer_source',
                    'accuracy_samples', 'class_areas', 'manifest'}
 PARAMETERS = FILE_PARAMETERS | set('operation resampling categorical expect encoding slope_method raster_identity '
-    'index_formula index_bands stack stack_reduction stack_weights stack_min_count processing_full_scan qa_kind qa_keep_codes '
+    'index_formula index_bands stack stack_reduction stack_weights stack_min_count processing_full_scan qa_kind qa_keep_codes qa_source dem_vertical_unit metric_quantity metric_property '
+    'metric_unit buffer_distance_m buffer_source '
     'time_range sar_expect min_per_class estimates_requested require_provenance vertical_operation vertical_sources '
     'decode_scale decode_offset unit_conversion vertical_source_units vertical_unit vertical_level support_sources support_source_nodata support_rule'.split())
 LIST_FILE_PARAMETERS = ('stack', 'vertical_sources', 'support_sources')
@@ -170,6 +171,7 @@ def _missing_bindings(check, values):
         'rs.reflectance_range': ['expect'], 'rs.index_range': ['expect'],
         'raster.vertical_units': ['vertical_operation', 'vertical_sources', 'vertical_source_units', 'vertical_unit'],
         'raster.nodata_support': ['support_sources', 'support_rule'],
+        'geometry.metric_values': ['metric_quantity'],
     }.get(check, [])
     missing = [key for key in needed if key not in values or values[key] is None]
     if check == 'rs.index_formula':
@@ -179,7 +181,10 @@ def _missing_bindings(check, values):
         missing += ['source_band:'+role for role in roles if role not in bound]
     if check == 'rs.cloud_mask_applied' and values.get('qa_kind') == 'keep-codes' and not values.get('qa_keep_codes'):
         missing.append('qa_keep_codes')
-    if check == 'raster.vertical_units' and values.get('vertical_operation') == 'depth-below-level':
+    if check == 'geometry.metric_values':
+        missing += [key for key in (('buffer_distance_m', 'buffer_source') if values.get('metric_quantity') == 'buffer'
+                                    else ('metric_property', 'metric_unit')) if values.get(key) is None]
+    if check == 'raster.vertical_units' and values.get('vertical_operation') in ('depth-below-level', 'minus-level'):
         if values.get('vertical_level') is None:
             missing.append('vertical_level')
     if check == 'rs.stack_reduction' and values.get('stack_reduction') in ('weighted-sum', 'ols-slope'):

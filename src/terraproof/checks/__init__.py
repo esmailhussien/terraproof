@@ -7,6 +7,7 @@ from terraproof.checks import index_formula as index_checks
 from terraproof.checks import stack_reduction as stack_checks
 from terraproof.checks import slope_formula as slope_checks, raster_identity as identity_checks
 from terraproof.checks import nodata_support as support_checks, vertical_units as vertical_checks
+from terraproof.checks import metric_values as metric_value_checks
 from terraproof.checks.base import STATUSES, CheckResult, result
 
 __all__ = ["STATUSES", "CheckResult", "result", "run_checks"]
@@ -28,6 +29,7 @@ def run_checks(
     qa_path: str | None = None,
     qa_kind: str | None = None,
     qa_keep_codes: list | None = None,
+    qa_source: str | None = None,
     time_range: tuple[str, str] | list | None = None,
     sar_expect: str | None = None,
     accuracy_samples: dict | None = None,
@@ -35,6 +37,7 @@ def run_checks(
     min_per_class: int | None = None,
     estimates_requested: bool = False,
     dem: dict | None = None,
+    dem_vertical_unit: str | None = None,
     slope_method: str | None = None,
     raster_identity: bool = False,
     index_formula: str | None = None,
@@ -54,6 +57,11 @@ def run_checks(
     support_sources: list | None = None,
     support_source_nodata: list | None = None,
     support_rule: str | None = None,
+    metric_quantity: str | None = None,
+    metric_property: str | None = None,
+    metric_unit: str | None = None,
+    buffer_distance_m: float | None = None,
+    buffer_source: dict | None = None,
 ) -> list[CheckResult]:
     """Run every check that applies to the inspected inputs, in a fixed order."""
     vectors = [d for d in inputs if d["kind"] == "vector"]
@@ -99,7 +107,7 @@ def run_checks(
     if qa_path is not None or qa_kind is not None:
         for dataset in rasters:
             results += rs_processing.check_cloud_mask_applied(dataset, qa_path, qa_kind, full_scan=processing_full_scan,
-                                                               keep_codes=qa_keep_codes)
+                                                               keep_codes=qa_keep_codes, qa_source=qa_source)
     if time_range is not None:
         results += rs_processing.check_temporal_scope(stac_items, time_range)
 
@@ -117,7 +125,7 @@ def run_checks(
             results += slope_checks.check_slope_formula(dataset, dem, slope_method)
     elif dem is not None:
         for dataset in rasters:
-            results += terrain.check_slope_consistent(dataset, dem)
+            results += terrain.check_slope_consistent(dataset, dem, dem_vertical_unit)
 
     if raster_identity:
         for dataset in inputs:
@@ -132,6 +140,11 @@ def run_checks(
         for dataset in rasters:
             results += support_checks.check_nodata_support(dataset, support_sources, support_source_nodata,
                                                            support_rule)
+
+    if metric_quantity is not None or metric_property is not None or buffer_distance_m is not None:
+        for dataset in vectors:
+            results += metric_value_checks.check_metric_values(dataset, metric_quantity, metric_property,
+                                                               metric_unit, buffer_distance_m, buffer_source)
 
     if sar_expect is not None:
         results += sar.check_value_domain(rasters, sar_expect)

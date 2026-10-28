@@ -75,9 +75,12 @@ def _geographic_spacing(crs, transform, rows: int):
             abs(transform[4]) * np.radians(1.0) * meridional)
 
 
-def check_slope_consistent(output: dict, dem: dict) -> list:
-    """Compare a slope-in-degrees raster with the slope its DEM's units and spacing imply."""
-    evidence = {"output": output.get("path"), "dem": dem.get("path")}
+def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = None) -> list:
+    """Compare a slope-in-degrees raster with the slope its DEM's units and spacing imply.
+
+    `declared_unit` states the DEM's vertical unit when the file carries no label; a label that
+    contradicts it is a conflict, not something to choose between."""
+    evidence = {"output": output.get("path"), "dem": dem.get("path"), "declared_vertical_unit": declared_unit}
     if dem.get("kind") != "raster" or output.get("kind") != "raster":
         return [result(CHECK_ID, NOT_RUN, "Slope consistency needs a raster output and a raster DEM.", **evidence)]
     problems = _grid_problems(dem, output)
@@ -99,6 +102,15 @@ def check_slope_consistent(output: dict, dem: dict) -> list:
         return [result(CHECK_ID, NOT_RUN,
                        f"DEM {dem['path']} has no projected or geographic CRS; its pixel spacing is not a length.",
                        **evidence)]
+    if declared_unit:
+        declared = declared_unit.strip().lower()
+        if declared not in VERTICAL_UNITS:
+            return [result(CHECK_ID, NOT_RUN, f"Declared DEM vertical unit '{declared_unit}' is not a known "
+                           "length unit.", **evidence)]
+        if unit and unit.lower() in VERTICAL_UNITS and VERTICAL_UNITS[unit.lower()] != VERTICAL_UNITS[declared]:
+            return [result(CHECK_ID, NOT_RUN, f"The DEM is labelled '{unit}' but declared '{declared_unit}'; "
+                           "resolve the conflict before checking slope.", vertical_unit=unit, **evidence)]
+        unit = declared
     if unit and unit.lower() not in VERTICAL_UNITS:
         return [result(CHECK_ID, NOT_RUN, f"DEM vertical unit '{unit}' is not a known length unit.",
                        vertical_unit=unit, **evidence)]

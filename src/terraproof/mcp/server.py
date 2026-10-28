@@ -96,6 +96,7 @@ def run_checks(
     qa_path: str | None = None,
     qa_kind: str | None = None,
     qa_keep_codes: list[int] | None = None,
+    qa_source: str | None = None,
     time_range: list[str] | None = None,
     sar_expect: str | None = None,
     accuracy_samples: dict | list | str | None = None,
@@ -103,6 +104,7 @@ def run_checks(
     min_per_class: int | None = None,
     estimates_requested: bool = False,
     dem: str | None = None,
+    dem_vertical_unit: str | None = None,
     slope_method: str | None = None,
     raster_identity: bool = False,
     index_formula: str | None = None,
@@ -125,6 +127,11 @@ def run_checks(
     support_sources: list[str] | None = None,
     support_source_nodata: list[float | None] | None = None,
     support_rule: str | None = None,
+    metric_quantity: str | None = None,
+    metric_property: str | None = None,
+    metric_unit: str | None = None,
+    buffer_distance_m: float | None = None,
+    buffer_source: str | None = None,
     contract: dict | str | None = None,
     profiles: list[str] | None = None,
     lang: str = "en",
@@ -163,7 +170,12 @@ def run_checks(
     declared unit each in `vertical_source_units`, and the output's `vertical_unit` checks
     height values for mixed or mislabelled units. `support_sources` with `support_rule`
     (all or any), and optionally each source's declared fill in `support_source_nodata`,
-    checks that the output is valid exactly where its sources are. `profiles` names declared
+    checks that the output is valid exactly where its sources are.
+    `metric_quantity` (area, length or buffer) with `metric_property`/`metric_unit`, or
+    `buffer_distance_m` and `buffer_source`, verifies delivered vector measurements
+    geodesically in any CRS. `dem_vertical_unit` declares a DEM's unit when the file has no
+    label, and `qa_source` lets a keep-codes QA rule tell over-masking from source gaps.
+    `profiles` names declared
     goal profiles (routing/profiles.json) required on every path, bound to the arguments
     given; a binding a profile needs but you did not give leaves it incomplete.
     Supply `contract` as a verification-contract object or local JSON path to require
@@ -188,6 +200,7 @@ def run_checks(
         stack_layers = [_inspect_dataset(path) for path in stack or []]
         vertical_layers = [_inspect_dataset(path) for path in vertical_sources or []]
         support_layers = [_inspect_dataset(path) for path in support_sources or []]
+        buffer_layer = _inspect_dataset(buffer_source) if buffer_source else None
 
         inputs = [input_record(path, "input", dataset["kind"]) for path, dataset in zip(paths, inspections)]
         if compare is not None:
@@ -210,6 +223,10 @@ def run_checks(
             inputs.append(input_record(path, "support-source", layer["kind"]))
         if qa_path and Path(qa_path).is_file():
             inputs.append(input_record(qa_path, "qa", "raster"))
+        if qa_source and Path(qa_source).is_file():
+            inputs.append(input_record(qa_source, "qa-source", "raster"))
+        if buffer_layer is not None:
+            inputs.append(input_record(buffer_source, "buffer-source", buffer_layer["kind"]))
         if isinstance(accuracy_samples, str) and Path(accuracy_samples).is_file():
             inputs.append(input_record(accuracy_samples, "accuracy-samples", "accuracy-samples"))
         if isinstance(class_areas, str) and Path(class_areas).is_file():
@@ -236,6 +253,7 @@ def run_checks(
             qa_path=qa_path,
             qa_kind=qa_kind,
             qa_keep_codes=qa_keep_codes or None,
+            qa_source=qa_source,
             time_range=time_tuple,
             sar_expect=sar_expect,
             accuracy_samples=samples,
@@ -243,6 +261,7 @@ def run_checks(
             min_per_class=min_per_class,
             estimates_requested=estimates_requested,
             dem=dem_dataset,
+            dem_vertical_unit=dem_vertical_unit,
             slope_method=slope_method,
             raster_identity=raster_identity,
             index_formula=index_formula,
@@ -262,11 +281,17 @@ def run_checks(
             support_sources=support_layers or None,
             support_source_nodata=support_source_nodata or None,
             support_rule=support_rule,
+            metric_quantity=metric_quantity,
+            metric_property=metric_property,
+            metric_unit=metric_unit,
+            buffer_distance_m=buffer_distance_m,
+            buffer_source=buffer_layer,
         )
 
         checked_paths = list(paths)
         for path in (compare_to, reference_input, dem, nir, red, *(bands or {}).values(), *(stack or []),
-                     *(vertical_sources or []), *(support_sources or []), qa_path, accuracy_samples,
+                     *(vertical_sources or []), *(support_sources or []), qa_source, buffer_source, qa_path,
+                     accuracy_samples,
                      class_areas):
             if isinstance(path, str):
                 checked_paths.append(path)
@@ -298,6 +323,7 @@ def run_checks(
         "decode_offset": decode_offset,
         "unit_conversion": unit_conversion,
         "dem": dem,
+        "dem_vertical_unit": dem_vertical_unit,
         "slope_method": slope_method,
         "raster_identity": raster_identity,
         "index_formula": index_formula,
@@ -312,6 +338,7 @@ def run_checks(
         "qa_path": qa_path,
         "qa_kind": qa_kind,
         "qa_keep_codes": qa_keep_codes or None,
+        "qa_source": qa_source,
         "time_range": time_tuple,
         "sar_expect": sar_expect,
         "accuracy_samples": accuracy_samples,
@@ -328,6 +355,11 @@ def run_checks(
         "support_sources": support_sources or None,
         "support_source_nodata": support_source_nodata or None,
         "support_rule": support_rule,
+        "metric_quantity": metric_quantity,
+        "metric_property": metric_property,
+        "metric_unit": metric_unit,
+        "buffer_distance_m": buffer_distance_m,
+        "buffer_source": buffer_source,
     }
     try:
         if profiles and contract is not None:

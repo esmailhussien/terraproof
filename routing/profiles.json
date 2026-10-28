@@ -28,7 +28,7 @@
       ]
     },
     "metric-operation": {
-      "description": "A distance, area, length or buffer computed in a metric CRS.",
+      "description": "A dataset about to be used for a distance, area, length or buffer operation must be in a metric CRS. For measurements already delivered, use metric-values.",
       "checks": [
         "crs.metric_operation"
       ]
@@ -37,6 +37,12 @@
       "description": "A slope-in-degrees output derived from a declared DEM.",
       "checks": [
         "terrain.slope_consistent"
+      ]
+    },
+    "metric-values": {
+      "description": "Vector measurements already delivered (area or length properties, or a buffer), in any CRS.",
+      "checks": [
+        "geometry.metric_values"
       ]
     }
   }

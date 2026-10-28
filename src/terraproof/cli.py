@@ -85,6 +85,15 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument("--processing-full-scan", action="store_true",
                               help="verify every corresponding band/pixel for supplied calibration and QA relations")
     check_parser.add_argument("--dem", metavar="PATH", help="DEM a slope-in-degrees raster was derived from")
+    check_parser.add_argument("--dem-vertical-unit", metavar="UNIT",
+                              help="declared vertical unit of --dem when its file has no label (metre, foot, ...)")
+    check_parser.add_argument("--metric-quantity", choices=["area", "length", "buffer"],
+                              help="verify delivered vector measurements geodesically, in any CRS")
+    check_parser.add_argument("--metric-property", metavar="FIELD", help="feature property holding the area or length")
+    check_parser.add_argument("--metric-unit", metavar="UNIT",
+                              help="unit of --metric-property (square_metre, hectare, square_kilometre, metre, kilometre)")
+    check_parser.add_argument("--buffer-distance-m", type=float, metavar="METRES", help="declared ground buffer distance")
+    check_parser.add_argument("--buffer-source", metavar="PATH", help="vector the output buffers")
     check_parser.add_argument("--slope-method", choices=["central-difference"],
                               help="verify every slope value and complete stencil/edge mask from --dem")
     check_parser.add_argument("--raster-identity", action="store_true",
@@ -109,6 +118,8 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument(
         "--qa-kind", choices=["s2-scl", "landsat-qa-pixel", "keep-codes"], help="kind of QA raster supplied with --qa"
     )
+    check_parser.add_argument("--qa-source", metavar="PATH",
+                              help="source band the QA rule masks; tells over-masking from source gaps for keep-codes")
     check_parser.add_argument("--qa-keep-code", action="append", type=int, default=[], metavar="CODE",
                               help="QA code your quality rule accepts, for --qa-kind keep-codes (every other code "
                                    "must be nodata); repeatable; needs --processing-full-scan")
@@ -223,6 +234,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
     stack = [inspect_dataset(path) for path in args.stack]
     vertical_sources = [inspect_dataset(path) for path in args.vertical_source]
     support_sources = [inspect_dataset(path) for path in args.support_source]
+    buffer_source = _inspect_if_exists(args.buffer_source)
     support_nodata = [None if value == "file" else _float_arg(value, "--support-source-nodata")
                       for value in args.support_source_nodata] or None
 
@@ -241,6 +253,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
     for path, layer in zip(args.support_source, support_sources):
         _record_input(inputs, path, "support-source", layer["kind"])
     _record_input(inputs, args.qa_path, "qa", "raster")
+    _record_input(inputs, args.qa_source, "qa-source", "raster")
+    _record_input(inputs, args.buffer_source, "buffer-source", buffer_source["kind"] if buffer_source else "unknown")
     _record_input(inputs, args.accuracy_samples, "accuracy-samples", "accuracy-samples")
     _record_input(inputs, args.class_areas, "class-areas", "class-areas")
     _record_input(inputs, args.manifest, "manifest", "manifest")
@@ -264,6 +278,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         qa_path=args.qa_path,
         qa_kind=args.qa_kind,
         qa_keep_codes=args.qa_keep_code or None,
+        qa_source=args.qa_source,
         time_range=time_range,
         sar_expect=args.sar_expect,
         accuracy_samples=accuracy_samples,
@@ -271,6 +286,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         min_per_class=args.min_per_class,
         estimates_requested=args.estimates_requested,
         dem=dem,
+        dem_vertical_unit=args.dem_vertical_unit,
         slope_method=args.slope_method,
         raster_identity=args.raster_identity,
         index_formula=args.index_formula,
@@ -290,11 +306,16 @@ def _cmd_check(args: argparse.Namespace) -> int:
         support_sources=support_sources or None,
         support_source_nodata=support_nodata,
         support_rule=args.support_rule,
+        metric_quantity=args.metric_quantity,
+        metric_property=args.metric_property,
+        metric_unit=args.metric_unit,
+        buffer_distance_m=args.buffer_distance_m,
+        buffer_source=buffer_source,
     )
 
     checked_paths = list(args.paths)
     for path in (args.compare_to, args.reference_input, args.dem, args.nir, args.red, *band_paths.values(), *args.stack,
-                 *args.vertical_source, *args.support_source,
+                 *args.vertical_source, *args.support_source, args.qa_source, args.buffer_source,
                  args.qa_path, args.accuracy_samples, args.class_areas):
         if path:
             checked_paths.append(path)
@@ -324,6 +345,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         "decode_offset": args.decode_offset,
         "unit_conversion": args.unit_conversion,
         "dem": args.dem,
+        "dem_vertical_unit": args.dem_vertical_unit,
         "slope_method": args.slope_method,
         "raster_identity": args.raster_identity,
         "index_formula": args.index_formula,
@@ -338,6 +360,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         "qa_path": args.qa_path,
         "qa_kind": args.qa_kind,
         "qa_keep_codes": args.qa_keep_code or None,
+        "qa_source": args.qa_source,
         "time_range": time_range,
         "sar_expect": args.sar_expect,
         "accuracy_samples": args.accuracy_samples,
@@ -354,6 +377,11 @@ def _cmd_check(args: argparse.Namespace) -> int:
         "support_sources": args.support_source or None,
         "support_source_nodata": support_nodata,
         "support_rule": args.support_rule,
+        "metric_quantity": args.metric_quantity,
+        "metric_property": args.metric_property,
+        "metric_unit": args.metric_unit,
+        "buffer_distance_m": args.buffer_distance_m,
+        "buffer_source": args.buffer_source,
     }
     if args.profile and args.contract:
         raise SystemExit("terraproof check: give --profile or --contract, not both")

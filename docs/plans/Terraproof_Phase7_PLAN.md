@@ -207,6 +207,25 @@ The aim of this phase is narrow: a Terraproof report should never imply more ver
 - A declared DEM vertical unit.
 - Vertical datum and fathom support.
 
+#### V4 fixes (2026-10-28)
+
+Each V4 finding is fixed from declared inputs only, and pinned as a regression test on the spent V0 cases in `tests/python/test_phase7_v0_regression.py` (15 tests).
+
+| Finding | Fix | Evidence |
+| --- | --- | --- |
+| `crs.metric_operation` false alarms | New check `geometry.metric_values` and profile `metric-values`. It verifies delivered area and length properties geodesically, and a buffer's ground distance from its declared source, in any output CRS. `metric-operation` stays for data about to be measured. | geom-05 and geom-07 pass; geom-01 and geom-03 fail. Buffers: geom-06 passes and geom-02 fails. |
+| Over-masking (qa-04) | With `qa_kind: keep-codes`, a kept code that is nodata in the output is over-masking. It fails where the declared `qa_source` band holds a value, and warns without that band. | qa-04 fails and qa-05 passes. |
+| DEM unit undeclarable (geom-04/08) | `dem_vertical_unit` declares the unit when the file has none. A contradicting label is a conflict, which is `not-run`. | geom-04 fails; geom-08 warns, because it uses another stencil. |
+| Vertical datum, fathoms (vert-03/07/08) | New operation `minus-level` for a constant geoid separation; a geoid grid is a `difference`. `fathom` is now a unit, and `depth-to-elevation` covers positive-down soundings. | vert-03 fails; vert-07 and vert-08 pass. |
+
+`geometry.winding` still fails a correct buffer (geom-06) on RFC 7946 ring orientation. That is a genuine format finding, not a contradicted claim, so it counts as review burden.
+
+#### Next measurement (V4b, not started)
+
+- **Fresh cases first.** A new independent agent authors fresh sealed cases from the V0b brief (kept outside the repository with the other agent briefs) and seals them by hash before any further product change. The brief covers six families: delivered metric values, QA in both directions, unlabelled DEMs, datums and unusual units, a nodata and scale regression family, and plain correct outputs.
+- **Mapping before results.** The declaration mapping is written and committed before any V4b result.
+- **Acceptance (unchanged).** Within declared coverage: zero false assurance and zero confirmed false alarms. Detection is reported, not thresholded.
+
 ## 4. Order
 
 V0 is sealed first. V1 and V2 come next, together, because the grade needs the coverage block. V3 follows, then V4. V0 can be authored in parallel with the V1 design, but V2 and V3 code waits for the seal.

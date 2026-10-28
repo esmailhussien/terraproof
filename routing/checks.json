@@ -272,6 +272,18 @@
         "support_sources",
         "support_rule"
       ]
+    },
+    "geometry.metric_values": {
+      "family": "geometry",
+      "description": "Delivered vector measurements (area or length properties, or a buffer's ground distance) match their geodesic values, whatever CRS the output is stored in.",
+      "applies_to": [
+        "vector"
+      ],
+      "enabled_by": [
+        "metric_quantity",
+        "metric_property",
+        "metric_unit"
+      ]
     }
   }
 }
