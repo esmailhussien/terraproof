@@ -224,6 +224,19 @@ Each V4 finding is fixed from declared inputs only, and pinned as a regression t
 
 - **Fresh cases first.** A new independent agent authors fresh sealed cases from the V0b brief (kept outside the repository with the other agent briefs) and seals them by hash before any further product change. The brief covers six families: delivered metric values, QA in both directions, unlabelled DEMs, datums and unusual units, a nodata and scale regression family, and plain correct outputs.
 - **Mapping before results.** The declaration mapping is written and committed before any V4b result.
+- **Seal record (2026-10-28).** An independent agent authored 48 cases from the brief, in a fresh clone of `main` (`fe3c6a4`), on branch `geova/verification-heldout-v0b`, commit `178fcd8`.
+  - Counts: geographic metric work, QA masking, unlabelled-DEM slope, vertical datums and units, and a nodata and scale regression family, each 4 wrong and 4 correct; plus 8 `plain` correct outputs. That is 20 wrong and 28 correct.
+  - The agent reported 106 byte-identical files across two generator runs, and the oracle agreeing with all 48 cases.
+  - The maintainer side verified the committed LF hashes and the import lines, and ran the cases' own test (3 passed). The case content was not read.
+  - The commit also adds `eol=lf` rules for these files to `.gitattributes`.
+
+  | File | SHA-256 |
+  | --- | --- |
+  | `evals/verification-heldout-v0b/cases.json` | `5f0c32ef821a809fe3c5957bdda963679a67a382ba016e5413562399d642e860` |
+  | `evals/verification-heldout-v0b/generate.py` | `604f38538fe24136c9c0cf3be9daffe033885af83cc7cd2da626ef0e6a5351be` |
+  | `evals/verification-heldout-v0b/oracle.py` | `3674990f278a31624a1874cf611504cb99ab71306a33589774147a7e5c53407b` |
+  | `evals/verification-heldout-v0b/README.md` | `aa8cbc85875aac102c4e996bf028840370a526f71f4324b29dd234b7c3d934a6` |
+
 - **Acceptance (unchanged).** Within declared coverage: zero false assurance and zero confirmed false alarms. Detection is reported, not thresholded.
 
 ## 4. Order
