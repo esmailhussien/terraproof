@@ -1,0 +1,8 @@
+{
+  "schema": "terraproof.verification-contract/1",
+  "requirements": [{
+    "paths": ["outputs/parcels_area.gpkg"],
+    "checks": ["crs.defined", "crs.metric_operation", "geometry.valid", "scope.record_count"],
+    "parameters": {"operation": "area", "compare_to": "inputs/parcels.gpkg"}
+  }]
+}

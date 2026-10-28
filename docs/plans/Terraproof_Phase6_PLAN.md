@@ -51,7 +51,7 @@ Decided by the maintainer before E3. It adds one bounded readiness workstream, *
 - **R2. The evaluator-access boundary.** MCP admission closes the registered-server route. The "with" and "without" environments also drop an activated driver venv from `PATH` and `VIRTUAL_ENV`, so the harness interpreter is not reachable by name. Neither makes other host files unreadable: the checkout and the driver interpreter remain readable by path. Before E3, a no-model check puts a benign canary file outside the task and records whether the agent's own Python and the host's built-in readers can open it. No ACL, ownership or integrity-label change is made. Unless a whole-process boundary is shown, confirmation results are reported as "contamination screened", never "evaluator-blind". The contamination labels keep rejecting runs either way.
 - **R3. One live readiness batch (proposed, not approved).** It replaces the separate MiMo shakedown and delivery recheck:
   - MiMo-V2.6-Flash: 12 development tasks × 1 pair = 24 invocations.
-  - GLM 5.3 Flash and DeepSeek 4.1 Flash: 4 development tasks × 1 pair each = 16 invocations. The 4 tasks are one per trap family, listed in the approval request before any of their new outcomes are read.
+  - GLM 5.3 Flash and DeepSeek 4.1 Flash: 4 development tasks × 1 pair each = 16 invocations. The 4 tasks are fixed by a rule that uses no outcome: the alphabetically first development task in each of the first four trap families alphabetically. They are `hr-landcover-shifted-grid`, `hr-sar-boxcar-db`, `hr-three-date-mean-8bit` and `hr-station-distance`.
   - Total 40 invocations on OpenCode Go quota, 900 s timeout, on the R1 candidate wheel. Retries count against the 40.
   - Failed and successful outputs are kept, with host completion, artifact acceptance and verification status reported apart. The batch is a readiness check, not an effect estimate. It needs the user's separate approval of the exact command.
 - **Contract usability (F), bounded.** Before E3, only docs and examples that the agent does not see may land: workflow templates for the four existing check families, and one ordinary-CI example that fails a job on a missing or failed required check and uploads the evidence. Templates are matched to declared goals and data, never to benchmark task ids or oracle methods. A compact MCP response changes the treatment, so it waits until after E6.
@@ -64,6 +64,28 @@ Decided by the maintainer before E3. It adds one bounded readiness workstream, *
   Any effect or cost threshold that will drive a product decision is fixed at E3, not after E6.
 - **Deferred.** C group 3, large-data performance, spatial previews, automatic patches, signing and a public leaderboard wait until after E6 or a recorded user need. New hosts and skills stay out of this phase.
 - **Order.** R1, R2 and the bounded F land offline in one PR. R3 runs only if approved. Then E3 freezes once, and E4 → E5 → E6 follow under the existing protocol.
+
+#### Readiness record (2026-10-28, no model calls)
+
+`tests/runtime_readiness.py` runs R1 (`record`) and R2 (`canary`).
+
+- **R1 (`record`).** The candidate comes from commit `45230c7`, whose production files are identical to main after #37.
+  - Wheel: `terraproof-0.8.0-py3-none-any.whl`, SHA-256 `a9e7cd34144ae263844db4d2bec68ebcdc79c60befa0443be9fd7ff729fc7713` (226 payload files). A rebuild gives a different wheel hash (archive timestamps) but the same payload.
+  - Production fingerprint: `4bd44f33de3563c9e31d1b8acfb140808bf79274572fe254d24415e3f5a7daf4`.
+  - Runtime: Python 3.12.10, numpy 2.5.4, rasterio 1.5.2, pyproj 3.8.0, shapely 2.2.0, pyogrio 0.13.0, mcp 2.3.0.
+  - Venv: `C:\Users\mrsom\.venvs\agent-with-r1c`, MCP argv `<venv>\Scripts\python.exe -I -m terraproof.mcp`. The E2 venvs are unchanged.
+  - All ten checks pass. The clean export and the reused build directory give identical, evaluator-free payloads, and the reused build dropped a planted stale evaluator. MCP admission passes and the server serves its tools. A no-model OpenCode preflight with this venv admits the same fingerprint.
+  - The version label is still 0.8.0, but the code differs from the published 0.8.0, which is why the fingerprint, not the label, identifies the treatment.
+- **R1 found two defects, both fixed here.**
+  - The admission fingerprint hashed raw bytes, so the same commit failed admission on a checkout whose text files had CRLF line endings. Text is now hashed with CRLF read as LF; binary files are unchanged.
+  - The wheel must be installed with its `mcp` extra, or the "with" venv has no MCP server.
+- **R2 (`canary`).** The result is the same for both conditions:
+  - Neither interpreter can import `terraproof.evals`, and the driver interpreter is not on `PATH`.
+  - Both can read a private canary outside the task, the checkout's evaluator source and the driver interpreter by path.
+  - OpenCode `run --auto` approves any permission that is not explicitly denied, and the harness denies none.
+
+  Results are therefore labelled **contamination screened**, not evaluator-blind. The trace contamination labels remain the guard.
+- **F.** The four [contract templates](../CONTRACT_TEMPLATES.md) and the CI example are tested on generated data. A valid output verifies, an intentional defect fails (a dropped vector record needs review) and missing evidence is incomplete. They are docs only; nothing the agent sees changed.
 
 ## 2. Goals
 

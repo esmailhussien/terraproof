@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Phase 6 readiness (Amendment 3) and contract templates
+
+- Tested contract templates for four workflows (vector area, categorical raster grid,
+  NDVI from named bands, median stack) and an ordinary CI example; see
+  `docs/CONTRACT_TEMPLATES.md`.
+- MCP admission's production fingerprint reads CRLF as LF in text files, so one
+  commit admits on Windows and Unix checkouts alike.
+- Lift harness: an agent with its own interpreter no longer inherits an activated
+  driver venv on `PATH` or in `VIRTUAL_ENV`. `tests/runtime_readiness.py` records
+  the candidate runtime (R1) and what each condition's interpreter can read (R2).
+
 ### E2 runtime correction and verification contracts
 
 - Explicit isolated MCP interpreter registration and real-host admission against

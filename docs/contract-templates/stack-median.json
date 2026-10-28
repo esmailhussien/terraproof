@@ -1,0 +1,8 @@
+{
+  "schema": "terraproof.verification-contract/1",
+  "requirements": [{
+    "paths": ["outputs/median.tif"],
+    "checks": ["rs.stack_reduction"],
+    "parameters": {"stack": ["inputs/t1.tif", "inputs/t2.tif", "inputs/t3.tif"], "stack_reduction": "median"}
+  }]
+}
