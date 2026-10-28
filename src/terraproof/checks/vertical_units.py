@@ -6,6 +6,9 @@ made from the sources:
 - ``convert``      one source, the output is that surface in the output's unit
 - ``difference``   two sources, the output is the first minus the second (for example a change or
                    a height above a surface), in the output's unit
+- ``depth-below-level``  one source surface and a declared level in the output's unit; the output is
+                   the level minus the surface where the surface is below it, and 0 elsewhere (for
+                   example flood depth for a water-surface level)
 
 Every delivered cell where all sources and the output are valid is compared with the declared
 operation done in metres and converted to the output unit. A band unit label on the output that
@@ -25,7 +28,7 @@ from terraproof.checks.base import FAIL, NOT_RUN, PASS, result
 from terraproof.checks.rs_processing import _grid_problems
 
 CHECK_ID = "raster.vertical_units"
-OPERATIONS = {"convert": 1, "difference": 2}
+OPERATIONS = {"convert": 1, "difference": 2, "depth-below-level": 1}
 METRES = {"metre": 1.0, "foot": 0.3048, "us-survey-foot": 1200.0 / 3937.0}
 ALIASES = {"m": "metre", "meter": "metre", "meters": "metre", "metres": "metre", "metre": "metre",
            "ft": "foot", "feet": "foot", "foot": "foot", "international-foot": "foot",
@@ -44,8 +47,8 @@ def unit_name(value) -> str | None:
 
 
 def check_vertical_units(output: dict, sources: list | None, source_units: list | None,
-                         operation: str | None, unit: str | None) -> list:
-    evidence = {"output": output.get("path"), "operation": operation, "output_unit": unit,
+                         operation: str | None, unit: str | None, level: float | None = None) -> list:
+    evidence = {"output": output.get("path"), "operation": operation, "output_unit": unit, "level": level,
                 "sources": [source.get("path") for source in sources or []], "source_units": source_units}
     missing = [name for name, value in (("vertical_operation", operation), ("vertical_unit", unit),
                                         ("vertical_sources", sources), ("vertical_source_units", source_units))
@@ -54,8 +57,12 @@ def check_vertical_units(output: dict, sources: list | None, source_units: list 
         return [result(CHECK_ID, NOT_RUN, "Declare " + ", ".join(missing) + " to check vertical units; units are "
                        "never inferred.", missing_bindings=missing, **evidence)]
     if operation not in OPERATIONS or len(sources) != OPERATIONS[operation] or len(source_units) != len(sources):
-        return [result(CHECK_ID, NOT_RUN, "convert takes one source and difference takes two, each with one "
-                       "declared unit.", **evidence)]
+        return [result(CHECK_ID, NOT_RUN, "convert and depth-below-level take one source and difference takes two, "
+                       "each with one declared unit.", **evidence)]
+    if operation == "depth-below-level" and not (isinstance(level, (int, float)) and not isinstance(level, bool)
+                                                 and np.isfinite(level)):
+        return [result(CHECK_ID, NOT_RUN, "Declare vertical_level, the level in the output unit, for "
+                       "depth-below-level.", missing_bindings=["vertical_level"], **evidence)]
     units = [unit_name(value) for value in (*source_units, unit)]
     if None in units:
         return [result(CHECK_ID, NOT_RUN, f"Declared units must be one of {', '.join(METRES)}.", **evidence)]
@@ -88,6 +95,8 @@ def check_vertical_units(output: dict, sources: list | None, source_units: list 
                                                    for r, v in zip(reads, values)])
                     metres = values[0] * factors[0] - (values[1] * factors[1] if operation == "difference" else 0.0)
                     expected = metres / METRES[output_canonical]
+                    if operation == "depth-below-level":
+                        expected = np.maximum(level - expected, 0.0)
                     observed = values[-1]
                     wrong = valid & ~np.isclose(observed, expected, rtol=RTOL, atol=ATOL)
                     compared += int(np.count_nonzero(valid))

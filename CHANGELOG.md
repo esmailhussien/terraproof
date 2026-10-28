@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `--vertical-source-unit`, `--vertical-unit`), plus contradicting unit labels.
 - `raster.nodata_support`: the output must be valid exactly where its declared
   sources are (`--support-source`, `--support-source-nodata`, `--support-rule all|any`).
+- `raster.vertical_units` also checks `depth-below-level` against a declared
+  `--vertical-level`.
+- `rs.cloud_mask_applied`: `--qa-kind keep-codes` with declared `--qa-keep-code`s,
+  and a full scan no longer reports QA nodata as unverifiable where the output is
+  already nodata.
+- `rs.scale_applied_once`: declared `--decode-scale`/`--decode-offset` and
+  `--unit-conversion kelvin-to-celsius`; correct outputs of products whose
+  calibration lives only in STAC, or that change unit, no longer fail.
+- `terrain.slope_consistent` supports geographic DEMs with a declared vertical unit.
 - Goal profiles (`routing/profiles.json`) expand to required checks in a
   contract (`profiles`), or from `--profile NAME` / MCP `profiles`. A binding a
   profile needs but the caller did not give leaves the requirement incomplete.

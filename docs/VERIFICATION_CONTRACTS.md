@@ -71,16 +71,27 @@ python -m terraproof check outputs/change.tif --profile vertical-units   --verti
 A profile never guesses its bindings. Without `--vertical-unit`, for example,
 the requirement is `incomplete` and the diagnostics name what to declare.
 
-- `raster.vertical_units` compares every cell with the declared `convert` or
-  `difference` of the sources, done in metres and converted to the output unit.
-  It also fails when the output band's unit label contradicts its declared unit.
-  It does not cover vertical datum differences, or depths from a constant water
-  level.
+- `raster.vertical_units` compares every cell with the declared `convert`,
+  `difference` or `depth-below-level` (with `--vertical-level`, in the output
+  unit) of the sources, done in metres and converted to the output unit. It also
+  fails when the output band's unit label contradicts its declared unit. It does
+  not cover vertical datum differences.
 - `raster.nodata_support` requires the output to be valid exactly where its
   sources are valid under `--support-rule all` or `any`. A source's fill can be
   declared with `--support-source-nodata`, for example `0` when a product stores
   fill as zero without saying so in the file. Values where the sources hold only
   fill, and nodata where they hold valid values such as real zeros, both fail.
+
+Other declarations that close a gap rather than guess one:
+
+- `--qa-kind keep-codes --qa-keep-code N ...` with `--processing-full-scan`
+  states which QA codes your quality rule accepts; every other code must be
+  nodata in the output.
+- `--decode-scale` and `--decode-offset` give a calibration the file lacks (for
+  example one declared only in a STAC item), and `--unit-conversion
+  kelvin-to-celsius` a unit change after decoding.
+- `--dem` on a geographic DEM works when the DEM declares its vertical unit; the
+  spacing is converted to metres on the ellipsoid for each row.
 
 ## Read both outcomes
 

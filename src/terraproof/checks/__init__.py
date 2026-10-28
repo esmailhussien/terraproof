@@ -22,8 +22,12 @@ def run_checks(
     expect: str | None = None,
     reference_input: dict | None = None,
     encoding: str | None = None,
+    decode_scale: float | None = None,
+    decode_offset: float | None = None,
+    unit_conversion: str | None = None,
     qa_path: str | None = None,
     qa_kind: str | None = None,
+    qa_keep_codes: list | None = None,
     time_range: tuple[str, str] | list | None = None,
     sar_expect: str | None = None,
     accuracy_samples: dict | None = None,
@@ -46,6 +50,7 @@ def run_checks(
     vertical_sources: list | None = None,
     vertical_source_units: list | None = None,
     vertical_unit: str | None = None,
+    vertical_level: float | None = None,
     support_sources: list | None = None,
     support_source_nodata: list | None = None,
     support_rule: str | None = None,
@@ -88,11 +93,13 @@ def run_checks(
     # a check that applies but cannot run reports not-run itself rather than being omitted.
     if reference_input is not None or encoding is not None:
         for dataset in rasters:
-            results += rs_processing.check_scale_applied_once(dataset, reference_input, encoding,
-                                                              full_scan=processing_full_scan)
+            results += rs_processing.check_scale_applied_once(dataset, reference_input, encoding, decode_scale,
+                                                              decode_offset, full_scan=processing_full_scan,
+                                                              unit_conversion=unit_conversion)
     if qa_path is not None or qa_kind is not None:
         for dataset in rasters:
-            results += rs_processing.check_cloud_mask_applied(dataset, qa_path, qa_kind, full_scan=processing_full_scan)
+            results += rs_processing.check_cloud_mask_applied(dataset, qa_path, qa_kind, full_scan=processing_full_scan,
+                                                               keep_codes=qa_keep_codes)
     if time_range is not None:
         results += rs_processing.check_temporal_scope(stac_items, time_range)
 
@@ -119,7 +126,7 @@ def run_checks(
     if vertical_operation is not None or vertical_sources or vertical_unit is not None:
         for dataset in rasters:
             results += vertical_checks.check_vertical_units(dataset, vertical_sources, vertical_source_units,
-                                                            vertical_operation, vertical_unit)
+                                                            vertical_operation, vertical_unit, vertical_level)
 
     if support_rule is not None or support_sources:
         for dataset in rasters:

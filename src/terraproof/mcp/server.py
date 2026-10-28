@@ -90,8 +90,12 @@ def run_checks(
     expect: str | None = None,
     reference_input: str | None = None,
     encoding: str | None = None,
+    decode_scale: float | None = None,
+    decode_offset: float | None = None,
+    unit_conversion: str | None = None,
     qa_path: str | None = None,
     qa_kind: str | None = None,
+    qa_keep_codes: list[int] | None = None,
     time_range: list[str] | None = None,
     sar_expect: str | None = None,
     accuracy_samples: dict | list | str | None = None,
@@ -117,6 +121,7 @@ def run_checks(
     vertical_sources: list[str] | None = None,
     vertical_source_units: list[str] | None = None,
     vertical_unit: str | None = None,
+    vertical_level: float | None = None,
     support_sources: list[str] | None = None,
     support_source_nodata: list[float | None] | None = None,
     support_rule: str | None = None,
@@ -135,8 +140,11 @@ def run_checks(
     used for (buffer, distance, area, length); `compare_to` is a source for vector record
     counts or explicit raster identity; `resampling` is the method declared for the rasters and `categorical` says
     they hold class codes; `expect` is the value range the bands should hold (reflectance or
-    index). Phase 4 options include `reference_input`/`encoding` for scale/offset checks,
-    `qa_path`/`qa_kind` for cloud-mask checks, `time_range` for temporal coverage.
+    index). Phase 4 options include `reference_input`/`encoding` for scale/offset checks
+    (`decode_scale`/`decode_offset` declare a calibration the file lacks, and
+    `unit_conversion="kelvin-to-celsius"` a unit change after decoding),
+    `qa_path`/`qa_kind` for cloud-mask checks (`qa_kind="keep-codes"` with `qa_keep_codes`
+    declares the QA codes your quality rule accepts), `time_range` for temporal coverage.
     For final calibration/QA audits, set `processing_full_scan=True`: this checks
     every corresponding band and pixel in bounded windows; the default remains
     a sampled screen. This option does not expand other checks' scope.
@@ -150,7 +158,8 @@ def run_checks(
     output masking warns because its QA policy is not supplied. `manifest` verifies a run manifest and appends `provenance.reproducible`;
     `require_provenance` prevents Decision-grade when no manifest is supplied. `lang`
     selects the Markdown language (en or ar). Results match `python -m terraproof check`.
-    `vertical_operation` (convert or difference) with ordered `vertical_sources`, one
+    `vertical_operation` (convert, difference, or depth-below-level with `vertical_level`
+    in the output unit) with ordered `vertical_sources`, one
     declared unit each in `vertical_source_units`, and the output's `vertical_unit` checks
     height values for mixed or mislabelled units. `support_sources` with `support_rule`
     (all or any), and optionally each source's declared fill in `support_source_nodata`,
@@ -221,8 +230,12 @@ def run_checks(
             expect=expect,
             reference_input=reference,
             encoding=encoding,
+            decode_scale=decode_scale,
+            decode_offset=decode_offset,
+            unit_conversion=unit_conversion,
             qa_path=qa_path,
             qa_kind=qa_kind,
+            qa_keep_codes=qa_keep_codes or None,
             time_range=time_tuple,
             sar_expect=sar_expect,
             accuracy_samples=samples,
@@ -245,6 +258,7 @@ def run_checks(
             vertical_sources=vertical_layers or None,
             vertical_source_units=vertical_source_units or None,
             vertical_unit=vertical_unit,
+            vertical_level=vertical_level,
             support_sources=support_layers or None,
             support_source_nodata=support_source_nodata or None,
             support_rule=support_rule,
@@ -280,6 +294,9 @@ def run_checks(
         "expect": expect,
         "reference_input": reference_input,
         "encoding": encoding,
+        "decode_scale": decode_scale,
+        "decode_offset": decode_offset,
+        "unit_conversion": unit_conversion,
         "dem": dem,
         "slope_method": slope_method,
         "raster_identity": raster_identity,
@@ -294,6 +311,7 @@ def run_checks(
         "processing_full_scan": processing_full_scan,
         "qa_path": qa_path,
         "qa_kind": qa_kind,
+        "qa_keep_codes": qa_keep_codes or None,
         "time_range": time_tuple,
         "sar_expect": sar_expect,
         "accuracy_samples": accuracy_samples,
@@ -306,6 +324,7 @@ def run_checks(
         "vertical_sources": vertical_sources or None,
         "vertical_source_units": vertical_source_units or None,
         "vertical_unit": vertical_unit,
+        "vertical_level": vertical_level,
         "support_sources": support_sources or None,
         "support_source_nodata": support_source_nodata or None,
         "support_rule": support_rule,

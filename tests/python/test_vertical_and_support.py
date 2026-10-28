@@ -172,3 +172,41 @@ def test_new_checks_appear_in_not_checked_until_enabled(make_raster):
     names = {item["check"]: item["enabled_by"] for item in report["coverage"]["not_checked"]}
     assert names["raster.vertical_units"][0] == "vertical_operation"
     assert names["raster.nodata_support"] == ["support_sources", "support_rule"]
+
+
+def test_depth_below_level_needs_the_level_and_clips_at_zero(make_raster, surfaces):
+    _, before_ft = surfaces["arrays"]
+    level = 150.0
+    depth = np.maximum(level - before_ft * FT, 0).astype("float32")
+    path = make_raster("depth.tif", depth)
+    sources = [inspect_dataset(surfaces["before_ft"])]
+    common = dict(vertical_operation="depth-below-level", vertical_sources=sources, vertical_source_units=["foot"],
+                  vertical_unit="metre")
+    missing = _only(run_checks([inspect_dataset(path)], **common), "raster.vertical_units")
+    assert missing.status == "not-run" and missing.evidence["missing_bindings"] == ["vertical_level"]
+    assert _only(run_checks([inspect_dataset(path)], vertical_level=level, **common),
+                 "raster.vertical_units").status == "pass"
+
+
+def test_keep_codes_need_declared_codes_and_a_full_scan(make_raster):
+    from terraproof.checks.rs_processing import check_cloud_mask_applied
+    qa = make_raster("qa.tif", np.zeros(SHAPE, dtype="uint8"), nodata=None)
+    out = inspect_dataset(make_raster("out.tif", _surface(8, 1, 2)))
+    assert check_cloud_mask_applied(out, qa, "keep-codes", full_scan=True)[0].evidence["missing_bindings"] == [
+        "qa_keep_codes"]
+    assert check_cloud_mask_applied(out, qa, "keep-codes", keep_codes=[0])[0].status == "not-run"
+
+
+def test_unknown_unit_conversion_is_not_run(make_raster):
+    from terraproof.checks.rs_processing import check_scale_applied_once
+    source = inspect_dataset(make_raster("dn.tif", np.ones(SHAPE, dtype="uint16"), nodata=0))
+    out = inspect_dataset(make_raster("out.tif", _surface(9, 1, 2)))
+    assert check_scale_applied_once(out, source, unit_conversion="celsius-to-mars")[0].status == "not-run"
+
+
+def test_geographic_dem_without_a_vertical_unit_is_not_run(make_raster):
+    from terraproof.checks.terrain import check_slope_consistent
+    dem = make_raster("dem.tif", _surface(10, 100, 200), crs="EPSG:4326", origin=(33.0, 45.0), resolution=0.0005)
+    slope = make_raster("slope.tif", _surface(11, 0, 5), crs="EPSG:4326", origin=(33.0, 45.0), resolution=0.0005)
+    check = check_slope_consistent(inspect_dataset(slope), inspect_dataset(dem))[0]
+    assert check.status == "not-run" and "vertical unit" in check.message

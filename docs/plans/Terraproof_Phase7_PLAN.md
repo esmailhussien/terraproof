@@ -119,14 +119,23 @@ The aim of this phase is narrow: a Terraproof report should never imply more ver
   - the wrong E4 `hr-landcover-change-fill` artifact.
 
   The accepted E4 run of that task stays clean.
-- **Gaps found, not fixed in this step.**
-  - **Depth below a constant level.** `hr-flood-depth-feet`, 2 E4 artifacts. `raster.vertical_units` has no operation for a depth below a constant water level.
-  - **QA layers with few flagged pixels.** `rs.cloud_mask_applied` is `not-run` when the sampled stride finds no flagged pixel: Sentinel-2 SCL in `hr-s2-scl-red`, Landsat QA_PIXEL in `hr-landsat-clear-red`. `hr-modis-lst-quality`'s MODIS QC layer has no supported kind.
-  - **Scale with a declared unit change, or STAC-only scale.** `rs.scale_applied_once` fails *correct* outputs when the output also changes unit, as in reanalysis kelvin to °C. It also fails them when the scale is declared only in STAC, as in HLS, because there is no encoding preset. Without a way to declare that, the `scaled-reflectance` profile would raise false alarms on such products.
-  - **Slope on a geographic DEM.** `terrain.slope_consistent` is `not-run` for a geographic DEM (`hr-slope-geographic`). The task's trap is exactly that the DEM is geographic.
-  - **Not attempted here.** Categorical resampling, dB against linear, dtype overflow, distance in a geographic CRS and temporal labels: 10 of the 21 development seeds.
-
-  Each gap is either a new check, or an existing check extended to accept a declaration. The V4 measurement reports detection over all five families, so these gaps count against it.
+- **Gaps closed (2026-10-28).** Each fix uses only what the user declares. Each one became a regression case: `tests/python/test_phase7_regression.py` now has 23 cases, and each reference keeps its grade.
+  - **Depth below a constant level.** `raster.vertical_units` gained `depth-below-level` with a declared `vertical_level`. Both flood seeds and both wrong E4 flood artifacts fail; the reference passes.
+  - **QA layers.** The full-scan cloud-mask check counted QA nodata as unverifiable even where the output was already nodata. It now counts it only where the output still holds a value. With `processing_full_scan`, the SCL and QA_PIXEL references pass, and `clouds-only`, `clear-bit-only` and the wrong E4 SCL artifact fail.
+  - **The user's own quality rule.** A new QA kind, `keep-codes`, takes declared `qa_keep_codes`: every other code must be nodata. It catches both MODIS LST quality seeds and both wrong E4 LST artifacts, and the Landsat RADSAT `off-by-one-bit` seed.
+  - **Declared calibration.** `rs.scale_applied_once` takes `decode_scale` and `decode_offset` (for example from a STAC item) and `unit_conversion: kelvin-to-celsius`.
+    - The HLS and reanalysis references now pass where they previously failed: those were false alarms.
+    - The HLS, reanalysis and LST kelvin seeds fail, as does the wrong E4 reanalysis artifact.
+  - **Geographic DEMs.** `terrain.slope_consistent` converts each row's spacing to metres on the CRS ellipsoid when the DEM's vertical unit is declared. It names two mistakes: degrees used as lengths, and longitude spacing not scaled by latitude. Both seeds and the wrong E4 slope artifact fail, and the accepted E4 artifact passes. The oracle's reference uses another stencil and gets a warning (review burden, not false assurance).
+- **Also caught with existing checks once declared.**
+  - `uint8-sum`, by `rs.stack_reduction` `weighted-sum`.
+  - `linear-power-delivered`, by `sar.value_domain`.
+- **Remaining gaps.**
+  - **Values a categorical resampling invents.** `raster.resampling` checks the declared method, not the delivered values, so `bilinear` and `cubic` pass.
+  - **dB averaging.** `averaged-in-db` passes, because nothing checks a filter's domain.
+  - **Extra QA masking.** `any-band-saturation` and `water-masked` mask more than the rule requires, and the cloud-mask check does not test over-masking.
+  - **Temporal labels.** `labels-as-days` was not attempted.
+  - **Distance on a geographic grid.** `crs.metric_operation` fails the *correct* geodesic distance raster on a geographic grid (`hr-station-distance`). The `metric-operation` profile therefore raises false alarms on geographic outputs, and `degrees` and `degree-euclidean` are not separated from correct work.
 
 ### V4. Measure the configuration (offline, no model calls)
 

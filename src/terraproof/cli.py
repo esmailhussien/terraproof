@@ -13,6 +13,7 @@ from terraproof.checks import run_checks
 from terraproof.checks.index_formula import FORMULAS
 from terraproof.checks.stack_reduction import REDUCTIONS as STACK_REDUCTIONS
 from terraproof.checks.vertical_units import OPERATIONS as VERTICAL_OPERATIONS
+from terraproof.checks.rs_processing import UNIT_CONVERSIONS
 from terraproof.checks.base import FAIL, result
 from terraproof.evidence import EXIT_CODES, build_report, input_record, render_markdown, to_json
 from terraproof.evidence.contract import profile_contract
@@ -59,6 +60,12 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument(
         "--encoding", choices=["s2-l2a", "landsat-c2-l2"], help="known product encoding for scale/offset checks"
     )
+    check_parser.add_argument("--decode-scale", type=float, metavar="S",
+                              help="declared scale of --reference-input DN (for example from a STAC item)")
+    check_parser.add_argument("--decode-offset", type=float, metavar="O",
+                              help="declared offset of --reference-input DN")
+    check_parser.add_argument("--unit-conversion", choices=sorted(UNIT_CONVERSIONS),
+                              help="declared unit change after decoding, for the scale check")
     check_parser.add_argument("--index-formula", choices=sorted(FORMULAS),
                               help="verify a spectral index from explicitly supplied calibrated source bands")
     check_parser.add_argument("--band", action="append", default=[], metavar="ROLE=PATH",
@@ -83,12 +90,15 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument("--raster-identity", action="store_true",
                               help="compare all valid raster samples, masks and grid metadata with --compare-to")
     check_parser.add_argument("--vertical-operation", choices=sorted(VERTICAL_OPERATIONS),
-                              help="how the height output was made from --vertical-source: convert (one) or difference (first minus second)")
+                              help="how the height output was made from --vertical-source: convert (one), difference (first minus second) "
+                                   "or depth-below-level (one, with --vertical-level)")
     check_parser.add_argument("--vertical-source", action="append", default=[], metavar="PATH",
                               help="ordered source surface for --vertical-operation; repeatable")
     check_parser.add_argument("--vertical-source-unit", action="append", default=[], metavar="UNIT",
                               help="declared vertical unit of each --vertical-source (metre, foot, us-survey-foot); repeatable")
     check_parser.add_argument("--vertical-unit", metavar="UNIT", help="declared vertical unit of the output")
+    check_parser.add_argument("--vertical-level", type=float, metavar="LEVEL",
+                              help="level in the output unit for --vertical-operation depth-below-level")
     check_parser.add_argument("--support-source", action="append", default=[], metavar="PATH",
                               help="source raster whose valid cells define the output's support; repeatable")
     check_parser.add_argument("--support-source-nodata", action="append", default=[], metavar="VALUE",
@@ -97,8 +107,11 @@ def build_parser() -> argparse.ArgumentParser:
                               help="output valid where all (or any) --support-source cells are valid")
     check_parser.add_argument("--qa", metavar="PATH", dest="qa_path", help="QA raster (SCL or Landsat QA_PIXEL)")
     check_parser.add_argument(
-        "--qa-kind", choices=["s2-scl", "landsat-qa-pixel"], help="kind of QA raster supplied with --qa"
+        "--qa-kind", choices=["s2-scl", "landsat-qa-pixel", "keep-codes"], help="kind of QA raster supplied with --qa"
     )
+    check_parser.add_argument("--qa-keep-code", action="append", type=int, default=[], metavar="CODE",
+                              help="QA code your quality rule accepts, for --qa-kind keep-codes (every other code "
+                                   "must be nodata); repeatable; needs --processing-full-scan")
     check_parser.add_argument("--time-range", nargs=2, metavar=("START", "END"), help="ISO 8601 bounds for STAC items")
     check_parser.add_argument(
         "--sar-expect", choices=["sigma0-db", "sigma0-linear"], help="declared SAR backscatter scale"
@@ -245,8 +258,12 @@ def _cmd_check(args: argparse.Namespace) -> int:
         expect=args.expect,
         reference_input=reference_input,
         encoding=args.encoding,
+        decode_scale=args.decode_scale,
+        decode_offset=args.decode_offset,
+        unit_conversion=args.unit_conversion,
         qa_path=args.qa_path,
         qa_kind=args.qa_kind,
+        qa_keep_codes=args.qa_keep_code or None,
         time_range=time_range,
         sar_expect=args.sar_expect,
         accuracy_samples=accuracy_samples,
@@ -269,6 +286,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         vertical_sources=vertical_sources or None,
         vertical_source_units=args.vertical_source_unit or None,
         vertical_unit=args.vertical_unit,
+        vertical_level=args.vertical_level,
         support_sources=support_sources or None,
         support_source_nodata=support_nodata,
         support_rule=args.support_rule,
@@ -302,6 +320,9 @@ def _cmd_check(args: argparse.Namespace) -> int:
         "expect": args.expect,
         "reference_input": args.reference_input,
         "encoding": args.encoding,
+        "decode_scale": args.decode_scale,
+        "decode_offset": args.decode_offset,
+        "unit_conversion": args.unit_conversion,
         "dem": args.dem,
         "slope_method": args.slope_method,
         "raster_identity": args.raster_identity,
@@ -316,6 +337,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         "processing_full_scan": args.processing_full_scan,
         "qa_path": args.qa_path,
         "qa_kind": args.qa_kind,
+        "qa_keep_codes": args.qa_keep_code or None,
         "time_range": time_range,
         "sar_expect": args.sar_expect,
         "accuracy_samples": args.accuracy_samples,
@@ -328,6 +350,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         "vertical_sources": args.vertical_source or None,
         "vertical_source_units": args.vertical_source_unit or None,
         "vertical_unit": args.vertical_unit,
+        "vertical_level": args.vertical_level,
         "support_sources": args.support_source or None,
         "support_source_nodata": support_nodata,
         "support_rule": args.support_rule,
