@@ -206,6 +206,12 @@ def host_env(condition: str = WITH, agent_python: str | None = None, agent_pytho
     elif agent_python_with:
         env.pop("PYTHONPATH", None)
         interpreter = agent_python_with
+    if interpreter != sys.executable:
+        # An activated driver venv would leave the harness interpreter reachable by name.
+        driver_dir = os.path.normcase(str(Path(sys.executable).parent))
+        env.pop("VIRTUAL_ENV", None)
+        env["PATH"] = os.pathsep.join(entry for entry in env.get("PATH", "").split(os.pathsep)
+                                      if os.path.normcase(entry.rstrip("\\/")) != driver_dir)
     env["PATH"] = str(Path(interpreter).parent) + os.pathsep + env.get("PATH", "")
     return env
 

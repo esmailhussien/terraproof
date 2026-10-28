@@ -923,6 +923,19 @@ def test_host_env_puts_the_with_interpreter_first_and_drops_pythonpath(tmp_path,
     assert "PYTHONPATH" not in default
 
 
+def test_host_env_drops_an_activated_driver_venv_for_agent_interpreters(tmp_path, monkeypatch):
+    driver_dir = str(Path(sys.executable).parent)
+    monkeypatch.setenv("PATH", os.pathsep.join([driver_dir + os.sep, "other-bin"]))
+    monkeypatch.setenv("VIRTUAL_ENV", str(Path(sys.executable).parent.parent))
+    with_python = tmp_path / "with-venv" / "Scripts" / "python.exe"
+    for env in (driver.host_env(WITH, None, str(with_python)), driver.host_env(WITHOUT, str(with_python))):
+        entries = [os.path.normcase(entry.rstrip("\\/")) for entry in env["PATH"].split(os.pathsep)]
+        assert os.path.normcase(driver_dir) not in entries and "other-bin" in env["PATH"]
+        assert "VIRTUAL_ENV" not in env
+    default = driver.host_env(WITH)
+    assert default["PATH"].split(os.pathsep)[0] == driver_dir and "VIRTUAL_ENV" in default
+
+
 def test_driver_carries_the_with_python_into_the_approved_command(capsys, tmp_path):
     with_python = tmp_path / "with-venv" / "python.exe"
     assert driver.main(["--agent-host", "codex", "--runs", "1", "--task", FAST[0],

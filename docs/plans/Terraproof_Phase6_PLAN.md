@@ -1,6 +1,6 @@
 # Terraproof — Phase 6 Plan: Ship the checks, find headroom
 
-> Status: **in progress (2026-10-27)**. Implemented: A (Phase 5 closed), B1 (product-only wheel and sdist), B4 (clean-install CI from the built wheel), B5 (README install text), B6 (`--agent-python-with`) and D's "now" step (skills frozen and labelled unmeasured). B2 is done: `terraproof` is registered on PyPI and TestPyPI as pending trusted publishers for `publish-python.yml`, and the `pypi` environment needs the maintainer's review. B3's workflow first ran on the `v0.8.0` tag, and v0.8.0 shipped to PyPI and npm on 2026-10-27. C is in progress: the source-aware scorecard rejects 14 of the 25 frozen blind spots (groups 1 and 2) with 0 false passes, past the target of 12; group 3 is not started. E1 is done (headroom cohort calibrated and split; see the E1 record in §3.E). E2 is complete as a 96-run exploratory development shakedown; evaluator exposure and completion/coverage findings are recorded in the [E2 review](../E2_REVIEW.md). An offline corrective batch adds explicit MCP runtime admission and optional verification contracts before the E3 freeze. E3–E6 have not started; no primary host/model is frozen. It follows the [Phase 5 measurement](Terraproof_Phase5_PLAN.md) and replaces open-ended host and harness work with five bounded workstreams. Every real model call still needs the user's explicit approval with an exact invocation count.
+> Status: **in progress (2026-10-27)**. Implemented: A (Phase 5 closed), B1 (product-only wheel and sdist), B4 (clean-install CI from the built wheel), B5 (README install text), B6 (`--agent-python-with`) and D's "now" step (skills frozen and labelled unmeasured). B2 is done: `terraproof` is registered on PyPI and TestPyPI as pending trusted publishers for `publish-python.yml`, and the `pypi` environment needs the maintainer's review. B3's workflow first ran on the `v0.8.0` tag, and v0.8.0 shipped to PyPI and npm on 2026-10-27. C is in progress: the source-aware scorecard rejects 14 of the 25 frozen blind spots (groups 1 and 2) with 0 false passes, past the target of 12; group 3 is not started. E1 is done (headroom cohort calibrated and split; see the E1 record in §3.E). E2 is complete as a 96-run exploratory development shakedown; evaluator exposure and completion/coverage findings are recorded in the [E2 review](../E2_REVIEW.md). An offline corrective batch adds explicit MCP runtime admission and optional verification contracts before the E3 freeze. Amendment 2 fixes the primary model class and its selection rule; Amendment 3 adds the readiness workstream R before E3. E3–E6 have not started; no primary host/model is frozen. It follows the [Phase 5 measurement](Terraproof_Phase5_PLAN.md) and replaces open-ended host and harness work with five bounded workstreams. Every real model call still needs the user's explicit approval with an exact invocation count.
 >
 > Numbering follows the phase documents. The [v1 roadmap](Terraproof_v1_PLAN.md)'s "Phase 6 — Ecosystem" moves later.
 
@@ -30,19 +30,40 @@ Decided by the maintainer before any E inference. It replaces decision 2 (§7) a
 
 ### Amendment 2 (2026-10-28): the primary is a mid-sized flash model
 
-Decided by the maintainer before E3, with no confirmation-set inference. It narrows Amendment 1's primary choice; Amendment 1's host rules and harness freeze are unchanged.
+Decided by the maintainer before E3, with no confirmation-set inference. It narrows Amendment 1's primary choice and, for one input, replaces its "not outcomes" wording (rule 3 below). Amendment 1's host rules and harness freeze are unchanged.
 
 - **Primary model class.** The E primary is a mid-sized, competitively priced flash model on OpenCode Go. The candidates are `opencode-go/glm-5.3-flash`, `opencode-go/deepseek-v4.1-flash` and `opencode-go/mimo-v2.6-flash`. This is the class of model most GIS users of a tool like Terraproof will run. GPT-4o (API host) and Gemini (Antigravity) are no longer primary candidates. If they are run at all, they are separately reported secondaries and never pooled.
+- **The trade-off, stated now.** The class is chosen for the intended users, not for headroom. On the E2 development tasks the flash models were accepted 11/12 and 12/12 without Terraproof, and GPT-4o 5/12. Choosing the flash class makes a stop at E5 the likely outcome (see the headroom risk below). The maintainer accepts that, and GPT-4o is not reinstated after E4 is seen.
 - **Selection rule, fixed now and applied at E3:**
-  1. **Delivery.** Terraproof MCP calls in at least 11 of 12 development "with" runs, with no evaluator-exposure finding left open.
-  2. **Baseline headroom.** Among the candidates that pass (1), choose the lowest development acceptance rate in the "without" condition.
-  3. **Tie-break.** More development "with" runs with Terraproof calls, then the lexically first model id.
-
-  Rule 2 uses only the "without" condition. "With" acceptance and with-minus-without differences are not selection inputs, so this is not choosing a host by its observed effect.
-- **Development evidence so far (E2, before the corrective batch).** GLM 5.3 Flash: 11/12 accepted without Terraproof, with Terraproof calls in all 12 "with" runs. DeepSeek 4.1 Flash: 12/12 without, Terraproof calls in all 12 "with" runs, and one "with" run that read evaluator sources. MiMo-V2.6-Flash was not in E2.
-- **Proposed MiMo shakedown (not approved).** Run 12 development tasks × 1 pair = 24 invocations of `opencode-go/mimo-v2.6-flash` on OpenCode Go quota, with a 900 s timeout and the setup from the E2 corrective batch. It gives MiMo the delivery and baseline evidence that rules 1–2 need. GLM and DeepSeek delivery was measured before that correction, so their "with" delivery is rechecked on the corrected setup only if a separate readiness check is approved. Their "without" baselines stand, because the "without" condition has no MCP and was not affected by the correction. The shakedown needs the user's separate approval with that exact count.
-- **Headroom risk, stated before E4.** On this development sample, the flash models pass almost every task without Terraproof. At an 11/12 baseline, the 2-run screen (E4) is expected to keep only about 3–6 of the 24 confirmation tasks, and fewer at 12/12. The go/no-go needs at least 8. These are rough estimates from 12 tasks with one run each. **A stop at E5 is a valid result:** it would mean these flash models avoid the cohort's traps unaided. It is not rescued by switching models on the same screened set.
+  1. **Delivery on the corrected setup.** Terraproof MCP calls in every "with" run of the Amendment 3 readiness batch, with MCP admission passing and no contamination finding. E2's delivery counts for no candidate: every E2 "with" run registered MCP with the driver interpreter, so the exposure finding applies to all of them, not only to DeepSeek.
+  2. **Availability.** OpenCode Go lists the model id at E3 and served it in the readiness batch.
+  3. **Baseline headroom.** Among the candidates that pass (1) and (2), choose the fewest accepted "without" runs, pooling E2 development and the readiness batch. This is the one outcome input, and it is "without" only, as in E4's screen. "With" acceptance and with-minus-without differences are never selection inputs.
+  4. **Tie-break.** The lexically first model id. On 12 single runs a one-task gap is noise and a tie is likely, so the tie-break is the expected deciding rule, not an edge case.
+- **Development evidence so far (E2, before the corrective batch).** GLM 5.3 Flash: 11/12 accepted without Terraproof, with Terraproof calls in all 12 "with" runs. DeepSeek 4.1 Flash: 12/12 without, Terraproof calls in all 12 "with" runs, and one "with" run that read evaluator sources. MiMo-V2.6-Flash was not in E2. The "without" baselines stand for rule 3, because the "without" condition has no MCP and was not affected by the correction.
+- **Headroom risk, stated before E4.** E5 keeps a task if at least one of its 2 screening runs is rejected. At an 11/12 per-run baseline that is 1 − (11/12)² ≈ 16% of tasks, about 4 of the 24 (roughly 3–6), and fewer at 12/12. The go/no-go needs at least 8. These are rough estimates from 12 tasks with one run each. **A stop at E5 is a valid result:** it would mean these flash models avoid the cohort's traps unaided. It is not rescued by switching models on the same screened set.
 - **Open option, decided at E3 or not at all:** pre-register screening two candidate models (96 "without" invocations) and confirm on the one that keeps more tasks. Confirmation uses fresh runs, so this selection does not bias the paired comparison. It is allowed only if it is written into the E3 freeze before E4 starts.
+
+### Amendment 3 (2026-10-28): verified treatment delivery before E3
+
+Decided by the maintainer before E3. It adds one bounded readiness workstream, **R**, between the E2 corrective batch ([#37](https://github.com/esmailhussien/terraproof/pull/37), merged) and the E3 freeze. A–C are not restarted and E2 is not rerun. The primary metric, sign-flip analysis, fresh paired confirmation, baseline-only screening and minimum-eight stop rule are unchanged.
+
+- **R1. Lock the runtime.** Build a product-only candidate wheel from a known commit, from both a clean and a reused build directory. Record the wheel SHA-256, the production fingerprint that MCP admission reports (`mcp_production_sha256`), the Python, geospatial and MCP versions, and the registered MCP argv. A version label alone is not enough. The "without" interpreter stays dependency-only; any unavoidable tool-side difference is recorded, not called identical.
+- **R2. The evaluator-access boundary.** MCP admission closes the registered-server route. The "with" and "without" environments also drop an activated driver venv from `PATH` and `VIRTUAL_ENV`, so the harness interpreter is not reachable by name. Neither makes other host files unreadable: the checkout and the driver interpreter remain readable by path. Before E3, a no-model check puts a benign canary file outside the task and records whether the agent's own Python and the host's built-in readers can open it. No ACL, ownership or integrity-label change is made. Unless a whole-process boundary is shown, confirmation results are reported as "contamination screened", never "evaluator-blind". The contamination labels keep rejecting runs either way.
+- **R3. One live readiness batch (proposed, not approved).** It replaces the separate MiMo shakedown and delivery recheck:
+  - MiMo-V2.6-Flash: 12 development tasks × 1 pair = 24 invocations.
+  - GLM 5.3 Flash and DeepSeek 4.1 Flash: 4 development tasks × 1 pair each = 16 invocations. The 4 tasks are one per trap family, listed in the approval request before any of their new outcomes are read.
+  - Total 40 invocations on OpenCode Go quota, 900 s timeout, on the R1 candidate wheel. Retries count against the 40.
+  - Failed and successful outputs are kept, with host completion, artifact acceptance and verification status reported apart. The batch is a readiness check, not an effect estimate. It needs the user's separate approval of the exact command.
+- **Contract usability (F), bounded.** Before E3, only docs and examples that the agent does not see may land: workflow templates for the four existing check families, and one ordinary-CI example that fails a job on a missing or failed required check and uploads the evidence. Templates are matched to declared goals and data, never to benchmark task ids or oracle methods. A compact MCP response changes the treatment, so it waits until after E6.
+- **Secondary reporting, registered at E3.** Reported beside the unchanged primary, never in its place:
+  - artifact acceptance against verification completion, as a cross-table;
+  - wrong outputs flagged by production checks against oracle-only rejections;
+  - correct outputs left unverified, with the reason, kept apart from false alarms;
+  - "with"/"without" cost, tokens, latency, contamination, infrastructure failures and timeouts.
+
+  Any effect or cost threshold that will drive a product decision is fixed at E3, not after E6.
+- **Deferred.** C group 3, large-data performance, spatial previews, automatic patches, signing and a public leaderboard wait until after E6 or a recorded user need. New hosts and skills stay out of this phase.
+- **Order.** R1, R2 and the bounded F land offline in one PR. R3 runs only if approved. Then E3 freezes once, and E4 → E5 → E6 follow under the existing protocol.
 
 ## 2. Goals
 
@@ -143,7 +164,7 @@ Costs scale from Phase 5 on Claude Code: about $0.12 per "without" run and $0.20
 
 - **Screen "without" only.** Screening "with" would select tasks where Terraproof happens to look good.
 - **Use fresh runs.** Screening runs never enter the analysis, and confirmation uses fresh runs in both conditions. Selection therefore changes which tasks are included (tasks where the baseline sometimes fails), not how they are scored. The fresh baseline will probably pass more often than it did in screening (regression to the mean); that is expected.
-- **Fix the host and model at E3.** Choose them for availability, not outcomes, and do not change them after screening.
+- **Fix the host and model at E3.** Choose them for delivery and availability, plus Amendment 2's "without"-only baseline rule, never by observed effect, and do not change them after screening.
 - **Freeze the product after E3.** No product change between E3 and the end of E6. A change invalidates the confirmation set, and a new one must be authored.
 - **Go/no-go.** With fewer than 8 kept tasks, stop and report "insufficient headroom on this host" as the result. That is a finding, not a failure.
 
@@ -220,7 +241,7 @@ B, C and E1 touch disjoint files and can run in parallel.
 ## 7. Decisions needed
 
 1. **Evals in the wheel:** leave them out (proposed), or publish a separate `terraproof-evals` distribution?
-2. **Host for E:** decided in Amendments 1 and 2. The primary is a mid-sized flash model on OpenCode Go (GLM 5.3 Flash, DeepSeek 4.1 Flash or MiMo-V2.6-Flash), chosen at E3 by Amendment 2's selection rule. Claude Code is not used for E. Still open: whether to approve the MiMo shakedown, and whether to pre-register a two-model screen.
+2. **Host for E:** decided in Amendments 1 and 2. The primary is a mid-sized flash model on OpenCode Go (GLM 5.3 Flash, DeepSeek 4.1 Flash or MiMo-V2.6-Flash), chosen at E3 by Amendment 2's selection rule. Claude Code is not used for E. Still open: whether to approve Amendment 3's 40-invocation readiness batch, and whether to pre-register a two-model screen.
 3. **Pool size:** 36 candidates (proposed), or 24 (cheaper to author, but probably fewer than 12 kept tasks and less power).
 4. **Skills default** if there is no evidence by phase end: an opt-in pack (proposed), or keep them in the default install labelled unmeasured.
 5. **PyPI publisher:** the maintainer creates the project and the Trusted Publisher; confirm which GitHub repository it trusts.
