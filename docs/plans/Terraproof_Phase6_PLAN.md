@@ -1,6 +1,6 @@
 # Terraproof — Phase 6 Plan: Ship the checks, find headroom
 
-> Status: **in progress (2026-10-27)**. Implemented: A (Phase 5 closed), B1 (product-only wheel and sdist), B4 (clean-install CI from the built wheel), B5 (README install text), B6 (`--agent-python-with`) and D's "now" step (skills frozen and labelled unmeasured). B2 is done: `terraproof` is registered on PyPI and TestPyPI as pending trusted publishers for `publish-python.yml`, and the `pypi` environment needs the maintainer's review. B3's workflow first ran on the `v0.8.0` tag, and v0.8.0 shipped to PyPI and npm on 2026-10-27. C is in progress: the source-aware scorecard rejects 14 of the 25 frozen blind spots (groups 1 and 2) with 0 false passes, past the target of 12; group 3 is not started. E1 is done (headroom cohort calibrated and split; see the E1 record in §3.E). E2 is complete as a 96-run exploratory development shakedown; evaluator exposure and completion/coverage findings are recorded in the [E2 review](../E2_REVIEW.md). An offline corrective batch adds explicit MCP runtime admission and optional verification contracts before the E3 freeze. Amendment 2 fixes the primary model class and its selection rule; Amendment 3 adds the readiness workstream R before E3. E3–E6 have not started; no primary host/model is frozen. It follows the [Phase 5 measurement](Terraproof_Phase5_PLAN.md) and replaces open-ended host and harness work with five bounded workstreams. Every real model call still needs the user's explicit approval with an exact invocation count.
+> Status: **in progress (2026-10-27)**. Implemented: A (Phase 5 closed), B1 (product-only wheel and sdist), B4 (clean-install CI from the built wheel), B5 (README install text), B6 (`--agent-python-with`) and D's "now" step (skills frozen and labelled unmeasured). B2 is done: `terraproof` is registered on PyPI and TestPyPI as pending trusted publishers for `publish-python.yml`, and the `pypi` environment needs the maintainer's review. B3's workflow first ran on the `v0.8.0` tag, and v0.8.0 shipped to PyPI and npm on 2026-10-27. C is in progress: the source-aware scorecard rejects 14 of the 25 frozen blind spots (groups 1 and 2) with 0 false passes, past the target of 12; group 3 is not started. E1 is done (headroom cohort calibrated and split; see the E1 record in §3.E). E2 is complete as a 96-run exploratory development shakedown; evaluator exposure and completion/coverage findings are recorded in the [E2 review](../E2_REVIEW.md). An offline corrective batch adds explicit MCP runtime admission and optional verification contracts before the E3 freeze. Amendment 2 fixes the primary model class and its selection rule; Amendment 3 adds the readiness workstream R before E3; R1, R2, F and the 40-invocation R3 batch are done, and on R3's evidence the selection rule picks MiMo-V2.6-Flash. E3–E6 have not started; no primary host/model is frozen. It follows the [Phase 5 measurement](Terraproof_Phase5_PLAN.md) and replaces open-ended host and harness work with five bounded workstreams. Every real model call still needs the user's explicit approval with an exact invocation count.
 >
 > Numbering follows the phase documents. The [v1 roadmap](Terraproof_v1_PLAN.md)'s "Phase 6 — Ecosystem" moves later.
 
@@ -49,7 +49,7 @@ Decided by the maintainer before E3. It adds one bounded readiness workstream, *
 
 - **R1. Lock the runtime.** Build a product-only candidate wheel from a known commit, from both a clean and a reused build directory. Record the wheel SHA-256, the production fingerprint that MCP admission reports (`mcp_production_sha256`), the Python, geospatial and MCP versions, and the registered MCP argv. A version label alone is not enough. The "without" interpreter stays dependency-only; any unavoidable tool-side difference is recorded, not called identical.
 - **R2. The evaluator-access boundary.** MCP admission closes the registered-server route. The "with" and "without" environments also drop an activated driver venv from `PATH` and `VIRTUAL_ENV`, so the harness interpreter is not reachable by name. Neither makes other host files unreadable: the checkout and the driver interpreter remain readable by path. Before E3, a no-model check puts a benign canary file outside the task and records whether the agent's own Python and the host's built-in readers can open it. No ACL, ownership or integrity-label change is made. Unless a whole-process boundary is shown, confirmation results are reported as "contamination screened", never "evaluator-blind". The contamination labels keep rejecting runs either way.
-- **R3. One live readiness batch (proposed, not approved).** It replaces the separate MiMo shakedown and delivery recheck:
+- **R3. One live readiness batch (approved and run 2026-10-28; see the R3 record below).** It replaces the separate MiMo shakedown and delivery recheck:
   - MiMo-V2.6-Flash: 12 development tasks × 1 pair = 24 invocations.
   - GLM 5.3 Flash and DeepSeek 4.1 Flash: 4 development tasks × 1 pair each = 16 invocations. The 4 tasks are fixed by a rule that uses no outcome: the alphabetically first development task in each of the first four trap families alphabetically. They are `hr-landcover-shifted-grid`, `hr-sar-boxcar-db`, `hr-three-date-mean-8bit` and `hr-station-distance`.
   - Total 40 invocations on OpenCode Go quota, 900 s timeout, on the R1 candidate wheel. Retries count against the 40.
@@ -86,6 +86,26 @@ Decided by the maintainer before E3. It adds one bounded readiness workstream, *
 
   Results are therefore labelled **contamination screened**, not evaluator-blind. The trace contamination labels remain the guard.
 - **F.** The four [contract templates](../CONTRACT_TEMPLATES.md) and the CI example are tested on generated data. A valid output verifies, an intentional defect fails (a dropped vector record needs review) and missing evidence is incomplete. They are docs only; nothing the agent sees changed.
+
+#### R3 record (2026-10-28, 40 invocations)
+
+The approved batch ran on OpenCode 1.19.4 after #38's CI passed, with `--runs 1 --timeout 900`, the "without" venv `geo-agent-py312` and the R1 venv `agent-with-r1c`. It started 40 agent runs of the 40 approved, with no retries, and reported $0 spent. Reports and recordings are kept locally in `.terracache/r3-{mimo,glm,deepseek}.json` and `-rec/`.
+
+| Model | Pairs | Host completed | "With" runs with Terraproof MCP calls | Admission (every run) | Contamination | Accepted without | Accepted with |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `opencode-go/mimo-v2.6-flash` | 12 | 24/24 | 12/12 (3–8 calls each) | pass, fingerprint `4bd44f33…` | none | 11/12 | 11/12 |
+| `opencode-go/glm-5.3-flash` | 4 | 8/8 | 4/4 (4–6 calls) | pass | none | 4/4 | 4/4 |
+| `opencode-go/deepseek-v4.1-flash` | 4 | 8/8 | 4/4 (3–7 calls) | pass | none | 4/4 | 4/4 |
+
+- **Not an effect estimate.** The only rejected task, `hr-elevation-change-mixed-units` on MiMo, was rejected in both conditions on its independent pixel values.
+- **Verification status, kept apart from acceptance.** Every accepted output was also graded by the production checks. Four accepted runs were graded review-required rather than decision-grade: MiMo "without" twice, MiMo "with" once and GLM "without" once. None was graded failed.
+- **Cost.** Median tokens per run, "without" against "with": MiMo 7.9k against 34.4k, GLM 12.2k against 43.3k, DeepSeek 12.7k against 40.2k. Batch wall time was 65 min for MiMo's 24 runs, 13 min for GLM's 8 and 7 min for DeepSeek's 8. The harness does not record per-run latency.
+- **Amendment 2's rule on this evidence (applied formally at E3).**
+  1. Delivery: all three pass.
+  2. Availability: all three were served. The model list is rechecked at E3.
+  3. Pooled "without" acceptance: MiMo 11/12 (R3 only; it was not in E2), GLM 15/16 (E2 11/12 + R3 4/4), DeepSeek 16/16 (E2 12/12 + R3 4/4). MiMo has the fewest, both as a count and as a rate, so the tie-break is not needed.
+
+  The rule therefore selects **MiMo-V2.6-Flash**, unless the E3 availability check fails. Its 11/12 baseline gives the same headroom estimate as above, about 4 kept tasks of 24 against the 8 needed.
 
 ## 2. Goals
 
@@ -263,7 +283,7 @@ B, C and E1 touch disjoint files and can run in parallel.
 ## 7. Decisions needed
 
 1. **Evals in the wheel:** leave them out (proposed), or publish a separate `terraproof-evals` distribution?
-2. **Host for E:** decided in Amendments 1 and 2. The primary is a mid-sized flash model on OpenCode Go (GLM 5.3 Flash, DeepSeek 4.1 Flash or MiMo-V2.6-Flash), chosen at E3 by Amendment 2's selection rule. Claude Code is not used for E. Still open: whether to approve Amendment 3's 40-invocation readiness batch, and whether to pre-register a two-model screen.
+2. **Host for E:** decided in Amendments 1 and 2. The primary is a mid-sized flash model on OpenCode Go (GLM 5.3 Flash, DeepSeek 4.1 Flash or MiMo-V2.6-Flash), chosen at E3 by Amendment 2's selection rule. Claude Code is not used for E. The 40-invocation readiness batch ran on 2026-10-28, and on its evidence the rule selects MiMo-V2.6-Flash (R3 record). Still open: whether to pre-register a two-model screen.
 3. **Pool size:** 36 candidates (proposed), or 24 (cheaper to author, but probably fewer than 12 kept tasks and less power).
 4. **Skills default** if there is no evidence by phase end: an opt-in pack (proposed), or keep them in the default install labelled unmeasured.
 5. **PyPI publisher:** the maintainer creates the project and the Trusted Publisher; confirm which GitHub repository it trusts.
