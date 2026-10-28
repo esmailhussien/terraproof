@@ -1,6 +1,6 @@
 # Terraproof — Phase 7 Plan: Say what was verified
 
-> Status: **in progress (2026-10-28)**. V0 is sealed, and V1 (grade and coverage) and V2/V3 (goal profiles, `raster.vertical_units`, `raster.nodata_support`) are implemented; known gaps are listed in the V2/V3 record. V4 has not started. It follows the [Phase 6 stop](Terraproof_Phase6_PLAN.md#e4-and-e5-record-2026-10-28-stop) and its [verification audit](../PHASE6_VERIFICATION_AUDIT.md). No model calls are planned.
+> Status: **in progress (2026-10-28)**. V0 is sealed, and V1 (grade and coverage) and V2/V3 (goal profiles, `raster.vertical_units`, `raster.nodata_support`) are implemented; known gaps are listed in the V2/V3 record. V4 was measured once on the sealed cases (acceptance not met; see the V4 record). It follows the [Phase 6 stop](Terraproof_Phase6_PLAN.md#e4-and-e5-record-2026-10-28-stop) and its [verification audit](../PHASE6_VERIFICATION_AUDIT.md). No model calls are planned.
 
 ## 1. Why this phase
 
@@ -149,6 +149,63 @@ The aim of this phase is narrow: a Terraproof report should never imply more ver
   - zero confirmed false alarms on correct cases.
 
   Detection is reported, not thresholded. A wrong case outside declared coverage must not be `decision-grade` either.
+
+#### V4 record (2026-10-28): measured once; acceptance not met
+
+**Run.**
+
+- The 40 sealed cases were generated with their own generator, and their own oracle agreed with all 40.
+- [`tests/phase7_v4.py`](../../tests/phase7_v4.py) translated each case's declared facts into Terraproof arguments. It uses one rule per declared operation, and was committed (`dfe8904`) before any result existed.
+- It ran each case once declared and once undeclared, on the product at `ec78ce2`.
+- Result: `.terracache/phase7-v4.json`, SHA-256 `883a24e9ccc6b8b5afe6ee41f89d28b6405defe4d27ed3a0f88621878bcf9f84`.
+- The cases are now spent as held-out evidence. They become regression material, and a later configuration needs fresh sealed cases.
+
+**Declared configuration (primary).**
+
+| Measure | Result |
+| --- | --- |
+| Wrong cases with a failing check | **17/20** |
+| Wrong cases with a failing check that also separates them from the correct cases | **14/20**: all 4 nodata, all 4 scale, 3 of 4 QA and 3 of 4 vertical-unit cases. The 3 geographic vector detections come from `crs.metric_operation`, which also fails the 3 correct ones. |
+| Wrong cases graded `decision-grade` (false assurance) | **0/20** |
+| Correct cases graded `decision-grade` | **0/20** |
+| Correct cases graded `review-required` | 15/20, all from `raster.cog_layout` and `raster.nodata_declared` warnings on the generated GeoTIFFs |
+| Correct cases graded `advisory-only` | 5/20 |
+| Confirmed false alarms on correct cases | **3/20**: `crs.metric_operation` fails geom-05/06/07, whose metric values were computed correctly in a projected CRS or geodesically |
+| Requirements left `incomplete` | 3 |
+| Cases with no declarable requirement | 2 (vertical datum correction) |
+
+**Undeclared configuration.**
+
+- No case was graded `decision-grade`, which is the V1 change working.
+- Two wrong geographic vector outputs were graded `checks-passed`, and their reports list the applicable checks that did not run.
+- Detection was 1/20: a `geometry.winding` failure that also fires on a correct buffer.
+
+**Acceptance (fixed in §3 V4).**
+
+- **Zero false assurance within declared coverage: met, but only by accident.** No output of any kind reached `decision-grade`, because unrelated layout warnings capped every raster at `review-required`. Rewritten as a tiled GeoTIFF with overviews (same values), `heldout-qa-04-wrong` is graded `decision-grade`, with a verified contract on an output that over-masks valid water. This was checked after the run, without changing the product. The cloud-mask check verifies only that flagged pixels are masked. This is the over-masking gap recorded above, now shown on independent data.
+- **Zero confirmed false alarms: not met (3).** `crs.metric_operation` judges the output's CRS, not how the metric value was computed. The `metric-operation` profile is therefore unsafe for geodesic or reprojected work delivered in geographic coordinates.
+
+**Misses and incomplete cases, by cause.**
+
+| Cause | Cases | Effect |
+| --- | --- | --- |
+| No argument for vertical datum transformations | vert-03 (wrong), vert-07 (correct) | Nothing to require |
+| `fathom` is not a supported vertical unit | vert-08 (correct) | `incomplete` |
+| No argument declares a DEM's vertical unit when the file has no label | geom-04 (wrong), geom-08 (correct) | `incomplete`, so neither is falsely assured |
+| Over-masking is not checked | qa-04 (wrong) | Missed |
+
+**What this supports.** On independent data, declared checks now catch most silent mistakes in four of the five families. Nothing was falsely assured. It does not support the claim that a declared, passing contract certifies correctness:
+
+- one over-masking mistake would pass a contract;
+- one profile raises false alarms;
+- review burden on correct outputs is total in this configuration.
+
+**Next fixes, measured only on fresh sealed cases.**
+
+- A metric check that verifies the delivered value, not the CRS.
+- An over-masking side for the QA rule.
+- A declared DEM vertical unit.
+- Vertical datum and fathom support.
 
 ## 4. Order
 
