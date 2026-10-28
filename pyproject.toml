@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "terraproof"
-version = "0.8.0"
+version = "0.9.0"
 description = "Evidence-graded skills, tools, and checks for mapping and remote-sensing AI agents. By Geova."
 readme = "README.md"
 license = "MIT"
