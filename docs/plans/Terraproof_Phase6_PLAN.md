@@ -1,6 +1,6 @@
 # Terraproof — Phase 6 Plan: Ship the checks, find headroom
 
-> Status: **in progress (2026-10-27)**. Implemented: A (Phase 5 closed), B1 (product-only wheel and sdist), B4 (clean-install CI from the built wheel), B5 (README install text), B6 (`--agent-python-with`) and D's "now" step (skills frozen and labelled unmeasured). B2 is done: `terraproof` is registered on PyPI and TestPyPI as pending trusted publishers for `publish-python.yml`, and the `pypi` environment needs the maintainer's review. B3's workflow first ran on the `v0.8.0` tag, and v0.8.0 shipped to PyPI and npm on 2026-10-27. C is in progress: the source-aware scorecard rejects 14 of the 25 frozen blind spots (groups 1 and 2) with 0 false passes, past the target of 12; group 3 is not started. E1 is done (headroom cohort calibrated and split; see the E1 record in §3.E). E2 is complete as a 96-run exploratory development shakedown; evaluator exposure and completion/coverage findings are recorded in the [E2 review](../E2_REVIEW.md). An offline corrective batch adds explicit MCP runtime admission and optional verification contracts before the E3 freeze. Amendment 2 fixes the primary model class and its selection rule; Amendment 3 adds the readiness workstream R before E3; R1, R2, F and the 40-invocation R3 batch are done, and on R3's evidence the selection rule picks MiMo-V2.6-Flash. E3 now registers MiMo alone, the treatment identity and verification secondaries; E4–E6 have not started. The without-only E4 entry point (`tests/screen_without.py`) is validated offline; E4 awaits approval of its 48 invocations. It follows the [Phase 5 measurement](Terraproof_Phase5_PLAN.md) and replaces open-ended host and harness work with five bounded workstreams. Every real model call still needs the user's explicit approval with an exact invocation count.
+> Status: **in progress (2026-10-27)**. Implemented: A (Phase 5 closed), B1 (product-only wheel and sdist), B4 (clean-install CI from the built wheel), B5 (README install text), B6 (`--agent-python-with`) and D's "now" step (skills frozen and labelled unmeasured). B2 is done: `terraproof` is registered on PyPI and TestPyPI as pending trusted publishers for `publish-python.yml`, and the `pypi` environment needs the maintainer's review. B3's workflow first ran on the `v0.8.0` tag, and v0.8.0 shipped to PyPI and npm on 2026-10-27. C is in progress: the source-aware scorecard rejects 14 of the 25 frozen blind spots (groups 1 and 2) with 0 false passes, past the target of 12; group 3 is not started. E1 is done (headroom cohort calibrated and split; see the E1 record in §3.E). E2 is complete as a 96-run exploratory development shakedown; evaluator exposure and completion/coverage findings are recorded in the [E2 review](../E2_REVIEW.md). An offline corrective batch adds explicit MCP runtime admission and optional verification contracts before the E3 freeze. Amendment 2 fixes the primary model class and its selection rule; Amendment 3 adds the readiness workstream R before E3; R1, R2, F and the 40-invocation R3 batch are done, and on R3's evidence the selection rule picks MiMo-V2.6-Flash. E3 now registers MiMo alone, the treatment identity and verification secondaries; E4–E6 have not started. E4 ran (48 "without" invocations) and E5 stopped with 6 of the required 8 tasks retained; E6 does not run (see the E4 and E5 record). It follows the [Phase 5 measurement](Terraproof_Phase5_PLAN.md) and replaces open-ended host and harness work with five bounded workstreams. Every real model call still needs the user's explicit approval with an exact invocation count.
 >
 > Numbering follows the phase documents. The [v1 roadmap](Terraproof_v1_PLAN.md)'s "Phase 6 — Ecosystem" moves later.
 
@@ -166,6 +166,44 @@ If E5 proceeds, E6 uses all retained tasks, three fresh runs per condition (6n i
 - **Offline validation.**
   - 14 tests in `tests/python/test_screen_without.py` use scripted adapters on development tasks only. They cover the order and the "without"-only condition, the budget and opt-in refusals, preflight-only, the classification and go/no-go rules, the plan-only output and the host-version refusal.
   - A no-model preflight on the real host (`--preflight-only`, OpenCode 1.19.4) calibrated all 24 confirmation tasks as eligible. It prepared 48 "without" projects and passed every preflight check, with 0 agent runs started.
+
+#### E4 and E5 record (2026-10-28): stop
+
+**Run.** E4 ran as approved from commit `61223b7`, from 15:40 to 17:10 (+03:00). It used `tests/screen_without.py --approve-model-calls 48`, with `opencode 1.19.4 opencode-go/mimo-v2.6-flash` and the `geo-agent-py312` "without" interpreter. All 48 runs started and the host completed every one. There were no retries and no preflight failures, and calibration was eligible. Report SHA-256: `1188ef2dce93bacc38f08da57dec2c797e4a3ad03b40792c4046f691f62a3cac` (`.terracache/e4-screen.json`, kept locally).
+
+**Counts (accept/reject and validity only).** Of the 48 runs:
+
+- 39 were accepted.
+- 8 were merit rejections.
+- 1 was unresolved.
+
+| Task | Accepted | Merit rejections | Unresolved |
+| --- | ---: | ---: | --- |
+| `hr-flood-depth-feet` | 0 | 2 | |
+| `hr-modis-lst-quality` | 0 | 2 | |
+| `hr-landcover-change-fill` | 1 | 1 | |
+| `hr-reanalysis-air-temperature` | 1 | 1 | |
+| `hr-s2-scl-red` | 1 | 1 | |
+| `hr-slope-geographic` | 0 | 1 | 1 (contamination) |
+| the other 18 tasks | 2 each | 0 | |
+
+**E5: stop.** 6 tasks were retained against the minimum of 8, and no task is unresolved. Resolving the one contaminated run could not change this, because its task is already retained. As registered: **"On MiMo-V2.6-Flash, this cohort leaves insufficient headroom to measure improvement under the registered protocol."** E6 does not run. This is not a claim that Terraproof is useless, or that other models have no headroom. No model is switched on the screened set. The estimate before E4 was about 4 retained tasks (roughly 3–6); 6 were observed.
+
+**Validity finding.** The unresolved run is `hr-slope-geographic`, run 0, in the **without** condition. It carries the labels:
+
+- `harness-source`
+- `oracle-source`
+- `outside-project`
+- `terraproof-in-without:import`
+- `terraproof-in-without:package-query`
+
+Its artifact would have been accepted, so the contamination label forced the rejection. This is the path-readable boundary that R2 recorded: OpenCode's readers and the agent's Python could reach the checkout. The trace labels caught it, as R2 said they must. It is recorded as unresolved, not as headroom. A whole-process boundary remains a prerequisite for any claim of evaluator-blind results.
+
+**What is now open.** With the E5 stop recorded, the sealed E4 report may be read. The registered verification secondaries are still owed, as descriptive results. The product freeze also ends, and the deferred work can resume:
+
+- the `decision-grade` label and its coverage;
+- check selection for semantic traps, such as vertical units;
+- C group 3.
 
 ## 2. Goals
 
