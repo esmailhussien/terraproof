@@ -199,7 +199,14 @@ If E5 proceeds, E6 uses all retained tasks, three fresh runs per condition (6n i
 
 Its artifact would have been accepted, so the contamination label forced the rejection. This is the path-readable boundary that R2 recorded: OpenCode's readers and the agent's Python could reach the checkout. The trace labels caught it, as R2 said they must. It is recorded as unresolved, not as headroom. A whole-process boundary remains a prerequisite for any claim of evaluator-blind results.
 
-**What is now open.** With the E5 stop recorded, the sealed E4 report may be read. The registered verification secondaries are still owed, as descriptive results. The product freeze also ends, and the deferred work can resume:
+**Verification secondaries.** With the E5 stop recorded, the sealed E4 report was read. The registered secondaries are in the [verification audit](../PHASE6_VERIFICATION_AUDIT.md#e4-confirmation-screen-registered-verification-secondaries).
+
+- On every E4 artifact, the configured path ran only three generic checks: `crs.defined`, `raster.nodata_declared` and `raster.cog_layout`.
+- The checks detected **0/8** wrong artifacts, and all 8 were graded `decision-grade` (false assurance **8/8**). Wrong artifacts were 8 of the 40 uncontaminated `decision-grade` artifacts.
+- 7/39 correct artifacts needed review, all for a COG layout warning, and none was a confirmed false alarm.
+- Contract coverage was unassessed.
+
+**What is now open.** The product freeze ends, and the deferred work can resume:
 
 - the `decision-grade` label and its coverage;
 - check selection for semantic traps, such as vertical units;
