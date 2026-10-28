@@ -12,7 +12,7 @@ Terraproof helps AI coding agents do geospatial work they can prove. It gives an
 
 Everything runs locally and offline. No model API key is needed.
 
-**Status:** experimental (v0.8.0). See [Evaluation status](#evaluation-status) for what has and has not been measured.
+**Status:** experimental (v0.9.0). See [Evaluation status](#evaluation-status) for what has and has not been measured.
 
 ---
 
@@ -25,7 +25,7 @@ npx terraproof route "Reproject a GeoTIFF to EPSG:3857 and build a COG with GDAL
 npx terraproof route "Download Sentinel-2 from a STAC catalog, compute NDVI, and map the change with MapLibre" --format json
 ```
 
-Then check the data the work produced with the Python package (Python 3.10+). From the first PyPI release (0.8.0) it installs with `pip`:
+Then check the data the work produced with the Python package (Python 3.10+). Since 0.8.0 it installs from PyPI with `pip`:
 
 ```bash
 pip install "terraproof[mcp]"

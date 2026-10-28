@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [0.9.0] — 2026-10-28
+
+Phase 7: a report no longer implies more verification than happened. **Breaking:** without a
+verification contract, passing checks grade `checks-passed` (exit 0), never `decision-grade`;
+reports move to `terraproof.evidence/0.2`. Measured once on 48 independently written, sealed
+held-out cases (Phase 7 V4b): with declared inputs, 17 of 20 wrong outputs failed a required
+check, no wrong output was graded `decision-grade` (13 correct ones were), and no correct output
+raised a confirmed false alarm. Details and limits are in
+[the Phase 7 plan](docs/plans/Terraproof_Phase7_PLAN.md). It also ships the Phase 6 work after 0.8.0:
+source-aware checks, verification contracts and evidence bundles, contract templates, and the
+readiness and screening records (Phase 6 stopped at E5; no lift is claimed).
 
 ### Goal profiles and two declared-source checks (Phase 7 V2/V3)
 
@@ -123,13 +133,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The lift driver's Python/IO preflight probe reads the task's first raster input, not
   whichever input comes first (some tasks list a STAC catalog first).
 
+## [0.8.0] — 2026-10-27
+
 ### Release record
 
 - v0.8.0 shipped on 2026-10-27: tag `v0.8.0` on `9dabd84` (merge `a4ddda6`), PyPI through
   `publish-python.yml` after review, npm `terraproof@0.8.0` (shasum `27910c5e…`, identical to
   the tag), and GitHub release *Terraproof v0.8.0* with the npm tarball, wheel and sdist.
-
-## [0.8.0] — 2026-10-27
 
 ### Phase 6 (in progress; see the [Phase 6 plan](docs/plans/Terraproof_Phase6_PLAN.md))
 
