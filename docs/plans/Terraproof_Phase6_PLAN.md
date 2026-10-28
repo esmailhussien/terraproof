@@ -1,6 +1,6 @@
 # Terraproof — Phase 6 Plan: Ship the checks, find headroom
 
-> Status: **in progress (2026-10-27)**. Implemented: A (Phase 5 closed), B1 (product-only wheel and sdist), B4 (clean-install CI from the built wheel), B5 (README install text), B6 (`--agent-python-with`) and D's "now" step (skills frozen and labelled unmeasured). B2 is done: `terraproof` is registered on PyPI and TestPyPI as pending trusted publishers for `publish-python.yml`, and the `pypi` environment needs the maintainer's review. B3's workflow first ran on the `v0.8.0` tag, and v0.8.0 shipped to PyPI and npm on 2026-10-27. C is in progress: the source-aware scorecard rejects 14 of the 25 frozen blind spots (groups 1 and 2) with 0 false passes, past the target of 12; group 3 is not started. E1 is done (headroom cohort calibrated and split; see the E1 record in §3.E). E2–E6 have not started. It follows the [Phase 5 measurement](Terraproof_Phase5_PLAN.md) and replaces open-ended host and harness work with five bounded workstreams. Every real model call still needs the user's explicit approval with an exact invocation count.
+> Status: **in progress (2026-10-27)**. Implemented: A (Phase 5 closed), B1 (product-only wheel and sdist), B4 (clean-install CI from the built wheel), B5 (README install text), B6 (`--agent-python-with`) and D's "now" step (skills frozen and labelled unmeasured). B2 is done: `terraproof` is registered on PyPI and TestPyPI as pending trusted publishers for `publish-python.yml`, and the `pypi` environment needs the maintainer's review. B3's workflow first ran on the `v0.8.0` tag, and v0.8.0 shipped to PyPI and npm on 2026-10-27. C is in progress: the source-aware scorecard rejects 14 of the 25 frozen blind spots (groups 1 and 2) with 0 false passes, past the target of 12; group 3 is not started. E1 is done (headroom cohort calibrated and split; see the E1 record in §3.E). E2 is complete as a 96-run exploratory development shakedown; evaluator exposure and completion/coverage findings are recorded in the [E2 review](../E2_REVIEW.md). An offline corrective batch adds explicit MCP runtime admission and optional verification contracts before the E3 freeze. E3–E6 have not started; no primary host/model is frozen. It follows the [Phase 5 measurement](Terraproof_Phase5_PLAN.md) and replaces open-ended host and harness work with five bounded workstreams. Every real model call still needs the user's explicit approval with an exact invocation count.
 >
 > Numbering follows the phase documents. The [v1 roadmap](Terraproof_v1_PLAN.md)'s "Phase 6 — Ecosystem" moves later.
 
@@ -219,3 +219,21 @@ B, C and E1 touch disjoint files and can run in parallel.
 | Source-aware checks become a second oracle | They use only inputs and parameters a user has, share no code with the oracles, and are reported apart from the frozen counts |
 | There is still no headroom | The go/no-go stop is the result. "Frontier agents avoid these traps unaided" is useful for deciding what the product claims |
 | The PyPI name is taken before publication | Claim it first (B2) |
+
+
+## E2 development record and offline corrective work (2026-10-27)
+
+See the [E2 review](../E2_REVIEW.md) for the unchanged counts, spend, contamination
+and the distinction between final-artifact acceptance and host completion.
+The three contaminated runs remain rejected; seven unresolved GPT-4o completions
+include three accepted artifacts. All six rejected GPT-4o with-artifacts were
+rejected only by the independent oracle in final scoring. None of these
+development observations is a confirmation result.
+
+The corrective batch uses no model calls. Explicit candidate MCP Python and
+production-fingerprint admission close the exposed interpreter route, with native
+filesystem limits still declared. Optional [contracts](../VERIFICATION_CONTRACTS.md)
+make missing required checks/source context explicit; legacy grades are preserved.
+Completion review retains its strict rules and records fixed unresolved labels
+for future audits. Do not tune against confirmation outputs. Finish development
+readiness and freeze this changed treatment at E3 before E4/E6.

@@ -69,6 +69,11 @@ Checks cover CRS and units, geometry validity and GeoJSON winding, record counts
 
 The grade describes the data path and the checks that ran. It is not a certification of survey, engineering, legal, or safety fitness.
 
+For explicit task requirements, add `--contract contract.json` (MCP: `contract`).
+The additional contract outcome prevents success when a required output check or
+source/parameter binding is missing, while preserving the legacy grade. See
+[verification contracts, diagnostics and unsigned evidence bundles](docs/VERIFICATION_CONTRACTS.md).
+
 ### Verify a spectral index against its source bands
 
 ```bash

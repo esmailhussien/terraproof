@@ -14,6 +14,7 @@ from terraproof.checks.index_formula import FORMULAS
 from terraproof.checks.stack_reduction import REDUCTIONS as STACK_REDUCTIONS
 from terraproof.checks.base import FAIL, result
 from terraproof.evidence import EXIT_CODES, build_report, input_record, render_markdown, to_json
+from terraproof.evidence.report import report_exit_code
 from terraproof.inspect import inspect_dataset
 from terraproof.preflight import run_preflight
 
@@ -104,6 +105,7 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument("--format", choices=["json", "md"], default="json", help="report format")
     check_parser.add_argument("--lang", choices=["en", "ar"], default="en", help="language of the Markdown report")
     check_parser.add_argument("--out", metavar="FILE", help="write the report to FILE instead of stdout")
+    check_parser.add_argument("--contract", metavar="FILE", help="explicit required checks, output paths and source/parameter bindings")
 
     preflight_parser = subparsers.add_parser(
         "preflight",
@@ -129,6 +131,9 @@ def build_parser() -> argparse.ArgumentParser:
     manifest_parser.add_argument(
         "args", nargs=argparse.REMAINDER, help="manifest subcommand and options (write or verify)"
     )
+
+    evidence_parser = subparsers.add_parser('evidence', help='write or verify an unsigned evidence bundle')
+    evidence_parser.add_argument('args', nargs=argparse.REMAINDER)
 
     return parser
 
@@ -278,14 +283,14 @@ def _cmd_check(args: argparse.Namespace) -> int:
         "manifest": args.manifest,
         "require_provenance": args.require_provenance,
     }
-    report = build_report(inputs=inputs, results=results, parameters=parameters)
+    report = build_report(inputs=inputs, results=results, parameters=parameters, contract=args.contract)
     text = to_json(report) if args.format == "json" else render_markdown(report, lang=args.lang)
 
     if args.out:
         Path(args.out).write_text(text, encoding="utf-8", newline="\n")
     else:
         sys.stdout.write(text)
-    return EXIT_CODES[report["grade"]]
+    return report_exit_code(report)
 
 
 def _cmd_preflight(args: argparse.Namespace) -> int:
@@ -335,6 +340,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "manifest":
             from terraproof.provenance.__main__ import _run as _provenance_run
             return _provenance_run(args.args)
+        if args.command == "evidence":
+            from terraproof.evidence.bundle import main as evidence_main
+            return evidence_main(args.args)
         return _cmd_check(args)
     except Exception as exc:  # CLI boundary: unreadable or unsupported input is a usage-level failure
         print(f"terraproof: error: {exc}", file=sys.stderr)

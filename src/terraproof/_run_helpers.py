@@ -213,4 +213,5 @@ def verify_manifest_coverage(
             uncovered_paths=missing,
         )
 
-    return provenance_result
+    return result('provenance.reproducible', provenance_result.status, provenance_result.message,
+                  **{**provenance_result.evidence, 'inputs': list(checked_paths)})

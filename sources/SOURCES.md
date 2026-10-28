@@ -390,3 +390,12 @@ The full calibration/QA checks (`src/terraproof/checks/processing_full.py`) and 
 checker scorecard (`tests/checker_scorecard.py`) are original Terraproof/Geova MIT code. No
 external implementation is vendored. Raster validity follows the
 [Rasterio mask API](https://rasterio.readthedocs.io/en/stable/topics/masks.html).
+
+## Verification contracts and runtime admission
+
+Verification contracts, structured diagnostics, unsigned evidence bundles and the
+study runtime-admission helper are original Terraproof/Geova code under this
+repository's MIT license. No external implementation or data is vendored.
+Existing product skills, sources and third-party attribution remain included in
+candidate wheels. Evidence bundles are local integrity records, not signatures
+or scientific certification.
