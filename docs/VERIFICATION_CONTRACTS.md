@@ -6,6 +6,9 @@ not infer the user's task, run processing code or decide which scientific method
 is appropriate. The contract belongs to the caller; retain its digest separately
 and reuse it unchanged after a repair.
 
+Tested starting points for four common workflows, and a CI example, are in
+[Contract templates](CONTRACT_TEMPLATES.md).
+
 ## Declare the requirements
 
 For example, save `contract.json` in a project containing `inputs/` and `outputs/`:

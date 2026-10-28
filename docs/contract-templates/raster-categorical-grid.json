@@ -1,0 +1,8 @@
+{
+  "schema": "terraproof.verification-contract/1",
+  "requirements": [{
+    "paths": ["outputs/landcover_aligned.tif"],
+    "checks": ["raster.nodata_declared", "raster.grid_alignment", "raster.resampling"],
+    "parameters": {"resampling": "nearest", "categorical": true}
+  }]
+}

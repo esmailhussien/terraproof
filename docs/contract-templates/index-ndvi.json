@@ -1,0 +1,8 @@
+{
+  "schema": "terraproof.verification-contract/1",
+  "requirements": [{
+    "paths": ["outputs/ndvi.tif"],
+    "checks": ["rs.index_formula"],
+    "parameters": {"index_formula": "ndvi", "nir": "inputs/nir.tif", "red": "inputs/red.tif"}
+  }]
+}

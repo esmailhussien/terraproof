@@ -1,6 +1,6 @@
 # Terraproof — Phase 6 Plan: Ship the checks, find headroom
 
-> Status: **in progress (2026-10-27)**. Implemented: A (Phase 5 closed), B1 (product-only wheel and sdist), B4 (clean-install CI from the built wheel), B5 (README install text), B6 (`--agent-python-with`) and D's "now" step (skills frozen and labelled unmeasured). B2 is done: `terraproof` is registered on PyPI and TestPyPI as pending trusted publishers for `publish-python.yml`, and the `pypi` environment needs the maintainer's review. B3's workflow first ran on the `v0.8.0` tag, and v0.8.0 shipped to PyPI and npm on 2026-10-27. C is in progress: the source-aware scorecard rejects 14 of the 25 frozen blind spots (groups 1 and 2) with 0 false passes, past the target of 12; group 3 is not started. E1 is done (headroom cohort calibrated and split; see the E1 record in §3.E). E2 is complete as a 96-run exploratory development shakedown; evaluator exposure and completion/coverage findings are recorded in the [E2 review](../E2_REVIEW.md). An offline corrective batch adds explicit MCP runtime admission and optional verification contracts before the E3 freeze. E3–E6 have not started; no primary host/model is frozen. It follows the [Phase 5 measurement](Terraproof_Phase5_PLAN.md) and replaces open-ended host and harness work with five bounded workstreams. Every real model call still needs the user's explicit approval with an exact invocation count.
+> Status: **in progress (2026-10-27)**. Implemented: A (Phase 5 closed), B1 (product-only wheel and sdist), B4 (clean-install CI from the built wheel), B5 (README install text), B6 (`--agent-python-with`) and D's "now" step (skills frozen and labelled unmeasured). B2 is done: `terraproof` is registered on PyPI and TestPyPI as pending trusted publishers for `publish-python.yml`, and the `pypi` environment needs the maintainer's review. B3's workflow first ran on the `v0.8.0` tag, and v0.8.0 shipped to PyPI and npm on 2026-10-27. C is in progress: the source-aware scorecard rejects 14 of the 25 frozen blind spots (groups 1 and 2) with 0 false passes, past the target of 12; group 3 is not started. E1 is done (headroom cohort calibrated and split; see the E1 record in §3.E). E2 is complete as a 96-run exploratory development shakedown; evaluator exposure and completion/coverage findings are recorded in the [E2 review](../E2_REVIEW.md). An offline corrective batch adds explicit MCP runtime admission and optional verification contracts before the E3 freeze. Amendment 2 fixes the primary model class and its selection rule; Amendment 3 adds the readiness workstream R before E3; R1, R2, F and the 40-invocation R3 batch are done, and on R3's evidence the selection rule picks MiMo-V2.6-Flash. E3 now registers MiMo alone, the treatment identity and verification secondaries; E4–E6 have not started. The without-only execution entry point still needs offline validation before E4 approval. It follows the [Phase 5 measurement](Terraproof_Phase5_PLAN.md) and replaces open-ended host and harness work with five bounded workstreams. Every real model call still needs the user's explicit approval with an exact invocation count.
 >
 > Numbering follows the phase documents. The [v1 roadmap](Terraproof_v1_PLAN.md)'s "Phase 6 — Ecosystem" moves later.
 
@@ -27,6 +27,125 @@ Decided by the maintainer before any E inference. It replaces decision 2 (§7) a
 - **Harness freeze exception:** the OpenCode CLI host (`--agent-host opencode`) is the only new host. It runs `opencode run --format json --pure --auto` with the condition in the workspace (`AGENTS.md` and `opencode.json`). It disables skills from `.claude`/`.agents`, Claude Code prompt files, external plugins and self-update. Preflight fails a run if OpenCode's global config, rules, skills, agents, commands or plugins, or any config above the run project, mention Terraproof.
 - **Product side:** OpenCode is also the main open-model path for users. The `--agent opencode` installer format is checked end to end by the host's no-model preflight. A real MCP call is first seen in E2.
 - **Costs:** OpenCode Go and Antigravity runs use subscription quota, so the harness limits are the approved run count and timeout. GPT-4o runs keep the API host's USD caps. The cost column below was written for Claude Code and is indicative only.
+
+### Amendment 2 (2026-10-28): the primary is a mid-sized flash model
+
+Decided by the maintainer before E3, with no confirmation-set inference. It narrows Amendment 1's primary choice and, for one input, replaces its "not outcomes" wording (rule 3 below). Amendment 1's host rules and harness freeze are unchanged.
+
+- **Primary model class.** The E primary is a mid-sized, competitively priced flash model on OpenCode Go. The candidates are `opencode-go/glm-5.3-flash`, `opencode-go/deepseek-v4.1-flash` and `opencode-go/mimo-v2.6-flash`. This is the class of model most GIS users of a tool like Terraproof will run. GPT-4o (API host) and Gemini (Antigravity) are no longer primary candidates. If they are run at all, they are separately reported secondaries and never pooled.
+- **The trade-off, stated now.** The class is chosen for the intended users, not for headroom. On the E2 development tasks the flash models were accepted 11/12 and 12/12 without Terraproof, and GPT-4o 5/12. Choosing the flash class makes a stop at E5 the likely outcome (see the headroom risk below). The maintainer accepts that, and GPT-4o is not reinstated after E4 is seen.
+- **Selection rule, fixed now and applied at E3:**
+  1. **Delivery on the corrected setup.** Terraproof MCP calls in every "with" run of the Amendment 3 readiness batch, with MCP admission passing and no contamination finding. E2's delivery counts for no candidate: every E2 "with" run registered MCP with the driver interpreter, so the exposure finding applies to all of them, not only to DeepSeek.
+  2. **Availability.** OpenCode Go lists the model id at E3 and served it in the readiness batch.
+  3. **Baseline headroom.** Among the candidates that pass (1) and (2), choose the fewest accepted "without" runs, pooling E2 development and the readiness batch. This is the one outcome input, and it is "without" only, as in E4's screen. "With" acceptance and with-minus-without differences are never selection inputs.
+  4. **Tie-break.** The lexically first model id. On 12 single runs a one-task gap is noise and a tie is likely, so the tie-break is the expected deciding rule, not an edge case.
+- **Development evidence so far (E2, before the corrective batch).** GLM 5.3 Flash: 11/12 accepted without Terraproof, with Terraproof calls in all 12 "with" runs. DeepSeek 4.1 Flash: 12/12 without, Terraproof calls in all 12 "with" runs, and one "with" run that read evaluator sources. MiMo-V2.6-Flash was not in E2. The "without" baselines stand for rule 3, because the "without" condition has no MCP and was not affected by the correction.
+- **Headroom risk, stated before E4.** E5 keeps a task if at least one of its 2 screening runs is rejected. At an 11/12 per-run baseline that is 1 − (11/12)² ≈ 16% of tasks, about 4 of the 24 (roughly 3–6), and fewer at 12/12. The go/no-go needs at least 8. These are rough estimates from 12 tasks with one run each. **A stop at E5 is a valid result:** it would mean these flash models avoid the cohort's traps unaided. It is not rescued by switching models on the same screened set.
+- **Option closed at E3 (2026-10-28):** the maintainer chose MiMo alone: 48 "without" screening invocations, not a two-model screen. GLM is not a fallback after seeing E4.
+
+### Amendment 3 (2026-10-28): verified treatment delivery before E3
+
+Decided by the maintainer before E3. It adds one bounded readiness workstream, **R**, between the E2 corrective batch ([#37](https://github.com/esmailhussien/terraproof/pull/37), merged) and the E3 freeze. A–C are not restarted and E2 is not rerun. The primary metric, sign-flip analysis, fresh paired confirmation, baseline-only screening and minimum-eight stop rule are unchanged.
+
+- **R1. Lock the runtime.** Build a product-only candidate wheel from a known commit, from both a clean and a reused build directory. Record the wheel SHA-256, the production fingerprint that MCP admission reports (`mcp_production_sha256`), the Python, geospatial and MCP versions, and the registered MCP argv. A version label alone is not enough. The "without" interpreter stays dependency-only; any unavoidable tool-side difference is recorded, not called identical.
+- **R2. The evaluator-access boundary.** MCP admission closes the registered-server route. The "with" and "without" environments also drop an activated driver venv from `PATH` and `VIRTUAL_ENV`, so the harness interpreter is not reachable by name. Neither makes other host files unreadable: the checkout and the driver interpreter remain readable by path. Before E3, a no-model check puts a benign canary file outside the task and records whether the agent's own Python and the host's built-in readers can open it. No ACL, ownership or integrity-label change is made. Unless a whole-process boundary is shown, confirmation results are reported as "contamination screened", never "evaluator-blind". The contamination labels keep rejecting runs either way.
+- **R3. One live readiness batch (approved and run 2026-10-28; see the R3 record below).** It replaces the separate MiMo shakedown and delivery recheck:
+  - MiMo-V2.6-Flash: 12 development tasks × 1 pair = 24 invocations.
+  - GLM 5.3 Flash and DeepSeek 4.1 Flash: 4 development tasks × 1 pair each = 16 invocations. The 4 tasks are fixed by a rule that uses no outcome: the alphabetically first development task in each of the first four trap families alphabetically. They are `hr-landcover-shifted-grid`, `hr-sar-boxcar-db`, `hr-three-date-mean-8bit` and `hr-station-distance`.
+  - Total 40 invocations on OpenCode Go quota, 900 s timeout, on the R1 candidate wheel. Retries count against the 40.
+  - Failed and successful outputs are kept, with host completion, artifact acceptance and verification status reported apart. The batch is a readiness check, not an effect estimate. It needs the user's separate approval of the exact command.
+- **Contract usability (F), bounded.** Before E3, only docs and examples that the agent does not see may land: workflow templates for the four existing check families, and one ordinary-CI example that fails a job on a missing or failed required check and uploads the evidence. Templates are matched to declared goals and data, never to benchmark task ids or oracle methods. A compact MCP response changes the treatment, so it waits until after E6.
+- **Secondary reporting, registered at E3.** Reported beside the unchanged primary, never in its place:
+  - artifact acceptance against verification completion, as a cross-table;
+  - wrong outputs flagged by production checks against oracle-only rejections;
+  - correct outputs left unverified, with the reason, kept apart from false alarms;
+  - "with"/"without" cost, tokens, latency, contamination, infrastructure failures and timeouts.
+
+  Any effect or cost threshold that will drive a product decision is fixed at E3, not after E6.
+- **Deferred.** C group 3, large-data performance, spatial previews, automatic patches, signing and a public leaderboard wait until after E6 or a recorded user need. New hosts and skills stay out of this phase.
+- **Order.** R1, R2 and the bounded F land offline in one PR. R3 runs only if approved. Then E3 freezes once, and E4 → E5 → E6 follow under the existing protocol.
+
+#### Readiness record (2026-10-28, no model calls)
+
+`tests/runtime_readiness.py` runs R1 (`record`) and R2 (`canary`).
+
+- **R1 (`record`).** The candidate comes from commit `45230c7`, whose production files are identical to main after #37.
+  - Wheel: `terraproof-0.8.0-py3-none-any.whl`, SHA-256 `a9e7cd34144ae263844db4d2bec68ebcdc79c60befa0443be9fd7ff729fc7713` (226 payload files). A rebuild gives a different wheel hash (archive timestamps) but the same payload.
+  - Production fingerprint: `4bd44f33de3563c9e31d1b8acfb140808bf79274572fe254d24415e3f5a7daf4`.
+  - Runtime: Python 3.12.10, numpy 2.5.4, rasterio 1.5.2, pyproj 3.8.0, shapely 2.2.0, pyogrio 0.13.0, mcp 2.3.0.
+  - Venv: `C:\Users\mrsom\.venvs\agent-with-r1c`, MCP argv `<venv>\Scripts\python.exe -I -m terraproof.mcp`. The E2 venvs are unchanged.
+  - All ten checks pass. The clean export and the reused build directory give identical, evaluator-free payloads, and the reused build dropped a planted stale evaluator. MCP admission passes and the server serves its tools. A no-model OpenCode preflight with this venv admits the same fingerprint.
+  - The version label is still 0.8.0, but the code differs from the published 0.8.0, which is why the fingerprint, not the label, identifies the treatment.
+- **R1 found two defects, both fixed here.**
+  - The admission fingerprint hashed raw bytes, so the same commit failed admission on a checkout whose text files had CRLF line endings. Text is now hashed with CRLF read as LF; binary files are unchanged.
+  - The wheel must be installed with its `mcp` extra, or the "with" venv has no MCP server.
+- **R2 (`canary`).** The result is the same for both conditions:
+  - Neither interpreter can import `terraproof.evals`, and the driver interpreter is not on `PATH`.
+  - Both can read a private canary outside the task, the checkout's evaluator source and the driver interpreter by path.
+  - OpenCode `run --auto` approves any permission that is not explicitly denied, and the harness denies none.
+
+  Results are therefore labelled **contamination screened**, not evaluator-blind. The trace contamination labels remain the guard.
+- **F.** The four [contract templates](../CONTRACT_TEMPLATES.md) and the CI example are tested on generated data. A valid output verifies, an intentional defect fails (a dropped vector record needs review) and missing evidence is incomplete. They are docs only; nothing the agent sees changed.
+
+#### R3 record (2026-10-28, 40 invocations)
+
+The approved batch ran on OpenCode 1.19.4 after #38's CI passed, with `--runs 1 --timeout 900`, the "without" venv `geo-agent-py312` and the R1 venv `agent-with-r1c`. It started 40 agent runs of the 40 approved, with no retries, and reported $0 spent. Reports and recordings are kept locally in `.terracache/r3-{mimo,glm,deepseek}.json` and `-rec/`.
+
+| Model | Pairs | Host completed | "With" runs with Terraproof MCP calls | Admission (every run) | Contamination | Accepted without | Accepted with |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `opencode-go/mimo-v2.6-flash` | 12 | 24/24 | 12/12 (3–8 calls each) | pass, fingerprint `4bd44f33…` | none | 11/12 | 11/12 |
+| `opencode-go/glm-5.3-flash` | 4 | 8/8 | 4/4 (4–6 calls) | pass | none | 4/4 | 4/4 |
+| `opencode-go/deepseek-v4.1-flash` | 4 | 8/8 | 4/4 (3–7 calls) | pass | none | 4/4 | 4/4 |
+
+- **Not an effect estimate.** The only rejected task, `hr-elevation-change-mixed-units` on MiMo, was rejected in both conditions on its independent pixel values.
+- **Verification status, kept apart from acceptance.** Every accepted output was also graded by the production checks. Four accepted runs were graded review-required rather than decision-grade: MiMo "without" twice, MiMo "with" once and GLM "without" once. None was graded failed.
+- **Cost.** Median tokens per run, "without" against "with": MiMo 7.9k against 34.4k, GLM 12.2k against 43.3k, DeepSeek 12.7k against 40.2k. Batch wall time was 65 min for MiMo's 24 runs, 13 min for GLM's 8 and 7 min for DeepSeek's 8. The harness does not record per-run latency.
+- **Amendment 2's rule on this evidence (applied formally at E3).**
+  1. Delivery: all three pass.
+  2. Availability: all three were served. The model list is rechecked at E3.
+  3. Pooled "without" acceptance: MiMo 11/12 (R3 only; it was not in E2), GLM 15/16 (E2 11/12 + R3 4/4), DeepSeek 16/16 (E2 12/12 + R3 4/4). MiMo has the fewest, both as a count and as a rate, so the tie-break is not needed.
+
+  The rule therefore selects **MiMo-V2.6-Flash**, unless the E3 availability check fails. Its 11/12 baseline gives the same headroom estimate as above, about 4 kept tasks of 24 against the 8 needed.
+
+#### E3 registration (2026-10-28, offline)
+
+The maintainer approved a single-model screen and explicit verification reporting before E4. This registration freezes the design and treatment described below. It authorizes **no model invocations**. E4 and E6 still require their separate exact-command approvals. E4 has not started.
+
+**Primary and treatment identity.** OpenCode Go `opencode-go/mimo-v2.6-flash`, OpenCode CLI 1.19.4. On 2026-10-28, the native executable's `--version` and `models opencode-go` commands returned that version and listed that exact model ID; no inference was used. The provider's internal weights/revision are not exposed or pinned, so record run dates and any provider change. Unavailability or a changed host version pauses execution; it does not permit an unregistered model substitution.
+
+- Product: the R1 candidate wheel and runtime recorded above, SHA-256 `a9e7cd34144ae263844db4d2bec68ebcdc79c60befa0443be9fd7ff729fc7713`, production fingerprint `4bd44f33de3563c9e31d1b8acfb140808bf79274572fe254d24415e3f5a7daf4`. This is **not** the published 0.8.0 wheel despite sharing its version label. Do not substitute a new wheel on the version string alone.
+- Agent interpreters: `C:\Users\mrsom\.venvs\agent-with-r1c\Scripts\python.exe` with the R1 wheel and its MCP extra; `C:\Users\mrsom\.venvs\geo-agent-py312\Scripts\python.exe` dependency-only without. MCP argv is the with interpreter followed by `-I -m terraproof.mcp`. Python/geospatial/MCP versions remain the R1 versions. The driver interpreter stays outside agent PATH; the two conditions remain contamination screened, not evaluator-blind.
+- Host: the existing OpenCode adapter at `d216804`, native executable `C:\Users\mrsom\AppData\Roaming\npm\node_modules\opencode-ai\bin\opencode.exe`, `run --format json --pure --auto`, model above, 900-second per-run timeout, no explicit reasoning variant (provider default). Keep its existing `--dir`, condition instructions/configuration, neutral project roots, disabled external skills/Claude files/plugins/self-update, runtime admission and contamination rejection. No new completion review, task-specific contracts, example injection or hidden oracle parameters are added.
+- Freeze the product, router, skills, agent-facing instructions, recipe/scorer/oracles and analysis through E6, or until a recorded E5 stop. Docs not visible to agents may clarify this registration without changing the treatment. Record the final merge commit as provenance; docs-only commits do not change the identities below.
+
+**Screen, stop and confirmation.** E4 uses the existing 24-task confirmation split (seed 20261027), **without only, twice per task: 48 invocations total**, no GLM screen, no automatic retry beyond the approved count. E5 retains a task with at least one merit rejection; this means baseline failure, not a task accepted by the baseline. Contamination, infrastructure failure or missing scoring evidence is not a scientific error or headroom. Report invalid counts; unresolved screening coverage pauses the go/no-go rather than silently shrinking its denominator. With fewer than eight retained tasks, stop with: **"On MiMo-V2.6-Flash, this cohort leaves insufficient headroom to measure improvement under the registered protocol."** This is not a claim that Terraproof is useless or that other models have no headroom. Do not switch models on the screened set.
+
+The current `tests/agent_lift.py` entry point schedules pairs; `--runs 2` is **not** a 48-run without-only screen. Before E4 approval, validate the without-only execution entry point offline against this registration, including a hard 48-run budget and no with-condition calls. Any required scheduling-only adapter must preserve the frozen prompts, host behavior, scoring and analysis, be separately documented and tested before inference, and must not inspect confirmation outputs. Do not launch the paired entry point as E4.
+
+If E5 proceeds, E6 uses all retained tasks, three fresh runs per condition (6n invocations); E4 runs never enter E6. Primary analysis stays task-level exact two-sided sign-flip at alpha 0.05, task-cluster percentile bootstrap (10,000 resamples, seed 20261024), and secondary exact McNemar with its existing dependence caveat. The existing exact-test implementation returns no p-value when more than 20 task differences are supplied. If that occurs, report the primary p-value as unavailable, without a significance claim or post-hoc substitute; do not drop tasks to bypass the limit or select an analysis after seeing outcomes. No pooling across models, development runs, seeds or configurations. Before E6, inspect screening accept/reject counts and validity only, not confirmation artifacts or traces for tuning.
+
+**Registered verification secondaries.** These are descriptive, reported alongside the unchanged primary even if E5 stops. They are not replacement significance tests, marketing thresholds or grounds to rescue the primary. The development audit is already observed evidence, not prospectively collected confirmation evidence. Report by candidate, condition, task and configuration; give numerators, denominators and missing values. A run's complete deliverable bundle is the unit; seeded cases form a separate population. Ground truth is the independent oracle plus structural deliverable contract, never the production grade itself. Missing, unreadable, contaminated and infrastructure-failed runs are tabulated separately, not automatically counted as scientifically wrong.
+
+1. **Detection:** among readable, independently wrong artifacts, the fraction with an actual production `fail` on the scored artifact. Also show `warn`, `not-run` and omitted relevant coverage separately. Do not equate every expected-status mismatch or `checks_ok: false` with detection; inspect the actual results or report that breakdown unavailable.
+2. **False assurance:** wrong artifacts graded legacy `decision-grade` / all independently wrong artifacts; also wrong decision-grade artifacts / all decision-grade artifacts. Show these for evaluator final scoring separately from any retained agent-visible checks. The safety aim is zero false assurance within explicitly declared coverage; no tolerable nonzero rate or general certification claim is registered. A zero observed numerator with a small denominator is not proof of zero risk. This is a descriptive safety target, not a new E5 or statistical gate.
+3. **Correct-output review burden and false alarms:** correct artifacts with `review-required`, an actual check failure, or an inability to verify, each reported separately. Count a finding as a confirmed false alarm only after its claimed defect is independently contradicted; justified warnings on otherwise numerically correct outputs remain review burden. Never treat every advisory-only grade as an actual failure.
+4. **Explicit limits:** report `incomplete` required-check coverage only when an actual coverage assessment exists, with reasons. Without a declared contract, record coverage as **unassessed**, not complete or zero incomplete. Missing evidence, skipped checks and contradictory findings are distinct. Do not retrofit task-specific contracts into the live treatment to improve this metric.
+5. **Cost:** per-condition input/output tokens, total and median tokens, ratio of condition medians, available paired differences, reported spend and subscription-quota use. Report end-to-end run latency only if actually retained; batch elapsed time and summed tool durations are not substitutes. No product go/no-go token or time multiplier is registered; these remain descriptive. Missing measurements stay missing.
+
+**Known pre-freeze limitation.** The [development audit](../PHASE6_VERIFICATION_AUDIT.md) confirms that generic production checks ran during calibration but detected 0/21 development seeded mistakes; all 21 received legacy decision-grade. The wrong MiMo elevation artifact also received that grade in both R3 final scoring replays, rejected only by the oracle. This demonstrates a real configured coverage/assurance gap, not catalog-wide sensitivity and not proof of what an agent saw in its MCP reply. Four correct R3 artifacts required review, which is review burden pending per-check adjudication. Legacy decision-grade certifies the checks emitted, not scientific correctness. Label/coverage-default/response fixes wait until after E6 or an E5 stop; historical results are not rewritten.
+
+**Frozen source identities.** SHA-256 of file contents with CRLF normalized to LF; full-file hashes bind the held-out content without reviewing it for product tuning. Code reference: `d21680459dd3dfd2937ade376fbb5a8520de16c5`.
+
+| File | SHA-256 |
+| --- | --- |
+| `tests/agent_lift.py` | `3d1029d63ff183197909d18afb2a3f9971c936fac60a077bfb1c957f35432d6a` |
+| `tests/runtime_admission.py` | `b3a7a7e49e01efacc1f030e63a10685522a4cbbffb244986de7e0ed0a8758c11` |
+| `src/terraproof/evals/lift.py` | `fe5ac06c97fa272b6def97785f69b38d6629c98d284cc6e9270c2de9bb7b0237` |
+| `evals/headroom/pool.json` | `84e9839f9dd0102abb1d7ccb22de527641b1d8e7669bb10a777c8344df7d85f4` |
+| `evals/headroom/split.json` | `5004a4fc4a4e7f28be05a5166004c25586e21b01c088d878de8a40af2000460b` |
+| `evals/headroom/tasks.json` | `385c184e0445c33f015d8e49f4e0462c685a52d6ef1d2d8369a7c3a971455b4d` |
+| `src/terraproof/evals/headroom/recipes.py` | `3e5a7adc0ecd189ae215b5be7c3c20d5cf1c498335dbdf07d3fc2baf7b58dd38` |
+| `src/terraproof/evals/headroom/oracles.py` | `6d40c9801586f8604a2ce9102a1f7c2b370e2ef22a20c7a1ecfd55f2fe09a14a` |
 
 ## 2. Goals
 
@@ -116,7 +235,7 @@ Twenty-five seeded wrong outputs are rejected only by the independent oracle: th
 |---|---|---|---|
 | E1 Calibrate and freeze | Calibration gate on all 36 candidates; commit hash recorded | 0 | $0 |
 | E2 Development shakedown | 12 development tasks × 1 pair; checks treatment delivery and skill reads | 24 | ≈ $4 / $24 |
-| E3 Freeze treatment and analysis | Record the Terraproof version (the PyPI wheel), host, model, flags, screening rule and primary analysis in this plan | 0 | $0 |
+| E3 Freeze treatment and analysis | Record the exact R1 candidate wheel/fingerprint, host, model, flags, screening rule and analysis in this plan | 0 | $0 |
 | E4 Screen the confirmation set | "without" only, 2 runs per task | 48 | ≈ $6 / $48 |
 | E5 Go/no-go | Keep a task if at least one screening run is rejected on its merits (not for contamination) | 0 | $0 |
 | E6 Confirmation | Kept tasks, paired, 3 runs per condition, fresh runs | 6 per kept task (72 at 12) | ≈ $12 / $1 per run |
@@ -127,9 +246,9 @@ Costs scale from Phase 5 on Claude Code: about $0.12 per "without" run and $0.20
 
 - **Screen "without" only.** Screening "with" would select tasks where Terraproof happens to look good.
 - **Use fresh runs.** Screening runs never enter the analysis, and confirmation uses fresh runs in both conditions. Selection therefore changes which tasks are included (tasks where the baseline sometimes fails), not how they are scored. The fresh baseline will probably pass more often than it did in screening (regression to the mean); that is expected.
-- **Fix the host and model at E3.** Choose them for availability, not outcomes, and do not change them after screening.
+- **Fix the host and model at E3.** Choose them for delivery and availability, plus Amendment 2's "without"-only baseline rule, never by observed effect, and do not change them after screening.
 - **Freeze the product after E3.** No product change between E3 and the end of E6. A change invalidates the confirmation set, and a new one must be authored.
-- **Go/no-go.** With fewer than 8 kept tasks, stop and report "insufficient headroom on this host" as the result. That is a finding, not a failure.
+- **Go/no-go.** With fewer than 8 kept tasks, stop and report "On MiMo-V2.6-Flash, this cohort leaves insufficient headroom to measure improvement under the registered protocol." That is a finding, not a failure.
 
 **Analysis.** Same as Phase 5 §5:
 
@@ -204,7 +323,7 @@ B, C and E1 touch disjoint files and can run in parallel.
 ## 7. Decisions needed
 
 1. **Evals in the wheel:** leave them out (proposed), or publish a separate `terraproof-evals` distribution?
-2. **Host for E:** decided in Amendment 1. Candidates are OpenCode (open model, Go subscription), Antigravity (Gemini) and the API host (GPT-4o), with one primary fixed at E3. Claude Code is not used for E.
+2. **Host for E:** decided in Amendments 1 and 2. The primary is a mid-sized flash model on OpenCode Go (GLM 5.3 Flash, DeepSeek 4.1 Flash or MiMo-V2.6-Flash), chosen at E3 by Amendment 2's selection rule. Claude Code is not used for E. The 40-invocation readiness batch ran on 2026-10-28, and on its evidence the rule selects MiMo-V2.6-Flash (R3 record). Closed at E3: MiMo alone, 48 without invocations; no two-model screen.
 3. **Pool size:** 36 candidates (proposed), or 24 (cheaper to author, but probably fewer than 12 kept tasks and less power).
 4. **Skills default** if there is no evidence by phase end: an opt-in pack (proposed), or keep them in the default install labelled unmeasured.
 5. **PyPI publisher:** the maintainer creates the project and the Trusted Publisher; confirm which GitHub repository it trusts.

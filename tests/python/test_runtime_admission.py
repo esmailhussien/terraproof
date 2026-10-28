@@ -72,3 +72,17 @@ def test_fingerprint_detects_asset_and_code_drift(tmp_path):
     second = admission.fingerprint(package, assets)
     (assets/'sources/LICENSE').write_text('preserved attribution')
     assert len({first, second, admission.fingerprint(package, assets)}) == 3
+
+
+def test_fingerprint_ignores_checkout_line_endings_but_not_binary_bytes(tmp_path):
+    package = tmp_path/'package'; package.mkdir()
+    assets = tmp_path/'assets'
+    for folder in ('skills', 'routing', 'instructions', 'sources', 'third_party'):
+        (assets/folder).mkdir(parents=True)
+    code, blob = package/'checks.py', assets/'skills/icon.bin'
+    code.write_bytes(b'a = 1\nb = 2\n'); blob.write_bytes(b'\0\r\n')
+    lf = admission.fingerprint(package, assets)
+    code.write_bytes(b'a = 1\r\nb = 2\r\n')
+    assert admission.fingerprint(package, assets) == lf
+    blob.write_bytes(b'\0\n')
+    assert admission.fingerprint(package, assets) != lf

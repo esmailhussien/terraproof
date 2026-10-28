@@ -11,6 +11,10 @@ import subprocess
 
 
 def fingerprint(package, assets):
+    # Text is hashed with CRLF read as LF, so one commit admits on any checkout's line endings.
+    def digest(path):
+        data = path.read_bytes()
+        return hashlib.sha256(data if b'\0' in data else data.replace(b'\r\n', b'\n')).hexdigest()
     files = {}
     for path in sorted(package.rglob('*.py')):
         relative = path.relative_to(package)
@@ -18,13 +22,13 @@ def fingerprint(package, assets):
             continue
         if path.is_symlink():
             raise ValueError('linked production code')
-        files['code/'+relative.as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+        files['code/'+relative.as_posix()] = digest(path)
     for folder in ('skills', 'routing', 'instructions', 'sources', 'third_party'):
         for path in sorted((assets/folder).rglob('*')):
             if path.is_symlink():
                 raise ValueError('linked production asset')
             if path.is_file() and '__pycache__' not in path.parts and path.suffix != '.pyc':
-                files['assets/'+folder+'/'+path.relative_to(assets/folder).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+                files['assets/'+folder+'/'+path.relative_to(assets/folder).as_posix()] = digest(path)
     return hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()
 
 
