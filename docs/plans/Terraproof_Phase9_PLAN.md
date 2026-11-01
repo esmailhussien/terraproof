@@ -196,6 +196,31 @@ Phase 8 measured Terraproof on real data and with a real agent. When the user de
 - **Sanity run on spent cases, not a measurement.** On the spent Q0 outputs, both correct geographic Nepal slopes now pass (100% match), and both geographic wrong slopes fail (100% match to their mistake).
 - **Not re-measured.** Q0 is spent, so this does not show the fixes on fresh cases.
 
+#### Q5.2 design (2026-11-02): registered before any run
+
+- **Driver.** [`tests/phase9_q5_agent.py`](../../tests/phase9_q5_agent.py) is committed (`bd5af54`) before any run. It reuses the Phase 8 P4 adapter, labels, install, brief and preflight, and runs the "with" condition only. Its labels add whether `run_checks` offered `next_step` and whether the agent then called `propose_contract` (tested in `tests/python/test_phase9_q5_agent.py`).
+- **Tasks.** Five, on Q0's cached sources but on bands and products no sealed Q0 case or P4 task delivered. One task per form:
+
+  | Task | Form | Truth (oracle: numpy, rasterio, pyproj) |
+  | --- | --- | --- |
+  | `q5-c1-blue-reflectance` | dataset | c1 stores raw DNs (1st percentile 1079), so (DN − 1000) × 1e-4, with fill as nodata |
+  | `q5-c1-clear-mask` | validity mask | 1 exactly where SCL is 4, 5, 6 or 11; the trap is class 2 (dark area), 34 561 cells |
+  | `q5-nepal-slope-percent` | dataset | slope in percent on WGS84 ground spacing; either central differences or Horn, with median ≤ 0.2° and p95 ≤ 1° (latitude ignored is ≥ 1.1° off) |
+  | `q5-kauai-summary` | summary | mean of non-fill cells (real zeros kept) and their exact count |
+  | `q5-switzerland-area` | summary | geodesic area within 1% |
+
+  Every oracle accepted a right deliverable and rejected a known mistake in calibration, and the driver repeats that before any run.
+- **Brief.** Neutral, never mentioning verification. Terraproof is installed as a user would install it, including the MCP instructions' two-step pattern.
+- **Host.** OpenCode 1.19.4 with `opencode-go/mimo-v2.6-flash`, 900 s per run, two runs per task: **10 invocations**, with no retries.
+  - The "with" interpreter is `C:\Users\mrsom\.venvs\agent-with-p9`. It holds this branch's wheel at `bd5af54` (SHA-256 `02df1dc7…c231`), with `terraproof.evals` excluded and R1-pinned dependencies.
+  - The driver interpreter is `terraproof-py312`.
+- **Preflight.** All 10 projects passed every no-model check, and no model was called.
+- **Requirement.** Zero false assurance. Everything else is reported, not thresholded:
+  - the next step offered and followed;
+  - the declared share;
+  - the last grade seen;
+  - deliverable correctness.
+
 ## 4. Order and delivery
 
 1. Q0 is sealed first.
