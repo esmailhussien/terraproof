@@ -1,9 +1,31 @@
-# Terraproof Release Checklist — v0.8.0, v0.7.3, v0.7.2, v0.7.1, v0.7.0, v0.6.0, v0.5.1, v0.5.0, v0.4.1 and v0.4.0
+# Terraproof Release Checklist — v0.9.0, v0.8.0, v0.7.3, v0.7.2, v0.7.1, v0.7.0, v0.6.0, v0.5.1, v0.5.0, v0.4.1 and v0.4.0
 
-Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 routing measurement that v0.4.1 ships, and the gates that remain open. v0.4.0 was released on 2026-10-23: tag `v0.4.0`, GitHub release *Terraproof v0.4.0*, and `terraproof@0.4.0` on npm as `latest`. v0.4.1 was released on 2026-10-24: tag `v0.4.1` on `f39d342`, GitHub release *Terraproof v0.4.1* (marked Latest), and `terraproof@0.4.1` on npm as `latest`. v0.5.0 (new `geometry.winding` check, COG JPEG warning, Phase 5 agent-lift harness, and the docs/README tidy-up) was released on 2026-10-24: tag `v0.5.0` on `1a33c4c` (part of `main` through merge commit `af66faa`), GitHub release *Terraproof v0.5.0* (marked Latest), and `terraproof@0.5.0` on npm as `latest`, published 04:18 UTC. The published tarball matches the tagged files exactly (plus the built `dist/`). v0.5.1 (fixes for all eight findings of an independent Codex review of v0.5.0 plus two further under-graded lift deliverables; re-grading the 72 saved Phase 5 main-run deliverables changed 0 verdicts) was released on 2026-10-24: tag `v0.5.1` on merge commit `6937a3e`, GitHub release *Terraproof v0.5.1* (marked Latest), and `terraproof@0.5.1` on npm as `latest`. The published tarball matches the tagged files exactly (plus the built `dist/`). v0.6.0 (six harder agent-lift tasks as a separate `harder` cohort, the OpenAI-compatible API agent host for the lift driver, the new `terrain.slope_consistent` check, and the geomaster terrain snippet fix; the benchmark is 33/33 tasks, 0 false passes, 25 checker rejections and 25 checker blind spots) was released on 2026-10-25: tag `v0.6.0` on `e18c143` (part of `main` through merge commit `2f81050`), GitHub release *Terraproof v0.6.0* (marked Latest), and `terraproof@0.6.0` on npm as `latest`, published 00:01 UTC. v0.8.0 is the first release published to PyPI as well as npm. Sections 2–5 describe the v0.8.0 release procedure. Historical verification below remains explicitly versioned.
+Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 routing measurement that v0.4.1 ships, and the gates that remain open. v0.4.0 was released on 2026-10-23: tag `v0.4.0`, GitHub release *Terraproof v0.4.0*, and `terraproof@0.4.0` on npm as `latest`. v0.4.1 was released on 2026-10-24: tag `v0.4.1` on `f39d342`, GitHub release *Terraproof v0.4.1* (marked Latest), and `terraproof@0.4.1` on npm as `latest`. v0.5.0 (new `geometry.winding` check, COG JPEG warning, Phase 5 agent-lift harness, and the docs/README tidy-up) was released on 2026-10-24: tag `v0.5.0` on `1a33c4c` (part of `main` through merge commit `af66faa`), GitHub release *Terraproof v0.5.0* (marked Latest), and `terraproof@0.5.0` on npm as `latest`, published 04:18 UTC. The published tarball matches the tagged files exactly (plus the built `dist/`). v0.5.1 (fixes for all eight findings of an independent Codex review of v0.5.0 plus two further under-graded lift deliverables; re-grading the 72 saved Phase 5 main-run deliverables changed 0 verdicts) was released on 2026-10-24: tag `v0.5.1` on merge commit `6937a3e`, GitHub release *Terraproof v0.5.1* (marked Latest), and `terraproof@0.5.1` on npm as `latest`. The published tarball matches the tagged files exactly (plus the built `dist/`). v0.6.0 (six harder agent-lift tasks as a separate `harder` cohort, the OpenAI-compatible API agent host for the lift driver, the new `terrain.slope_consistent` check, and the geomaster terrain snippet fix; the benchmark is 33/33 tasks, 0 false passes, 25 checker rejections and 25 checker blind spots) was released on 2026-10-25: tag `v0.6.0` on `e18c143` (part of `main` through merge commit `2f81050`), GitHub release *Terraproof v0.6.0* (marked Latest), and `terraproof@0.6.0` on npm as `latest`, published 00:01 UTC. v0.8.0 is the first release published to PyPI as well as npm. Sections 2–5 describe the release procedure, used for v0.8.0 and v0.9.0. Historical verification below remains explicitly versioned.
 
 ---
 
+
+## v0.9.0 release — 2026-10-28
+
+Phase 7 and the Phase 6 work after 0.8.0. **Breaking grade change:** without a verification
+contract, passing checks grade `checks-passed` (exit 0) instead of `decision-grade`, and
+reports move to `terraproof.evidence/0.2` with a `coverage` block; 0.1 evidence bundles still
+verify. New checks `raster.vertical_units`, `raster.nodata_support` and
+`geometry.metric_values`; goal profiles; declared inputs for existing checks. Phase 7 V4b, measured
+once on 48 sealed held-out cases: 17/20 wrong outputs caught, 0 false assurance, 0 confirmed
+false alarms. Phase 6 stopped at E5; no lift is claimed. The 33-task benchmark gates in CI.
+
+- [ ] PR CI green on the release head, then merged with a regular merge commit.
+- [ ] Tag the release commit `v0.9.0` and push the tag. This starts `publish-python.yml`:
+  build, clean install on every OS, TestPyPI publish and install, then a wait for the `pypi`
+  environment review.
+- [ ] Publish the reviewed npm tarball (`npm publish --access public`; browser/2FA).
+- [ ] Approve the `pypi` deployment in GitHub only after the TestPyPI install jobs pass.
+- [ ] GitHub release *Terraproof v0.9.0* with the npm tarball, wheel and sdist attached; its notes
+  lead with the breaking grade change and the migration note.
+- [ ] Post-release: `npx terraproof@0.9.0 --version` and `route` from a blank directory, and
+  `pip install "terraproof[mcp]==0.9.0"` in a fresh venv runs `inspect`, `check` (a clean
+  output without a contract reports `checks-passed`) and lists the MCP tools.
 
 ## v0.8.0 release — 2026-10-27
 
@@ -428,7 +450,7 @@ Still declared. In the invocation the spec defines, the checker has no legitimat
 ## 3. Package Name & Registry Strategy
 
 The npm identity is the existing unscoped `terraproof` package. Confirm the
-publishing account with `npm whoami` and check that `0.8.0` is unpublished before
+publishing account with `npm whoami` and check that the new version is unpublished before
 publishing. Use the exact reviewed tarball, keep its version and integrity hash,
 and complete any npm browser/2FA approval through the supported login flow.
 
@@ -451,7 +473,7 @@ before the first tag:
 
 1. Combine the complete batch and version bump in one PR. Wait for its full CI,
    merge it, and verify CI on the exact merged-main commit.
-2. Tag that commit `v0.8.0` and push the tag (branch-only CI does not rerun for tags).
+2. Tag that commit `vX.Y.Z` and push the tag (branch-only CI does not rerun for tags).
    The tag starts `publish-python.yml`, which builds the wheel and sdist once, installs
    them cleanly on every OS and publishes to TestPyPI, then waits for the `pypi` review.
 3. Build the npm tarball from that clean commit. Verify the npm executable uses LF and
@@ -459,8 +481,8 @@ before the first tag:
 4. Publish the reviewed npm tarball with `npm publish <tarball> --access public`.
 5. Approve the `pypi` deployment once the TestPyPI install jobs pass. The workflow
    publishes the same files to PyPI and installs them from the index on every OS.
-6. Create **Terraproof v0.8.0** on GitHub with the tarball and wheel attached. Use
-   the 0.8.0 changelog and record final verification links/hashes and the existing
+6. Create **Terraproof vX.Y.Z** on GitHub with the tarball and wheel attached. Use
+   that version's changelog and record final verification links/hashes and the existing
    scientific/checker limitations. No new model run is implied.
 7. Verify the published npm version and routing from a blank directory, and the PyPI
    install in a fresh venv. Record the outcome in the release.
