@@ -259,3 +259,19 @@ def test_a_spherical_spacing_model_passes_and_ignoring_latitude_fails(make_raste
     ignored = make_raster("ignored.tif", _spherical_slope(z, lats, step, scale_longitude=False), crs="EPSG:4326",
                           origin=(16.0, lats[0] + 0.5 * step), resolution=step, nodata=-9999.0)
     assert _only(_run(ignored, **args), "terrain.slope_consistent").status == "fail"
+
+
+def test_a_mask_without_anything_to_verify_it_names_what_is_missing(make_raster, scl):
+    codes, _qa = scl
+    mask = _mask(make_raster, "mask.tif", np.isin(codes, [4, 5, 6]))
+    parameters = {"output_form": "validity-mask"}
+    report = build_report(inputs=[input_record(mask, "input", "raster")], results=_run(mask, output_form="validity-mask"),
+                          parameters=parameters)
+    step = report["next_step"]
+    assert step["profiles"] == [] and step["missing"]["qa-masked"] == ["qa_path", "qa_kind"]
+    assert "qa_path" in render_markdown(report) and "qa_path" in render_markdown(report, lang="ar")
+    with_qa = build_report(inputs=[input_record(mask, "input", "raster")],
+                           results=_run(mask, output_form="validity-mask", qa_path=_qa, qa_kind="keep-codes",
+                                        qa_keep_codes=[4, 5, 6]),
+                           parameters=dict(parameters, qa_path=_qa))
+    assert "missing" not in with_qa.get("next_step", {})

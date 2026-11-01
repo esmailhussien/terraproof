@@ -253,6 +253,8 @@ Phase 8 measured Terraproof on real data and with a real agent. When the user de
 2. **Not a lift claim.** There was no "without" condition, and the tasks differ from P4's. The 10/10 correctness and the declaration rate are observed behaviour, not an effect size.
 3. **Remaining gap: masks without their QA layer.** `next_step` only names profiles whose checks already ran. An agent that declares a mask but omits `qa_path` gets no prompt toward `qa-masked`. A narrow follow-up would name the missing binding when `output_form` is declared without a QA layer, still never inferring which layer it is.
 
+**After Q5.2 (2026-11-02): mask hint added, not measured.** A report with `output_form = validity-mask` and neither QA nor support check carries `next_step.missing`. It names `qa_path` and `qa_kind` for `qa-masked`, or `support_sources` and `support_rule` for `nodata-support`, plus one Markdown line in English and Arabic. It never names which file. A test covers it.
+
 
 ## 4. Order and delivery
 

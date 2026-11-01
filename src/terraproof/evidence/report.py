@@ -42,6 +42,8 @@ LABELS = {
         "all_ran": "Every applicable catalogue check ran.",
         "next_step": ("Next step: your arguments ran every check of the goal {0}. Declare it with `propose` "
                       "(MCP: `propose_contract`), then check with the contract to make them required."),
+        "next_step_mask": ("Next step: a validity mask was declared with nothing to verify it against. Supply its "
+                           "QA layer (`qa_path`, `qa_kind`) or its sources (`support_sources`, `support_rule`)."),
         "cols_checks": ("Check", "Status", "Input", "Message"),
         "cols_inputs": ("Role", "Path", "Kind", "SHA-256", "Bytes"),
         "roles": {
@@ -91,6 +93,8 @@ LABELS = {
         "all_ran": "نُفِّذ كل فحص منطبق من الكتالوج.",
         "next_step": ("الخطوة التالية: وسائطك شغّلت كل فحوصات الهدف {0}. أعلِنه بـ `propose` "
                       "(في MCP: `propose_contract`)، ثم افحص بالعقد لتصبح هذه الفحوصات مطلوبة."),
+        "next_step_mask": ("الخطوة التالية: أُعلن قناع صلاحية بلا ما يُتحقق منه به. قدّم طبقة ضبط الجودة "
+                           "(`qa_path`، `qa_kind`) أو مصادره (`support_sources`، `support_rule`)."),
         "cols_checks": ("الفحص", "الحالة", "المدخل", "الرسالة"),
         "cols_inputs": ("الدور", "المسار", "النوع", "SHA-256", "الحجم (بايت)"),
         "roles": {
@@ -195,13 +199,22 @@ def next_step(report: dict) -> dict | None:
     from terraproof.evidence.propose import command_flags
     ran = {check["id"] for check in report["checks"]}
     enabled = sorted(name for name, entry in profiles().items() if set(entry["checks"]) <= ran)
-    if not enabled:
+    missing = {}
+    if (report["parameters"].get("output_form") == "validity-mask"
+            and not {"rs.cloud_mask_applied", "raster.nodata_support"} & ran):
+        # A declared mask with nothing to verify it against: name what each mask goal needs, never which file.
+        missing = {"qa-masked": ["qa_path", "qa_kind"], "nodata-support": ["support_sources", "support_rule"]}
+    if not enabled and not missing:
         return None
     outputs = [record["path"] for record in report["inputs"] if record["role"] == "input"]
     given = {key: value for key, value in report["parameters"].items() if value not in (None, False, [], {}, ())}
     arguments = {key: value for key, value in recheck_arguments({"paths": outputs, "parameters": given}).items()
                  if key != "paths"}
-    return {"profiles": enabled,
+    if not enabled:
+        return {"profiles": [], "missing": missing,
+                "why": "A validity mask was declared, but nothing to verify it against was given. Supply its QA "
+                       "layer (qa-masked) or the sources whose valid cells it should follow (nodata-support)."}
+    return {"profiles": enabled, **({"missing": missing} if missing else {}),
             "why": "These checks ran from your arguments but are not required, so the grade cannot be "
                    "decision-grade. Declare the goal to make them required.",
             "propose_contract": {"paths": outputs, "profiles": enabled, "arguments": arguments},
@@ -281,8 +294,10 @@ def render_markdown(report: dict, lang: str = "en") -> str:
                 for item in coverage["not_checked"]] + [""]
         else:
             section += [labels["all_ran"], ""]
-        if report.get("next_step"):
+        if report.get("next_step", {}).get("profiles"):
             section += [labels["next_step"].format(", ".join(_code(n) for n in report["next_step"]["profiles"])), ""]
+        if report.get("next_step", {}).get("missing"):
+            section += [labels["next_step_mask"], ""]
         lines[lines.index(f"## {labels['checks']}"):lines.index(f"## {labels['checks']}")] = section
 
     if report["checks"]:
