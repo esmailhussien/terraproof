@@ -183,7 +183,10 @@ Use `--manifest run.json --require-provenance` for `provenance.reproducible`
 drift). Add `--time-range START END` for `rs.temporal_scope` on source Items.
 For `rs.scale_applied_once`, compare a decoded raster with its raw source using
 `--reference-input RAW.tif --encoding s2-l2a` or `landsat-c2-l2`; the sampled
-output is compared with DN × scale + offset under that declared encoding.
+output is compared with DN × scale + offset under that declared encoding. For
+`s2-l2a` also pass `--decode-offset`: -0.1 for ESA DNs from processing baseline
+04.00, 0 for earlier baselines and for distributions that already applied it
+(an Earth Search item says `earthsearch:boa_offset_applied: true`).
 
 **Not checked automatically:** whether the search returned the right items,
 whether pinned items still exist upstream, licence compliance and transfer

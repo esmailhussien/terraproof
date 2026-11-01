@@ -77,7 +77,7 @@ def test_check_with_reference_input_and_encoding(make_raster, tmp_path, capsys):
     dn = make_raster("dn.tif", np.full((64, 64), 1500, dtype="uint16"), nodata=65535)
     out = make_raster("out.tif", np.full((64, 64), 0.05, dtype="float32"), nodata=-9999.0)
 
-    assert main(["check", str(out), "--reference-input", str(dn), "--encoding", "s2-l2a"]) == 0
+    assert main(["check", str(out), "--reference-input", str(dn), "--encoding", "s2-l2a", "--decode-offset", "-0.1"]) == 0
 
     report = json.loads(capsys.readouterr().out)
     ids = {check["id"]: check["status"] for check in report["checks"]}

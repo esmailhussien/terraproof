@@ -7,7 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+## [0.10.0] — 2026-11-01
+
+Phase 8: easier declarations, measured on real data and with a real agent. New
+`propose` / `propose_contract` drafts a contract from explicit metadata; three opt-in checks
+close remaining gaps. **Changed:** `--encoding s2-l2a` needs `--decode-offset`, and
+`geometry.winding` warns instead of failing. Measured once on 34 sealed real-data cases (Phase 8
+P3): declared checks caught 7 of 7 covered wrong outputs with no false assurance or false alarm.
+Proposals from metadata alone did not meet acceptance (fixed, not re-measured), and 20 of the 34
+real deliverables are forms no check covers yet. A 10-run agent measurement (P4) found the
+`s2-l2a` preset certifying two wrong decodes (fixed, not re-measured). Details are in
+[the Phase 8 plan](docs/plans/Terraproof_Phase8_PLAN.md).
+
+### Contract proposals from metadata (Phase 8 P1)
+
+- `python -m terraproof propose OUTPUT... --profile NAME` and the MCP tool
+  `propose_contract` draft a verification contract for goal profiles. They take the
+  same bindings as `check` and fill the missing ones only from explicit metadata: a
+  single-band source's unit label or nodata, or `raster:bands` scale, offset, nodata
+  or unit of a local STAC Item asset tied to the file with `--stac FILE=ITEM#ASSET`.
+  Each filled binding records its evidence. Unstated, undeclarable, conflicting and
+  unusable bindings are listed, never guessed, and a proposal is never applied for you.
+  `--contract-out` saves the contract, and the proposal gives the `check` command
+  that runs it.
+- A STAC `raster:bands` offset is reported as a conflict, not proposed, when the same item
+  says the offset is already in the stored values (`earthsearch:boa_offset_applied`). Earth
+  Search Sentinel-2 L2A items state both, and copying the offset decoded correct
+  reflectance as wrong in the Phase 8 P3 measurement.
+- The MCP server now has seven tools.
+
+### The `s2-l2a` preset no longer certifies an offset it cannot know (Phase 8 P4)
+
+- **Changed:** `--encoding s2-l2a` needs `--decode-offset` (0 or -0.1). The Sentinel-2 L2A offset
+  depends on the processing baseline (-0.1 from 04.00) and on the distributor; Earth Search
+  `sentinel-2-l2a` COGs already include it. Without a declared offset, an output matching either
+  offset is `not-run` (naming the match), and only an output matching neither fails. In the
+  Phase 8 P4 agent run, the preset had graded two doubly offset decodes `decision-grade`.
+
+### Three opt-in checks and a winding change (Phase 8 P2)
+
+- `raster.categorical_codes` (`--categorical-source`): every output class code must
+  occur in the class raster it came from, so blended codes from bilinear, cubic or
+  average resampling fail.
+- `sar.filter_domain` (`--sar-filter boxcar`, `--sar-filter-size`,
+  `--sar-filter-source`, with `--sar-expect`): a declared boxcar speckle filter is
+  recomputed in linear power; one averaged in dB fails.
+- `rs.stack_window` (`--stack-window`, `--stack-time`): a stack output's time label
+  must hold every layer's interval without overlap; an accumulation must also cover
+  it without gaps, with weights equal to layer hours.
+- **Changed:** `geometry.winding` now warns instead of failing. RFC 7946 tells parsers
+  not to reject such rings, and orientation changes no geometry. A clockwise GeoJSON
+  now grades `review-required` (exit 2) instead of `advisory-only` (exit 3), and
+  still never `decision-grade`.
+
 ## [0.9.0] — 2026-10-28
+
+Released 2026-11-01: merge `b6aca7e` (#41), tag `v0.9.0`, PyPI through `publish-python.yml`,
+npm `terraproof@0.9.0` (shasum `6ddb3b79…`), and GitHub release *Terraproof v0.9.0*.
 
 Phase 7: a report no longer implies more verification than happened. **Breaking:** without a
 verification contract, passing checks grade `checks-passed` (exit 0), never `decision-grade`;

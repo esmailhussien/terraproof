@@ -125,7 +125,33 @@ def check_scale_applied_once(
     caller declares them (for example from a STAC item) or `encoding` names a product whose
     calibration is documented (s2-l2a, landsat-c2-l2). The output is compared against that
     formula once, against the raw DN (decoding not applied), and against the formula applied twice.
+
+    The Sentinel-2 L2A offset is not a property of the product alone: ESA's DNs carry -0.1 only
+    from processing baseline 04.00, and some distributions (Earth Search sentinel-2-l2a) already
+    applied it. So `s2-l2a` uses a declared `offset` when given; without one, an output matching
+    either 0 or -0.1 is not-run, naming the offset to declare, and only an output matching neither
+    fails (Phase 8 P4 found the preset certifying a doubly offset decode).
     """
+    if encoding == "s2-l2a":
+        scale = ENCODINGS[encoding]["scale"] if scale is None else scale
+        if offset is not None:
+            return _scale_applied_once(output, reference_input, None, scale, offset, full_scan, unit_conversion)
+        trials = {candidate: _scale_applied_once(output, reference_input, None, scale, candidate, full_scan,
+                                                 unit_conversion) for candidate in (-0.1, 0.0)}
+        matched = [candidate for candidate, found in trials.items() if any(r.status == PASS for r in found)]
+        if not matched:
+            return [result("rs.scale_applied_once", r.status, r.message, encoding=encoding,
+                           **{k: v for k, v in r.evidence.items() if k != "encoding"}) for r in trials[-0.1]]
+        evidence = {k: v for k, v in trials[matched[0]][0].evidence.items() if k != "encoding"}
+        return [result("rs.scale_applied_once", NOT_RUN,
+                       f"The output matches the s2-l2a decode with offset {matched[0]:g}, but the preset cannot tell "
+                       "which offset is right: ESA's DNs carry -0.1 only from processing baseline 04.00, and some "
+                       "distributions (Earth Search sentinel-2-l2a) already applied it. Declare decode_offset.",
+                       encoding=encoding, matched_offset=matched[0], missing_bindings=["decode_offset"], **evidence)]
+    return _scale_applied_once(output, reference_input, encoding, scale, offset, full_scan, unit_conversion)
+
+
+def _scale_applied_once(output, reference_input, encoding, scale, offset, full_scan, unit_conversion) -> list:
     if unit_conversion is not None and unit_conversion not in UNIT_CONVERSIONS:
         return [result("rs.scale_applied_once", NOT_RUN, f"Unknown unit_conversion '{unit_conversion}'. Known: "
                        f"{', '.join(UNIT_CONVERSIONS)}.", output=output["path"], unit_conversion=unit_conversion)]

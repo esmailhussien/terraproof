@@ -5,7 +5,30 @@ Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 r
 ---
 
 
-## v0.9.0 release — 2026-10-28
+## v0.10.0 release — prepared 2026-11-01
+
+Phase 8: `propose` and the MCP tool `propose_contract` (seven tools); new opt-in checks
+`raster.categorical_codes`, `sar.filter_domain` and `rs.stack_window`. **Changed:**
+`--encoding s2-l2a` needs `--decode-offset` (otherwise not-run, never certified), and
+`geometry.winding` warns instead of failing (a clockwise GeoJSON alone exits 2, not 3).
+Measured: P3 on 34 sealed real-data cases (declared: 7/7 covered caught, 0 false assurance, 0
+false alarms; proposed: acceptance not met, fixed and not re-measured), and P4 with 10 approved
+OpenCode/MiMo runs (two false assurances through the preset, fixed and not re-measured).
+
+- [ ] PR CI green on the release head, then merged with a regular merge commit.
+- [ ] Tag the release commit `v0.10.0` and push the tag (annotated). This starts
+  `publish-python.yml`: build, clean install on every OS, TestPyPI publish and install, then a
+  wait for the `pypi` environment review.
+- [ ] Publish the reviewed npm tarball (`npm publish --access public`; browser/2FA; check
+  `npm whoami` first, since an expired session shows as E404).
+- [ ] Approve the `pypi` deployment in GitHub only after the TestPyPI install jobs pass.
+- [ ] GitHub release *Terraproof v0.10.0* with the npm tarball, wheel and sdist attached; its
+  notes lead with the two changed behaviours and the migration (`--decode-offset`).
+- [ ] Post-release: `npx terraproof@0.10.0 --version` and `route` from a blank directory, and
+  `pip install "terraproof[mcp]==0.10.0"` in a fresh venv runs `inspect`, `check`, `propose`
+  and lists seven MCP tools.
+
+## v0.9.0 release — 2026-11-01 (prepared 2026-10-28)
 
 Phase 7 and the Phase 6 work after 0.8.0. **Breaking grade change:** without a verification
 contract, passing checks grade `checks-passed` (exit 0) instead of `decision-grade`, and
@@ -15,17 +38,17 @@ verify. New checks `raster.vertical_units`, `raster.nodata_support` and
 once on 48 sealed held-out cases: 17/20 wrong outputs caught, 0 false assurance, 0 confirmed
 false alarms. Phase 6 stopped at E5; no lift is claimed. The 33-task benchmark gates in CI.
 
-- [ ] PR CI green on the release head, then merged with a regular merge commit.
-- [ ] Tag the release commit `v0.9.0` and push the tag. This starts `publish-python.yml`:
+- [x] PR CI green on the release head, then merged with a regular merge commit. 2026-11-01: #41, 20/20 on `3211e8d`, merge `b6aca7e`.
+- [x] Tag the release commit `v0.9.0` and push the tag (annotated, on `b6aca7e`). This starts `publish-python.yml`:
   build, clean install on every OS, TestPyPI publish and install, then a wait for the `pypi`
   environment review.
-- [ ] Publish the reviewed npm tarball (`npm publish --access public`; browser/2FA).
-- [ ] Approve the `pypi` deployment in GitHub only after the TestPyPI install jobs pass.
-- [ ] GitHub release *Terraproof v0.9.0* with the npm tarball, wheel and sdist attached; its notes
-  lead with the breaking grade change and the migration note.
-- [ ] Post-release: `npx terraproof@0.9.0 --version` and `route` from a blank directory, and
+- [x] Publish the reviewed npm tarball (`npm publish --access public`; browser/2FA). 2026-11-01: shasum `6ddb3b79…`; its files match the tag apart from CRLF line endings in 168 text files, and `bin/terraproof.js` has no CR bytes. A first attempt failed with the misleading E404 of an expired npm session.
+- [x] Approve the `pypi` deployment in GitHub only after the TestPyPI install jobs pass. All 6 TestPyPI installs passed; PyPI wheel SHA-256 `766071d4…`, sdist `72db79ac…`.
+- [x] GitHub release *Terraproof v0.9.0* with the npm tarball, wheel and sdist attached; its notes
+  lead with the breaking grade change and the migration note. Marked Latest.
+- [x] Post-release: `npx terraproof@0.9.0 --version` and `route` from a blank directory, and
   `pip install "terraproof[mcp]==0.9.0"` in a fresh venv runs `inspect`, `check` (a clean
-  output without a contract reports `checks-passed`) and lists the MCP tools.
+  output without a contract reports `checks-passed`) and lists the MCP tools. 2026-11-01, Windows: `terraproof v0.9.0`, route exit 0; pip 0.9.0, `inspect` exit 0, `check` exit 0 with `checks-passed`, schema `terraproof.evidence/0.2` and coverage not assessed; six MCP tools.
 
 ## v0.8.0 release — 2026-10-27
 

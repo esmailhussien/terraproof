@@ -38,7 +38,9 @@ INSTRUCTIONS = (
     "full; installed skill files are not automatically loaded by every host. Use `preflight` "
     "to validate a declared plan against the real inputs before spending compute. For derived "
     "outputs, supply the relevant source operands and options to `run_checks`; inspection or "
-    "a plausible value range alone does not verify the derivation. For NDVI, use "
+    "a plausible value range alone does not verify the derivation. To require a declared goal, "
+    "`propose_contract` drafts a contract for its goal profiles from explicit metadata; review it "
+    "and pass it to `run_checks`. For NDVI, use "
     "`index_formula=\"ndvi\"`, `nir` and `red` on the saved output; for NBR, dNBR, NDWI, MNDWI, "
     "NDMI, SAVI or EVI pass `bands` by role (and `band_numbers` for multi-band sources). For "
     "composites, accumulations and trends pass the ordered input layers as `stack` with "
@@ -132,6 +134,12 @@ def run_checks(
     metric_unit: str | None = None,
     buffer_distance_m: float | None = None,
     buffer_source: str | None = None,
+    categorical_source: str | None = None,
+    sar_filter: str | None = None,
+    sar_filter_size: int | None = None,
+    sar_filter_source: str | None = None,
+    stack_times: list[str] | None = None,
+    stack_window: list[str] | None = None,
     contract: dict | str | None = None,
     profiles: list[str] | None = None,
     lang: str = "en",
@@ -148,6 +156,8 @@ def run_checks(
     counts or explicit raster identity; `resampling` is the method declared for the rasters and `categorical` says
     they hold class codes; `expect` is the value range the bands should hold (reflectance or
     index). Phase 4 options include `reference_input`/`encoding` for scale/offset checks
+    (`encoding="s2-l2a"` also needs `decode_offset`, 0 or -0.1: the offset depends on the
+    processing baseline and the distributor)
     (`decode_scale`/`decode_offset` declare a calibration the file lacks, and
     `unit_conversion="kelvin-to-celsius"` a unit change after decoding),
     `qa_path`/`qa_kind` for cloud-mask checks (`qa_kind="keep-codes"` with `qa_keep_codes`
@@ -175,6 +185,11 @@ def run_checks(
     `buffer_distance_m` and `buffer_source`, verifies delivered vector measurements
     geodesically in any CRS. `dem_vertical_unit` declares a DEM's unit when the file has no
     label, and `qa_source` lets a keep-codes QA rule tell over-masking from source gaps.
+    `categorical_source` checks that every output class code occurs in the class raster it
+    was resampled from. `sar_filter="boxcar"` with an odd `sar_filter_size`, the unfiltered
+    `sar_filter_source` and `sar_expect` recomputes the speckle filter in linear power.
+    `stack_window` (start, end) with one ISO "START/END" interval per `stack` layer in
+    `stack_times` checks the output's time label (and, for weighted-sum, gaps and hour weights).
     `profiles` names declared
     goal profiles (routing/profiles.json) required on every path, bound to the arguments
     given; a binding a profile needs but you did not give leaves it incomplete.
@@ -201,6 +216,8 @@ def run_checks(
         vertical_layers = [_inspect_dataset(path) for path in vertical_sources or []]
         support_layers = [_inspect_dataset(path) for path in support_sources or []]
         buffer_layer = _inspect_dataset(buffer_source) if buffer_source else None
+        class_layer = _inspect_dataset(categorical_source) if categorical_source else None
+        filter_layer = _inspect_dataset(sar_filter_source) if sar_filter_source else None
 
         inputs = [input_record(path, "input", dataset["kind"]) for path, dataset in zip(paths, inspections)]
         if compare is not None:
@@ -227,6 +244,10 @@ def run_checks(
             inputs.append(input_record(qa_source, "qa-source", "raster"))
         if buffer_layer is not None:
             inputs.append(input_record(buffer_source, "buffer-source", buffer_layer["kind"]))
+        if class_layer is not None:
+            inputs.append(input_record(categorical_source, "categorical-source", class_layer["kind"]))
+        if filter_layer is not None:
+            inputs.append(input_record(sar_filter_source, "sar-filter-source", filter_layer["kind"]))
         if isinstance(accuracy_samples, str) and Path(accuracy_samples).is_file():
             inputs.append(input_record(accuracy_samples, "accuracy-samples", "accuracy-samples"))
         if isinstance(class_areas, str) and Path(class_areas).is_file():
@@ -286,11 +307,18 @@ def run_checks(
             metric_unit=metric_unit,
             buffer_distance_m=buffer_distance_m,
             buffer_source=buffer_layer,
+            categorical_source=class_layer,
+            sar_filter=sar_filter,
+            sar_filter_size=sar_filter_size,
+            sar_filter_source=filter_layer,
+            stack_times=stack_times or None,
+            stack_window=stack_window,
         )
 
         checked_paths = list(paths)
         for path in (compare_to, reference_input, dem, nir, red, *(bands or {}).values(), *(stack or []),
                      *(vertical_sources or []), *(support_sources or []), qa_source, buffer_source, qa_path,
+                     categorical_source, sar_filter_source,
                      accuracy_samples,
                      class_areas):
             if isinstance(path, str):
@@ -360,6 +388,12 @@ def run_checks(
         "metric_unit": metric_unit,
         "buffer_distance_m": buffer_distance_m,
         "buffer_source": buffer_source,
+        "categorical_source": categorical_source,
+        "sar_filter": sar_filter,
+        "sar_filter_size": sar_filter_size,
+        "sar_filter_source": sar_filter_source,
+        "stack_times": stack_times or None,
+        "stack_window": stack_window,
     }
     try:
         if profiles and contract is not None:
@@ -377,6 +411,39 @@ def run_checks(
         "report": json.loads(to_json(report)),
         "markdown": render_markdown(report, lang=lang),
     }
+
+
+@mcp.tool()
+def propose_contract(
+    paths: list[str],
+    profiles: list[str],
+    arguments: dict[str, Any] | None = None,
+    stac: list[str] | None = None,
+) -> dict[str, Any]:
+    """Draft a verification contract for declared goal profiles; it is never applied for you.
+
+    `paths` are the outputs, `profiles` the goal profiles (routing/profiles.json), and
+    `arguments` the bindings you already know, named as for `run_checks` (for example
+    `{"dem": "dem.tif"}`). A binding the profiles need that you did not give is filled only
+    from explicit metadata: a single-band source's unit label or nodata in the file, or
+    `raster:bands` scale, offset, nodata or unit of a local STAC Item asset you tie to it with
+    `stac` entries `"FILE=ITEM.json#ASSET"`. Each filled binding carries its evidence (file,
+    field, value). Bindings no metadata states are listed in `undeclared` or `not_stated`, and
+    disagreeing metadata in `conflicts`; none is guessed. Review the proposal, then call
+    `run_checks` with its `check_arguments` and `contract`. Matches `python -m terraproof propose`.
+    """
+    if not isinstance(paths, list) or not paths or not all(isinstance(path, str) for path in paths):
+        raise ToolError("paths must be a non-empty list of file paths")
+    from terraproof.evidence.propose import propose_contract as _propose
+
+    values = dict(arguments or {})
+    bands, numbers = values.pop("bands", None), values.pop("band_numbers", None) or {}
+    if bands:
+        values["index_bands"] = {role: [path, numbers.get(role)] for role, path in bands.items()}
+    try:
+        return jsonable(_propose(paths, profiles, values, stac))
+    except (OSError, ValueError, TypeError) as exc:
+        raise ToolError(f"cannot propose a verification contract: {exc}") from exc
 
 
 @mcp.tool()

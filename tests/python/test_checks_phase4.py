@@ -123,7 +123,7 @@ def test_s2_l2a_decoding_matches_the_published_formula(make_raster, evaluate):
     path_out = make_raster("fp_s2_out.tif", np.full((SIDE, SIDE), 0.05, dtype="float32"), nodata=-9999.0)
 
     results, grade = evaluate(
-        [path_out], reference_input=inspect_dataset(path_dn), encoding="s2-l2a"
+        [path_out], reference_input=inspect_dataset(path_dn), encoding="s2-l2a", decode_offset=-0.1
     )
 
     result = one(results, "rs.scale_applied_once")
@@ -228,7 +228,7 @@ def test_s2_decoded_once_passes_scale_applied_once(make_raster, evaluate):
         make_raster, "s2_ok_dn.tif", "s2_ok_out.tif", lambda grid: (grid - 1000) / 10000.0
     )
 
-    results, grade = evaluate([out], reference_input=inspect_dataset(dn), encoding="s2-l2a")
+    results, grade = evaluate([out], reference_input=inspect_dataset(dn), encoding="s2-l2a", decode_offset=-0.1)
 
     result = one(results, "rs.scale_applied_once")
     assert result.status == "pass"
@@ -332,7 +332,7 @@ def test_source_nodata_off_stride_and_extra_qa_mask(make_raster, evaluate, leak)
     decoded[8, 8] = -9999.0  # additional QA masking is legitimate
     dn = make_raster("mask_dn.tif", raw, nodata=0)
     out = make_raster("mask_out.tif", decoded, nodata=-9999.0)
-    results, _ = evaluate([out], reference_input=inspect_dataset(dn), encoding="s2-l2a")
+    results, _ = evaluate([out], reference_input=inspect_dataset(dn), encoding="s2-l2a", decode_offset=-0.1)
     check = one(results, "rs.scale_applied_once")
     assert check.status == ("fail" if leak else "pass")
     if leak:
@@ -1394,3 +1394,22 @@ def test_run_checks_defaults_are_unchanged_without_new_kwargs(make_raster, evalu
     assert statuses["raster.nodata_declared"] == "pass"
     assert statuses["raster.cog_layout"] == "pass"
     assert grade == CHECKS_PASSED
+
+
+@pytest.mark.parametrize("full_scan", [False, True])
+@pytest.mark.parametrize("offset, expected", [(-0.1, "not-run"), (0.0, "not-run"), ("double", "fail")])
+def test_s2_l2a_preset_without_a_declared_offset_never_certifies(make_raster, evaluate, full_scan, offset, expected):
+    """Phase 8 P4: Earth Search COGs already include the -0.1 offset, so the preset cannot pick one."""
+    from terraproof.inspect import inspect_dataset
+
+    raw = np.full((16, 16), 2500, dtype="uint16")
+    decoded = raw.astype("float64") * 0.0001
+    decoded = (decoded - 0.1) * 0.0001 - 0.1 if offset == "double" else decoded + offset
+    dn = make_raster("preset_dn.tif", raw, nodata=0)
+    out = make_raster("preset_out.tif", decoded.astype("float32"), nodata=-9999.0)
+    results, grade = evaluate([out], reference_input=inspect_dataset(dn), encoding="s2-l2a",
+                              processing_full_scan=full_scan)
+    check = one(results, "rs.scale_applied_once")
+    assert check.status == expected and grade == ADVISORY
+    if expected == "not-run":
+        assert check.evidence["matched_offset"] == offset and check.evidence["missing_bindings"] == ["decode_offset"]

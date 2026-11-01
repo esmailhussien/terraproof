@@ -58,10 +58,10 @@ def satellite_s2_baseline_offset(root: Path):
     steps = [
         check_step("check sr_red.tif sr_nir.tif --expect reflectance", [sr_red, sr_nir], expect="reflectance"),
         check_step(
-            "run_checks(['sr_red.tif'], encoding='s2-l2a', reference_input='red_dn.tif')",
+            "run_checks(['sr_red.tif'], encoding='s2-l2a', decode_offset=-0.1, reference_input='red_dn.tif')",
             [sr_red],
             reference_input=inspect_dataset(dn_red),
-            encoding="s2-l2a",
+            encoding="s2-l2a", decode_offset=-0.1,
         ),
         check_step(
             "run_checks(['sr_red.tif'], qa_path='scl.tif', qa_kind='s2-scl')",
@@ -172,8 +172,8 @@ def satellite_s2_baseline_offset(root: Path):
     no_offset_path = write_raster(root / "sr_red_no_offset.tif", no_offset, crs=UTM, nodata=FLOAT_NODATA, dtype="float32")
     wrong_steps = [
         check_step("check sr_red_no_offset.tif sr_nir.tif --expect reflectance", [no_offset_path, sr_nir], expect="reflectance"),
-        check_step("run_checks(no_offset, reference_input=red_dn, encoding='s2-l2a')", [no_offset_path],
-                   reference_input=inspect_dataset(dn_red), encoding="s2-l2a"),
+        check_step("run_checks(no_offset, reference_input=red_dn, encoding='s2-l2a', decode_offset=-0.1)", [no_offset_path],
+                   reference_input=inspect_dataset(dn_red), encoding="s2-l2a", decode_offset=-0.1),
     ]
     wrong_oracle = Oracle("the offset must be applied from the product baseline, not the acquisition date")
     wrong_values = read_raster(no_offset_path)

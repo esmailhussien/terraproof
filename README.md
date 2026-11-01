@@ -12,7 +12,7 @@ Terraproof helps AI coding agents do geospatial work they can prove. It gives an
 
 Everything runs locally and offline. No model API key is needed.
 
-**Status:** experimental (v0.9.0). See [Evaluation status](#evaluation-status) for what has and has not been measured.
+**Status:** experimental (v0.10.0). See [Evaluation status](#evaluation-status) for what has and has not been measured.
 
 ---
 
@@ -73,7 +73,9 @@ The grade describes the data path and the checks that ran. It is not a certifica
 For explicit task requirements, add `--contract contract.json` (MCP: `contract`).
 The contract's outcome becomes the report's grade: it is decision-grade only when every
 required check on every required output ran and passed with its declared sources and
-parameters, and any other failure or warning still counts. See
+parameters, and any other failure or warning still counts. `propose --profile NAME`
+(MCP: `propose_contract`) drafts such a contract, filling bindings only from explicit
+file or STAC metadata and listing what you still need to declare. See
 [verification contracts, diagnostics and unsigned evidence bundles](docs/VERIFICATION_CONTRACTS.md).
 
 ### Verify a spectral index against its source bands
@@ -137,7 +139,7 @@ band and pixel in bounded windows; see [scope, examples and measured controls](d
 python -m terraproof.mcp      # stdio server; needs the `mcp` extra
 ```
 
-It is read-only and offline, with six tools: `preflight`, `inspect_dataset`, `run_checks`, `list_skills`, `load_section`, and `find_guidance`. CLI and MCP return the same reports.
+It is read-only and offline, with seven tools: `preflight`, `inspect_dataset`, `run_checks`, `propose_contract`, `list_skills`, `load_section`, and `find_guidance`. CLI and MCP return the same reports.
 
 ### Install into a project
 
@@ -193,7 +195,8 @@ Each skill lives in `skills/<name>/` with a `SKILL.md`, references, and a `skill
 - **Routing:** an independent, frozen 160-item set (v5) passed once in both languages: English recall 0.97 with 3.75 wrong picks per 100, Arabic recall 0.96 with 2.5. Earlier independent sets (v3, v4) failed and stay on record. The v5 set was written by an AI agent, not reviewed by an expert.
 - **Agent lift:** in a 54-run Claude Code comparison on 9 tasks, runs with Terraproof passed 27/27 and runs without it 21/27. The pre-specified test is **not significant** (p = 0.125), and five tasks passed either way, so no lift is claimed. The clearest single result is Landsat QA masking (3/3 with, 0/3 without). See [`docs/plans/Terraproof_Phase5_PLAN.md`](docs/plans/Terraproof_Phase5_PLAN.md).
 - **Harder cohort:** a one-repeat Claude Code screen passed all six tasks both with and without Terraproof. That small screen shows no observed benefit and is separate from the original nine-task study. API pilots are exploratory and do not establish lift.
-- **Real hosts:** tool use through MCP has been verified with Codex, Claude Code and Antigravity (Gemini). OpenCode's install format passes a no-model check with the real CLI, but no real tool call has been recorded yet. Cursor and Copilot are unit-tested against their documented layouts only.
+- **Real data (Phase 8):** on 34 sealed cases built from public Sentinel-2, Copernicus DEM, 3DEP and Natural Earth data, declared checks caught 7 of 7 covered wrong outputs with no false assurance and no false alarm. 20 of the 34 deliverables (validity masks, slope in percent, JSON reports) are forms no check covers yet. Contracts proposed from metadata alone did not meet acceptance. In a 10-run agent measurement, the agent rarely declared a goal, and the `s2-l2a` preset certified two wrong decodes; that preset now requires `--decode-offset`. See [`docs/plans/Terraproof_Phase8_PLAN.md`](docs/plans/Terraproof_Phase8_PLAN.md).
+- **Real hosts:** tool use through MCP has been verified with Codex, Claude Code, Antigravity (Gemini) and OpenCode (Phase 8 P4, ten runs with real tool calls). Cursor and Copilot are unit-tested against their documented layouts only.
 
 ---
 

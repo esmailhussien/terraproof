@@ -18,7 +18,7 @@ from mcp import Client  # noqa: E402
 from terraproof.cli import main  # noqa: E402
 from terraproof.mcp.server import mcp  # noqa: E402
 
-TOOL_NAMES = ["find_guidance", "inspect_dataset", "list_skills", "load_section", "preflight", "run_checks"]
+TOOL_NAMES = ["find_guidance", "inspect_dataset", "list_skills", "load_section", "preflight", "propose_contract", "run_checks"]
 
 
 def test_full_processing_cli_mcp_parity_for_an_off_stride_error(make_raster, capsys):
@@ -64,9 +64,10 @@ def test_optical_blindspot_cli_mcp_parity(make_raster, capsys, defect):
         decoded[0, 1] = -9999.0
     dn = make_raster("parity_dn.tif", raw, nodata=0)
     out = make_raster("parity_out.tif", decoded, nodata=-9999.0)
-    assert main(["check", out, "--reference-input", dn, "--encoding", "s2-l2a"]) == 3
+    assert main(["check", out, "--reference-input", dn, "--encoding", "s2-l2a", "--decode-offset", "-0.1"]) == 3
     cli = json.loads(capsys.readouterr().out)
-    payload = call("run_checks", {"paths": [out], "reference_input": dn, "encoding": "s2-l2a"}).structured_content
+    payload = call("run_checks", {"paths": [out], "reference_input": dn, "encoding": "s2-l2a",
+                                  "decode_offset": -0.1}).structured_content
     cli_check = next(c for c in cli["checks"] if c["id"] == "rs.scale_applied_once")
     mcp_check = next(c for c in payload["report"]["checks"] if c["id"] == "rs.scale_applied_once")
     assert cli_check == mcp_check
@@ -269,6 +270,7 @@ def test_run_checks_with_reference_input_and_encoding(make_raster):
         "paths": [str(out)],
         "reference_input": str(dn),
         "encoding": "s2-l2a",
+        "decode_offset": -0.1,
     }).structured_content
 
     ids = {check["id"]: check["status"] for check in payload["report"]["checks"]}
@@ -501,13 +503,13 @@ def test_clockwise_geojson_winding_cli_mcp_parity(tmp_path, capsys):
     ]}
     path = tmp_path / "clockwise_parity.geojson"
     path.write_text(json.dumps(document), encoding="utf-8")
-    assert main(["check", str(path)]) == 3
+    assert main(["check", str(path)]) == 2
     cli = json.loads(capsys.readouterr().out)
     payload = call("run_checks", {"paths": [str(path)]}).structured_content
     cli_check = next(c for c in cli["checks"] if c["id"] == "geometry.winding")
     mcp_check = next(c for c in payload["report"]["checks"] if c["id"] == "geometry.winding")
     assert cli_check == mcp_check
-    assert cli_check["status"] == "fail"
+    assert cli_check["status"] == "warn"
 
 
 @pytest.mark.parametrize("mistake", [False, True])
@@ -595,3 +597,21 @@ def test_cli_mcp_contract_parity_and_bundle_roundtrip(make_raster, tmp_path, cap
     capsys.readouterr()
     assert main(['evidence', 'verify', str(bundle_path)]) == 0
     assert json.loads(capsys.readouterr().out)['status'] == 'pass'
+
+
+def test_propose_contract_cli_mcp_parity(make_raster, tmp_path, capsys):
+    import rasterio
+
+    dem = make_raster("dem.tif", np.ones((16, 16), dtype="float32"))
+    with rasterio.open(dem, "r+") as dataset:
+        dataset.units = ("ft",)
+    item = tmp_path / "item.json"
+    item.write_text(json.dumps({"type": "Feature", "stac_version": "1.0.0", "id": "x", "properties": {},
+                                "assets": {"dem": {"href": "dem.tif", "raster:bands": [{"unit": "ft"}]}}}),
+                    encoding="utf-8")
+    assert main(["propose", dem, "--profile", "slope-from-dem", "--dem", dem, "--stac", f"{dem}={item}#dem"]) == 0
+    cli = json.loads(capsys.readouterr().out)
+    payload = call("propose_contract", {"paths": [dem], "profiles": ["slope-from-dem"], "arguments": {"dem": dem},
+                                        "stac": [f"{dem}={item}#dem"]}).structured_content
+    assert payload == cli
+    assert [b["value"] for b in cli["bindings"] if b["parameter"] == "dem_vertical_unit"] == ["foot"]

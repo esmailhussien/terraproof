@@ -8,6 +8,8 @@ from terraproof.checks import stack_reduction as stack_checks
 from terraproof.checks import slope_formula as slope_checks, raster_identity as identity_checks
 from terraproof.checks import nodata_support as support_checks, vertical_units as vertical_checks
 from terraproof.checks import metric_values as metric_value_checks
+from terraproof.checks import categorical_codes as code_checks, sar_filter as sar_filter_checks
+from terraproof.checks import stack_window as window_checks
 from terraproof.checks.base import STATUSES, CheckResult, result
 
 __all__ = ["STATUSES", "CheckResult", "result", "run_checks"]
@@ -62,6 +64,12 @@ def run_checks(
     metric_unit: str | None = None,
     buffer_distance_m: float | None = None,
     buffer_source: dict | None = None,
+    categorical_source: dict | None = None,
+    sar_filter: str | None = None,
+    sar_filter_size: int | None = None,
+    sar_filter_source: dict | None = None,
+    stack_times: list | None = None,
+    stack_window: list | None = None,
 ) -> list[CheckResult]:
     """Run every check that applies to the inspected inputs, in a fixed order."""
     vectors = [d for d in inputs if d["kind"] == "vector"]
@@ -88,6 +96,9 @@ def run_checks(
         results += raster.check_grid_alignment(rasters)
     if resampling is not None and categorical:
         results += raster.check_resampling(rasters, resampling)
+    if categorical_source is not None:
+        for dataset in rasters:
+            results += code_checks.check_categorical_codes(dataset, categorical_source)
 
     if expect == "reflectance":
         results += rs.check_reflectance(rasters)
@@ -115,6 +126,10 @@ def run_checks(
         for dataset in inputs:
             results += stack_checks.check_stack_reduction(dataset, stack, stack_reduction, stack_weights,
                                                           stack_min_count)
+    if stack_times or stack_window:
+        for dataset in rasters:
+            results += window_checks.check_stack_window(dataset, stack, stack_times, stack_window, stack_reduction,
+                                                        stack_weights)
 
     if index_formula is not None or nir is not None or red is not None or index_bands:
         for dataset in inputs:
@@ -149,6 +164,10 @@ def run_checks(
     if sar_expect is not None:
         results += sar.check_value_domain(rasters, sar_expect)
         results += sar.check_geocoded(rasters)
+    if sar_filter is not None or sar_filter_size is not None or sar_filter_source is not None:
+        for dataset in rasters:
+            results += sar_filter_checks.check_filter_domain(dataset, sar_filter_source, sar_filter, sar_filter_size,
+                                                             sar_expect)
 
     if accuracy_samples is not None:
         design_kwargs = {} if min_per_class is None else {"min_per_class": min_per_class}

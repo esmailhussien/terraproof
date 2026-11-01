@@ -263,7 +263,7 @@ CCW_EXTERIOR = [[30.0, 30.0], [30.1, 30.0], [30.1, 30.1], [30.0, 30.1], [30.0, 3
 CW_HOLE = [[30.02, 30.02], [30.02, 30.08], [30.08, 30.08], [30.08, 30.02], [30.02, 30.02]]
 
 
-def test_clockwise_geojson_exterior_fails_winding(make_geojson, evaluate):
+def test_clockwise_geojson_exterior_warns_winding(make_geojson, evaluate):
     document = {"type": "FeatureCollection", "features": [
         _polygon_feature(CCW_EXTERIOR),
         _polygon_feature(list(reversed(CCW_EXTERIOR))),
@@ -273,19 +273,19 @@ def test_clockwise_geojson_exterior_fails_winding(make_geojson, evaluate):
     results, grade = evaluate([path])
 
     result = one(results, "geometry.winding")
-    assert result.status == "fail"
+    assert result.status == "warn"
     assert result.evidence["first_break_indices"] == [1]
     assert one(results, "geometry.valid").status == "pass"
-    assert grade == ADVISORY
+    assert grade == REVIEW
 
 
-def test_counterclockwise_hole_fails_winding(make_geojson, evaluate):
+def test_counterclockwise_hole_warns_winding(make_geojson, evaluate):
     document = {"type": "FeatureCollection", "features": [_polygon_feature(CCW_EXTERIOR, [list(reversed(CW_HOLE))])]}
     path = make_geojson("ccw_hole.geojson", document)
 
     results, _ = evaluate([path])
 
-    assert one(results, "geometry.winding").status == "fail"
+    assert one(results, "geometry.winding").status == "warn"
 
 
 def test_right_hand_rule_geojson_passes_winding(make_geojson, evaluate):
