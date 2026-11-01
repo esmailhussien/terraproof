@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.11.0] — 2026-11-02
 
+Released 2026-11-02: merge `9e69f54` (#43), tag `v0.11.0`, PyPI through `publish-python.yml`,
+npm `terraproof@0.11.0` (shasum `734c442d…`), and GitHub release *Terraproof v0.11.0*.
+
 Phase 9: real deliverables. Validity masks, slopes in percent and JSON summaries are now checkable,
 and reports guide undeclared checks toward a declared goal. Measured once on 36 fresh sealed
 real-data cases (Phase 9 Q5.1): 33 of 36 deliverables got a requirement (Phase 8: 14 of 34), and
