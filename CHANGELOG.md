@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.10.0] — 2026-11-01
 
+Released 2026-11-01: merge `a2205a2` (#42), tag `v0.10.0`, PyPI through `publish-python.yml`,
+npm `terraproof@0.10.0` (shasum `0e52555f…`), and GitHub release *Terraproof v0.10.0*.
+
 Phase 8: easier declarations, measured on real data and with a real agent. New
 `propose` / `propose_contract` drafts a contract from explicit metadata; three opt-in checks
 close remaining gaps. **Changed:** `--encoding s2-l2a` needs `--decode-offset`, and

@@ -5,7 +5,7 @@ Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 r
 ---
 
 
-## v0.10.0 release — prepared 2026-11-01
+## v0.10.0 release — 2026-11-01
 
 Phase 8: `propose` and the MCP tool `propose_contract` (seven tools); new opt-in checks
 `raster.categorical_codes`, `sar.filter_domain` and `rs.stack_window`. **Changed:**
@@ -15,18 +15,18 @@ Measured: P3 on 34 sealed real-data cases (declared: 7/7 covered caught, 0 false
 false alarms; proposed: acceptance not met, fixed and not re-measured), and P4 with 10 approved
 OpenCode/MiMo runs (two false assurances through the preset, fixed and not re-measured).
 
-- [ ] PR CI green on the release head, then merged with a regular merge commit.
-- [ ] Tag the release commit `v0.10.0` and push the tag (annotated). This starts
+- [x] PR CI green on the release head, then merged with a regular merge commit. 2026-11-01: #42, 20/20 on `1d276fc`, merge `a2205a2`.
+- [x] Tag the release commit `v0.10.0` and push the tag (annotated, on `a2205a2`). This starts
   `publish-python.yml`: build, clean install on every OS, TestPyPI publish and install, then a
   wait for the `pypi` environment review.
-- [ ] Publish the reviewed npm tarball (`npm publish --access public`; browser/2FA; check
-  `npm whoami` first, since an expired session shows as E404).
-- [ ] Approve the `pypi` deployment in GitHub only after the TestPyPI install jobs pass.
-- [ ] GitHub release *Terraproof v0.10.0* with the npm tarball, wheel and sdist attached; its
-  notes lead with the two changed behaviours and the migration (`--decode-offset`).
-- [ ] Post-release: `npx terraproof@0.10.0 --version` and `route` from a blank directory, and
+- [x] Publish the reviewed npm tarball (`npm publish --access public`; browser/2FA; check
+  `npm whoami` first, since an expired session shows as E404). 2026-11-01: shasum `0e52555f…`, `latest`; its 183 files match the tag apart from CRLF in 166 text files and the 8 built `dist/router/*.js`, which a rebuild from the tag reproduces; `bin/terraproof.js` has no CR.
+- [x] Approve the `pypi` deployment in GitHub only after the TestPyPI install jobs pass. Publish run succeeded; PyPI wheel SHA-256 `efc55335…`, sdist `356a31d2…`.
+- [x] GitHub release *Terraproof v0.10.0* with the npm tarball, wheel and sdist attached; its
+  notes lead with the two changed behaviours and the migration (`--decode-offset`). Marked Latest; assets verified against both registries.
+- [x] Post-release: `npx terraproof@0.10.0 --version` and `route` from a blank directory, and
   `pip install "terraproof[mcp]==0.10.0"` in a fresh venv runs `inspect`, `check`, `propose`
-  and lists seven MCP tools.
+  and lists seven MCP tools. 2026-11-01, Windows: `terraproof v0.10.0`, route exit 0; pip 0.10.0, `inspect` exit 0, `check` of a clean COG exit 0 `checks-passed` with schema `terraproof.evidence/0.2`, `propose` filled `dem_vertical_unit` from the file label, seven tools served.
 
 ## v0.9.0 release — 2026-11-01 (prepared 2026-10-28)
 
