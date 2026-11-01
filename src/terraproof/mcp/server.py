@@ -38,9 +38,10 @@ INSTRUCTIONS = (
     "full; installed skill files are not automatically loaded by every host. Use `preflight` "
     "to validate a declared plan against the real inputs before spending compute. For derived "
     "outputs, supply the relevant source operands and options to `run_checks`; inspection or "
-    "a plausible value range alone does not verify the derivation. To require a declared goal, "
+    "a plausible value range alone does not verify the derivation. Declare the goal in two steps: "
     "`propose_contract` drafts a contract for its goal profiles from explicit metadata; review it "
-    "and pass it to `run_checks`. For NDVI, use "
+    "and pass it to `run_checks`. Only a fully verified contract is decision-grade, so when "
+    "`run_checks` returns `next_step`, follow it. For NDVI, use "
     "`index_formula=\"ndvi\"`, `nir` and `red` on the saved output; for NBR, dNBR, NDWI, MNDWI, "
     "NDMI, SAVI or EVI pass `bands` by role (and `band_numbers` for multi-band sources). For "
     "composites, accumulations and trends pass the ordered input layers as `stack` with "
@@ -140,6 +141,15 @@ def run_checks(
     sar_filter_source: str | None = None,
     stack_times: list[str] | None = None,
     stack_window: list[str] | None = None,
+    output_form: str | None = None,
+    output_valid_value: float | None = None,
+    slope_unit: str | None = None,
+    summary_key: str | None = None,
+    summary_statistic: str | None = None,
+    summary_source: str | None = None,
+    summary_unit: str | None = None,
+    summary_feature: str | None = None,
+    summary_mask: str | None = None,
     contract: dict | str | None = None,
     profiles: list[str] | None = None,
     lang: str = "en",
@@ -190,6 +200,12 @@ def run_checks(
     `sar_filter_source` and `sar_expect` recomputes the speckle filter in linear power.
     `stack_window` (start, end) with one ISO "START/END" interval per `stack` layer in
     `stack_times` checks the output's time label (and, for weighted-sum, gaps and hour weights).
+    `output_form="validity-mask"` declares outputs as masks whose valid cells hold
+    `output_valid_value` (default 1), for the QA-mask and support checks. `slope_unit`
+    ("degrees" or "percent") states a slope output's unit for the `dem` checks. A JSON report
+    output is checked with `summary_key`, `summary_statistic` (mean, count, sum, min, max of a
+    raster; count, area, length of vector features), `summary_source`, and where needed
+    `summary_unit`, `summary_feature` ("FIELD=VALUE") and `summary_mask`.
     `profiles` names declared
     goal profiles (routing/profiles.json) required on every path, bound to the arguments
     given; a binding a profile needs but you did not give leaves it incomplete.
@@ -218,6 +234,8 @@ def run_checks(
         buffer_layer = _inspect_dataset(buffer_source) if buffer_source else None
         class_layer = _inspect_dataset(categorical_source) if categorical_source else None
         filter_layer = _inspect_dataset(sar_filter_source) if sar_filter_source else None
+        summary_layer = _inspect_dataset(summary_source) if summary_source else None
+        summary_mask_layer = _inspect_dataset(summary_mask) if summary_mask else None
 
         inputs = [input_record(path, "input", dataset["kind"]) for path, dataset in zip(paths, inspections)]
         if compare is not None:
@@ -248,6 +266,10 @@ def run_checks(
             inputs.append(input_record(categorical_source, "categorical-source", class_layer["kind"]))
         if filter_layer is not None:
             inputs.append(input_record(sar_filter_source, "sar-filter-source", filter_layer["kind"]))
+        if summary_layer is not None:
+            inputs.append(input_record(summary_source, "summary-source", summary_layer["kind"]))
+        if summary_mask_layer is not None:
+            inputs.append(input_record(summary_mask, "summary-mask", summary_mask_layer["kind"]))
         if isinstance(accuracy_samples, str) and Path(accuracy_samples).is_file():
             inputs.append(input_record(accuracy_samples, "accuracy-samples", "accuracy-samples"))
         if isinstance(class_areas, str) and Path(class_areas).is_file():
@@ -313,12 +335,21 @@ def run_checks(
             sar_filter_source=filter_layer,
             stack_times=stack_times or None,
             stack_window=stack_window,
+            output_form=output_form,
+            output_valid_value=output_valid_value,
+            slope_unit=slope_unit,
+            summary_key=summary_key,
+            summary_statistic=summary_statistic,
+            summary_source=summary_layer,
+            summary_unit=summary_unit,
+            summary_feature=summary_feature,
+            summary_mask=summary_mask_layer,
         )
 
         checked_paths = list(paths)
         for path in (compare_to, reference_input, dem, nir, red, *(bands or {}).values(), *(stack or []),
                      *(vertical_sources or []), *(support_sources or []), qa_source, buffer_source, qa_path,
-                     categorical_source, sar_filter_source,
+                     categorical_source, sar_filter_source, summary_source, summary_mask,
                      accuracy_samples,
                      class_areas):
             if isinstance(path, str):
@@ -394,6 +425,15 @@ def run_checks(
         "sar_filter_source": sar_filter_source,
         "stack_times": stack_times or None,
         "stack_window": stack_window,
+        "output_form": output_form,
+        "output_valid_value": output_valid_value,
+        "slope_unit": slope_unit,
+        "summary_key": summary_key,
+        "summary_statistic": summary_statistic,
+        "summary_source": summary_source,
+        "summary_unit": summary_unit,
+        "summary_feature": summary_feature,
+        "summary_mask": summary_mask,
     }
     try:
         if profiles and contract is not None:

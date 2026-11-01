@@ -111,13 +111,13 @@ def calibration(output, reference, encoding=None, scale=None, offset=None, add=0
                   "Additional output masks are counted but their scientific policy is not verified.")
 
 
-def cloud_mask(output, qa_path, qa_kind, keep_codes=None, qa_source=None):
+def cloud_mask(output, qa_path, qa_kind, keep_codes=None, qa_source=None, valid_value=None):
     """Every flagged QA location must be invalid in every output band. With qa_kind "keep-codes" the
     caller declares the acceptable QA codes, and every other code is flagged; a kept code that is
     nodata in the output is over-masking. With the declared source band (qa_source) over-masking fails
     where the source holds a value; without it, it warns, because a source gap cannot be told apart."""
     evidence = {"output": output.get("path"), "qa_path": qa_path, "qa_kind": qa_kind, "qa_keep_codes": keep_codes,
-                "qa_source": qa_source,
+                "qa_source": qa_source, "output_valid_value": valid_value,
                 "processing_full_scan": True, "stride": 1, "scan_scope": "all output bands and QA pixels",
                 "window_size": WINDOW_SIZE}
     def answer(status, message):
@@ -154,6 +154,8 @@ def cloud_mask(output, qa_path, qa_kind, keep_codes=None, qa_source=None):
                 for band in dst.indexes:
                     values = dst.read(band, window=window)
                     valid = (dst.read_masks(band, window=window) > 0) & ~np.isnan(values)
+                    if valid_value is not None:  # a declared validity mask: only the valid value is valid
+                        valid &= values == valid_value
                     bad = flagged & valid
                     band_count += int(np.count_nonzero(bad))
                     any_band_unmasked |= bad

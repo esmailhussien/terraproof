@@ -15,3 +15,7 @@ tests/python/test_verification_heldout_v0b.py text eol=lf
 # Phase 8 held-out verification cases from real data (preserve exact LF hashes across platforms)
 evals/verification-heldout-real/* text eol=lf
 tests/python/test_verification_heldout_real.py text eol=lf
+
+# Phase 9 held-out verification cases Q0 (preserve exact LF hashes across platforms)
+evals/verification-heldout-q0/* text eol=lf
+tests/python/test_verification_heldout_q0.py text eol=lf

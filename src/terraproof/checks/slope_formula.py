@@ -15,10 +15,13 @@ RTOL = 2e-6
 ATOL = 1e-6
 
 
-def check_slope_formula(output: dict, dem: dict | None, method: str | None) -> list:
+def check_slope_formula(output: dict, dem: dict | None, method: str | None, slope_unit: str | None = None) -> list:
+    """`slope_unit` percent converts the output to degrees before comparing; the default is degrees."""
     evidence = {'output': output.get('path'), 'dem': dem.get('path') if dem else None,
-                'method': method, 'edge_policy': 'nodata',
+                'method': method, 'edge_policy': 'nodata', 'slope_unit': slope_unit,
                 'tolerance': {'rtol': RTOL, 'atol_degrees': ATOL}}
+    if slope_unit not in (None, 'degrees', 'percent'):
+        return [result(CHECK_ID, NOT_RUN, 'slope_unit must be degrees or percent.', **evidence)]
     if method != 'central-difference' or dem is None:
         return [result(CHECK_ID, NOT_RUN, 'Declare slope_method=central-difference and supply a DEM.', **evidence)]
     if output.get('kind') != 'raster' or dem.get('kind') != 'raster':
@@ -86,6 +89,8 @@ def check_slope_formula(output: dict, dem: dict | None, method: str | None) -> l
                     expected, support = expected[section], support[section]
                     window = Window(col, row, width, height)
                     observed = dst.read(1, window=window)
+                    if slope_unit == 'percent':
+                        observed = np.degrees(np.arctan(observed.astype('float64') / 100.0))
                     output_unmasked = dst.read_masks(1, window=window) > 0
                     finite = np.isfinite(observed)
                     unsupported += int(np.count_nonzero(output_unmasked & (~support | ~finite)))

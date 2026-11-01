@@ -47,9 +47,11 @@ def _fill_values(source_nodata, count):
     return values
 
 
-def check_nodata_support(output: dict, sources: list | None, source_nodata: list | None, rule: str | None) -> list:
+def check_nodata_support(output: dict, sources: list | None, source_nodata: list | None, rule: str | None,
+                         valid_value: float | None = None) -> list:
+    """`valid_value` declares the output a validity mask: a cell is valid only where it holds that value."""
     evidence = {"output": output.get("path"), "rule": rule, "sources": [s.get("path") for s in sources or []],
-                "source_nodata": source_nodata}
+                "source_nodata": source_nodata, "output_valid_value": valid_value}
     missing = [name for name, value in (("support_rule", rule), ("support_sources", sources)) if not value]
     if missing:
         return [result(CHECK_ID, NOT_RUN, "Declare " + ", ".join(missing) + " to check the output's valid support.",
@@ -84,7 +86,10 @@ def check_nodata_support(output: dict, sources: list | None, source_nodata: list
                         masks.append(valid)
                     expected = np.logical_and.reduce(masks) if rule == "all" else np.logical_or.reduce(masks)
                     out = dst.read(1, window=window, masked=True)
-                    delivered = ~np.ma.getmaskarray(out) & np.isfinite(np.ma.getdata(out).astype("float64"))
+                    values = np.ma.getdata(out).astype("float64")
+                    delivered = ~np.ma.getmaskarray(out) & np.isfinite(values)
+                    if valid_value is not None:
+                        delivered &= values == valid_value
                     supported += int(np.count_nonzero(expected))
                     fill_as_data += int(np.count_nonzero(delivered & ~expected))
                     valid_as_fill += int(np.count_nonzero(expected & ~delivered))

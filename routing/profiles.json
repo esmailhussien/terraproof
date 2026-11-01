@@ -44,6 +44,12 @@
       "checks": [
         "geometry.metric_values"
       ]
+    },
+    "summary-value": {
+      "description": "A JSON report delivering one statistic (mean, count, sum, min, max, area or length) of a declared raster or vector source.",
+      "checks": [
+        "report.summary_value"
+      ]
     }
   }
 }

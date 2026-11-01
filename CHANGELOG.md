@@ -9,7 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-11-02
+
+Phase 9: real deliverables. Validity masks, slopes in percent and JSON summaries are now checkable,
+and reports guide undeclared checks toward a declared goal. Measured once on 36 fresh sealed
+real-data cases (Phase 9 Q5.1): 33 of 36 deliverables got a requirement (Phase 8: 14 of 34), and
+declared checks caught 12 of 15 wrong outputs with no false assurance or false alarm. Proposals
+were judged correctly in both Sentinel-2 distributions. A 10-run agent measurement (Q5.2): 8 runs
+declared their goal, every offered `next_step` was followed, 10 of 10 deliverables were correct,
+and no wrong output was certified (Phase 8 P4: 2). No lift is claimed. Details are in
+[the Phase 9 plan](docs/plans/Terraproof_Phase9_PLAN.md).
+
+### Real deliverable forms and the next step (Phase 9 Q1-Q4)
+
+- `--output-form validity-mask` (`--output-valid-value`, default 1): 1/0 mask outputs for
+  `rs.cloud_mask_applied` and `raster.nodata_support`.
+- `--slope-unit degrees|percent` for `terrain.slope_consistent` and `terrain.slope_formula`.
+- New opt-in check `report.summary_value` and profile `summary-value`: one declared statistic in a
+  JSON report, recomputed from a declared raster or vector source. Plain JSON objects are now
+  inspected as reports instead of being rejected.
+- Reports without a contract carry `next_step` when the caller's arguments ran every check of a
+  goal profile, naming the `propose` / `propose_contract` call that would require them. Advisory;
+  the grade is unchanged. The MCP instructions state the two-step pattern.
+- `terrain.slope_consistent` on geographic DEMs compares with a 1% relative tolerance (0.1% stays for
+  projected DEMs). WGS84, mean-sphere and 111 320 m-per-degree spacing differ by at most 0.674%,
+  while latitude-ignored spacing is off by 13% or more above 28 degrees. Correct geographic slopes
+  that used to warn now pass, and latitude-ignored ones now fail.
+- A `qa-masked` requirement on a declared validity mask no longer needs `processing_full_scan`,
+  because a declared mask is always read in full.
+- A declared validity mask with no QA layer and no support source gets a `next_step` that names
+  the missing bindings (`qa_path`, `qa_kind`, or `support_sources`, `support_rule`), never which file.
+
 ## [0.10.0] — 2026-11-01
+
+Released 2026-11-01: merge `a2205a2` (#42), tag `v0.10.0`, PyPI through `publish-python.yml`,
+npm `terraproof@0.10.0` (shasum `0e52555f…`), and GitHub release *Terraproof v0.10.0*.
 
 Phase 8: easier declarations, measured on real data and with a real agent. New
 `propose` / `propose_contract` drafts a contract from explicit metadata; three opt-in checks

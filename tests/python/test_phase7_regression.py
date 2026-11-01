@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from terraproof.checks import run_checks
-from terraproof.evidence.grade import ADVISORY, CHECKS_PASSED, REVIEW, grade_for
+from terraproof.evidence.grade import ADVISORY, CHECKS_PASSED, grade_for
 from terraproof.inspect import inspect_dataset
 
 lift = pytest.importorskip("terraproof.evals.lift")
@@ -69,9 +69,9 @@ CASES = {
         qa_source="red.tif"),
         CHECKS_PASSED),
     "slope-degrees-as-metres": ("hr-slope-geographic", "degrees-as-metres.tif", "terrain.slope_consistent", dict(
-        dem="dem.tif"), REVIEW),  # the reference uses another stencil, which warns
+        dem="dem.tif"), CHECKS_PASSED),  # the reference's spacing model is within the 1% geographic tolerance
     "slope-no-latitude-scaling": ("hr-slope-geographic", "no-latitude-scaling.tif", "terrain.slope_consistent", dict(
-        dem="dem.tif"), REVIEW),
+        dem="dem.tif"), CHECKS_PASSED),
     "rain-dry-as-missing": ("hr-rainfall-dry-days", "dry-as-missing.tif", "rs.stack_reduction", dict(
         stack=["rain_day1.tif", "rain_day2.tif", "rain_day3.tif"], stack_reduction="weighted-sum",
         stack_weights=THIRDS), CHECKS_PASSED),

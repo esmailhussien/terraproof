@@ -1,0 +1,2457 @@
+{
+  "cases": [
+    {
+      "id": "mask_wrong_rejected_class_kept_wa",
+      "family": "validity_masks",
+      "kind": "wrong",
+      "deliverable_form": "validity-mask",
+      "scenario": "A forest-plot analyst in the Bernese Oberland assembles a 2025 summer Sentinel-2 L2A clear-land layer for tile 32TMS. The colleague who delivered the validity mask rejected only the medium-probability-cloud class and shipped everything else as usable.",
+      "goal": "Decide the pixel-validity mask for this alpine scene so that no pixel of a cloudy, shadowed, cirrus or dark class is treated as usable land.",
+      "sources": [
+        {
+          "path": "cache/s2-v0/item.json",
+          "role": "STAC item of the v0 scene (Earth Search sentinel-2-l2a; scale/offset/nodata under raster:bands; earthsearch:boa_offset_applied=true)"
+        },
+        {
+          "path": "cache/s2-v0/tileinfo_metadata.json",
+          "role": "tileinfo metadata of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/granule_metadata.xml",
+          "role": "granule metadata XML of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/wa_SCL.tif",
+          "role": "512x512 window of the v0 scene classification layer (EPSG:32632, 20 m; Bernese Oberland, tile 32TMS, 2025-08-31)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        },
+        "mask_usable_value": 1
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "pixel_qa_class_meanings": false,
+        "mask_usable_value": false
+      },
+      "output": {
+        "path": "outputs/mask_wrong_rejected_class_kept_wa/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the documented usable value is 1."
+      },
+      "oracle": {
+        "reason": "SCL class meanings and the valid/invalid split come from the ESA Sentinel-2 L2A classification table, not from the fetched files; the asset title names the layer 'Scene classification map (SCL)'. Rejecting only the medium-probability-cloud class leaves cloud shadows and thin cirrus in the usable set, so pixels the documented rule rejects count as clear land.",
+        "value_metric": "count_of_documented_invalid_pixels_kept_usable",
+        "value": 53109
+      }
+    },
+    {
+      "id": "mask_wrong_qa60_bits_mixed_wa",
+      "family": "validity_masks",
+      "kind": "wrong",
+      "deliverable_form": "validity-mask",
+      "scenario": "A pipeline engineer reuses an old L1C QA60 bitmask snippet on the integer classification codes of the same alpine window, shifting class values into QA60 bit positions instead of comparing documented classes.",
+      "goal": "Decide the pixel-validity mask for this alpine scene so that cloudy, shadow and cirrus class pixels are not treated as usable (snow/ice only if the analysis treats it so).",
+      "sources": [
+        {
+          "path": "cache/s2-v0/item.json",
+          "role": "STAC item of the v0 scene (Earth Search sentinel-2-l2a; scale/offset/nodata under raster:bands; earthsearch:boa_offset_applied=true)"
+        },
+        {
+          "path": "cache/s2-v0/tileinfo_metadata.json",
+          "role": "tileinfo metadata of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/granule_metadata.xml",
+          "role": "granule metadata XML of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/wa_SCL.tif",
+          "role": "512x512 window of the v0 scene classification layer (EPSG:32632, 20 m; Bernese Oberland, tile 32TMS, 2025-08-31)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        },
+        "mask_usable_value": 1
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "pixel_qa_class_meanings": false,
+        "mask_usable_value": false
+      },
+      "output": {
+        "path": "outputs/mask_wrong_qa60_bits_mixed_wa/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the documented usable value is 1."
+      },
+      "oracle": {
+        "reason": "SCL class meanings and the valid/invalid split come from the ESA Sentinel-2 L2A classification table, not from the fetched files; the asset title names the layer 'Scene classification map (SCL)'. Shifting L2A classification codes into the L1C QA60 bit positions (10 = opaque cloud, 11 = cirrus) rejects the cirrus and snow/ice classes while keeping dark pixels, cloud shadows and clouds usable; the mix-up of QA60 bit semantics with classification values is documented in the ESA L2A classification table.",
+        "value_metric": "count_of_documented_invalid_pixels_kept_usable",
+        "value": 29897
+      }
+    },
+    {
+      "id": "mask_wrong_water_rejected_wa",
+      "family": "validity_masks",
+      "kind": "wrong",
+      "deliverable_form": "validity-mask",
+      "scenario": "A lake-colour study asks for a masked window of the same alpine tile; the colleague who delivered the mask mislabelled the water class as unusable, so every open-water pixel of the window is evicted.",
+      "goal": "Confirm the pixel-validity mask the documented Sentinel-2 L2A classification rule gives for an analysis in which open water is a valid class.",
+      "sources": [
+        {
+          "path": "cache/s2-v0/item.json",
+          "role": "STAC item of the v0 scene (Earth Search sentinel-2-l2a; scale/offset/nodata under raster:bands; earthsearch:boa_offset_applied=true)"
+        },
+        {
+          "path": "cache/s2-v0/tileinfo_metadata.json",
+          "role": "tileinfo metadata of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/granule_metadata.xml",
+          "role": "granule metadata XML of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/wa_SCL.tif",
+          "role": "512x512 window of the v0 scene classification layer (EPSG:32632, 20 m; Bernese Oberland, tile 32TMS, 2025-08-31)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        },
+        "mask_usable_value": 1
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "pixel_qa_class_meanings": false,
+        "mask_usable_value": false
+      },
+      "output": {
+        "path": "outputs/mask_wrong_water_rejected_wa/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the documented usable value is 1."
+      },
+      "oracle": {
+        "reason": "SCL class meanings and the valid/invalid split come from the ESA Sentinel-2 L2A classification table, not from the fetched files; the asset title names the layer 'Scene classification map (SCL)'. Excluding class 6 evicts genuine open-water pixels that the documented rule counts as valid.",
+        "value_metric": "count_of_documented_valid_pixels_rejected_by_the_delivered_mask",
+        "value": 481
+      }
+    },
+    {
+      "id": "mask_wrong_fill_kept_valid_wb",
+      "family": "validity_masks",
+      "kind": "wrong",
+      "deliverable_form": "validity-mask",
+      "scenario": "A swath-edge window of the v0 scene lies entirely inside the tile's no-data wedge: its classification layer is class 0 everywhere. The colleague who delivered the mask marked the whole window usable anyway.",
+      "goal": "Deliver the pixel-validity mask of the swath-edge classification window following the documented rule for a generic analysis; no-data pixels are not usable.",
+      "sources": [
+        {
+          "path": "cache/s2-v0/tileinfo_metadata.json",
+          "role": "tileinfo metadata of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/granule_metadata.xml",
+          "role": "granule metadata XML of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/wb_SCL.tif",
+          "role": "512x512 window of the v0 scene classification layer inside the no-data wedge (EPSG:32632, 20 m; class 0 everywhere)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10
+        ],
+        "mask_usable_value": 1,
+        "classified_window_role": "swath-edge window whose classification layer is 100% no-data (tile data coverage 93.36% per tileinfo)"
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "mask_usable_value": false,
+        "classified_window_role": {
+          "stated": true,
+          "where": "cache/s2-v0/tileinfo_metadata.json: dataCoveragePercentage = 93.36 and tileDataGeometry document the data-boundary wedge"
+        }
+      },
+      "output": {
+        "path": "outputs/mask_wrong_fill_kept_valid_wb/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the documented usable value is 1."
+      },
+      "oracle": {
+        "reason": "SCL class meanings and the valid/invalid split come from the ESA Sentinel-2 L2A classification table, not from the fetched files; the asset title names the layer 'Scene classification map (SCL)'. The window holds nothing but the no-data class, so under the documented rule every pixel is rejected; marking all of it usable declares fill data as observations.",
+        "value_metric": "count_of_documented_invalid_pixels_kept_usable",
+        "value": 262144
+      }
+    },
+    {
+      "id": "mask_correct_standard_rule_wa",
+      "family": "validity_masks",
+      "kind": "correct",
+      "deliverable_form": "validity-mask",
+      "scenario": "A land-cover modeller needs a QA-clean window of tile 32TMS (2025-08-31) for a vegetation analysis and asks that the Sentinel-2 L2A classification rule be applied as documented.",
+      "goal": "Produce the pixel-validity mask of the scene-classification window for a generic vegetation analysis: classes 4, 5, 6 and 7 usable; no-data, dark, shadow, cloud and cirrus classes rejected.",
+      "sources": [
+        {
+          "path": "cache/s2-v0/item.json",
+          "role": "STAC item of the v0 scene (Earth Search sentinel-2-l2a; scale/offset/nodata under raster:bands; earthsearch:boa_offset_applied=true)"
+        },
+        {
+          "path": "cache/s2-v0/tileinfo_metadata.json",
+          "role": "tileinfo metadata of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/granule_metadata.xml",
+          "role": "granule metadata XML of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/wa_SCL.tif",
+          "role": "512x512 window of the v0 scene classification layer (EPSG:32632, 20 m; Bernese Oberland, tile 32TMS, 2025-08-31)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        },
+        "mask_usable_value": 1
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "pixel_qa_class_meanings": false,
+        "mask_usable_value": false
+      },
+      "output": {
+        "path": "outputs/mask_correct_standard_rule_wa/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the documented usable value is 1."
+      },
+      "oracle": {
+        "evidence": "The delivered mask matches the documented rule applied to the classification window pixel for pixel; every pixel the rule counts as valid is 1 and every other pixel is 0.",
+        "value_metric": "usable_pixel_count",
+        "value": 206206
+      }
+    },
+    {
+      "id": "mask_correct_snow_valid_wa",
+      "family": "validity_masks",
+      "kind": "correct",
+      "deliverable_form": "validity-mask",
+      "scenario": "A glaciologist surveys the 2025-08-31 32TMS alpine window and needs the mask that treats snow/ice as a usable class, with clouds and shadows still rejected.",
+      "goal": "Produce the pixel-validity mask under the documented rule with snow/ice included as valid: classes 4, 5, 6, 7 and 11 usable; no-data, dark, shadow, cloud and cirrus rejected.",
+      "sources": [
+        {
+          "path": "cache/s2-v0/item.json",
+          "role": "STAC item of the v0 scene (Earth Search sentinel-2-l2a; scale/offset/nodata under raster:bands; earthsearch:boa_offset_applied=true)"
+        },
+        {
+          "path": "cache/s2-v0/tileinfo_metadata.json",
+          "role": "tileinfo metadata of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/granule_metadata.xml",
+          "role": "granule metadata XML of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/wa_SCL.tif",
+          "role": "512x512 window of the v0 scene classification layer (EPSG:32632, 20 m; Bernese Oberland, tile 32TMS, 2025-08-31)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6,
+          7,
+          11
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        },
+        "mask_usable_value": 1,
+        "pixel_qa_scenario": "snow/ice is a valid class of this study"
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "pixel_qa_class_meanings": false,
+        "mask_usable_value": false,
+        "pixel_qa_scenario": false
+      },
+      "output": {
+        "path": "outputs/mask_correct_snow_valid_wa/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the documented usable value is 1."
+      },
+      "oracle": {
+        "evidence": "The delivered mask matches the documented rule-with-snow-valid applied to the classification window pixel for pixel.",
+        "value_metric": "usable_pixel_count",
+        "value": 207620
+      }
+    },
+    {
+      "id": "mask_correct_water_veg_only_wa",
+      "family": "validity_masks",
+      "kind": "correct",
+      "deliverable_form": "validity-mask",
+      "scenario": "A river-restoration project masks the same 32TMS window with only vegetation, bare ground and water usable (the low-probability-cloud class is excluded because the study re-runs its own classification).",
+      "goal": "Produce the pixel-validity mask of the scene-classification window using only classes 4, 5 and 6 as valid, per the documented classification.",
+      "sources": [
+        {
+          "path": "cache/s2-v0/item.json",
+          "role": "STAC item of the v0 scene (Earth Search sentinel-2-l2a; scale/offset/nodata under raster:bands; earthsearch:boa_offset_applied=true)"
+        },
+        {
+          "path": "cache/s2-v0/tileinfo_metadata.json",
+          "role": "tileinfo metadata of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/granule_metadata.xml",
+          "role": "granule metadata XML of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/wa_SCL.tif",
+          "role": "512x512 window of the v0 scene classification layer (EPSG:32632, 20 m; Bernese Oberland, tile 32TMS, 2025-08-31)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        },
+        "mask_usable_value": 1,
+        "pixel_qa_scenario": "only vegetation, bare ground and water are needed"
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "pixel_qa_class_meanings": false,
+        "mask_usable_value": false,
+        "pixel_qa_scenario": false
+      },
+      "output": {
+        "path": "outputs/mask_correct_water_veg_only_wa/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the documented usable value is 1."
+      },
+      "oracle": {
+        "evidence": "The delivered mask matches the documented subset rule (classes 4, 5 and 6 valid) applied to the classification window pixel for pixel.",
+        "value_metric": "usable_pixel_count",
+        "value": 202681
+      }
+    },
+    {
+      "id": "mask_correct_wedge_all_invalid_wb",
+      "family": "validity_masks",
+      "kind": "correct",
+      "deliverable_form": "validity-mask",
+      "scenario": "The same swath-edge window processed honestly: the delivered validity mask must record that the window holds no usable category at all.",
+      "goal": "Deliver the pixel-validity mask of the swath-edge classification window under the documented rule for a generic analysis.",
+      "sources": [
+        {
+          "path": "cache/s2-v0/tileinfo_metadata.json",
+          "role": "tileinfo metadata of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/granule_metadata.xml",
+          "role": "granule metadata XML of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/wb_SCL.tif",
+          "role": "512x512 window of the v0 scene classification layer inside the no-data wedge (EPSG:32632, 20 m; class 0 everywhere)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10
+        ],
+        "mask_usable_value": 1,
+        "classified_window_role": "swath-edge window whose classification layer is 100% no-data (tile data coverage 93.36% per tileinfo)"
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "mask_usable_value": false,
+        "classified_window_role": {
+          "stated": true,
+          "where": "cache/s2-v0/tileinfo_metadata.json: dataCoveragePercentage = 93.36 and tileDataGeometry document the data-boundary wedge"
+        }
+      },
+      "output": {
+        "path": "outputs/mask_correct_wedge_all_invalid_wb/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the documented usable value is 1."
+      },
+      "oracle": {
+        "evidence": "The classification window is entirely class 0 (no data), so under the documented rule the correct validity mask is all zero, and the delivered mask matches that exactly.",
+        "value_metric": "usable_pixel_count",
+        "value": 0
+      }
+    },
+    {
+      "id": "slope_wrong_degrees_as_metres_geographic_nepal",
+      "family": "slope",
+      "kind": "wrong",
+      "deliverable_form": "dataset",
+      "scenario": "A terrain QC engineer computed a slope-percent grid over the Nepal window with the decimal-degree spacings taken straight from the geotransform and used as if they were metre lengths.",
+      "goal": "Report the delivered mean terrain slope (percent) for the Nepal window and the factor by which an honest metre-based computation disagrees with it.",
+      "sources": [
+        {
+          "path": "cache/copdem/n28e084_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N28 E084 (Nepal, EPSG:4326; elevation values in metres)"
+        }
+      ],
+      "facts": {
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic, pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "measured_property": "terrain slope between neighbouring pixels"
+      },
+      "facts_in_metadata": {
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "cache/copdem/n28e084_win.tif: GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "cache/copdem/n28e084_win.tif: GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "cache/copdem/n28e084_win.tif: GeoTIFF geotransform"
+        },
+        "measured_property": false
+      },
+      "output": {
+        "path": "outputs/slope_wrong_degrees_as_metres_geographic_nepal/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope raster labelled percent."
+      },
+      "oracle": {
+        "reason": "the fetched Copernicus DEM COG states EPSG:4326 and the pixel sizes but no vertical unit; a slope computation must convert the degree spacings to metre lengths before differencing. On a geographic DEM a 0.00027778 degree step must be converted to metres (about 27 m east-west, 31 m north-south at 28.7 N) before differencing; using degree numbers directly makes the slope percent about 1e5 times too large.",
+        "value_metric": "delivered_mean_slope_percent_over_truth_mean_slope_percent",
+        "value": 105055.814261
+      }
+    },
+    {
+      "id": "slope_wrong_latitude_ignored_geographic_svalbard",
+      "family": "slope",
+      "kind": "wrong",
+      "deliverable_form": "dataset",
+      "scenario": "A terrain QC engineer computed a slope-percent grid over the Svalbard window converting degrees to metres with a flat '111.32 km per degree' reduction, never applying the latitude-dependent (cos phi) correction the geotransform's own asymmetry calls for.",
+      "goal": "Report the delivered mean terrain slope (percent) for the Svalbard window and the factor by which an honest latitude-aware computation disagrees with it.",
+      "sources": [
+        {
+          "path": "cache/copdem/n78e016_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N78 E016 (Svalbard, EPSG:4326; elevation in metres; X spacing in degrees is 3x the Y spacing)"
+        }
+      ],
+      "facts": {
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic, pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0008333333333333333,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "measured_property": "terrain slope between neighbouring pixels"
+      },
+      "facts_in_metadata": {
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "cache/copdem/n28e084_win.tif: GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "cache/copdem/n78e016_win.tif: GeoTIFF geotransform (0.0008333 deg)"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "cache/copdem/n78e016_win.tif: GeoTIFF geotransform (0.0002778 deg)"
+        },
+        "measured_property": false
+      },
+      "output": {
+        "path": "outputs/slope_wrong_latitude_ignored_geographic_svalbard/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope raster labelled percent."
+      },
+      "oracle": {
+        "reason": "the fetched Copernicus DEM COG states EPSG:4326 and the pixel sizes but no vertical unit; a slope computation must convert the degree spacings to metre lengths before differencing. At 78.5 N one degree of longitude covers only about a fifth of the equatorial metre length, so a 0.0008333 degree east-west step is about 71.5 m with the cos(latitude) correction and 92.8 m without; skipping the correction shrinks the east-west gradient and with it the delivered mean slope by about a fifth of the honest value.",
+        "value_metric": "delivered_mean_slope_percent_over_truth_mean_slope_percent",
+        "value": 0.578053
+      }
+    },
+    {
+      "id": "slope_wrong_unit_confused_projected_svalbard",
+      "family": "slope",
+      "kind": "wrong",
+      "deliverable_form": "dataset",
+      "scenario": "A terrain QC engineer reprojected the Svalbard window onto a 30 m UTM 33N grid, computed the slope correctly in degrees - and then delivered the degrees grid under the label 'slope percent' in the report.",
+      "goal": "Report the delivered mean slope value that the report labels percent, and the factor by which the honest percent values on the same grid disagree with it.",
+      "sources": [
+        {
+          "path": "cache/copdem/n78e016_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N78 E016 (Svalbard, EPSG:4326; elevation in metres; X spacing in degrees is 3x the Y spacing)"
+        }
+      ],
+      "facts": {
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic, pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "measured_property": "terrain slope between neighbouring pixels"
+      },
+      "facts_in_metadata": {
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "cache/copdem/n28e084_win.tif: GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "cache/copdem/n78e016_win.tif: GeoTIFF geotransform (0.0008333 deg)"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "cache/copdem/n78e016_win.tif: GeoTIFF geotransform (0.0002778 deg)"
+        },
+        "measured_property": false
+      },
+      "output": {
+        "path": "outputs/slope_wrong_unit_confused_projected_svalbard/slope.tif",
+        "form": "dataset",
+        "description": "Degree-values delivered under the percent label."
+      },
+      "oracle": {
+        "reason": "the fetched Copernicus DEM COG states EPSG:4326 and the pixel sizes but no vertical unit; a slope computation must convert the degree spacings to metre lengths before differencing. The delivered grid holds degree values (arctan of the metre gradient) labelled as percent; percent is 100 times the tangent, so the honest percent mean on the same grid is far larger than the delivered degrees mean and the numbers disagree by the reported factor.",
+        "value_metric": "truth_mean_slope_percent_over_delivered_degrees_labelled_percent",
+        "value": 2.330595
+      }
+    },
+    {
+      "id": "slope_correct_percent_geographic_nepal",
+      "family": "slope",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "A terrain QC engineer computed the slope-percent grid over the Nepal window with the degree spacings converted to latitude-aware metre lengths before differencing.",
+      "goal": "Report the delivered mean terrain slope (percent) for the Nepal window computed from metre-converted pixel steps.",
+      "sources": [
+        {
+          "path": "cache/copdem/n28e084_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N28 E084 (Nepal, EPSG:4326; elevation values in metres)"
+        }
+      ],
+      "facts": {
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic, pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "measured_property": "terrain slope between neighbouring pixels"
+      },
+      "facts_in_metadata": {
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "cache/copdem/n28e084_win.tif: GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "cache/copdem/n28e084_win.tif: GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "cache/copdem/n28e084_win.tif: GeoTIFF geotransform"
+        },
+        "measured_property": false
+      },
+      "output": {
+        "path": "outputs/slope_correct_percent_geographic_nepal/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope-percent raster."
+      },
+      "oracle": {
+        "evidence": "The delivered grid converts the degree steps to metre lengths (about 27 m east-west, 31 m north-south) before differencing, so its mean matches the recomputation to within rounding.",
+        "value_metric": "mean_slope_percent",
+        "value": 67.858156
+      }
+    },
+    {
+      "id": "slope_correct_degrees_geographic_nepal",
+      "family": "slope",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "The same Nepal study also delivered the slope in degrees (the arctangent of the metre-unit gradient) for a usage that prefers angle terminology.",
+      "goal": "Report the delivered mean terrain slope (degrees) for the Nepal window.",
+      "sources": [
+        {
+          "path": "cache/copdem/n28e084_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N28 E084 (Nepal, EPSG:4326; elevation values in metres)"
+        }
+      ],
+      "facts": {
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic, pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "measured_property": "terrain slope between neighbouring pixels"
+      },
+      "facts_in_metadata": {
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "cache/copdem/n28e084_win.tif: GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "cache/copdem/n28e084_win.tif: GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "cache/copdem/n28e084_win.tif: GeoTIFF geotransform"
+        },
+        "measured_property": false
+      },
+      "output": {
+        "path": "outputs/slope_correct_degrees_geographic_nepal/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope-degrees raster."
+      },
+      "oracle": {
+        "evidence": "The delivered degrees grid is the arctangent of the honest metre-converted gradient, so its mean matches the recomputation to within rounding.",
+        "value_metric": "mean_slope_degrees",
+        "value": 31.282528
+      }
+    },
+    {
+      "id": "slope_correct_degrees_projected_svalbard",
+      "family": "slope",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "A polar team reprojected the Svalbard window onto a 30 m UTM 33N grid and delivered the slope in degrees computed on that metre grid.",
+      "goal": "Report the delivered mean terrain slope (degrees) for the Svalbard window computed on the projected metre grid.",
+      "sources": [
+        {
+          "path": "cache/copdem/n78e016_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N78 E016 (Svalbard, EPSG:4326; elevation in metres; X spacing in degrees is 3x the Y spacing)"
+        }
+      ],
+      "facts": {
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic, pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "measured_property": "terrain slope between neighbouring pixels"
+      },
+      "facts_in_metadata": {
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "cache/copdem/n28e084_win.tif: GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "cache/copdem/n78e016_win.tif: GeoTIFF geotransform (0.0008333 deg)"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "cache/copdem/n78e016_win.tif: GeoTIFF geotransform (0.0002778 deg)"
+        },
+        "measured_property": false
+      },
+      "output": {
+        "path": "outputs/slope_correct_degrees_projected_svalbard/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope-degrees raster (EPSG:32633, 30 m)."
+      },
+      "oracle": {
+        "evidence": "The delivered grid is computed on the EPSG:32633 metre regrid of the same window (bilinear resampling, 30 m grid), so its mean matches the recomputation to within rounding.",
+        "value_metric": "mean_slope_degrees",
+        "value": 6.237232
+      }
+    },
+    {
+      "id": "summary_wrong_fill_averaged_in_kauai",
+      "family": "summary_reports",
+      "kind": "wrong",
+      "deliverable_form": "summary",
+      "scenario": "An island habitat mapper summarised the Kauai 3DEP window in one pass and left the declared fill value inside the average.",
+      "goal": "Report the mean elevation value that the delivered summary JSON holds, and the factor by which the honest fill-excluded mean disagrees with it.",
+      "sources": [
+        {
+          "path": "cache/usgs3dep/USGS_13_n22w159.xml",
+          "role": "FGDC metadata sidecar of the 3DEP tile (states metres and NAVD 88) - as found"
+        },
+        {
+          "path": "cache/usgs3dep/USGS_13_n22w159_win.tif",
+          "role": "512x512 window of the 3DEP 1/3 arc-second tile n22w159 (Kauai coast: declared fill and genuine 0 m cells)"
+        }
+      ],
+      "facts": {
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "NAVD 88",
+        "horizontal_crs": "EPSG:4269 (geographic, pixel spacing 1/3 arc-second)",
+        "fill_value": -999999.0,
+        "summary_statistic": "mean over raster cells",
+        "summary_key": "mean_elevation_m",
+        "summary_data": "3DEP window n22w159 (all cells, fill included as delivered)"
+      },
+      "facts_in_metadata": {
+        "elevation_unit": {
+          "stated": true,
+          "where": "cache/usgs3dep/USGS_13_n31w091.xml / USGS_13_n22w159.xml: idinfo.descript.abstract 'All elevation values are in meters'"
+        },
+        "elevation_vertical_datum": {
+          "stated": true,
+          "where": "same sidecar abstract: 'referenced to the North American Vertical Datum of 1988 (NAVD 88)'"
+        },
+        "horizontal_crs": {
+          "stated": true,
+          "where": "same sidecar abstract: 'geographic coordinates ... North American Datum of 1983 (NAD 83)'; the window GeoTIFF CRS is EPSG:4269"
+        },
+        "fill_value": {
+          "stated": true,
+          "where": "window GeoTIFF GDAL NODATA tag (-999999)"
+        },
+        "summary_statistic": false,
+        "summary_key": {
+          "stated": true,
+          "where": "the delivered outputs/summary.json itself names its key 'mean_elevation_m' (a delivered file, not source metadata)"
+        },
+        "summary_data": false
+      },
+      "output": {
+        "path": "outputs/summary_wrong_fill_averaged_in_kauai/summary.json",
+        "form": "summary",
+        "description": "Delivered summary JSON (mean over all cells)."
+      },
+      "oracle": {
+        "reason": "The tile's fill value is -999999 and about 30% of the window is ocean voids; averaging it in drags the delivered mean down hundreds of thousands of metres while the honest fill-excluded mean is a few tens of metres.",
+        "value_metric": "abs_delivered_minus_truth_over_truth_mean",
+        "value": 13477.831383
+      }
+    },
+    {
+      "id": "summary_wrong_zeros_evicted_kauai",
+      "family": "summary_reports",
+      "kind": "wrong",
+      "deliverable_form": "summary",
+      "scenario": "A second colleague summarised the same Kauai window by counting usable cells and treated every exact zero-height cell as missing data, so the coastal strand vanished from the count even though the product declares only -999999 as fill.",
+      "goal": "Report the usable-cell count that the delivered summary JSON holds, and compare with the count a careful reader derives from the product's declared fill.",
+      "sources": [
+        {
+          "path": "cache/usgs3dep/USGS_13_n22w159.xml",
+          "role": "FGDC metadata sidecar of the 3DEP tile (states metres and NAVD 88) - as found"
+        },
+        {
+          "path": "cache/usgs3dep/USGS_13_n22w159_win.tif",
+          "role": "512x512 window of the 3DEP 1/3 arc-second tile n22w159 (Kauai coast: declared fill and genuine 0 m cells)"
+        }
+      ],
+      "facts": {
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "NAVD 88",
+        "horizontal_crs": "EPSG:4269 (geographic, pixel spacing 1/3 arc-second)",
+        "fill_value": -999999.0,
+        "summary_statistic": "count over raster cells",
+        "summary_key": "usable_pixel_count",
+        "summary_data": "3DEP window n22w159 (cells that are not the declared fill, with genuine 0 m heights included)"
+      },
+      "facts_in_metadata": {
+        "elevation_unit": {
+          "stated": true,
+          "where": "cache/usgs3dep/USGS_13_n31w091.xml / USGS_13_n22w159.xml: idinfo.descript.abstract 'All elevation values are in meters'"
+        },
+        "elevation_vertical_datum": {
+          "stated": true,
+          "where": "same sidecar abstract: 'referenced to the North American Vertical Datum of 1988 (NAVD 88)'"
+        },
+        "horizontal_crs": {
+          "stated": true,
+          "where": "same sidecar abstract: 'geographic coordinates ... North American Datum of 1983 (NAD 83)'; the window GeoTIFF CRS is EPSG:4269"
+        },
+        "fill_value": {
+          "stated": true,
+          "where": "window GeoTIFF GDAL NODATA tag (-999999)"
+        },
+        "summary_statistic": false,
+        "summary_key": {
+          "stated": true,
+          "where": "the delivered outputs/summary.json itself names its key 'usable_pixel_count'"
+        },
+        "summary_data": false
+      },
+      "output": {
+        "path": "outputs/summary_wrong_zeros_evicted_kauai/summary.json",
+        "form": "summary",
+        "description": "Delivered summary JSON (count evicting zeros)."
+      },
+      "oracle": {
+        "reason": "The 3DEP tile declares -999999 as fill and states elevations in metres with no exclusion of zero; the delivered count evicts the genuine sea-level cells that the product keeps.",
+        "value_metric": "count_of_evicted_real_zero_height_cells",
+        "value": 109987
+      }
+    },
+    {
+      "id": "summary_wrong_area_degrees_sq_km_iceland",
+      "family": "summary_reports",
+      "kind": "wrong",
+      "deliverable_form": "summary",
+      "scenario": "An environmental agency asked for Iceland's surface area in square kilometres; a colleague computed the planar shapely area of the CRS84 geometry and shipped the raw degree-squared number under the 'sq_km' label.",
+      "goal": "Report the area value that the delivered summary JSON holds, and the factor by which an honest geodesic area computation disagrees with it.",
+      "sources": [
+        {
+          "path": "cache/naturalearth/ne_110m_admin_0_countries.geojson",
+          "role": "Natural Earth 110m admin-0 countries GeoJSON (public domain, tag v5.1.2)"
+        }
+      ],
+      "facts": {
+        "boundary_source": "Natural Earth 110m admin-0 countries boundary geometry",
+        "deliverable_crs": "OGC:CRS84 (as the source itself states in its crs field)",
+        "measured_quantity_units": "sq_km",
+        "summary_statistic": "country area",
+        "summary_key": "area_sq_km",
+        "summary_data": "Iceland polygon of the Natural Earth 110m admin-0 file"
+      },
+      "facts_in_metadata": {
+        "boundary_source": {
+          "stated": true,
+          "where": "cache/naturalearth/ne_110m_admin_0_countries.geojson: the file is the Natural Earth 110m admin-0 countries dataset; per-feature 'featurecla' property identifies each admin-0 boundary"
+        },
+        "deliverable_crs": {
+          "stated": true,
+          "where": "cache/naturalearth/ne_110m_admin_0_countries.geojson: crs.name = 'urn:ogc:def:crs:OGC:1.3:CRS84'"
+        },
+        "measured_quantity_units": false,
+        "summary_statistic": false,
+        "summary_key": {
+          "stated": true,
+          "where": "the delivered outputs/summary.json itself names its key 'area_sq_km'"
+        },
+        "summary_data": false
+      },
+      "output": {
+        "path": "outputs/summary_wrong_area_degrees_sq_km_iceland/summary.json",
+        "form": "summary",
+        "description": "Delivered summary JSON (degree-squared area labelled sq_km)."
+      },
+      "oracle": {
+        "reason": "The delivered value is the planar (degree-squared) area of a CRS84 polygon relabelled as square kilometres; the honest geodesic area of the same geometry is about 5.2e3 times larger\u3002",
+        "value_metric": "truth_geodesic_area_km2_over_delivered_labelled_sq_km",
+        "value": 5237.709196
+      }
+    },
+    {
+      "id": "summary_correct_mean_excluding_fill_kauai",
+      "family": "summary_reports",
+      "kind": "correct",
+      "deliverable_form": "summary",
+      "scenario": "The same Kauai window summarised honestly: the declared fill dropped, the genuine 0 m cells kept, mean and count delivered.",
+      "goal": "Report the mean elevation and usable-cell count that the delivered summary JSON holds.",
+      "sources": [
+        {
+          "path": "cache/usgs3dep/USGS_13_n22w159.xml",
+          "role": "FGDC metadata sidecar of the 3DEP tile (states metres and NAVD 88) - as found"
+        },
+        {
+          "path": "cache/usgs3dep/USGS_13_n22w159_win.tif",
+          "role": "512x512 window of the 3DEP 1/3 arc-second tile n22w159 (Kauai coast: declared fill and genuine 0 m cells)"
+        }
+      ],
+      "facts": {
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "NAVD 88",
+        "horizontal_crs": "EPSG:4269 (geographic, pixel spacing 1/3 arc-second)",
+        "fill_value": -999999.0,
+        "summary_statistic": "mean and count over raster cells",
+        "summary_key": "mean_elevation_m and usable_pixel_count",
+        "summary_data": "3DEP window n22w159 (declared-fill excluded, zeros kept)"
+      },
+      "facts_in_metadata": {
+        "elevation_unit": {
+          "stated": true,
+          "where": "cache/usgs3dep/USGS_13_n31w091.xml / USGS_13_n22w159.xml: idinfo.descript.abstract 'All elevation values are in meters'"
+        },
+        "elevation_vertical_datum": {
+          "stated": true,
+          "where": "same sidecar abstract: 'referenced to the North American Vertical Datum of 1988 (NAVD 88)'"
+        },
+        "horizontal_crs": {
+          "stated": true,
+          "where": "same sidecar abstract: 'geographic coordinates ... North American Datum of 1983 (NAD 83)'; the window GeoTIFF CRS is EPSG:4269"
+        },
+        "fill_value": {
+          "stated": true,
+          "where": "window GeoTIFF GDAL NODATA tag (-999999)"
+        },
+        "summary_statistic": false,
+        "summary_key": {
+          "stated": true,
+          "where": "the delivered outputs/summary.json itself names its keys 'mean_elevation_m' and 'usable_pixel_count'"
+        },
+        "summary_data": false
+      },
+      "output": {
+        "path": "outputs/summary_correct_mean_excluding_fill_kauai/summary.json",
+        "form": "summary",
+        "description": "Delivered summary JSON (fill-excluded)."
+      },
+      "oracle": {
+        "evidence": "The delivered mean equals the recomputed mean over exactly the non-fill cells, and the delivered count equals their number; the genuine sea-level cells stay in both.",
+        "value_metric": "mean_elevation_m",
+        "value": 22.607054
+      }
+    },
+    {
+      "id": "summary_correct_max_elevation_delta",
+      "family": "summary_reports",
+      "kind": "correct",
+      "deliverable_form": "summary",
+      "scenario": "A coastal engineer summarised the Mississippi-delta 3DEP window and delivered the maximum elevation in metres, citing the product's own sidecar statement of units and datum.",
+      "goal": "Report the maximum elevation value that the delivered summary JSON holds, with the unit and datum the product states.",
+      "sources": [
+        {
+          "path": "cache/usgs3dep/USGS_13_n31w091.xml",
+          "role": "FGDC metadata sidecar of the 3DEP tile (states metres and NAVD 88) - as found"
+        },
+        {
+          "path": "cache/usgs3dep/USGS_13_n31w091_win.tif",
+          "role": "604x604 window of the 3DEP 1/3 arc-second tile n31w091 (Mississippi delta coastline)"
+        }
+      ],
+      "facts": {
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "NAVD 88",
+        "horizontal_crs": "EPSG:4269 (geographic, pixel spacing 1/3 arc-second)",
+        "fill_value": -999999.0,
+        "summary_statistic": "maximum over raster cells",
+        "summary_key": "max_elevation_m",
+        "summary_data": "3DEP window n31w091 (declared-fill excluded)"
+      },
+      "facts_in_metadata": {
+        "elevation_unit": {
+          "stated": true,
+          "where": "cache/usgs3dep/USGS_13_n31w091.xml / USGS_13_n22w159.xml: idinfo.descript.abstract 'All elevation values are in meters'"
+        },
+        "elevation_vertical_datum": {
+          "stated": true,
+          "where": "same sidecar abstract: 'referenced to the North American Vertical Datum of 1988 (NAVD 88)'"
+        },
+        "horizontal_crs": {
+          "stated": true,
+          "where": "same sidecar abstract: 'geographic coordinates ... North American Datum of 1983 (NAD 83)'; the window GeoTIFF CRS is EPSG:4269"
+        },
+        "fill_value": {
+          "stated": true,
+          "where": "window GeoTIFF GDAL NODATA tag (-999999)"
+        },
+        "summary_statistic": false,
+        "summary_key": {
+          "stated": true,
+          "where": "the delivered outputs/summary.json itself names its key 'max_elevation_m'"
+        },
+        "summary_data": false
+      },
+      "output": {
+        "path": "outputs/summary_correct_max_elevation_delta/summary.json",
+        "form": "summary",
+        "description": "Delivered summary JSON (max elevation)."
+      },
+      "oracle": {
+        "evidence": "The delivered maximum equals the recomputed maximum over the non-fill cells, and the delivered unit and datum are the ones the product's sidecar states (meters, NAVD 88).",
+        "value_metric": "max_elevation_m",
+        "value": 2.413232
+      }
+    },
+    {
+      "id": "summary_correct_area_geodesic_iceland",
+      "family": "summary_reports",
+      "kind": "correct",
+      "deliverable_form": "summary",
+      "scenario": "The same area request redone properly: Iceland's area computed geodesically on the CRS84 boundary geometry and delivered under the sq_km label honestly.",
+      "goal": "Report the geodesic area value that the delivered summary JSON holds.",
+      "sources": [
+        {
+          "path": "cache/naturalearth/ne_110m_admin_0_countries.geojson",
+          "role": "Natural Earth 110m admin-0 countries GeoJSON (public domain, tag v5.1.2)"
+        }
+      ],
+      "facts": {
+        "boundary_source": "Natural Earth 110m admin-0 countries boundary geometry",
+        "deliverable_crs": "OGC:CRS84 (as the source itself states in its crs field)",
+        "measured_quantity_units": "sq_km",
+        "summary_statistic": "country area",
+        "summary_key": "area_sq_km",
+        "summary_data": "Iceland polygon of the Natural Earth 110m admin-0 file"
+      },
+      "facts_in_metadata": {
+        "boundary_source": {
+          "stated": true,
+          "where": "cache/naturalearth/ne_110m_admin_0_countries.geojson: the file is the Natural Earth 110m admin-0 countries dataset; per-feature 'featurecla' property identifies each admin-0 boundary"
+        },
+        "deliverable_crs": {
+          "stated": true,
+          "where": "cache/naturalearth/ne_110m_admin_0_countries.geojson: crs.name = 'urn:ogc:def:crs:OGC:1.3:CRS84'"
+        },
+        "measured_quantity_units": false,
+        "summary_statistic": false,
+        "summary_key": {
+          "stated": true,
+          "where": "the delivered outputs/summary.json itself names its key 'area_sq_km'"
+        },
+        "summary_data": false
+      },
+      "output": {
+        "path": "outputs/summary_correct_area_geodesic_iceland/summary.json",
+        "form": "summary",
+        "description": "Delivered summary JSON (geodesic area)."
+      },
+      "oracle": {
+        "evidence": "The delivered value equals the independent WGS84 geodesic area of the same geometry, recomputed from the delivered polygon coordinates to within rounding.",
+        "value_metric": "area_sq_km_geodesic",
+        "value": 107735.7185
+      }
+    },
+    {
+      "id": "summary_correct_perimeter_geodesic_switzerland",
+      "family": "summary_reports",
+      "kind": "correct",
+      "deliverable_form": "summary",
+      "scenario": "A border-engineering report needs Switzerland's boundary length; the delivered value is the geodesic length of the Natural Earth 110m exterior ring, summed segment by segment in metres and delivered in km.",
+      "goal": "Report the boundary perimeter value that the delivered summary JSON holds.",
+      "sources": [
+        {
+          "path": "cache/naturalearth/ne_110m_admin_0_countries.geojson",
+          "role": "Natural Earth 110m admin-0 countries GeoJSON (public domain, tag v5.1.2)"
+        }
+      ],
+      "facts": {
+        "boundary_source": "Natural Earth 110m admin-0 countries boundary geometry",
+        "deliverable_crs": "OGC:CRS84 (as the source itself states in its crs field)",
+        "measured_quantity_units": "km",
+        "summary_statistic": "boundary length",
+        "summary_key": "boundary_perimeter_km",
+        "summary_data": "Switzerland polygon of the Natural Earth 110m admin-0 file"
+      },
+      "facts_in_metadata": {
+        "boundary_source": {
+          "stated": true,
+          "where": "cache/naturalearth/ne_110m_admin_0_countries.geojson: the file is the Natural Earth 110m admin-0 countries dataset; per-feature 'featurecla' property identifies each admin-0 boundary"
+        },
+        "deliverable_crs": {
+          "stated": true,
+          "where": "cache/naturalearth/ne_110m_admin_0_countries.geojson: crs.name = 'urn:ogc:def:crs:OGC:1.3:CRS84'"
+        },
+        "measured_quantity_units": false,
+        "summary_statistic": false,
+        "summary_key": {
+          "stated": true,
+          "where": "the delivered outputs/summary.json itself names its key 'area_sq_km'"
+        },
+        "summary_data": false
+      },
+      "output": {
+        "path": "outputs/summary_correct_perimeter_geodesic_switzerland/summary.json",
+        "form": "summary",
+        "description": "Delivered summary JSON (geodesic perimeter)."
+      },
+      "oracle": {
+        "evidence": "The delivered value equals the independent segment-wise geodesic length of the same ring (WGS84 geodesic inverse), recomputed from the polygon coordinates to within rounding.",
+        "value_metric": "boundary_perimeter_km_geodesic",
+        "value": 1017.4836
+      }
+    },
+    {
+      "id": "s2_decode_v0_wrong_offset_applied_twice_wa",
+      "family": "s2_decodes_two_distributions",
+      "kind": "wrong",
+      "deliverable_form": "dataset",
+      "scenario": "A colleague processing the v0 distribution applied the declared -0.1 offset on top of stored values that already include it, then shipped the result as surface reflectance.",
+      "goal": "Report the mean surface reflectance of the delivered green-band window and how far it falls short of the honest decode.",
+      "sources": [
+        {
+          "path": "cache/s2-v0/item.json",
+          "role": "STAC item of the v0 scene (Earth Search sentinel-2-l2a; scale/offset/nodata under raster:bands; earthsearch:boa_offset_applied=true)"
+        },
+        {
+          "path": "cache/s2-v0/tileinfo_metadata.json",
+          "role": "tileinfo metadata of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/granule_metadata.xml",
+          "role": "granule metadata XML of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/wa_B03.tif",
+          "role": "1024x1024 window of the green (B03) reflectance COG (EPSG:32632, 10 m, DN values as served)"
+        }
+      ],
+      "facts": {
+        "s2_distribution": "Earth Search sentinel-2-l2a (v0)",
+        "band_common_name": "green (B03)",
+        "reflectance_scale": 0.0001,
+        "reflectance_offset_declared": -0.1,
+        "reflectance_offset_applied_in_stored_values": true,
+        "reflectance_offset_status_evidence": "item property earthsearch:boa_offset_applied = true; decoded water green reflectance ~0.024 is physical with the scale-only decode and negative with the decared offset applied again",
+        "fill_value": 0,
+        "value_kind": "surface reflectance"
+      },
+      "facts_in_metadata": {
+        "s2_distribution": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: collection = sentinel-2-l2a"
+        },
+        "band_common_name": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: band asset title and eo:bands[].name"
+        },
+        "reflectance_scale": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].scale = 0.0001"
+        },
+        "reflectance_offset_declared": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].offset = -0.1"
+        },
+        "reflectance_offset_applied_in_stored_values": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: properties.earthsearch:boa_offset_applied = true"
+        },
+        "reflectance_offset_status_evidence": false,
+        "fill_value": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].nodata = 0"
+        },
+        "value_kind": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: band asset roles include 'reflectance'"
+        }
+      },
+      "output": {
+        "path": "outputs/s2_decode_v0_wrong_offset_applied_twice_wa/reflectance.tif",
+        "form": "dataset",
+        "description": "Delivered reflectance raster ((value-1000)*1e-4 decode)."
+      },
+      "oracle": {
+        "reason": "The item declares scale 0.0001, offset -0.1 and nodata 0 per band under raster:bands, and properties.earthsearch:boa_offset_applied is true: the stored COG values already include the BOA offset, so the honest decode is reflectance = stored_value * 0.0001 and applying the declared offset again is wrong. Applying the declared offset to already-offset storage makes every pixel darker by 0.1 reflectance; dark targets such as open water end up negative, which is unphysical.",
+        "value_metric": "shortfall_mean_reflectance_vs_honest_decode",
+        "value": 0.1
+      }
+    },
+    {
+      "id": "s2_decode_v0_correct_scale_only_wa_b03",
+      "family": "s2_decodes_two_distributions",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "A compositing run needs honest surface-reflectance statistics for the green band of the v0 scene, decoded exactly as the distribution's own metadata instructs.",
+      "goal": "Report the mean surface reflectance of the delivered green-band window of the v0 distibution.",
+      "sources": [
+        {
+          "path": "cache/s2-v0/item.json",
+          "role": "STAC item of the v0 scene (Earth Search sentinel-2-l2a; scale/offset/nodata under raster:bands; earthsearch:boa_offset_applied=true)"
+        },
+        {
+          "path": "cache/s2-v0/tileinfo_metadata.json",
+          "role": "tileinfo metadata of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/granule_metadata.xml",
+          "role": "granule metadata XML of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/wa_B03.tif",
+          "role": "1024x1024 window of the green (B03) reflectance COG (EPSG:32632, 10 m, DN values as served)"
+        }
+      ],
+      "facts": {
+        "s2_distribution": "Earth Search sentinel-2-l2a (v0)",
+        "band_common_name": "green (B03)",
+        "reflectance_scale": 0.0001,
+        "reflectance_offset_declared": -0.1,
+        "reflectance_offset_applied_in_stored_values": true,
+        "reflectance_offset_status_evidence": "item property earthsearch:boa_offset_applied = true; decoded water green reflectance ~0.024 is physical with the scale-only decode and negative with the decared offset applied again",
+        "fill_value": 0,
+        "value_kind": "surface reflectance"
+      },
+      "facts_in_metadata": {
+        "s2_distribution": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: collection = sentinel-2-l2a"
+        },
+        "band_common_name": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: band asset title and eo:bands[].name"
+        },
+        "reflectance_scale": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].scale = 0.0001"
+        },
+        "reflectance_offset_declared": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].offset = -0.1"
+        },
+        "reflectance_offset_applied_in_stored_values": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: properties.earthsearch:boa_offset_applied = true"
+        },
+        "reflectance_offset_status_evidence": false,
+        "fill_value": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].nodata = 0"
+        },
+        "value_kind": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: band asset roles include 'reflectance'"
+        }
+      },
+      "output": {
+        "path": "outputs/s2_decode_v0_correct_scale_only_wa_b03/reflectance.tif",
+        "form": "dataset",
+        "description": "Delivered reflectance raster (scale-only decode)."
+      },
+      "oracle": {
+        "evidence": "The item declares scale 0.0001, offset -0.1 and nodata 0 per band under raster:bands, and properties.earthsearch:boa_offset_applied is true: the stored COG values already include the BOA offset, so the honest decode is reflectance = stored_value * 0.0001 and applying the declared offset again is wrong. The delivered raster decodes every non-fill pixel with reflectance = stored_value * 0.0001, so its mean matches the recomputed truth to within rounding.",
+        "value_metric": "mean_reflectance",
+        "value": 0.108206
+      }
+    },
+    {
+      "id": "s2_decode_v0_correct_scale_only_wa_b11",
+      "family": "s2_decodes_two_distributions",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "A moisture-mapping run needs the same honest decode for the v0 short-wave infrared band over the alpine window.",
+      "goal": "Report the mean surface reflectance of the delivered swir16-band window of the v0 distribution.",
+      "sources": [
+        {
+          "path": "cache/s2-v0/item.json",
+          "role": "STAC item of the v0 scene (Earth Search sentinel-2-l2a; scale/offset/nodata under raster:bands; earthsearch:boa_offset_applied=true)"
+        },
+        {
+          "path": "cache/s2-v0/tileinfo_metadata.json",
+          "role": "tileinfo metadata of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/granule_metadata.xml",
+          "role": "granule metadata XML of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/wa_B11.tif",
+          "role": "512x512 window of the swir16 (B11) reflectance COG (EPSG:32632, 20 m, DN values as served)"
+        }
+      ],
+      "facts": {
+        "s2_distribution": "Earth Search sentinel-2-l2a (v0)",
+        "band_common_name": "swir16 (B11)",
+        "reflectance_scale": 0.0001,
+        "reflectance_offset_declared": -0.1,
+        "reflectance_offset_applied_in_stored_values": true,
+        "reflectance_offset_status_evidence": "item property earthsearch:boa_offset_applied = true; decoded water green reflectance ~0.024 is physical with the scale-only decode and negative with the decared offset applied again",
+        "fill_value": 0,
+        "value_kind": "surface reflectance"
+      },
+      "facts_in_metadata": {
+        "s2_distribution": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: collection = sentinel-2-l2a"
+        },
+        "band_common_name": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: assets.swir16.title and eo:bands[].name"
+        },
+        "reflectance_scale": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].scale = 0.0001"
+        },
+        "reflectance_offset_declared": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].offset = -0.1"
+        },
+        "reflectance_offset_applied_in_stored_values": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: properties.earthsearch:boa_offset_applied = true"
+        },
+        "reflectance_offset_status_evidence": false,
+        "fill_value": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].nodata = 0"
+        },
+        "value_kind": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: band asset roles include 'reflectance'"
+        }
+      },
+      "output": {
+        "path": "outputs/s2_decode_v0_correct_scale_only_wa_b11/reflectance.tif",
+        "form": "dataset",
+        "description": "Delivered reflectance raster (scale-only decode)."
+      },
+      "oracle": {
+        "evidence": "The item declares scale 0.0001, offset -0.1 and nodata 0 per band under raster:bands, and properties.earthsearch:boa_offset_applied is true: the stored COG values already include the BOA offset, so the honest decode is reflectance = stored_value * 0.0001 and applying the declared offset again is wrong. The delivered raster decodes the swir16 window with reflectance = stored_value * 0.0001, so its mean matches the recomputed truth to within rounding.",
+        "value_metric": "mean_reflectance",
+        "value": 0.232439
+      }
+    },
+    {
+      "id": "s2_decode_c1_wrong_offset_missing_wa",
+      "family": "s2_decodes_two_distributions",
+      "kind": "wrong",
+      "deliverable_form": "dataset",
+      "scenario": "A colleague processed the c1 distribution with the familiar v0 recipe - scaled the stored values and skipped the offset - and shipped the result as surface reflectance.",
+      "goal": "Report the mean surface reflectance of the delivered green-band c1 window and how much it exceeds the honest decode.",
+      "sources": [
+        {
+          "path": "cache/s2-c1/item.json",
+          "role": "STAC item of the c1 scene (Earth Search sentinel-2-c1-l2a; scale/offset/nodata under raster:bands; no earthsearch:boa_offset_applied property)"
+        },
+        {
+          "path": "cache/s2-c1/tileInfo.json",
+          "role": "tileInfo metadata of the c1 scene (as found)"
+        },
+        {
+          "s2_distribution": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: collection = sentinel-2-c1-l2a"
+          },
+          "band_common_name": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: band asset title and eo:bands[].name"
+          },
+          "reflectance_scale": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: raster:bands[0].scale = 0.0001"
+          },
+          "reflectance_offset_declared": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: raster:bands[0].offset = -0.1"
+          },
+          "reflectance_offset_applied_in_stored_values": false,
+          "reflectance_offset_status_evidence": false,
+          "fill_value": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: raster:bands[0].nodata = 0"
+          },
+          "value_kind": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: band asset roles include 'reflectance'"
+          }
+        },
+        {
+          "path": "cache/s2-c1/wa_B03.tif",
+          "role": "1024x1024 window of the green (B03) reflectance COG (EPSG:32632, 10 m, DN values as served)"
+        }
+      ],
+      "facts": {
+        "s2_distribution": "Earth Search sentinel-2-c1-l2a (Collection 1)",
+        "band_common_name": "green (B03)",
+        "reflectance_scale": 0.0001,
+        "reflectance_offset_declared": -0.1,
+        "reflectance_offset_applied_in_stored_values": false,
+        "reflectance_offset_status_evidence": "the item carries no earthsearch:boa_offset_applied property; open-water green cells stored around DN 1272 decode to a physical ~0.027 reflectance only after subtracting the declared 0.1 offset ((DN-1000)*0.0001), while DN*0.0001 would claim an unphysical 0.127 over open water",
+        "fill_value": 0,
+        "value_kind": "surface reflectance"
+      },
+      "facts_in_metadata": {
+        "s2_distribution": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: collection = sentinel-2-c1-l2a"
+        },
+        "band_common_name": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: band asset title and eo:bands[].name"
+        },
+        "reflectance_scale": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: raster:bands[0].scale = 0.0001"
+        },
+        "reflectance_offset_declared": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: raster:bands[0].offset = -0.1"
+        },
+        "reflectance_offset_applied_in_stored_values": false,
+        "reflectance_offset_status_evidence": false,
+        "fill_value": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: raster:bands[0].nodata = 0"
+        },
+        "value_kind": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: band asset roles include 'reflectance'"
+        }
+      },
+      "output": {
+        "path": "outputs/s2_decode_c1_wrong_offset_missing_wa/reflectance.tif",
+        "form": "dataset",
+        "description": "Delivered reflectance raster (offset missing)."
+      },
+      "oracle": {
+        "reason": "The c1 item declares the same scale 0.0001 and offset -0.1 under raster:bands but carries no earthsearch:boa_offset_applied property; the stored COG values are raw SAFE DNs, so the honest decode is reflectance = (stored_value - 1000) * 0.0001 and decoding without the offset is wrong. Decoding the raw stored values with the scale only makes every pixel brighter by exactly 0.1 reflectance; over open water the delivered values are unphysical.",
+        "value_metric": "excess_mean_reflectance_vs_honest_decode",
+        "value": 0.1
+      }
+    },
+    {
+      "id": "s2_decode_c1_wrong_raw_dn_delivered_wa",
+      "family": "s2_decodes_two_distributions",
+      "kind": "wrong",
+      "deliverable_form": "dataset",
+      "scenario": "A pipeline stage skipped quantification entirely on the c1 green window and shipped the raw stored integers as surface reflectance.",
+      "goal": "Report the mean value the delivered raster carries as 'reflectance' and the factor by which it exceeds the honest decode.",
+      "sources": [
+        {
+          "path": "cache/s2-c1/item.json",
+          "role": "STAC item of the c1 scene (Earth Search sentinel-2-c1-l2a; scale/offset/nodata under raster:bands; no earthsearch:boa_offset_applied property)"
+        },
+        {
+          "path": "cache/s2-c1/tileInfo.json",
+          "role": "tileInfo metadata of the c1 scene (as found)"
+        },
+        {
+          "s2_distribution": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: collection = sentinel-2-c1-l2a"
+          },
+          "band_common_name": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: band asset title and eo:bands[].name"
+          },
+          "reflectance_scale": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: raster:bands[0].scale = 0.0001"
+          },
+          "reflectance_offset_declared": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: raster:bands[0].offset = -0.1"
+          },
+          "reflectance_offset_applied_in_stored_values": false,
+          "reflectance_offset_status_evidence": false,
+          "fill_value": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: raster:bands[0].nodata = 0"
+          },
+          "value_kind": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: band asset roles include 'reflectance'"
+          }
+        },
+        {
+          "path": "cache/s2-c1/wa_B03.tif",
+          "role": "1024x1024 window of the green (B03) reflectance COG (EPSG:32632, 10 m, DN values as served)"
+        }
+      ],
+      "facts": {
+        "s2_distribution": "Earth Search sentinel-2-c1-l2a (Collection 1)",
+        "band_common_name": "green (B03)",
+        "reflectance_scale": 0.0001,
+        "reflectance_offset_declared": -0.1,
+        "reflectance_offset_applied_in_stored_values": false,
+        "reflectance_offset_status_evidence": "the item carries no earthsearch:boa_offset_applied property; open-water green cells stored around DN 1272 decode to a physical ~0.027 reflectance only after subtracting the declared 0.1 offset ((DN-1000)*0.0001), while DN*0.0001 would claim an unphysical 0.127 over open water",
+        "fill_value": 0,
+        "value_kind": "surface reflectance"
+      },
+      "facts_in_metadata": {
+        "s2_distribution": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: collection = sentinel-2-c1-l2a"
+        },
+        "band_common_name": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: band asset title and eo:bands[].name"
+        },
+        "reflectance_scale": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: raster:bands[0].scale = 0.0001"
+        },
+        "reflectance_offset_declared": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: raster:bands[0].offset = -0.1"
+        },
+        "reflectance_offset_applied_in_stored_values": false,
+        "reflectance_offset_status_evidence": false,
+        "fill_value": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: raster:bands[0].nodata = 0"
+        },
+        "value_kind": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: band asset roles include 'reflectance'"
+        }
+      },
+      "output": {
+        "path": "outputs/s2_decode_c1_wrong_raw_dn_delivered_wa/reflectance.tif",
+        "form": "dataset",
+        "description": "Raw DN values relabelled as reflectance."
+      },
+      "oracle": {
+        "reason": "The c1 item declares the same scale 0.0001 and offset -0.1 under raster:bands but carries no earthsearch:boa_offset_applied property; the stored COG values are raw SAFE DNs, so the honest decode is reflectance = (stored_value - 1000) * 0.0001 and decoding without the offset is wrong. Leaving the packed values raw reports surface reflectance larger than physical by the scale factor 1e4 combined with the offset handling, so the delivered numbers are thousands of times larger than the honest decode.",
+        "value_metric": "delivered_over_truth_mean_ratio",
+        "value": 20791.888116
+      }
+    },
+    {
+      "id": "s2_decode_c1_correct_offset_subtracted_wa_b03",
+      "family": "s2_decodes_two_distributions",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "A careful analyst established the c1 offset status from the data and decoded the green window with the declared offset subtracted.",
+      "goal": "Report the mean surface reflectance of the delivered green-band c1 window.",
+      "sources": [
+        {
+          "path": "cache/s2-c1/item.json",
+          "role": "STAC item of the c1 scene (Earth Search sentinel-2-c1-l2a; scale/offset/nodata under raster:bands; no earthsearch:boa_offset_applied property)"
+        },
+        {
+          "path": "cache/s2-c1/tileInfo.json",
+          "role": "tileInfo metadata of the c1 scene (as found)"
+        },
+        {
+          "s2_distribution": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: collection = sentinel-2-c1-l2a"
+          },
+          "band_common_name": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: band asset title and eo:bands[].name"
+          },
+          "reflectance_scale": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: raster:bands[0].scale = 0.0001"
+          },
+          "reflectance_offset_declared": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: raster:bands[0].offset = -0.1"
+          },
+          "reflectance_offset_applied_in_stored_values": false,
+          "reflectance_offset_status_evidence": false,
+          "fill_value": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: raster:bands[0].nodata = 0"
+          },
+          "value_kind": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: band asset roles include 'reflectance'"
+          }
+        },
+        {
+          "path": "cache/s2-c1/wa_B03.tif",
+          "role": "1024x1024 window of the green (B03) reflectance COG (EPSG:32632, 10 m, DN values as served)"
+        }
+      ],
+      "facts": {
+        "s2_distribution": "Earth Search sentinel-2-c1-l2a (Collection 1)",
+        "band_common_name": "green (B03)",
+        "reflectance_scale": 0.0001,
+        "reflectance_offset_declared": -0.1,
+        "reflectance_offset_applied_in_stored_values": false,
+        "reflectance_offset_status_evidence": "the item carries no earthsearch:boa_offset_applied property; open-water green cells stored around DN 1272 decode to a physical ~0.027 reflectance only after subtracting the declared 0.1 offset ((DN-1000)*0.0001), while DN*0.0001 would claim an unphysical 0.127 over open water",
+        "fill_value": 0,
+        "value_kind": "surface reflectance"
+      },
+      "facts_in_metadata": {
+        "s2_distribution": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: collection = sentinel-2-c1-l2a"
+        },
+        "band_common_name": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: band asset title and eo:bands[].name"
+        },
+        "reflectance_scale": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: raster:bands[0].scale = 0.0001"
+        },
+        "reflectance_offset_declared": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: raster:bands[0].offset = -0.1"
+        },
+        "reflectance_offset_applied_in_stored_values": false,
+        "reflectance_offset_status_evidence": false,
+        "fill_value": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: raster:bands[0].nodata = 0"
+        },
+        "value_kind": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: band asset roles include 'reflectance'"
+        }
+      },
+      "output": {
+        "path": "outputs/s2_decode_c1_correct_offset_subtracted_wa_b03/reflectance.tif",
+        "form": "dataset",
+        "description": "Delivered reflectance raster ((value-1000)*1e-4)."
+      },
+      "oracle": {
+        "evidence": "The c1 item declares the same scale 0.0001 and offset -0.1 under raster:bands but carries no earthsearch:boa_offset_applied property; the stored COG values are raw SAFE DNs, so the honest decode is reflectance = (stored_value - 1000) * 0.0001 and decoding without the offset is wrong. The delivered raster decodes every non-fill pixel with reflectance = (stored_value - 1000) * 0.0001, so its mean matches the recomputed truth to within rounding; dark water stays physical.",
+        "value_metric": "mean_reflectance",
+        "value": 0.092662
+      }
+    },
+    {
+      "id": "s2_decode_c1_correct_offset_subtracted_wa_b11",
+      "family": "s2_decodes_two_distributions",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "The same careful decode for the c1 swir16 band over the alpine window.",
+      "goal": "Report the mean surface reflectance of the delivered swir16-band c1 window.",
+      "sources": [
+        {
+          "path": "cache/s2-c1/item.json",
+          "role": "STAC item of the c1 scene (Earth Search sentinel-2-c1-l2a; scale/offset/nodata under raster:bands; no earthsearch:boa_offset_applied property)"
+        },
+        {
+          "path": "cache/s2-c1/tileInfo.json",
+          "role": "tileInfo metadata of the c1 scene (as found)"
+        },
+        {
+          "s2_distribution": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: collection = sentinel-2-c1-l2a"
+          },
+          "band_common_name": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: band asset title and eo:bands[].name"
+          },
+          "reflectance_scale": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: raster:bands[0].scale = 0.0001"
+          },
+          "reflectance_offset_declared": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: raster:bands[0].offset = -0.1"
+          },
+          "reflectance_offset_applied_in_stored_values": false,
+          "reflectance_offset_status_evidence": false,
+          "fill_value": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: raster:bands[0].nodata = 0"
+          },
+          "value_kind": {
+            "stated": true,
+            "where": "cache/s2-c1/item.json: band asset roles include 'reflectance'"
+          }
+        },
+        {
+          "path": "cache/s2-c1/wa_B11.tif",
+          "role": "512x512 window of the swir16 (B11) reflectance COG (EPSG:32632, 20 m, DN values as served)"
+        }
+      ],
+      "facts": {
+        "s2_distribution": "Earth Search sentinel-2-c1-l2a (Collection 1)",
+        "band_common_name": "swir16 (B11)",
+        "reflectance_scale": 0.0001,
+        "reflectance_offset_declared": -0.1,
+        "reflectance_offset_applied_in_stored_values": false,
+        "reflectance_offset_status_evidence": "the item carries no earthsearch:boa_offset_applied property; open-water green cells stored around DN 1272 decode to a physical ~0.027 reflectance only after subtracting the declared 0.1 offset ((DN-1000)*0.0001), while DN*0.0001 would claim an unphysical 0.127 over open water",
+        "fill_value": 0,
+        "value_kind": "surface reflectance"
+      },
+      "facts_in_metadata": {
+        "s2_distribution": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: collection = sentinel-2-c1-l2a"
+        },
+        "band_common_name": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: assets.swir16.title and eo:bands[].name"
+        },
+        "reflectance_scale": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: raster:bands[0].scale = 0.0001"
+        },
+        "reflectance_offset_declared": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: raster:bands[0].offset = -0.1"
+        },
+        "reflectance_offset_applied_in_stored_values": false,
+        "reflectance_offset_status_evidence": false,
+        "fill_value": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: raster:bands[0].nodata = 0"
+        },
+        "value_kind": {
+          "stated": true,
+          "where": "cache/s2-c1/item.json: band asset roles include 'reflectance'"
+        }
+      },
+      "output": {
+        "path": "outputs/s2_decode_c1_correct_offset_subtracted_wa_b11/reflectance.tif",
+        "form": "dataset",
+        "description": "Delivered reflectance raster ((value-1000)*1e-4)."
+      },
+      "oracle": {
+        "evidence": "The c1 item declares the same scale 0.0001 and offset -0.1 under raster:bands but carries no earthsearch:boa_offset_applied property; the stored COG values are raw SAFE DNs, so the honest decode is reflectance = (stored_value - 1000) * 0.0001 and decoding without the offset is wrong. The delivered raster decodes the swir16 window with reflectance = (stored_value - 1000) * 0.0001, so its mean matches the recomputed truth to within rounding.",
+        "value_metric": "mean_reflectance",
+        "value": 0.231363
+      }
+    },
+    {
+      "id": "fillunits_wrong_fill_decoded_as_data_wb",
+      "family": "fill_and_vertical_units",
+      "kind": "wrong",
+      "deliverable_form": "dataset",
+      "scenario": "A swath-edge window of the v0 scene contains only the declared fill value; the colleague who processed it treated the fill as ordinary reflectance data and shipped it with a fully usable summary.",
+      "goal": "Decide from the delivered reflectance window and summary how many pixels carry observations and how many are declared fill read as data.",
+      "sources": [
+        {
+          "path": "cache/s2-v0/item.json",
+          "role": "STAC item of the v0 scene (Earth Search sentinel-2-l2a; scale/offset/nodata under raster:bands; earthsearch:boa_offset_applied=true)"
+        },
+        {
+          "path": "cache/s2-v0/tileinfo_metadata.json",
+          "role": "tileinfo metadata of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/granule_metadata.xml",
+          "role": "granule metadata XML of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/wb_B03.tif",
+          "role": "1024x1024 window of the green (B03) reflectance COG inside the no-data wedge (all values = declared fill)"
+        }
+      ],
+      "facts": {
+        "s2_distribution": "Earth Search sentinel-2-l2a (v0)",
+        "band_common_name": "green (B03)",
+        "reflectance_scale": 0.0001,
+        "reflectance_offset_declared": -0.1,
+        "reflectance_offset_applied_in_stored_values": true,
+        "reflectance_offset_status_evidence": "item property earthsearch:boa_offset_applied = true",
+        "fill_value": 0,
+        "value_kind": "surface reflectance",
+        "window_role": "swath-edge window, entirely declared fill (tile data coverage 93.36%)"
+      },
+      "facts_in_metadata": {
+        "s2_distribution": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: collection = sentinel-2-l2a"
+        },
+        "band_common_name": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: band asset title and eo:bands[].name"
+        },
+        "reflectance_scale": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].scale = 0.0001"
+        },
+        "reflectance_offset_declared": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].offset = -0.1"
+        },
+        "reflectance_offset_applied_in_stored_values": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: properties.earthsearch:boa_offset_applied = true"
+        },
+        "reflectance_offset_status_evidence": false,
+        "fill_value": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].nodata = 0"
+        },
+        "value_kind": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: band asset roles include 'reflectance'"
+        },
+        "window_role": {
+          "stated": true,
+          "where": "cache/s2-v0/tileinfo_metadata.json: dataCoveragePercentage = 93.36 documents the no-data wedge; the band's raster:bands[0].nodata = 0 marks the fill"
+        }
+      },
+      "output": {
+        "path": "outputs/fillunits_wrong_fill_decoded_as_data_wb/reflectance.tif",
+        "form": "dataset",
+        "description": "Delivered reflectance raster treating fill as data (+ summary)."
+      },
+      "oracle": {
+        "reason": "The window holds nothing but the declared fill value; treating it as reflectance data reports pixels that carry no observation.",
+        "value_metric": "falsely_usable_pixel_count",
+        "value": 1048576
+      }
+    },
+    {
+      "id": "fillunits_wrong_vertical_unit_ignored_kauai",
+      "family": "fill_and_vertical_units",
+      "kind": "wrong",
+      "deliverable_form": "dataset",
+      "scenario": "A colleague read the Kauai 3DEP window and delivered an 'elevation in feet' raster for a US flood report, copying the metre values of the source without any unit conversion.",
+      "goal": "Report the delivered elevation raster's mean in the unit it claims (feet) and the factor by which a correct metre-to-foot conversion disagrees with it.",
+      "sources": [
+        {
+          "path": "cache/usgs3dep/USGS_13_n22w159.xml",
+          "role": "FGDC metadata sidecar of the 3DEP tile (states metres and NAVD 88) - as found"
+        },
+        {
+          "path": "cache/usgs3dep/USGS_13_n22w159_win.tif",
+          "role": "512x512 window of the 3DEP 1/3 arc-second tile n22w159 (Kauai coast: declared fill and genuine 0 m cells)"
+        }
+      ],
+      "facts": {
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "NAVD 88",
+        "horizontal_crs": "EPSG:4269 (geographic, pixel spacing 1/3 arc-second)",
+        "fill_value": -999999.0
+      },
+      "facts_in_metadata": {
+        "elevation_unit": {
+          "stated": true,
+          "where": "cache/usgs3dep/USGS_13_n31w091.xml / USGS_13_n22w159.xml: idinfo.descript.abstract 'All elevation values are in meters'"
+        },
+        "elevation_vertical_datum": {
+          "stated": true,
+          "where": "same sidecar abstract: 'referenced to the North American Vertical Datum of 1988 (NAVD 88)'"
+        },
+        "horizontal_crs": {
+          "stated": true,
+          "where": "same sidecar abstract: 'geographic coordinates ... North American Datum of 1983 (NAD 83)'; the window GeoTIFF CRS is EPSG:4269"
+        },
+        "fill_value": {
+          "stated": true,
+          "where": "window GeoTIFF GDAL NODATA tag (-999999)"
+        }
+      },
+      "output": {
+        "path": "outputs/fillunits_wrong_vertical_unit_ignored_kauai/elevation_delivered.tif",
+        "form": "dataset",
+        "description": "Delivered elevation raster (metre values, no unit tag, claimed feet)."
+      },
+      "oracle": {
+        "reason": "The delivered raster copies the metre numbers unchanged and no unit tag is attached; the product sidecar states the values are meters (NAVD 88), so claiming feet makes values low by the metre-to-foot factor (1 m = 3.28084 ft).",
+        "value_metric": "truth_mean_elev_ft_over_delivered_mean_elev_ft",
+        "value": 3.28084
+      }
+    },
+    {
+      "id": "fillunits_correct_3dep_metres_delta",
+      "family": "fill_and_vertical_units",
+      "kind": "correct",
+      "deliverable_form": "summary",
+      "scenario": "A coastal engineer summarised the Mississippi-delta 3DEP window in metres and cited the product's own sidecar, which states the units and the vertical datum explicitly.",
+      "goal": "Report the mean elevation value and usable-cell count the delivered summary JSON holds, with the unit and datum the product states.",
+      "sources": [
+        {
+          "path": "cache/usgs3dep/USGS_13_n31w091.xml",
+          "role": "FGDC metadata sidecar of the 3DEP tile (states metres and NAVD 88) - as found"
+        },
+        {
+          "path": "cache/usgs3dep/USGS_13_n31w091_win.tif",
+          "role": "604x604 window of the 3DEP 1/3 arc-second tile n31w091 (Mississippi delta coastline)"
+        }
+      ],
+      "facts": {
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "NAVD 88",
+        "horizontal_crs": "EPSG:4269 (geographic, pixel spacing 1/3 arc-second)",
+        "fill_value": -999999.0,
+        "summary_statistic": "mean and count over raster cells",
+        "summary_key": "mean_elevation_m and usable_pixel_count",
+        "summary_data": "3DEP window n31w091 (declared-fill excluded)"
+      },
+      "facts_in_metadata": {
+        "elevation_unit": {
+          "stated": true,
+          "where": "cache/usgs3dep/USGS_13_n31w091.xml / USGS_13_n22w159.xml: idinfo.descript.abstract 'All elevation values are in meters'"
+        },
+        "elevation_vertical_datum": {
+          "stated": true,
+          "where": "same sidecar abstract: 'referenced to the North American Vertical Datum of 1988 (NAVD 88)'"
+        },
+        "horizontal_crs": {
+          "stated": true,
+          "where": "same sidecar abstract: 'geographic coordinates ... North American Datum of 1983 (NAD 83)'; the window GeoTIFF CRS is EPSG:4269"
+        },
+        "fill_value": {
+          "stated": true,
+          "where": "window GeoTIFF GDAL NODATA tag (-999999)"
+        },
+        "summary_statistic": false,
+        "summary_key": {
+          "stated": true,
+          "where": "the delivered outputs/summary.json itself names its keys 'mean_elevation_m' and 'usable_pixel_count'"
+        },
+        "summary_data": false
+      },
+      "output": {
+        "path": "outputs/fillunits_correct_3dep_metres_delta/summary.json",
+        "form": "summary",
+        "description": "Delivered summary JSON (metres, NAVD 88)."
+      },
+      "oracle": {
+        "evidence": "The delivered mean equals the recomputed mean over the non-fill cells, and the delivered unit and datum are the ones the product's sidecar states (meters, NAVD 88).",
+        "value_metric": "mean_elevation_m",
+        "value": 0.269949
+      }
+    },
+    {
+      "id": "fillunits_correct_wedge_fill_excluded_summary",
+      "family": "fill_and_vertical_units",
+      "kind": "correct",
+      "deliverable_form": "summary",
+      "scenario": "The same swath-edge window processed honestly: the delivered summary must record that the window holds no usable reflection at all.",
+      "goal": "Report the usable-pixel count and mean reflectance that the delivered summary JSON holds.",
+      "sources": [
+        {
+          "path": "cache/s2-v0/item.json",
+          "role": "STAC item of the v0 scene (Earth Search sentinel-2-l2a; scale/offset/nodata under raster:bands; earthsearch:boa_offset_applied=true)"
+        },
+        {
+          "path": "cache/s2-v0/tileinfo_metadata.json",
+          "role": "tileinfo metadata of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/granule_metadata.xml",
+          "role": "granule metadata XML of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/wb_B03.tif",
+          "role": "1024x1024 window of the green (B03) reflectance COG inside the no-data wedge (all values = declared fill)"
+        }
+      ],
+      "facts": {
+        "s2_distribution": "Earth Search sentinel-2-l2a (v0)",
+        "band_common_name": "green (B03)",
+        "reflectance_scale": 0.0001,
+        "reflectance_offset_declared": -0.1,
+        "reflectance_offset_applied_in_stored_values": true,
+        "reflectance_offset_status_evidence": "item property earthsearch:boa_offset_applied = true",
+        "fill_value": 0,
+        "value_kind": "surface reflectance",
+        "window_role": "swath-edge window, entirely declared fill (tile data coverage 93.36%)"
+      },
+      "facts_in_metadata": {
+        "s2_distribution": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: collection = sentinel-2-l2a"
+        },
+        "band_common_name": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: band asset title and eo:bands[].name"
+        },
+        "reflectance_scale": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].scale = 0.0001"
+        },
+        "reflectance_offset_declared": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].offset = -0.1"
+        },
+        "reflectance_offset_applied_in_stored_values": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: properties.earthsearch:boa_offset_applied = true"
+        },
+        "reflectance_offset_status_evidence": false,
+        "fill_value": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].nodata = 0"
+        },
+        "value_kind": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: band asset roles include 'reflectance'"
+        },
+        "window_role": {
+          "stated": true,
+          "where": "cache/s2-v0/tileinfo_metadata.json: dataCoveragePercentage = 93.36 documents the no-data wedge; the band's raster:bands[0].nodata = 0 marks the fill"
+        }
+      },
+      "output": {
+        "path": "outputs/fillunits_correct_wedge_fill_excluded_summary/summary.json",
+        "form": "summary",
+        "description": "Delivered summary JSON (fill excluded)."
+      },
+      "oracle": {
+        "evidence": "Every pixel of the window is the declared fill, so the correct usable count is 0 and the delivered summary records exactly that (mean null).",
+        "value_metric": "usable_pixel_count",
+        "value": 0
+      }
+    },
+    {
+      "id": "plain_mean_elevation_nepal",
+      "family": "plain",
+      "kind": "correct",
+      "deliverable_form": "summary",
+      "scenario": "A mountain-team lead summarised the Nepal Copernicus DEM window in metres straight from the delivered values and shipped mean, minimum and maximum.",
+      "goal": "Report the mean elevation value that the delivered summary JSON holds.",
+      "sources": [
+        {
+          "path": "cache/copdem/n28e084_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N28 E084 (Nepal, EPSG:4326; elevation values in metres)"
+        }
+      ],
+      "facts": {
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic, pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "measured_property": "terrain slope between neighbouring pixels"
+      },
+      "facts_in_metadata": {
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "cache/copdem/n28e084_win.tif: GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "cache/copdem/n28e084_win.tif: GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "cache/copdem/n28e084_win.tif: GeoTIFF geotransform"
+        },
+        "measured_property": false
+      },
+      "output": {
+        "path": "outputs/plain_mean_elevation_nepal/summary.json",
+        "form": "summary",
+        "description": "Delivered metre summary of the Nepal window."
+      },
+      "oracle": {
+        "evidence": "The delivered mean, min and max are the honest metre-valued statistics of the very window the sources deliver (no unit, scale or fill trap involved); the recomputation matches to within rounding.",
+        "value_metric": "mean_elevation_m",
+        "value": 5261.979411
+      }
+    },
+    {
+      "id": "plain_ndvi_v0_window_a",
+      "family": "plain",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "A vegetation analyst decoded the green and near-infrared windows of the v0 alpine scene and produced the NDVI map with class-wise means, including the negative NDVI of the clear water bodies.",
+      "goal": "Report the NDVI values the delivered map and its summary hold (whole window and per class, water included).",
+      "sources": [
+        {
+          "path": "cache/s2-v0/item.json",
+          "role": "STAC item of the v0 scene (Earth Search sentinel-2-l2a; scale/offset/nodata under raster:bands; earthsearch:boa_offset_applied=true)"
+        },
+        {
+          "path": "cache/s2-v0/tileinfo_metadata.json",
+          "role": "tileinfo metadata of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/granule_metadata.xml",
+          "role": "granule metadata XML of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/wa_B03.tif",
+          "role": "1024x1024 window of the green (B03) reflectance COG"
+        },
+        {
+          "path": "cache/s2-v0/wa_B08.tif",
+          "role": "1024x1024 window of the near-infrared (B08) reflectance COG"
+        },
+        {
+          "path": "cache/s2-v0/wa_SCL.tif",
+          "role": "matching 512x512 scene-classification window"
+        }
+      ],
+      "facts": {
+        "s2_distribution": "Earth Search sentinel-2-l2a (v0)",
+        "band_common_name": "green and near-infrared pair",
+        "reflectance_scale": 0.0001,
+        "reflectance_offset_declared": -0.1,
+        "reflectance_offset_applied_in_stored_values": true,
+        "reflectance_offset_status_evidence": "item property earthsearch:boa_offset_applied = true; decoded water green reflectance ~0.024 is physical with the scale-only decode and negative with the decared offset applied again",
+        "fill_value": 0,
+        "value_kind": "surface reflectance",
+        "measured_quantity": "NDVI per class of the scene classification"
+      },
+      "facts_in_metadata": {
+        "s2_distribution": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: collection = sentinel-2-l2a"
+        },
+        "band_common_name": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: band asset titles and eo:bands[].name"
+        },
+        "reflectance_scale": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].scale = 0.0001"
+        },
+        "reflectance_offset_declared": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].offset = -0.1"
+        },
+        "reflectance_offset_applied_in_stored_values": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: properties.earthsearch:boa_offset_applied = true"
+        },
+        "reflectance_offset_status_evidence": false,
+        "fill_value": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].nodata = 0"
+        },
+        "value_kind": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: band asset roles include 'reflectance'"
+        },
+        "measured_quantity": false
+      },
+      "output": {
+        "path": "outputs/plain_ndvi_v0_window_a/ndvi_map.tif",
+        "form": "dataset",
+        "description": "Delivered NDVI raster (nodata -9999) plus summary JSON."
+      },
+      "oracle": {
+        "evidence": "The delivered map and its class means are the honest NDVI values of the decoded bands; the water class mean is genuinely negative (about -0.64), which is the real-data feature; the recomputation matches to within rounding.",
+        "value_metric": "ndvi_class_6_water_mean",
+        "value": -0.64294
+      }
+    },
+    {
+      "id": "plain_blue_reflectance_snow_v0",
+      "family": "plain",
+      "kind": "correct",
+      "deliverable_form": "summary",
+      "scenario": "A snow albedo engineer summarised the blue band's surface reflectance over the snow/ice class of the v0 alpine window, decoded honestly; snow reflectance near 0.55 is exactly what a careful decode yields.",
+      "goal": "Report the mean blue surface reflectance value the delivered summary JSON holds over the snow class.",
+      "sources": [
+        {
+          "path": "cache/s2-v0/item.json",
+          "role": "STAC item of the v0 scene (Earth Search sentinel-2-l2a; scale/offset/nodata under raster:bands; earthsearch:boa_offset_applied=true)"
+        },
+        {
+          "path": "cache/s2-v0/tileinfo_metadata.json",
+          "role": "tileinfo metadata of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/granule_metadata.xml",
+          "role": "granule metadata XML of the v0 scene (as found)"
+        },
+        {
+          "path": "cache/s2-v0/wa_B02.tif",
+          "role": "1024x1024 window of the blue (B02) reflectance COG"
+        },
+        {
+          "path": "cache/s2-v0/wa_SCL.tif",
+          "role": "matching 512x512 scene-classification window (snow class 11)"
+        }
+      ],
+      "facts": {
+        "s2_distribution": "Earth Search sentinel-2-l2a (v0)",
+        "band_common_name": "blue (B02)",
+        "reflectance_scale": 0.0001,
+        "reflectance_offset_declared": -0.1,
+        "reflectance_offset_applied_in_stored_values": true,
+        "reflectance_offset_status_evidence": "item property earthsearch:boa_offset_applied = true; decoded water green reflectance ~0.024 is physical with the scale-only decode and negative with the decared offset applied again",
+        "fill_value": 0,
+        "value_kind": "surface reflectance"
+      },
+      "facts_in_metadata": {
+        "s2_distribution": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: collection = sentinel-2-l2a"
+        },
+        "band_common_name": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: assets.blue.title and eo:bands[].name"
+        },
+        "reflectance_scale": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].scale = 0.0001"
+        },
+        "reflectance_offset_declared": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].offset = -0.1"
+        },
+        "reflectance_offset_applied_in_stored_values": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: properties.earthsearch:boa_offset_applied = true"
+        },
+        "reflectance_offset_status_evidence": false,
+        "fill_value": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: raster:bands[0].nodata = 0"
+        },
+        "value_kind": {
+          "stated": true,
+          "where": "cache/s2-v0/item.json: band asset roles include 'reflectance'"
+        }
+      },
+      "output": {
+        "path": "outputs/plain_blue_reflectance_snow_v0/summary.json",
+        "form": "summary",
+        "description": "Delivered blue-reflection summary over snow."
+      },
+      "oracle": {
+        "evidence": "The delivered value is the honest mean of the decoded blue reflectance over the documented snow/ice class; the recomputation matches to within rounding.",
+        "value_metric": "mean_blue_reflectance_snow",
+        "value": 0.547693
+      }
+    },
+    {
+      "id": "plain_feature_count_ne",
+      "family": "plain",
+      "kind": "correct",
+      "deliverable_form": "summary",
+      "scenario": "A data librarian counted the country records delivered by the Natural Earth 110m admin-0 GeoJSON and shipped the plain feature count.",
+      "goal": "Report the feature count value the delivered summary JSON holds.",
+      "sources": [
+        {
+          "path": "cache/naturalearth/ne_110m_admin_0_countries.geojson",
+          "role": "Natural Earth 110m admin-0 countries GeoJSON (public domain, tag v5.1.2)"
+        }
+      ],
+      "facts": {
+        "boundary_source": "Natural Earth 110m admin-0 countries boundary geometry",
+        "deliverable_crs": "OGC:CRS84 (as the source itself states in its crs field)",
+        "measured_quantity_units": "sq_km",
+        "summary_statistic": "country area",
+        "summary_key": "area_sq_km",
+        "summary_data": "Iceland polygon of the Natural Earth 110m admin-0 file"
+      },
+      "facts_in_metadata": {
+        "boundary_source": {
+          "stated": true,
+          "where": "cache/naturalearth/ne_110m_admin_0_countries.geojson: the file is the Natural Earth 110m admin-0 countries dataset; per-feature 'featurecla' property identifies each admin-0 boundary"
+        },
+        "deliverable_crs": {
+          "stated": true,
+          "where": "cache/naturalearth/ne_110m_admin_0_countries.geojson: crs.name = 'urn:ogc:def:crs:OGC:1.3:CRS84'"
+        },
+        "measured_quantity_units": false,
+        "summary_statistic": false,
+        "summary_key": {
+          "stated": true,
+          "where": "the delivered outputs/summary.json itself names its key 'area_sq_km'"
+        },
+        "summary_data": false
+      },
+      "output": {
+        "path": "outputs/plain_feature_count_ne/summary.json",
+        "form": "summary",
+        "description": "Delivered plain feature count."
+      },
+      "oracle": {
+        "evidence": "The delivered count equals the number of features in the source GeoJSON, recomputed independently.",
+        "value_metric": "feature_count",
+        "value": 177
+      }
+    }
+  ]
+}

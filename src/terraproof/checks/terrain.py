@@ -22,6 +22,7 @@ from terraproof.checks.base import FAIL, NOT_RUN, PASS, WARN, result
 from terraproof.checks.rs_processing import _grid_problems
 
 CHECK_ID = "terrain.slope_consistent"
+SLOPE_UNITS = (None, "degrees", "percent")
 
 # Metres per declared vertical unit. An empty unit is assumed to match the horizontal unit.
 VERTICAL_UNITS = {
@@ -35,6 +36,10 @@ VERTICAL_UNITS = {
 # 2:1 pixel aspect falls well outside it on any sloping cell.
 RTOL = 1e-3
 ATOL = 0.01
+# Geographic DEMs: spacing from the WGS84 ellipsoid, a mean-radius sphere or 111 320 m per degree differs
+# by at most 0.674% from 0 to 88 degrees (Phase 9), so 1% accepts any of them. The mistakes differ by far
+# more: longitude not scaled by latitude is 13% at 28 degrees and 380% at 78; degrees as lengths ~1e5.
+GEOGRAPHIC_RTOL = 0.01
 MIN_MATCH_FRACTION = 0.95
 # Cells flatter than this are skipped: every hypothesis predicts about zero there.
 MIN_SLOPE_DEGREES = 0.5
@@ -57,8 +62,8 @@ def _slope_degrees(z: np.ndarray, valid: np.ndarray, factor: float, dx, dy):
     return out, support
 
 
-def _fraction(observed: np.ndarray, expected: np.ndarray) -> float:
-    return float(np.count_nonzero(np.abs(observed - expected) <= RTOL * np.abs(expected) + ATOL) / observed.size)
+def _fraction(observed: np.ndarray, expected: np.ndarray, rtol: float = RTOL) -> float:
+    return float(np.count_nonzero(np.abs(observed - expected) <= rtol * np.abs(expected) + ATOL) / observed.size)
 
 
 def _geographic_spacing(crs, transform, rows: int):
@@ -75,12 +80,17 @@ def _geographic_spacing(crs, transform, rows: int):
             abs(transform[4]) * np.radians(1.0) * meridional)
 
 
-def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = None) -> list:
-    """Compare a slope-in-degrees raster with the slope its DEM's units and spacing imply.
+def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = None,
+                           slope_unit: str | None = None) -> list:
+    """Compare a slope raster with the slope its DEM's units and spacing imply.
 
     `declared_unit` states the DEM's vertical unit when the file carries no label; a label that
-    contradicts it is a conflict, not something to choose between."""
-    evidence = {"output": output.get("path"), "dem": dem.get("path"), "declared_vertical_unit": declared_unit}
+    contradicts it is a conflict, not something to choose between. `slope_unit` declares the output
+    in degrees (the default) or percent; a percent slope is converted to degrees before comparing."""
+    evidence = {"output": output.get("path"), "dem": dem.get("path"), "declared_vertical_unit": declared_unit,
+                "slope_unit": slope_unit}
+    if slope_unit not in SLOPE_UNITS:
+        return [result(CHECK_ID, NOT_RUN, "slope_unit must be degrees or percent.", **evidence)]
     if dem.get("kind") != "raster" or output.get("kind") != "raster":
         return [result(CHECK_ID, NOT_RUN, "Slope consistency needs a raster output and a raster DEM.", **evidence)]
     problems = _grid_problems(dem, output)
@@ -96,6 +106,8 @@ def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = 
             z = src.read(1, masked=True)
         with rasterio.open(output["path"]) as dst:
             slope = dst.read(1, masked=True)
+        if slope_unit == "percent":
+            slope = np.degrees(np.arctan(slope.astype("float64") / 100.0))  # ufuncs keep the mask
     except rasterio.errors.RasterioIOError as error:
         return [result(CHECK_ID, NOT_RUN, f"Cannot read pixel values: {error}", **evidence)]
     if crs is None or not (crs.is_projected or crs.is_geographic):
@@ -125,7 +137,8 @@ def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = 
                         pixel_size_degrees=[abs(dem["transform"][0]), abs(dem["transform"][4])],
                         pixel_size_metres_range={"x": [float(dx.min()), float(dx.max())],
                                                  "y": [float(dy.min()), float(dy.max())]},
-                        tolerance={"rtol": RTOL, "atol_degrees": ATOL}, min_match_fraction=MIN_MATCH_FRACTION)
+                        tolerance={"rtol": GEOGRAPHIC_RTOL, "atol_degrees": ATOL},
+                        min_match_fraction=MIN_MATCH_FRACTION)
     else:
         horizontal = crs.linear_units_factor[1]
         vertical = VERTICAL_UNITS[unit.lower()] if unit else horizontal
@@ -148,7 +161,8 @@ def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = 
                        "delivered value, so nothing could be compared.", **evidence)]
 
     observed = delivered[keep]
-    declared = _fraction(observed, expected[keep])
+    rtol = GEOGRAPHIC_RTOL if geographic else RTOL
+    declared = _fraction(observed, expected[keep], rtol)
     evidence["declared_match_fraction"] = declared
     if declared >= MIN_MATCH_FRACTION:
         spacing = "ellipsoidal pixel spacing" if geographic else f"{dx:g} x {dy:g} pixel spacing"
@@ -169,7 +183,7 @@ def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = 
     matches = {}
     for name, (f, sx, sy) in mistakes.items():
         alternative, _ = _slope_degrees(values, valid, f, sx, sy)
-        matches[name] = _fraction(observed, alternative[keep])
+        matches[name] = _fraction(observed, alternative[keep], rtol)
     evidence["mistake_match_fractions"] = matches
     found = [name for name, fraction in matches.items() if fraction >= MIN_MATCH_FRACTION]
     if found:

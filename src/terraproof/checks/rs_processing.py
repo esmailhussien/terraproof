@@ -370,15 +370,18 @@ def _flagged(qa_path: str, qa_kind: str) -> tuple[np.ndarray, np.ndarray]:
 
 
 def check_cloud_mask_applied(output: dict, qa_path: str | None, qa_kind: str | None, *, full_scan: bool = False,
-                             keep_codes: list | None = None, qa_source: str | None = None) -> list:
+                             keep_codes: list | None = None, qa_source: str | None = None,
+                             valid_value: float | None = None) -> list:
     """Every cloud/shadow-flagged pixel of the QA raster must be nodata in the output.
 
     Masked pixels are those that are nodata in the output, or NaN, or outside the declared
     scale/offset reading: the check cannot claim a pixel was masked when it holds a value.
+    A declared validity mask (`valid_value`) is read in full: a pixel is unmasked only where it
+    holds that value.
     """
-    if full_scan:
+    if full_scan or valid_value is not None:
         from terraproof.checks.processing_full import cloud_mask
-        return cloud_mask(output, qa_path, qa_kind, keep_codes, qa_source)
+        return cloud_mask(output, qa_path, qa_kind, keep_codes, qa_source, valid_value)
     if qa_kind == "keep-codes":
         return [result("rs.cloud_mask_applied", NOT_RUN, "Declared keep-codes QA rules are checked with "
                        "processing_full_scan.", output=output["path"], qa_path=qa_path, qa_kind=qa_kind)]

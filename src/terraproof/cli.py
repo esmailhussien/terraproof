@@ -130,6 +130,21 @@ def build_parser() -> argparse.ArgumentParser:
     bindings.add_argument(
         "--sar-expect", choices=["sigma0-db", "sigma0-linear"], help="declared SAR backscatter scale"
     )
+    bindings.add_argument("--output-form", choices=["validity-mask"],
+                          help="the outputs are validity masks: only --output-valid-value counts as valid")
+    bindings.add_argument("--output-valid-value", type=float, metavar="V",
+                          help="value meaning valid in a validity-mask output (default 1)")
+    bindings.add_argument("--slope-unit", choices=["degrees", "percent"],
+                          help="unit of a slope output checked with --dem (default degrees)")
+    bindings.add_argument("--summary-key", metavar="KEY", help="JSON key (dots for nesting) holding a delivered number")
+    bindings.add_argument("--summary-statistic", choices=["mean", "count", "sum", "min", "max", "area", "length"],
+                          help="statistic the --summary-key number reports, recomputed from --summary-source")
+    bindings.add_argument("--summary-source", metavar="PATH", help="raster or vector the summary was computed from")
+    bindings.add_argument("--summary-unit", metavar="UNIT",
+                          help="unit of an area or length summary (square_kilometre, hectare, metre, kilometre, ...)")
+    bindings.add_argument("--summary-feature", metavar="FIELD=VALUE", help="vector features the summary covers")
+    bindings.add_argument("--summary-mask", metavar="PATH",
+                          help="validity mask (1 = include) on the raster source's grid")
     bindings.add_argument("--sar-filter", choices=["boxcar"],
                           help="speckle filter applied to --sar-filter-source; recomputed in linear power")
     bindings.add_argument("--sar-filter-size", type=int, metavar="N", help="odd window size of --sar-filter")
@@ -311,6 +326,15 @@ def _binding_parameters(args: argparse.Namespace) -> dict:
         "sar_filter_source": args.sar_filter_source,
         "stack_times": args.stack_time or None,
         "stack_window": args.stack_window,
+        "output_form": args.output_form,
+        "output_valid_value": args.output_valid_value,
+        "slope_unit": args.slope_unit,
+        "summary_key": args.summary_key,
+        "summary_statistic": args.summary_statistic,
+        "summary_source": args.summary_source,
+        "summary_unit": args.summary_unit,
+        "summary_feature": args.summary_feature,
+        "summary_mask": args.summary_mask,
     }
 
 
@@ -330,6 +354,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
     buffer_source = _inspect_if_exists(args.buffer_source)
     categorical_source = _inspect_if_exists(args.categorical_source)
     sar_filter_source = _inspect_if_exists(args.sar_filter_source)
+    summary_source = _inspect_if_exists(args.summary_source)
+    summary_mask = _inspect_if_exists(args.summary_mask)
     support_nodata = [None if value == "file" else _float_arg(value, "--support-source-nodata")
                       for value in args.support_source_nodata] or None
 
@@ -354,6 +380,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
                   categorical_source["kind"] if categorical_source else "unknown")
     _record_input(inputs, args.sar_filter_source, "sar-filter-source",
                   sar_filter_source["kind"] if sar_filter_source else "unknown")
+    _record_input(inputs, args.summary_source, "summary-source", summary_source["kind"] if summary_source else "unknown")
+    _record_input(inputs, args.summary_mask, "summary-mask", summary_mask["kind"] if summary_mask else "unknown")
     _record_input(inputs, args.accuracy_samples, "accuracy-samples", "accuracy-samples")
     _record_input(inputs, args.class_areas, "class-areas", "class-areas")
     _record_input(inputs, args.manifest, "manifest", "manifest")
@@ -416,12 +444,21 @@ def _cmd_check(args: argparse.Namespace) -> int:
         sar_filter_source=sar_filter_source,
         stack_times=args.stack_time or None,
         stack_window=args.stack_window,
+        output_form=args.output_form,
+        output_valid_value=args.output_valid_value,
+        slope_unit=args.slope_unit,
+        summary_key=args.summary_key,
+        summary_statistic=args.summary_statistic,
+        summary_source=summary_source,
+        summary_unit=args.summary_unit,
+        summary_feature=args.summary_feature,
+        summary_mask=summary_mask,
     )
 
     checked_paths = list(args.paths)
     for path in (args.compare_to, args.reference_input, args.dem, args.nir, args.red, *band_paths.values(), *args.stack,
                  *args.vertical_source, *args.support_source, args.qa_source, args.buffer_source,
-                 args.categorical_source, args.sar_filter_source,
+                 args.categorical_source, args.sar_filter_source, args.summary_source, args.summary_mask,
                  args.qa_path, args.accuracy_samples, args.class_areas):
         if path:
             checked_paths.append(path)

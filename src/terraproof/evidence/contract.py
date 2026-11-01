@@ -12,13 +12,16 @@ from terraproof.evidence.grade import ADVISORY, CHECKS_PASSED, DECISION, REVIEW,
 
 SCHEMA = 'terraproof.verification-contract/1'
 FILE_PARAMETERS = {'compare_to', 'reference_input', 'dem', 'nir', 'red', 'qa_path', 'qa_source', 'buffer_source',
-                   'accuracy_samples', 'class_areas', 'manifest', 'categorical_source', 'sar_filter_source'}
+                   'accuracy_samples', 'class_areas', 'manifest', 'categorical_source', 'sar_filter_source',
+                   'summary_source', 'summary_mask'}
 PARAMETERS = FILE_PARAMETERS | set('operation resampling categorical expect encoding slope_method raster_identity '
     'index_formula index_bands stack stack_reduction stack_weights stack_min_count processing_full_scan qa_kind qa_keep_codes qa_source dem_vertical_unit metric_quantity metric_property '
     'metric_unit buffer_distance_m buffer_source '
     'time_range sar_expect min_per_class estimates_requested require_provenance vertical_operation vertical_sources '
     'decode_scale decode_offset unit_conversion vertical_source_units vertical_unit vertical_level support_sources support_source_nodata support_rule '
-    'categorical_source sar_filter sar_filter_size sar_filter_source stack_times stack_window'.split())
+    'categorical_source sar_filter sar_filter_size sar_filter_source stack_times stack_window '
+    'output_form output_valid_value slope_unit summary_key summary_statistic summary_source summary_unit '
+    'summary_feature summary_mask'.split())
 LIST_FILE_PARAMETERS = ('stack', 'vertical_sources', 'support_sources')
 
 
@@ -176,6 +179,7 @@ def _missing_bindings(check, values):
         'raster.categorical_codes': ['categorical_source'],
         'sar.filter_domain': ['sar_filter', 'sar_filter_size', 'sar_filter_source', 'sar_expect'],
         'rs.stack_window': ['stack', 'stack_times', 'stack_window'],
+        'report.summary_value': ['summary_key', 'summary_statistic', 'summary_source'],
     }.get(check, [])
     missing = [key for key in needed if key not in values or values[key] is None]
     if check == 'rs.index_formula':
@@ -185,12 +189,18 @@ def _missing_bindings(check, values):
         missing += ['source_band:'+role for role in roles if role not in bound]
     if check == 'rs.cloud_mask_applied' and values.get('qa_kind') == 'keep-codes' and not values.get('qa_keep_codes'):
         missing.append('qa_keep_codes')
+    if check == 'rs.cloud_mask_applied' and values.get('output_form') == 'validity-mask':
+        # A declared validity mask is always read in full, so the full-scan flag adds nothing.
+        missing = [key for key in missing if key != 'processing_full_scan']
     if check == 'geometry.metric_values':
         missing += [key for key in (('buffer_distance_m', 'buffer_source') if values.get('metric_quantity') == 'buffer'
                                     else ('metric_property', 'metric_unit')) if values.get(key) is None]
     if check == 'raster.vertical_units' and values.get('vertical_operation') in ('depth-below-level', 'minus-level'):
         if values.get('vertical_level') is None:
             missing.append('vertical_level')
+    if check == 'report.summary_value' and values.get('summary_statistic') in ('area', 'length'):
+        if values.get('summary_unit') is None:
+            missing.append('summary_unit')
     if check == 'rs.stack_reduction' and values.get('stack_reduction') in ('weighted-sum', 'ols-slope'):
         if not values.get('stack_weights'):
             missing.append('stack_weights')
