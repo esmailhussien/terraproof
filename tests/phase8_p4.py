@@ -231,6 +231,7 @@ def verification_calls(events, deliverables: tuple[str, ...]) -> list[dict]:
             "contract": arguments.get("contract") is not None,
             "targets_deliverable": any(str(p).replace("\\", "/").rsplit("/", 1)[-1] in deliverables for p in paths),
             "grade": grade, "verification_status": status,
+            "next_step_offered": '"next_step"' in str(state.get("output") or ""),
             "status": "failed" if state.get("status") == "error" else "completed",
         })
     return calls
@@ -239,9 +240,10 @@ def verification_calls(events, deliverables: tuple[str, ...]) -> list[dict]:
 class VerificationAdapter(OpenCodeHostAdapter):
     """The registered OpenCode adapter, keeping the verification labels of each run's trace."""
 
-    def __init__(self, *args, deliverables: dict[str, tuple[str, ...]], **kwargs):
+    def __init__(self, *args, deliverables: dict[str, tuple[str, ...]], inputs: dict | None = None, **kwargs):
         super().__init__(*args, **kwargs)
         self.deliverables = deliverables
+        self.inputs = inputs or {entry["task"].task_id: entry["task"].inputs for entry in TASKS}
         self.last_calls: list[dict] = []
 
     def run(self, request: AgentRequest):
@@ -258,7 +260,7 @@ class VerificationAdapter(OpenCodeHostAdapter):
 
     def preflight(self, request: AgentRequest) -> dict:
         """The registered preflight, probing a P4 input; a vector-only task's read probe uses pyogrio."""
-        inputs = {entry["task"].task_id: entry["task"].inputs for entry in TASKS}[request.task_id]
+        inputs = self.inputs[request.task_id]
         raster = next((name for name in inputs if name.endswith(".tif")), None)
         original = agent_lift._probe_input
         agent_lift._probe_input = lambda _task_id: raster or inputs[0]
