@@ -61,6 +61,16 @@
         "categorical"
       ]
     },
+    "raster.categorical_codes": {
+      "family": "raster",
+      "description": "Every valid output cell holds a class code found in the declared class source; blended codes from bilinear, cubic or average resampling fail.",
+      "applies_to": [
+        "raster"
+      ],
+      "enabled_by": [
+        "categorical_source"
+      ]
+    },
     "raster.grid_alignment": {
       "family": "raster",
       "description": "Rasters share CRS, pixel size, and pixel-grid origin so they can be combined."
@@ -155,6 +165,19 @@
         "sar_expect"
       ]
     },
+    "sar.filter_domain": {
+      "family": "sar",
+      "description": "A declared boxcar speckle filter, recomputed from its unfiltered source in linear power, matches the output; a filter averaged in dB fails.",
+      "applies_to": [
+        "raster"
+      ],
+      "enabled_by": [
+        "sar_filter",
+        "sar_filter_size",
+        "sar_filter_source",
+        "sar_expect"
+      ]
+    },
     "accuracy.sample_design": {
       "family": "accuracy",
       "description": "Every map class in the reference-sample CSV has at least min_per_class samples (default 50, a configurable rule of thumb); missing class areas when area estimates are requested are warned."
@@ -225,6 +248,18 @@
       "enabled_by": [
         "stack",
         "stack_reduction"
+      ]
+    },
+    "rs.stack_window": {
+      "family": "rs",
+      "description": "The output's declared time window holds every stack layer's declared interval without overlap; an accumulation also covers it without gaps, weighted by layer hours.",
+      "applies_to": [
+        "raster"
+      ],
+      "enabled_by": [
+        "stack",
+        "stack_times",
+        "stack_window"
       ]
     },
     "terrain.slope_formula": {

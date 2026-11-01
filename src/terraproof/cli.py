@@ -48,6 +48,8 @@ def build_parser() -> argparse.ArgumentParser:
     bindings.add_argument("--compare-to", metavar="PATH", help="source for vector record counts or explicit --raster-identity")
     bindings.add_argument("--resampling", metavar="METHOD", help="resampling method declared for the rasters")
     bindings.add_argument("--categorical", action="store_true", help="rasters hold categorical codes")
+    bindings.add_argument("--categorical-source", metavar="PATH",
+                          help="class raster the output was resampled from; every output code must occur in it")
     bindings.add_argument(
         "--expect", choices=["reflectance", "index"], help="expected value range of the raster bands"
     )
@@ -74,6 +76,10 @@ def build_parser() -> argparse.ArgumentParser:
                               help="one per --stack layer: hours for weighted-sum, decimal times for ols-slope")
     bindings.add_argument("--stack-min-count", type=int, metavar="N",
                               help="minimum valid layers for a supported cell (default 1)")
+    bindings.add_argument("--stack-time", action="append", default=[], metavar="START/END",
+                          help="ISO 8601 interval each --stack layer covers, in order; repeatable")
+    bindings.add_argument("--stack-window", nargs=2, metavar=("START", "END"),
+                          help="time window the output is labelled with; checked against --stack-time")
     bindings.add_argument("--band-number", action="append", default=[], metavar="ROLE=N",
                               help="1-based band of a multi-band --band source; repeatable")
     bindings.add_argument("--nir", metavar="PATH", help="single-band NIR source; calibration comes from its scale/offset metadata")
@@ -123,6 +129,11 @@ def build_parser() -> argparse.ArgumentParser:
     bindings.add_argument(
         "--sar-expect", choices=["sigma0-db", "sigma0-linear"], help="declared SAR backscatter scale"
     )
+    bindings.add_argument("--sar-filter", choices=["boxcar"],
+                          help="speckle filter applied to --sar-filter-source; recomputed in linear power")
+    bindings.add_argument("--sar-filter-size", type=int, metavar="N", help="odd window size of --sar-filter")
+    bindings.add_argument("--sar-filter-source", metavar="PATH",
+                          help="unfiltered backscatter, in the --sar-expect domain, on the output's grid")
     bindings.add_argument(
         "--accuracy-samples", metavar="JSON", help="JSON file of reference samples (map_class, ref_class, optional stratum_weight)"
     )
@@ -293,6 +304,12 @@ def _binding_parameters(args: argparse.Namespace) -> dict:
         "metric_unit": args.metric_unit,
         "buffer_distance_m": args.buffer_distance_m,
         "buffer_source": args.buffer_source,
+        "categorical_source": args.categorical_source,
+        "sar_filter": args.sar_filter,
+        "sar_filter_size": args.sar_filter_size,
+        "sar_filter_source": args.sar_filter_source,
+        "stack_times": args.stack_time or None,
+        "stack_window": args.stack_window,
     }
 
 
@@ -310,6 +327,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
     vertical_sources = [inspect_dataset(path) for path in args.vertical_source]
     support_sources = [inspect_dataset(path) for path in args.support_source]
     buffer_source = _inspect_if_exists(args.buffer_source)
+    categorical_source = _inspect_if_exists(args.categorical_source)
+    sar_filter_source = _inspect_if_exists(args.sar_filter_source)
     support_nodata = [None if value == "file" else _float_arg(value, "--support-source-nodata")
                       for value in args.support_source_nodata] or None
 
@@ -330,6 +349,10 @@ def _cmd_check(args: argparse.Namespace) -> int:
     _record_input(inputs, args.qa_path, "qa", "raster")
     _record_input(inputs, args.qa_source, "qa-source", "raster")
     _record_input(inputs, args.buffer_source, "buffer-source", buffer_source["kind"] if buffer_source else "unknown")
+    _record_input(inputs, args.categorical_source, "categorical-source",
+                  categorical_source["kind"] if categorical_source else "unknown")
+    _record_input(inputs, args.sar_filter_source, "sar-filter-source",
+                  sar_filter_source["kind"] if sar_filter_source else "unknown")
     _record_input(inputs, args.accuracy_samples, "accuracy-samples", "accuracy-samples")
     _record_input(inputs, args.class_areas, "class-areas", "class-areas")
     _record_input(inputs, args.manifest, "manifest", "manifest")
@@ -386,11 +409,18 @@ def _cmd_check(args: argparse.Namespace) -> int:
         metric_unit=args.metric_unit,
         buffer_distance_m=args.buffer_distance_m,
         buffer_source=buffer_source,
+        categorical_source=categorical_source,
+        sar_filter=args.sar_filter,
+        sar_filter_size=args.sar_filter_size,
+        sar_filter_source=sar_filter_source,
+        stack_times=args.stack_time or None,
+        stack_window=args.stack_window,
     )
 
     checked_paths = list(args.paths)
     for path in (args.compare_to, args.reference_input, args.dem, args.nir, args.red, *band_paths.values(), *args.stack,
                  *args.vertical_source, *args.support_source, args.qa_source, args.buffer_source,
+                 args.categorical_source, args.sar_filter_source,
                  args.qa_path, args.accuracy_samples, args.class_areas):
         if path:
             checked_paths.append(path)

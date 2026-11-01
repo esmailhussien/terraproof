@@ -501,13 +501,13 @@ def test_clockwise_geojson_winding_cli_mcp_parity(tmp_path, capsys):
     ]}
     path = tmp_path / "clockwise_parity.geojson"
     path.write_text(json.dumps(document), encoding="utf-8")
-    assert main(["check", str(path)]) == 3
+    assert main(["check", str(path)]) == 2
     cli = json.loads(capsys.readouterr().out)
     payload = call("run_checks", {"paths": [str(path)]}).structured_content
     cli_check = next(c for c in cli["checks"] if c["id"] == "geometry.winding")
     mcp_check = next(c for c in payload["report"]["checks"] if c["id"] == "geometry.winding")
     assert cli_check == mcp_check
-    assert cli_check["status"] == "fail"
+    assert cli_check["status"] == "warn"
 
 
 @pytest.mark.parametrize("mistake", [False, True])

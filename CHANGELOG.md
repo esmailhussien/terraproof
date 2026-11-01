@@ -22,6 +22,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that runs it.
 - The MCP server now has seven tools.
 
+### Three opt-in checks and a winding change (Phase 8 P2)
+
+- `raster.categorical_codes` (`--categorical-source`): every output class code must
+  occur in the class raster it came from, so blended codes from bilinear, cubic or
+  average resampling fail.
+- `sar.filter_domain` (`--sar-filter boxcar`, `--sar-filter-size`,
+  `--sar-filter-source`, with `--sar-expect`): a declared boxcar speckle filter is
+  recomputed in linear power; one averaged in dB fails.
+- `rs.stack_window` (`--stack-window`, `--stack-time`): a stack output's time label
+  must hold every layer's interval without overlap; an accumulation must also cover
+  it without gaps, with weights equal to layer hours.
+- **Changed:** `geometry.winding` now warns instead of failing. RFC 7946 tells parsers
+  not to reject such rings, and orientation changes no geometry. A clockwise GeoJSON
+  now grades `review-required` (exit 2) instead of `advisory-only` (exit 3), and
+  still never `decision-grade`.
+
 ## [0.9.0] — 2026-10-28
 
 Released 2026-11-01: merge `b6aca7e` (#41), tag `v0.9.0`, PyPI through `publish-python.yml`,

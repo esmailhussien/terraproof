@@ -25,6 +25,7 @@ from terraproof.evidence.contract import (FILE_PARAMETERS, LIST_FILE_PARAMETERS,
 _DEM_UNITS = {"metre": "metre", "foot": "foot", "us-survey-foot": "us survey foot"}
 # Command-line flags whose names are not the parameter name.
 FLAGS = {"qa_path": "--qa", "qa_keep_codes": "--qa-keep-code", "stack": "--stack", "stack_weights": "--stack-weight",
+         "stack_times": "--stack-time",
          "vertical_sources": "--vertical-source", "vertical_source_units": "--vertical-source-unit",
          "support_sources": "--support-source", "support_source_nodata": "--support-source-nodata"}
 # Verification choices and goals no metadata can state.
@@ -144,7 +145,7 @@ def check_command(arguments: dict, contract: str = "CONTRACT.json") -> list[str]
             argv += [part for role, n in sorted(value.items()) for part in ("--band-number", f"{role}={n}")]
         elif value is True:
             argv.append(flag(key))
-        elif key == "time_range":
+        elif key in ("time_range", "stack_window"):
             argv += [flag(key), *map(str, value)]
         elif isinstance(value, list):
             argv += [part for item in value for part in (flag(key), "file" if item is None else str(item))]

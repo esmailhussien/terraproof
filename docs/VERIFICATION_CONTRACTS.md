@@ -129,6 +129,24 @@ Other declarations that close a gap rather than guess one:
   rule keeps fails instead of only warning.
 - Vertical operations also include `minus-level` (for example a constant geoid
   separation) and `depth-to-elevation`; `fathom` is a supported unit.
+- `--categorical-source PATH` (`raster.categorical_codes`) requires every valid
+  output cell to hold a class code that occurs in the class raster it came from, on
+  any grid. Codes blended by bilinear, cubic or average resampling fail. A shifted
+  or dropped class keeps every code valid and is not detected.
+- `--sar-filter boxcar --sar-filter-size N --sar-filter-source PATH` with
+  `--sar-expect` (`sar.filter_domain`) recomputes the speckle filter from the
+  unfiltered source in linear power. A filter averaged in dB fails, and the report
+  counts the cells that match the dB average. Only cells whose whole window is
+  valid are compared.
+- `--stack-window START END` with one `--stack-time START/END` per `--stack` layer
+  (`rs.stack_window`) checks the output's time label. Layers must lie inside the
+  window without overlapping. With `--stack-reduction weighted-sum`, they must also
+  cover it without gaps, and each `--stack-weight` must equal its layer's hours.
+
+`geometry.winding` warns rather than fails (Phase 8). RFC 7946 binds GeoJSON
+writers to the right-hand rule but tells parsers not to reject other rings, and
+ring order changes no coordinate, area or topology. The warning still keeps a
+contract from decision-grade.
 
 ## Read both outcomes
 

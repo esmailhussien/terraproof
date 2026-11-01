@@ -99,6 +99,21 @@ The aim is narrow: make the declared path the easy path, without guessing, and t
 
 Each new or changed check follows the Phase 4 rules: a fail fixture, a pass fixture, zero false passes on all regression sets, and CLI and MCP parity.
 
+#### P2 record (2026-11-01): implemented; winding decided before P3
+
+- **`raster.categorical_codes`** (`--categorical-source`). Every valid output code must occur among the source's valid codes, on any grid. A subset is necessary, not sufficient: a nearest-neighbour shift or a dropped class is not detected.
+- **`sar.filter_domain`** (`--sar-filter boxcar`, `--sar-filter-size`, `--sar-filter-source`, plus `--sar-expect` for both rasters). The boxcar is recomputed in linear power on the shared grid. Only cells whose whole window is valid are compared. A failure counts the cells that match the dB-domain average, which names the mistake. "Mean" is the same filter as boxcar, so it has no separate name.
+- **`rs.stack_window`** (`--stack-window START END`, one `--stack-time START/END` per `--stack` layer). Layers must lie inside the labelled window without overlap. For `weighted-sum` they must also cover it without gaps, and each weight must equal its layer's hours. The per-layer intervals are declared; no metadata standard states them, so `propose` cannot fill them.
+- **No new goal profiles.** The P0 families do not cover these checks, and contracts can name them as `checks`.
+- **`geometry.winding`: `warn` (decided 2026-11-01, before any P3 run).** RFC 7946 §3.1.6 binds writers to the right-hand rule but tells parsers not to reject polygons that break it, and orientation changes no coordinate, area or topology. Phase 7 V4 recorded it failing a correct buffer (geom-06) as review burden. A warning still keeps a contract from `decision-grade`, so a non-conforming file is never certified, but it is no longer graded as wrong. User-visible: a clockwise GeoJSON with no other finding now exits 2 instead of 3.
+- **Tests.** [`tests/python/test_phase8_checks.py`](../../tests/python/test_phase8_checks.py) has 14 tests:
+  - for each check, pass and fail fixtures and refused or missing declarations;
+  - SAR in both domains, across window boundaries;
+  - a contract naming the missing window bindings;
+  - CLI/MCP parity.
+
+  The winding tests in `test_false_passes.py` and `test_mcp.py` now expect `warn`. The new checks are opt-in, so they never run on the regression sets unless declared.
+
 ### P3. Measure once on the real-data set (offline)
 
 Three configurations, each with its mapping committed first.

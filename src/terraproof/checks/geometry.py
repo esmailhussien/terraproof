@@ -74,7 +74,9 @@ def check_geometry(dataset: dict) -> list:
                    geometry_type_counts=counts)
         )
 
-    # Only GeoJSON has a ring-orientation rule (RFC 7946); other drivers are not checked.
+    # Only GeoJSON has a ring-orientation rule (RFC 7946); other drivers are not checked. It warns: RFC 7946
+    # 3.1.6 binds writers but tells parsers not to reject such polygons, and orientation changes no
+    # coordinate, area or topology. A warning still keeps a contract from decision-grade.
     winding = geometry.get("winding")
     if winding is not None:
         breaks = winding["right_hand_rule_break_count"]
@@ -82,7 +84,7 @@ def check_geometry(dataset: dict) -> list:
             results.append(
                 result(
                     "geometry.winding",
-                    FAIL,
+                    WARN,
                     f"{breaks} features in {path} break the RFC 7946 right-hand rule (exterior rings counterclockwise, "
                     f"holes clockwise); first feature indices (0-based): {winding['right_hand_rule_break_indices']}. "
                     "Rewrite the rings, e.g. with GDAL's RFC7946=YES layer option.",

@@ -134,6 +134,12 @@ def run_checks(
     metric_unit: str | None = None,
     buffer_distance_m: float | None = None,
     buffer_source: str | None = None,
+    categorical_source: str | None = None,
+    sar_filter: str | None = None,
+    sar_filter_size: int | None = None,
+    sar_filter_source: str | None = None,
+    stack_times: list[str] | None = None,
+    stack_window: list[str] | None = None,
     contract: dict | str | None = None,
     profiles: list[str] | None = None,
     lang: str = "en",
@@ -177,6 +183,11 @@ def run_checks(
     `buffer_distance_m` and `buffer_source`, verifies delivered vector measurements
     geodesically in any CRS. `dem_vertical_unit` declares a DEM's unit when the file has no
     label, and `qa_source` lets a keep-codes QA rule tell over-masking from source gaps.
+    `categorical_source` checks that every output class code occurs in the class raster it
+    was resampled from. `sar_filter="boxcar"` with an odd `sar_filter_size`, the unfiltered
+    `sar_filter_source` and `sar_expect` recomputes the speckle filter in linear power.
+    `stack_window` (start, end) with one ISO "START/END" interval per `stack` layer in
+    `stack_times` checks the output's time label (and, for weighted-sum, gaps and hour weights).
     `profiles` names declared
     goal profiles (routing/profiles.json) required on every path, bound to the arguments
     given; a binding a profile needs but you did not give leaves it incomplete.
@@ -203,6 +214,8 @@ def run_checks(
         vertical_layers = [_inspect_dataset(path) for path in vertical_sources or []]
         support_layers = [_inspect_dataset(path) for path in support_sources or []]
         buffer_layer = _inspect_dataset(buffer_source) if buffer_source else None
+        class_layer = _inspect_dataset(categorical_source) if categorical_source else None
+        filter_layer = _inspect_dataset(sar_filter_source) if sar_filter_source else None
 
         inputs = [input_record(path, "input", dataset["kind"]) for path, dataset in zip(paths, inspections)]
         if compare is not None:
@@ -229,6 +242,10 @@ def run_checks(
             inputs.append(input_record(qa_source, "qa-source", "raster"))
         if buffer_layer is not None:
             inputs.append(input_record(buffer_source, "buffer-source", buffer_layer["kind"]))
+        if class_layer is not None:
+            inputs.append(input_record(categorical_source, "categorical-source", class_layer["kind"]))
+        if filter_layer is not None:
+            inputs.append(input_record(sar_filter_source, "sar-filter-source", filter_layer["kind"]))
         if isinstance(accuracy_samples, str) and Path(accuracy_samples).is_file():
             inputs.append(input_record(accuracy_samples, "accuracy-samples", "accuracy-samples"))
         if isinstance(class_areas, str) and Path(class_areas).is_file():
@@ -288,11 +305,18 @@ def run_checks(
             metric_unit=metric_unit,
             buffer_distance_m=buffer_distance_m,
             buffer_source=buffer_layer,
+            categorical_source=class_layer,
+            sar_filter=sar_filter,
+            sar_filter_size=sar_filter_size,
+            sar_filter_source=filter_layer,
+            stack_times=stack_times or None,
+            stack_window=stack_window,
         )
 
         checked_paths = list(paths)
         for path in (compare_to, reference_input, dem, nir, red, *(bands or {}).values(), *(stack or []),
                      *(vertical_sources or []), *(support_sources or []), qa_source, buffer_source, qa_path,
+                     categorical_source, sar_filter_source,
                      accuracy_samples,
                      class_areas):
             if isinstance(path, str):
@@ -362,6 +386,12 @@ def run_checks(
         "metric_unit": metric_unit,
         "buffer_distance_m": buffer_distance_m,
         "buffer_source": buffer_source,
+        "categorical_source": categorical_source,
+        "sar_filter": sar_filter,
+        "sar_filter_size": sar_filter_size,
+        "sar_filter_source": sar_filter_source,
+        "stack_times": stack_times or None,
+        "stack_window": stack_window,
     }
     try:
         if profiles and contract is not None:
