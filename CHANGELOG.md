@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
 ## [0.9.0] — 2026-10-28
+
+Released 2026-11-01: merge `b6aca7e` (#41), tag `v0.9.0`, PyPI through `publish-python.yml`,
+npm `terraproof@0.9.0` (shasum `6ddb3b79…`), and GitHub release *Terraproof v0.9.0*.
 
 Phase 7: a report no longer implies more verification than happened. **Breaking:** without a
 verification contract, passing checks grade `checks-passed` (exit 0), never `decision-grade`;
