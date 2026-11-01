@@ -71,6 +71,33 @@ python -m terraproof check outputs/change.tif --profile vertical-units   --verti
 A profile never guesses its bindings. Without `--vertical-unit`, for example,
 the requirement is `incomplete` and the diagnostics name what to declare.
 
+### Propose a contract from metadata
+
+`propose` drafts the contract for you (MCP: `propose_contract`). It takes the same
+flags as `check`, for whatever you already know, and fills the bindings the profiles
+still need only where metadata states them explicitly:
+
+- a single-band source's unit label or nodata in the file itself;
+- `raster:bands` scale, offset, nodata or unit of a local STAC Item asset that you tie
+  to the file with `--stac FILE=ITEM.json#ASSET`. Files are never matched to assets by
+  name.
+
+```bash
+python -m terraproof propose outputs/slope.tif --profile slope-from-dem --dem inputs/dem.tif   --stac inputs/dem.tif=inputs/item.json#dem --contract-out contract.json
+```
+
+Every filled binding carries its evidence (file, field, value). The rest is reported, never chosen:
+
+- `undeclared`: bindings no metadata can state, such as the operation, the output's
+  unit or the QA rule, each with the flag that supplies it;
+- `not_stated`: bindings the metadata could have stated but did not;
+- `conflicts`: a file and its STAC asset that disagree;
+- `unusable`: a stated value that is not a known unit or a finite number.
+
+A bound value you passed is never replaced. A proposal is not coverage: review it,
+then run its `check_command` (MCP: `run_checks` with `check_arguments` and the
+contract). Its undeclared bindings keep the requirement `incomplete`.
+
 - `raster.vertical_units` compares every cell with the declared `convert`,
   `difference` or `depth-below-level` (with `--vertical-level`, in the output
   unit) of the sources, done in metres and converted to the output unit. It also

@@ -73,7 +73,9 @@ The grade describes the data path and the checks that ran. It is not a certifica
 For explicit task requirements, add `--contract contract.json` (MCP: `contract`).
 The contract's outcome becomes the report's grade: it is decision-grade only when every
 required check on every required output ran and passed with its declared sources and
-parameters, and any other failure or warning still counts. See
+parameters, and any other failure or warning still counts. `propose --profile NAME`
+(MCP: `propose_contract`) drafts such a contract, filling bindings only from explicit
+file or STAC metadata and listing what you still need to declare. See
 [verification contracts, diagnostics and unsigned evidence bundles](docs/VERIFICATION_CONTRACTS.md).
 
 ### Verify a spectral index against its source bands
@@ -137,7 +139,7 @@ band and pixel in bounded windows; see [scope, examples and measured controls](d
 python -m terraproof.mcp      # stdio server; needs the `mcp` extra
 ```
 
-It is read-only and offline, with six tools: `preflight`, `inspect_dataset`, `run_checks`, `list_skills`, `load_section`, and `find_guidance`. CLI and MCP return the same reports.
+It is read-only and offline, with seven tools: `preflight`, `inspect_dataset`, `run_checks`, `propose_contract`, `list_skills`, `load_section`, and `find_guidance`. CLI and MCP return the same reports.
 
 ### Install into a project
 

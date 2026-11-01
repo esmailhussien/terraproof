@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Contract proposals from metadata (Phase 8 P1)
+
+- `python -m terraproof propose OUTPUT... --profile NAME` and the MCP tool
+  `propose_contract` draft a verification contract for goal profiles. They take the
+  same bindings as `check` and fill the missing ones only from explicit metadata: a
+  single-band source's unit label or nodata, or `raster:bands` scale, offset, nodata
+  or unit of a local STAC Item asset tied to the file with `--stac FILE=ITEM#ASSET`.
+  Each filled binding records its evidence. Unstated, undeclarable, conflicting and
+  unusable bindings are listed, never guessed, and a proposal is never applied for you.
+  `--contract-out` saves the contract, and the proposal gives the `check` command
+  that runs it.
+- The MCP server now has seven tools.
+
 ## [0.9.0] — 2026-10-28
 
 Released 2026-11-01: merge `b6aca7e` (#41), tag `v0.9.0`, PyPI through `publish-python.yml`,

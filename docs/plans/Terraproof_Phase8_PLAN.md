@@ -77,6 +77,19 @@ The aim is narrow: make the declared path the easy path, without guessing, and t
   - `run_checks` without a contract may return the proposal beside `checks-passed`, labelled as a proposal.
 - **Tests.** Every binding source gets a fixture where the metadata states it, and one where it does not; the latter must leave the binding undeclared, never filled. Fixtures with conflicting metadata, such as a file label against STAC, must report the conflict instead of choosing.
 
+#### P1 record (2026-11-01): implemented
+
+- **Interface.** `propose` takes the same flags as `check` for what the caller knows; the separate `--source` flag was not needed. `--stac FILE=ITEM.json#ASSET` ties a file to a STAC asset explicitly; nothing is matched by name. The MCP tool `propose_contract` takes `paths`, `profiles`, `arguments` (named as for `run_checks`) and `stac`.
+- **What metadata can fill.** Only facts about sources:
+  - `dem_vertical_unit` and `vertical_source_units`, from a band unit label or STAC `unit`;
+  - `decode_scale` and `decode_offset`, from STAC `scale`/`offset` or a file scale other than 1 or offset other than 0 (rasterio reports 1 and 0 when a file states none);
+  - `support_source_nodata`, declared only where STAC states a fill the file lacks; a file's own fill keeps its mask.
+  - `scaled-reflectance` binds `expect=reflectance` from the profile itself, recorded as `from: profile`.
+- **Left to the caller.** The goal and verification choices: operations, the output's unit, the support rule, the QA kind and keep codes, and `processing_full_scan`. Each is listed in `undeclared` with its flag. A QA asset's roles and classes name what codes mean, not which ones a quality rule keeps, so `qa-masked` gets nothing from metadata. CRS needs no binding, since the checks read it themselves.
+- **Output.** `status: proposed`, the contract (absolute paths), each binding with `from` (caller, metadata or profile) and evidence, then `undeclared`, `not_stated`, `conflicts` and `unusable`, plus `check_arguments` and `check_command`. `--contract-out` writes the contract alone. A caller's binding is never replaced.
+- **Not done.** `run_checks` does not attach a proposal beside `checks-passed`. The plan left it optional, and an unrequested proposal next to every report would add noise without coverage.
+- **Tests.** [`tests/python/test_propose.py`](../../tests/python/test_propose.py) has 15 tests: stated and unstated for each binding source, file-against-STAC conflicts for unit and scale, unusable labels, caller precedence, determinism, relocatable contracts, refused input, and a CLI proposal run to a verified contract. CLI/MCP parity is in `tests/python/test_mcp.py`.
+
 ### P2. Remaining check gaps
 
 - **Categorical resampling.** Output values must be a subset of the source's class codes. This catches the invented classes `bilinear` and `cubic` produce.

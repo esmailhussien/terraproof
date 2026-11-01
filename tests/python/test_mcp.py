@@ -18,7 +18,7 @@ from mcp import Client  # noqa: E402
 from terraproof.cli import main  # noqa: E402
 from terraproof.mcp.server import mcp  # noqa: E402
 
-TOOL_NAMES = ["find_guidance", "inspect_dataset", "list_skills", "load_section", "preflight", "run_checks"]
+TOOL_NAMES = ["find_guidance", "inspect_dataset", "list_skills", "load_section", "preflight", "propose_contract", "run_checks"]
 
 
 def test_full_processing_cli_mcp_parity_for_an_off_stride_error(make_raster, capsys):
@@ -595,3 +595,21 @@ def test_cli_mcp_contract_parity_and_bundle_roundtrip(make_raster, tmp_path, cap
     capsys.readouterr()
     assert main(['evidence', 'verify', str(bundle_path)]) == 0
     assert json.loads(capsys.readouterr().out)['status'] == 'pass'
+
+
+def test_propose_contract_cli_mcp_parity(make_raster, tmp_path, capsys):
+    import rasterio
+
+    dem = make_raster("dem.tif", np.ones((16, 16), dtype="float32"))
+    with rasterio.open(dem, "r+") as dataset:
+        dataset.units = ("ft",)
+    item = tmp_path / "item.json"
+    item.write_text(json.dumps({"type": "Feature", "stac_version": "1.0.0", "id": "x", "properties": {},
+                                "assets": {"dem": {"href": "dem.tif", "raster:bands": [{"unit": "ft"}]}}}),
+                    encoding="utf-8")
+    assert main(["propose", dem, "--profile", "slope-from-dem", "--dem", dem, "--stac", f"{dem}={item}#dem"]) == 0
+    cli = json.loads(capsys.readouterr().out)
+    payload = call("propose_contract", {"paths": [dem], "profiles": ["slope-from-dem"], "arguments": {"dem": dem},
+                                        "stac": [f"{dem}={item}#dem"]}).structured_content
+    assert payload == cli
+    assert [b["value"] for b in cli["bindings"] if b["parameter"] == "dem_vertical_unit"] == ["foot"]

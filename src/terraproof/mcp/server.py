@@ -38,7 +38,9 @@ INSTRUCTIONS = (
     "full; installed skill files are not automatically loaded by every host. Use `preflight` "
     "to validate a declared plan against the real inputs before spending compute. For derived "
     "outputs, supply the relevant source operands and options to `run_checks`; inspection or "
-    "a plausible value range alone does not verify the derivation. For NDVI, use "
+    "a plausible value range alone does not verify the derivation. To require a declared goal, "
+    "`propose_contract` drafts a contract for its goal profiles from explicit metadata; review it "
+    "and pass it to `run_checks`. For NDVI, use "
     "`index_formula=\"ndvi\"`, `nir` and `red` on the saved output; for NBR, dNBR, NDWI, MNDWI, "
     "NDMI, SAVI or EVI pass `bands` by role (and `band_numbers` for multi-band sources). For "
     "composites, accumulations and trends pass the ordered input layers as `stack` with "
@@ -377,6 +379,39 @@ def run_checks(
         "report": json.loads(to_json(report)),
         "markdown": render_markdown(report, lang=lang),
     }
+
+
+@mcp.tool()
+def propose_contract(
+    paths: list[str],
+    profiles: list[str],
+    arguments: dict[str, Any] | None = None,
+    stac: list[str] | None = None,
+) -> dict[str, Any]:
+    """Draft a verification contract for declared goal profiles; it is never applied for you.
+
+    `paths` are the outputs, `profiles` the goal profiles (routing/profiles.json), and
+    `arguments` the bindings you already know, named as for `run_checks` (for example
+    `{"dem": "dem.tif"}`). A binding the profiles need that you did not give is filled only
+    from explicit metadata: a single-band source's unit label or nodata in the file, or
+    `raster:bands` scale, offset, nodata or unit of a local STAC Item asset you tie to it with
+    `stac` entries `"FILE=ITEM.json#ASSET"`. Each filled binding carries its evidence (file,
+    field, value). Bindings no metadata states are listed in `undeclared` or `not_stated`, and
+    disagreeing metadata in `conflicts`; none is guessed. Review the proposal, then call
+    `run_checks` with its `check_arguments` and `contract`. Matches `python -m terraproof propose`.
+    """
+    if not isinstance(paths, list) or not paths or not all(isinstance(path, str) for path in paths):
+        raise ToolError("paths must be a non-empty list of file paths")
+    from terraproof.evidence.propose import propose_contract as _propose
+
+    values = dict(arguments or {})
+    bands, numbers = values.pop("bands", None), values.pop("band_numbers", None) or {}
+    if bands:
+        values["index_bands"] = {role: [path, numbers.get(role)] for role, path in bands.items()}
+    try:
+        return jsonable(_propose(paths, profiles, values, stac))
+    except (OSError, ValueError, TypeError) as exc:
+        raise ToolError(f"cannot propose a verification contract: {exc}") from exc
 
 
 @mcp.tool()
