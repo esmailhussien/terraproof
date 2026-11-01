@@ -1,6 +1,6 @@
 # Terraproof — Phase 9 Plan: Cover real deliverables, make declaring the default
 
-> Status: **in progress (2026-11-02)**. Q0 sealed; Q1–Q4 implemented; Q5.1 measured (acceptance met in all three configurations). Q5.2 not started. It follows [Phase 8](Terraproof_Phase8_PLAN.md) and release 0.10.0.
+> Status: **complete (2026-11-02)**. Q0 sealed; Q1–Q4 implemented; Q5.1 measured (acceptance met in all three configurations); Q5.2 run (zero false assurance; 8 of 10 agent runs declared their goal). It follows [Phase 8](Terraproof_Phase8_PLAN.md) and release 0.10.0.
 
 ## 1. Why this phase
 
@@ -220,6 +220,39 @@ Phase 8 measured Terraproof on real data and with a real agent. When the user de
   - the declared share;
   - the last grade seen;
   - deliverable correctness.
+
+#### Q5.2 record (2026-11-02): 10 approved invocations run; zero false assurance
+
+**Run.**
+
+- The user approved exactly 10 invocations. All 10 started and completed, with no retries and no contamination labels (contamination screened, not evaluator-blind).
+- Oracle calibration passed again before the first run.
+- Report: `.terracache/phase9-q5-agent.json`, SHA-256 `76b6cdda2edde1668c4fd807f052ffcc346b673e10bbb4a3db1e08e0c3f4c724`.
+
+**Results against Phase 8 P4** (same host, model and protocol; different tasks):
+
+| | P4 | Q5.2 |
+| --- | --- | --- |
+| Correct deliverables (oracle) | 5 / 10 | **10 / 10** |
+| Checked the deliverable | 9 / 10 | 10 / 10 |
+| Declared a goal (profiles or contract) on it | 3 / 10 | **8 / 10** |
+| Called `propose_contract` | 2 / 10 | **8 / 10** |
+| `next_step` offered → then proposed | — | **4 → 4** |
+| Last grade `decision-grade` | 3 (2 on wrong outputs) | 8 (all on correct outputs) |
+| **False assurance** | **2** | **0** |
+
+**By task.**
+- **Blue reflectance (c1).** Both runs proposed `scaled-reflectance`, declared `decode_offset` with `encoding`, and reached `decision-grade`. Both deliverables applied the raw-DN offset correctly.
+- **Slope in percent.** Both runs proposed `slope-from-dem`, declared `slope_unit`, and reached `decision-grade`. One run first passed an unknown `check_arguments` argument three times, which the tool rejected.
+- **Kauai summary and Switzerland area.** In all 4 runs `run_checks` returned `next_step`, the agent proposed `summary-value`, and it reached `decision-grade`. In one Switzerland run an intermediate contract check `failed` before the final verified one.
+- **Clear mask.** Both runs declared `output_form = validity-mask` but never passed the QA layer (`qa_path`), so `rs.cloud_mask_applied` never ran. `next_step` had no complete profile to offer, and the runs ended at `advisory-only` and `review-required`. The masks were correct, so this was not false assurance, but they were never verified.
+
+**What this shows.**
+
+1. **Agents now declare goals.** Phase 8 P4 found agents checking without declaring; with Q4's `next_step` and the two-step instructions, 8 of 10 runs declared and every offered `next_step` was followed. No wrong output was certified.
+2. **Not a lift claim.** There was no "without" condition, and the tasks differ from P4's. The 10/10 correctness and the declaration rate are observed behaviour, not an effect size.
+3. **Remaining gap: masks without their QA layer.** `next_step` only names profiles whose checks already ran. An agent that declares a mask but omits `qa_path` gets no prompt toward `qa-masked`. A narrow follow-up would name the missing binding when `output_form` is declared without a QA layer, still never inferring which layer it is.
+
 
 ## 4. Order and delivery
 
