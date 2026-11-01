@@ -402,6 +402,58 @@ or scientific certification.
 
 ---
 
+## Real-data held-out verification cases (Phase 8 and Phase 9)
+
+The bundles `evals/verification-heldout-real/` (Phase 8) and
+`evals/verification-heldout-q0/` (Phase 9) fetch the following public sources
+with fixed URLs (no account, API key, requester-pays bucket or expiring signed
+URL) into local, git-ignored caches; binaries are never committed. The SHA-256
+of every fetched file is recorded in each bundle's cache manifest.
+
+### Sentinel-2 L2A (Copernicus, via Earth Search)
+
+- **Data (Phase 8 and Phase 9, distribution `sentinel-2-l2a`):** scene
+  `S2B_32TMS_20250831_0_L2A` (MGRS tile 32TMS, 2025-08-31, Bernese Oberland,
+  Switzerland), served as COGs by element84's Earth Search STAC API v1
+  (`https://earth-search.aws.element84.com/v1`) with companion tileinfo JSON
+  and granule metadata XML.
+- **Data (Phase 9 only, distribution `sentinel-2-c1-l2a`):** scene
+  `S2B_T32TMS_20230928T102123_L2A` (same MGRS tile, 2023-09-28, Collection 1
+  reprocessing), served as COGs from element84's
+  `e84-earth-search-sentinel-data` bucket with `tileInfo.json` and
+  `product_metadata.xml` sidecars.
+- **Licence:** ESA Copernicus Sentinel data, free of charge under the ESA
+  Sentinel use conditions.
+- **Required attribution:** *"Contains modified Copernicus Sentinel data
+  2025"* (Sentinel-2 scenes; the c1 scene contains modified Copernicus
+  Sentinel data 2023).
+
+### Copernicus DEM GLO-30
+
+- **Data:** small windows of tiles `N28 E084` (Nepal) and `N78 E016`
+  (Svalbard), 30 m elevation rasters (EPSG:4326), from the public
+  Copernicus DEM S3 bucket on AWS Open Data
+  (`copernicus-dem-30m.s3.amazonaws.com`).
+- **Licence:** Copernicus Digital Elevation Model — © DLR 2025, made available
+  by ESA/DLR for the Copernicus programme for free use with attribution.
+- **Required attribution:** *"Contains Copernicus DEM data"*/*"© DLR"*.
+
+### USGS 3DEP 1/3 arc-second
+
+- **Data:** windows of tiles `n31w091` (Mississippi delta) and `n22w159`
+  (Kauai) with their FGDC metadata sidecars, from the public USGS
+  (`prd-tnm.s3.amazonaws.com`) staged elevation products (resolution 13).
+- **Licence:** public domain — the sidecar itself states *"All 3DEP products
+  are public domain."*
+
+### Natural Earth 110m admin-0 countries
+
+- **Data:** `ne_110m_admin_0_countries.geojson` pinned at tag v5.1.2 of
+  `https://github.com/nvkelso/natural-earth-vector` (published via GitHub raw).
+- **Licence:** public domain (no restrictions, no attribution required).
+
+---
+
 ## Real-data held-out verification cases (Phase 8)
 
 The bundle `evals/verification-heldout-real/` fetches the following public
