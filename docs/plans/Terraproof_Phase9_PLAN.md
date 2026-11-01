@@ -47,13 +47,13 @@ Phase 8 measured Terraproof on real data and with a real agent. When the user de
 - **Binding.** `slope_unit = degrees | percent` for `terrain.slope_consistent` and `terrain.slope_formula`.
 - **Missing unit.** An undeclared unit keeps today's degrees, with a note in the evidence. A percent slope checked as degrees still fails, as today.
 
-### Q3. Declared summaries (decision needed)
+### Q3. Declared summaries (in scope, decided 2026-11-01)
 
 - **Proposed check.** `report.summary_value` recomputes one declared statistic over a declared source and compares it with the delivered JSON number.
   - Statistics: `mean`, `count`, `sum`, `min`, `max` of valid raster cells, or `area` / `length` of vector features, geodesic.
   - Bindings: the JSON key and the source.
   - Nodata and any declared validity mask are honoured.
-- **Why a decision is needed.** It is the first check whose output is not a geospatial dataset. If it is out of scope, the 5 summary cases stay a recorded gap.
+- **Decided in scope (2026-11-01).** It is the first check whose output is not a geospatial dataset. Its scope is narrow: one declared statistic, one declared key, one declared source. It never reads free text in a report.
 
 ### Q4. Make declaring the default for agents
 
@@ -79,7 +79,7 @@ Phase 8 measured Terraproof on real data and with a real agent. When the user de
 ## 4. Order and delivery
 
 1. Q0 is sealed first.
-2. Then Q1, Q2 and Q4, plus Q3 if it is approved.
+2. Then Q1, Q2, Q3 and Q4.
 3. Then Q5.1, then Q5.2 if it is approved.
 4. One branch, which also carries the v0.10.0 release ticks (`cd89c74`), and one PR.
 
@@ -94,5 +94,5 @@ Phase 8 measured Terraproof on real data and with a real agent. When the user de
 ## 6. Decisions needed
 
 1. **Q0 authoring.** Who authors Q0: an independent agent from a brief, as before.
-2. **Q3 scope.** Whether declared summaries are in scope.
+2. ~~**Q3 scope.**~~ Decided 2026-11-01: in scope.
 3. **Q5.2.** Whether to run the agent measurement, and its invocation count; decided after Q5.1.
