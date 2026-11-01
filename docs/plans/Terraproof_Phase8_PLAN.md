@@ -1,6 +1,6 @@
 # Terraproof — Phase 8 Plan: Easy declarations, real data, real agents
 
-> Status: **proposed (2026-11-01)**. Nothing is implemented. It follows [Phase 7](Terraproof_Phase7_PLAN.md) and release 0.9.0.
+> Status: **in progress (2026-11-01)**. P0 is sealed; no product code yet. It follows [Phase 7](Terraproof_Phase7_PLAN.md) and release 0.9.0.
 
 ## 1. Why this phase
 
@@ -49,6 +49,21 @@ The aim is narrow: make the declared path the easy path, without guessing, and t
   - Licences and attribution go into [`sources/SOURCES.md`](../../sources/SOURCES.md), as AGENTS.md rule 10 requires.
 - **Metadata as found.** Each case keeps the real metadata, including STAC items, so proposals can be measured on what products actually carry.
 - **Sealing.** As in Phase 7: hashes of the committed files, plus a seal test. The content is not read for product work.
+- **Seal record (2026-11-01).** An independent agent authored 34 cases from the brief, in a fresh clone of `main` (`b6aca7e`), on branch `geova/verification-heldout-real`, commit `3dfaedf`.
+  - Counts: QA masking 4 wrong and 4 correct; scale, offset and fill 3 and 3; elevation units and slope 3 and 3; nodata 2 and 2; delivered metric values 3 and 3; plus 4 `plain` correct outputs. That is 15 wrong and 19 correct.
+  - Sources: one Sentinel-2 L2A scene through Earth Search, Copernicus DEM GLO-30 and USGS 3DEP windows, and Natural Earth admin-0 at v5.1.2. Licences and attribution are in [`sources/SOURCES.md`](../../sources/SOURCES.md).
+  - The agent reported that 112 of 162 `facts` entries (69.1%) are stated by the real metadata, two byte-identical cold fetches, two byte-identical derivations, and the oracle agreeing with all 34 cases. Not used: the requester-pays Sentinel-2 granule bucket.
+  - The maintainer side verified the committed LF hashes, the import lines (no `terraproof` import) and the fetch hosts. It then ran a fresh fetch; the manifest hash matched, and the cases' own test passed 5 of 5. The case content was not read.
+  - The commit adds `eol=lf` rules for these files to `.gitattributes`. A later commit makes the cases' test skip in CI without a cache unless `TERRAPROOF_HELDOUT_REAL_FETCH=1` is set, so routine CI runs download nothing.
+
+  | File | SHA-256 |
+  | --- | --- |
+  | `evals/verification-heldout-real/cases.json` | `cd0c87d4456e53eab4c494604d6e197445a0584c0fc81da07650229e6812036f` |
+  | `evals/verification-heldout-real/fetch.py` | `bfb015154cce813e9e975e69f10c3ed6e16f9c3e26e915b396980354f50619df` |
+  | `evals/verification-heldout-real/derive.py` | `5141dd2794eddacde23968cec860d112effe9234c5847b31e3aecc37f04ac386` |
+  | `evals/verification-heldout-real/oracle.py` | `2dce2f5cabeecec4b4fe4678e0cff7c714cf9d9324e3b7e600806078af54a2e1` |
+  | `evals/verification-heldout-real/README.md` | `4765c19a71d063265b3c5b461ad72bd83618c3375fb19af3a93efbfc18597d62` |
+  | Fetched-file manifest (`manifest.json` in the cache) | `6aaf6aeb15f3370bc9e27f6a99c699905dc0ab514b9e8f2124f45cecf503e486` |
 
 ### P1. Contract proposals from metadata
 

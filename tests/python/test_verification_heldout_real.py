@@ -54,6 +54,8 @@ def _run(script: str, *args: object, capture: bool = True):
 def heldout_cache() -> Path:
     if _cache_filled():
         return CACHE
+    if os.environ.get("CI") and os.environ.get("TERRAPROOF_HELDOUT_REAL_FETCH") != "1":
+        pytest.skip("verification-heldout-real: no cache; CI fetches only with TERRAPROOF_HELDOUT_REAL_FETCH=1")
     if _network_available():
         result = _run("fetch.py", CACHE)
         if result.returncode != 0:
