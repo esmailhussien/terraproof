@@ -91,7 +91,9 @@ Every filled binding carries its evidence (file, field, value). The rest is repo
 - `undeclared`: bindings no metadata can state, such as the operation, the output's
   unit or the QA rule, each with the flag that supplies it;
 - `not_stated`: bindings the metadata could have stated but did not;
-- `conflicts`: a file and its STAC asset that disagree;
+- `conflicts`: a file and its STAC asset that disagree, or a STAC offset beside an item
+  property saying the offset is already applied (`earthsearch:boa_offset_applied`, as in
+  Earth Search Sentinel-2 L2A items);
 - `unusable`: a stated value that is not a known unit or a finite number.
 
 A bound value you passed is never replaced. A proposal is not coverage: review it,

@@ -28,6 +28,9 @@ FLAGS = {"qa_path": "--qa", "qa_keep_codes": "--qa-keep-code", "stack": "--stack
          "stack_times": "--stack-time",
          "vertical_sources": "--vertical-source", "vertical_source_units": "--vertical-source-unit",
          "support_sources": "--support-source", "support_source_nodata": "--support-source-nodata"}
+# Item properties stating that the band offset is already in the stored values (Earth Search
+# sentinel-2-l2a); beside a non-zero raster:bands offset they are a conflict, never a choice.
+OFFSET_APPLIED = ("earthsearch:boa_offset_applied",)
 # Verification choices and goals no metadata can state.
 _CALLER_ONLY = {"processing_full_scan": "a verification choice: pass it for a full-grid audit",
                 "vertical_unit": "the output's intended unit is part of the goal",
@@ -52,8 +55,8 @@ def parse_stac_binding(value: str) -> tuple[str, str, str]:
     return path, item, asset
 
 
-def _stac_band(item_path: str, asset_key: str) -> tuple[dict, str] | None:
-    """The single band an asset describes, from STAC 1.0 `raster:bands` or STAC 1.1 `bands`."""
+def _stac_band(item_path: str, asset_key: str) -> tuple[dict, str, dict] | None:
+    """The single band an asset describes, from STAC 1.0 `raster:bands` or STAC 1.1 `bands`, and the item's properties."""
     try:
         data = json.loads(Path(item_path).read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
@@ -69,7 +72,7 @@ def _stac_band(item_path: str, asset_key: str) -> tuple[dict, str] | None:
             band = bands[0]
             return ({"scale": band.get(prefix + "scale"), "offset": band.get(prefix + "offset"),
                      "nodata": band.get("nodata"), "unit": band.get("unit")},
-                    f"assets.{asset_key}.{key}[0]")
+                    f"assets.{asset_key}.{key}[0]", data.get("properties") or {})
     return None
 
 
@@ -97,6 +100,10 @@ def _statements(path: str, stac: dict, fact: str) -> list[dict]:
         band = _stac_band(item, asset)
         if band is not None and band[0][fact] is not None:
             found.append({"file": str(Path(item).resolve()), "field": f"{band[1]}.{fact}", "value": band[0][fact]})
+            if fact == "offset" and band[0][fact] != 0:
+                # An item that also says the offset is already applied leaves no offset to decode with.
+                found += [{"file": str(Path(item).resolve()), "field": f"properties.{flag}", "value": True,
+                           "means": 0.0} for flag in OFFSET_APPLIED if band[2].get(flag) is True]
     return found
 
 
@@ -104,7 +111,7 @@ def _agreed(statements: list[dict], normalise):
     """(value, None) when every statement agrees, (None, reason) otherwise; nothing stated gives (None, None)."""
     if not statements:
         return None, None
-    values = {json.dumps(normalise(s["value"])) for s in statements}
+    values = {json.dumps(normalise(s.get("means", s["value"]))) for s in statements}
     if "null" in values:
         return None, "stated value is not usable"
     if len(values) > 1:

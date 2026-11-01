@@ -194,6 +194,14 @@ That leaves 7 wrong and 7 correct cases with a declared requirement.
 
 These findings cannot be fixed and re-measured on these cases. Any fix needs fresh sealed cases.
 
+#### After P3 (2026-11-01): the offset conflict fixed, not re-measured
+
+- **Fix.** `propose` now reports a STAC `raster:bands` offset as a conflict, instead of filling it, when the same item states `earthsearch:boa_offset_applied: true`. The scale is still proposed.
+- **Tests.** Fixtures cover the flag true (conflict) and false (offset filled).
+- **Sanity run, not a measurement.** On the real cached item, `propose` now fills only `decode_scale` and lists the `decode_offset` conflict, citing both fields.
+- **What it does not show.** The P3 cases are spent, so this does not show that P3's proposed-configuration acceptance would now be met. Only fresh sealed cases can.
+- **Still unaddressed.** The coverage gaps (validity masks, slope in percent, reports) need their own work and their own fresh cases.
+
 ### P4. Agent verification behaviour (optional; separate approval)
 
 - **Setup.** One OpenCode Go model, MiMo-V2.6-Flash as registered in Phase 6, with the Terraproof MCP server. It runs on a small set of real-data tasks drawn from P0's sources but not from its sealed cases.

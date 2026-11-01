@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unusable bindings are listed, never guessed, and a proposal is never applied for you.
   `--contract-out` saves the contract, and the proposal gives the `check` command
   that runs it.
+- A STAC `raster:bands` offset is reported as a conflict, not proposed, when the same item
+  says the offset is already in the stored values (`earthsearch:boa_offset_applied`). Earth
+  Search Sentinel-2 L2A items state both, and copying the offset decoded correct
+  reflectance as wrong in the Phase 8 P3 measurement.
 - The MCP server now has seven tools.
 
 ### Three opt-in checks and a winding change (Phase 8 P2)

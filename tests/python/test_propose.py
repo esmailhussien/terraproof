@@ -23,9 +23,9 @@ def _label(path, unit):
     return path
 
 
-def _item(tmp_path, name="item.json", **band):
+def _item(tmp_path, name="item.json", properties=None, **band):
     path = tmp_path / name
-    path.write_text(json.dumps({"type": "Feature", "stac_version": "1.0.0", "id": "x", "properties": {},
+    path.write_text(json.dumps({"type": "Feature", "stac_version": "1.0.0", "id": "x", "properties": properties or {},
                                 "assets": {"data": {"href": "https://example.invalid/data.tif",
                                                     "raster:bands": [band]}}}), encoding="utf-8")
     return str(path)
@@ -124,6 +124,23 @@ def test_stac_scale_and_offset_fill_the_decode(tmp_path, make_raster):
     assert _binding(proposal, "decode_offset")["value"] == -0.1
     assert _binding(proposal, "expect") == {"parameter": "expect", "value": "reflectance", "from": "profile"}
     assert [u["parameter"] for u in proposal["undeclared"]] == ["processing_full_scan"]
+
+
+@pytest.mark.parametrize("applied", [True, False])
+def test_an_offset_the_item_says_is_applied_is_a_conflict(tmp_path, make_raster, applied):
+    # Earth Search sentinel-2-l2a items state raster:bands offset -0.1 and, in the same item,
+    # that the offset is already in the stored values (found on real data in Phase 8 P3).
+    raw = make_raster("raw.tif", np.full(SHAPE, 2500, dtype="uint16"), nodata=0)
+    item = _item(tmp_path, properties={"earthsearch:boa_offset_applied": applied}, scale=0.0001, offset=-0.1)
+    proposal = propose_contract([raw], ["scaled-reflectance"], {"reference_input": raw}, [f"{raw}={item}#data"])
+    assert _binding(proposal, "decode_scale")["value"] == 0.0001
+    if applied:
+        assert _binding(proposal, "decode_offset") is None
+        assert [c["parameter"] for c in proposal["conflicts"]] == ["decode_offset"]
+        assert [s["field"] for s in proposal["conflicts"][0]["statements"]] == [
+            "assets.data.raster:bands[0].offset", "properties.earthsearch:boa_offset_applied"]
+    else:
+        assert _binding(proposal, "decode_offset")["value"] == -0.1 and proposal["conflicts"] == []
 
 
 def test_file_scale_against_stac_scale_is_a_conflict(tmp_path, make_raster):
