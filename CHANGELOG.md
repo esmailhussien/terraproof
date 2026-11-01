@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-11-01
+
+Phase 8: easier declarations, measured on real data and with a real agent. New
+`propose` / `propose_contract` drafts a contract from explicit metadata; three opt-in checks
+close remaining gaps. **Changed:** `--encoding s2-l2a` needs `--decode-offset`, and
+`geometry.winding` warns instead of failing. Measured once on 34 sealed real-data cases (Phase 8
+P3): declared checks caught 7 of 7 covered wrong outputs with no false assurance or false alarm.
+Proposals from metadata alone did not meet acceptance (fixed, not re-measured), and 20 of the 34
+real deliverables are forms no check covers yet. A 10-run agent measurement (P4) found the
+`s2-l2a` preset certifying two wrong decodes (fixed, not re-measured). Details are in
+[the Phase 8 plan](docs/plans/Terraproof_Phase8_PLAN.md).
+
 ### Contract proposals from metadata (Phase 8 P1)
 
 - `python -m terraproof propose OUTPUT... --profile NAME` and the MCP tool
