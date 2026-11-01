@@ -222,11 +222,12 @@ def verification_calls(events, deliverables: tuple[str, ...]) -> list[dict]:
         arguments = state.get("input") if isinstance(state.get("input"), dict) else {}
         paths = arguments.get("paths") if isinstance(arguments.get("paths"), list) else []
         grade, status = _grade(state.get("output"))
+        profiles = arguments.get("profiles")
+        profiles = [profiles] if isinstance(profiles, str) else profiles if isinstance(profiles, list) else []
         calls.append({
             "tool": name.removeprefix("terraproof_"),
             "argument_names": sorted(str(key) for key in arguments),
-            "profiles": sorted(p for p in (arguments.get("profiles") or []) if isinstance(p, str)
-                               and re.fullmatch(r"[a-z-]{1,40}", p)),
+            "profiles": sorted(p for p in profiles if isinstance(p, str) and re.fullmatch(r"[a-z-]{1,40}", p)),
             "contract": arguments.get("contract") is not None,
             "targets_deliverable": any(str(p).replace("\\", "/").rsplit("/", 1)[-1] in deliverables for p in paths),
             "grade": grade, "verification_status": status,
@@ -375,7 +376,7 @@ def summarize(rows: list[dict]) -> dict:
         "checked_deliverable": count("checked_deliverable", ran),
         "declared_on_deliverable": count("declared_on_deliverable", ran),
         "last_check_coverage_assessed": count("last_coverage_assessed", ran),
-        "last_grade": {grade: sum(r["behaviour"]["last_grade"] == grade for r in ran) for grade in (*GRADES, None)},
+        "last_grade": {str(grade): sum(r["behaviour"]["last_grade"] == grade for r in ran) for grade in (*GRADES, None)},
         "false_assurance_wrong_seen_decision_grade": sum(r["behaviour"]["last_grade"] == "decision-grade"
                                                          for r in wrong),
         "wrong_seen_checks_passed": sum(r["behaviour"]["last_grade"] == "checks-passed" for r in wrong),

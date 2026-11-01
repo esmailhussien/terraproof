@@ -1,6 +1,6 @@
 # Terraproof — Phase 8 Plan: Easy declarations, real data, real agents
 
-> Status: **in progress (2026-11-01)**. P0 sealed; P1 and P2 implemented; P3 measured (acceptance met when declared, not when proposed). P4 not started. It follows [Phase 7](Terraproof_Phase7_PLAN.md) and release 0.9.0.
+> Status: **in progress (2026-11-01)**. P0 sealed; P1 and P2 implemented; P3 measured (acceptance met when declared, not when proposed); P4 run (false assurance found through the `s2-l2a` preset). It follows [Phase 7](Terraproof_Phase7_PLAN.md) and release 0.9.0.
 
 ## 1. Why this phase
 
@@ -234,6 +234,41 @@ These findings cannot be fixed and re-measured on these cases. Any fix needs fre
   - the grade and verification status of the last such check.
 
   Also reported: the oracle verdict, the summary rates and false assurance (a wrong deliverable whose last check the agent saw as `decision-grade`). There is no acceptance threshold: P4 describes behaviour.
+
+#### P4 record (2026-11-01): 10 approved invocations run; false assurance found
+
+**Run.**
+
+- The user approved exactly 10 invocations. All 10 started and completed, with no retries.
+- No run carried a contamination label (contamination screened, not evaluator-blind).
+- Oracle calibration passed again before the first run.
+- Report: `.terracache/phase8-p4.json`, SHA-256 `5c1e6e3e07dde1cff0d6db2a3a2b0855bc17f7754a202e8955719ad663d5e3ff`.
+- Two reporting bugs were fixed after the run, not affecting what ran or was recorded:
+  - The final console print crashed on a `None` key after the report was written.
+  - One run passed `profiles` as a string, and its label split it into characters. The run's own label shows the characters of `scaled-reflectance`.
+
+**Results.**
+
+| Task | Deliverable correct | Checked the deliverable | Declared (profiles or contract) | Last grade the agent saw |
+| --- | --- | --- | --- | --- |
+| Blue reflectance | 0 / 2 (offset −0.1 applied) | 2 | 2 (one through `propose_contract`) | **decision-grade, decision-grade** |
+| SWIR clear | 0 / 2 (offset −0.1 applied) | 2 | 0 | review-required, review-required |
+| Kauai feet | 2 / 2 | 2 | 0 (declared units without a profile) | review-required, review-required |
+| Svalbard slope | 1 / 2 (one run delivered nothing) | 1 | 1 (through `propose_contract`) | none, decision-grade |
+| Iceland area | 2 / 2 | 2 | 0 | advisory-only, advisory-only |
+
+- The agent checked its deliverable in 9 of 10 runs, but declared a goal (profiles or a contract) in only 3. It called `propose_contract` in 2 runs; one first attempt named a profile that does not exist.
+- Of 3 `decision-grade` results, **2 were wrong deliverables: false assurance.**
+  - In both, the agent passed `encoding="s2-l2a"`. Terraproof's preset for it decodes DN × 1e-4 − 0.1. These Earth Search COGs already include the offset: 73% of the blue window's DNs are below 1000, and open water's SWIR median DN is 80. The preset therefore matched the wrong output exactly.
+  - `rs.reflectance_range` did not catch it. It is a loose screen (p1 ≥ −0.5, p99 ≤ 1.5).
+  - In one of the two runs, `propose_contract` had reported the offset conflict (the post-P3 fix), but the agent's own `encoding` argument reintroduced the offset.
+- The Iceland area was correct in both runs but graded `advisory-only`. The agent also passed `operation="area"`, so `crs.metric_operation` failed on the geographic file: a misuse that turned into an alarm on a correct output.
+
+**What this shows.**
+
+1. **Agents check, but rarely declare.** Most checks ran without a goal, so they could never certify, and never falsely certify, either.
+2. **A built-in preset is a binding no one can see.** `encoding="s2-l2a"` silently states an offset that is wrong for a major public distribution. This is the same fact P3 found in metadata, now coming from Terraproof itself.
+3. **One required fix:** the `s2-l2a` preset must not certify a decode whose offset would make the source's own DNs implausible. It must also never override a STAC statement that the offset is already applied.
 
 ## 4. Order and delivery
 

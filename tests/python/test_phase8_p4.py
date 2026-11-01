@@ -57,3 +57,9 @@ def test_a_grade_is_read_from_text_output_too():
     summary = behaviour(verification_calls(events, DELIVERABLES))
     assert summary["last_grade"] == "decision-grade" and summary["last_verification_status"] == "verified"
     assert summary["last_coverage_assessed"]
+
+
+def test_a_profile_given_as_a_string_is_one_profile():
+    events = [_tool("terraproof_run_checks", {"paths": ["outputs/blue_reflectance.tif"],
+                                              "profiles": "scaled-reflectance"}, '{"grade": "checks-passed"}')]
+    assert verification_calls(events, DELIVERABLES)[0]["profiles"] == ["scaled-reflectance"]
