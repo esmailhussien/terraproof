@@ -1,6 +1,6 @@
 # Terraproof — Phase 9 Plan: Cover real deliverables, make declaring the default
 
-> Status: **in progress (2026-11-01)**. Q0 is sealed; no product code yet. It follows [Phase 8](Terraproof_Phase8_PLAN.md) and release 0.10.0.
+> Status: **in progress (2026-11-02)**. Q0 sealed; Q1–Q4 implemented; Q5.1 measured (acceptance met in all three configurations). Q5.2 not started. It follows [Phase 8](Terraproof_Phase8_PLAN.md) and release 0.10.0.
 
 ## 1. Why this phase
 
@@ -126,6 +126,62 @@ Phase 8 measured Terraproof on real data and with a real agent. When the user de
    - Same host and model as Phase 8 P4, with Terraproof installed.
    - **Reported:** the declared share, false assurance, and the grade the agent last saw.
    - **No acceptance threshold**, except that **zero false assurance** is required.
+
+#### Q5.1 record (2026-11-02): measured once; acceptance met in all three configurations
+
+**Run.**
+
+- The 36 sealed Q0 cases were derived with their own scripts, and their oracle agreed with all 36.
+- [`tests/phase9_q5.py`](../../tests/phase9_q5.py) maps each case by one rule per deliverable form. It never reads `kind`, and each wrong/correct pair gets the same rule. It was committed (`f6fd239`) before any result.
+- It ran once on the product at `7c26d08` (Q1–Q4).
+- Result: `.terracache/phase9-q5.json`, SHA-256 `b728c302e2c7f22a19eb2c1516fda31813b2446a256eaa8ccd1ece7109d55df6`.
+- These cases are now spent.
+
+**Coverage.** 33 of 36 deliverables got a requirement, against 14 of 34 in Phase 8 P3:
+- all 8 validity masks;
+- all 16 datasets;
+- 9 of 12 summaries. The other 3 are summaries whose facts state no key or statistic, which the mapping does not guess.
+
+**Results.**
+
+| Measure | Declared | Proposed | Undeclared |
+| --- | --- | --- | --- |
+| Wrong outputs failing a required check | **12 of 15** | 4 | 0 |
+| Wrong outputs graded `decision-grade` (false assurance) | **0** | **0** | **0** |
+| Correct outputs with a failing check (false alarms) | **0** | **0** | 0 |
+| Correct outputs graded `decision-grade` | 6 | 0 | 0 |
+| Metadata bindings contradicting the truth | — | **0** | — |
+
+**Acceptance (fixed in this plan): met.** There was no false assurance in any configuration and no false alarm within declared coverage. In the proposed configuration, no metadata binding contradicted the truth.
+
+**By form (declared).**
+- **Summaries.** 3 of 3 wrong were caught (fill averaged in, zeros evicted, degree area). 5 correct reached `decision-grade`. One correct case is `incomplete`: its facts name a key the report does not hold.
+- **Sentinel-2 decodes, both distributions.** 4 of 4 wrong were caught, including the v0 double offset and the c1 missing offset and raw DN. The 4 correct decodes are `review-required`, only because the delivered rasters declare no nodata or are not COGs.
+- **Fill and vertical units.** Both wrong were caught.
+- **Validity masks.** 3 of 4 wrong failed `rs.cloud_mask_applied`, and no correct mask raised an alarm.
+  - All 8 are `incomplete` because the mapping did not declare `processing_full_scan`, which the `qa-masked` profile requires. That omission is the mapping's, recorded as it ran.
+  - A declared mask is always read in full, so the requirement adds nothing for masks.
+  - The missed wrong mask keeps a swath-edge window whose QA is entirely nodata as valid. The QA check is then `not-run`: it is unverifiable, never certified.
+- **Slopes.** 1 of 3 wrong was caught (degrees used as lengths).
+  - **Geographic DEMs do not discriminate.** Correct geographic slopes match the check's own central differences in only 51% of cells at its 0.1% tolerance. The author's spacing approximation most likely differs from the check's ellipsoidal one. They therefore warn, and the latitude-ignored wrong slope also only warns: it matches its mistake in 34% of cells, under the 95% needed to fail.
+  - The unit-confused slope and one correct slope were reprojected to UTM, off the DEM's grid, so both are `not-run`.
+
+**Proposed.**
+- **Offset handled correctly in both distributions.**
+  - For the v0 distribution, `propose` reported the STAC offset as a conflict in 4 cases, citing `earthsearch:boa_offset_applied`, so it did not fill the wrong offset.
+  - For c1, which has no such flag, it filled −0.1, which is right there.
+  - This is the post-P3 fix, now measured on fresh cases.
+- **No coverage from metadata.** Metadata again filled none of the 87 required coverage bindings, so every requirement stayed `incomplete`. Proposals remain a convenience, not a route to coverage.
+
+**Undeclared.** No case offered `next_step`, as expected: the undeclared configuration passes no arguments that could run a goal's checks. Whether agents follow `next_step` is for Q5.2.
+
+**What this shows.**
+
+1. **The coverage gap is mostly closed.** Validity masks and summaries are now checkable, from 14 of 34 deliverables to 33 of 36. With declarations, 12 of 15 real mistakes were caught, with no false assurance or false alarm.
+2. **The offset fixes work on real data.** Both distributions' decodes were judged correctly, and proposals no longer copy a self-contradicting offset.
+3. **Two weaknesses remain, and need fresh cases to fix and measure:**
+   - geographic slope tolerance, which makes the check warn on correct and wrong alike;
+   - the `processing_full_scan` requirement for declared masks, which can be dropped because a mask is always read in full.
 
 ## 4. Order and delivery
 
