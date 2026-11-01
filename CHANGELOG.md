@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reports without a contract carry `next_step` when the caller's arguments ran every check of a
   goal profile, naming the `propose` / `propose_contract` call that would require them. Advisory;
   the grade is unchanged. The MCP instructions state the two-step pattern.
+- `terrain.slope_consistent` on geographic DEMs compares with a 1% relative tolerance (0.1% stays for
+  projected DEMs). WGS84, mean-sphere and 111 320 m-per-degree spacing differ by at most 0.674%,
+  while latitude-ignored spacing is off by 13% or more above 28 degrees. Correct geographic slopes
+  that used to warn now pass, and latitude-ignored ones now fail.
+- A `qa-masked` requirement on a declared validity mask no longer needs `processing_full_scan`,
+  because a declared mask is always read in full.
 
 ## [0.10.0] — 2026-11-01
 

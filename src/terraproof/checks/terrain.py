@@ -36,6 +36,10 @@ VERTICAL_UNITS = {
 # 2:1 pixel aspect falls well outside it on any sloping cell.
 RTOL = 1e-3
 ATOL = 0.01
+# Geographic DEMs: spacing from the WGS84 ellipsoid, a mean-radius sphere or 111 320 m per degree differs
+# by at most 0.674% from 0 to 88 degrees (Phase 9), so 1% accepts any of them. The mistakes differ by far
+# more: longitude not scaled by latitude is 13% at 28 degrees and 380% at 78; degrees as lengths ~1e5.
+GEOGRAPHIC_RTOL = 0.01
 MIN_MATCH_FRACTION = 0.95
 # Cells flatter than this are skipped: every hypothesis predicts about zero there.
 MIN_SLOPE_DEGREES = 0.5
@@ -58,8 +62,8 @@ def _slope_degrees(z: np.ndarray, valid: np.ndarray, factor: float, dx, dy):
     return out, support
 
 
-def _fraction(observed: np.ndarray, expected: np.ndarray) -> float:
-    return float(np.count_nonzero(np.abs(observed - expected) <= RTOL * np.abs(expected) + ATOL) / observed.size)
+def _fraction(observed: np.ndarray, expected: np.ndarray, rtol: float = RTOL) -> float:
+    return float(np.count_nonzero(np.abs(observed - expected) <= rtol * np.abs(expected) + ATOL) / observed.size)
 
 
 def _geographic_spacing(crs, transform, rows: int):
@@ -133,7 +137,8 @@ def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = 
                         pixel_size_degrees=[abs(dem["transform"][0]), abs(dem["transform"][4])],
                         pixel_size_metres_range={"x": [float(dx.min()), float(dx.max())],
                                                  "y": [float(dy.min()), float(dy.max())]},
-                        tolerance={"rtol": RTOL, "atol_degrees": ATOL}, min_match_fraction=MIN_MATCH_FRACTION)
+                        tolerance={"rtol": GEOGRAPHIC_RTOL, "atol_degrees": ATOL},
+                        min_match_fraction=MIN_MATCH_FRACTION)
     else:
         horizontal = crs.linear_units_factor[1]
         vertical = VERTICAL_UNITS[unit.lower()] if unit else horizontal
@@ -156,7 +161,8 @@ def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = 
                        "delivered value, so nothing could be compared.", **evidence)]
 
     observed = delivered[keep]
-    declared = _fraction(observed, expected[keep])
+    rtol = GEOGRAPHIC_RTOL if geographic else RTOL
+    declared = _fraction(observed, expected[keep], rtol)
     evidence["declared_match_fraction"] = declared
     if declared >= MIN_MATCH_FRACTION:
         spacing = "ellipsoidal pixel spacing" if geographic else f"{dx:g} x {dy:g} pixel spacing"
@@ -177,7 +183,7 @@ def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = 
     matches = {}
     for name, (f, sx, sy) in mistakes.items():
         alternative, _ = _slope_degrees(values, valid, f, sx, sy)
-        matches[name] = _fraction(observed, alternative[keep])
+        matches[name] = _fraction(observed, alternative[keep], rtol)
     evidence["mistake_match_fractions"] = matches
     found = [name for name, fraction in matches.items() if fraction >= MIN_MATCH_FRACTION]
     if found:

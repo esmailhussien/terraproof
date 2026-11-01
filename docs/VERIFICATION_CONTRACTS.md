@@ -153,7 +153,8 @@ Phase 9 declarations for real deliverables:
   1/0 raster without the binding is still read as data.
 - `--slope-unit percent` states a slope output in percent for `--dem` and
   `--slope-method`; it is converted to degrees before comparing. The default stays
-  degrees.
+  degrees. On a geographic DEM, `terrain.slope_consistent` accepts any common
+  spacing model (WGS84, mean sphere, 111 320 m per degree) within 1%.
 - `--summary-key KEY --summary-statistic STAT --summary-source PATH`
   (`report.summary_value`, profile `summary-value`) checks one number in a JSON
   report. It recomputes `mean`, `count`, `sum`, `min` or `max` over a raster's

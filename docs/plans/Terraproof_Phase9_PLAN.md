@@ -183,6 +183,19 @@ Phase 8 measured Terraproof on real data and with a real agent. When the user de
    - geographic slope tolerance, which makes the check warn on correct and wrong alike;
    - the `processing_full_scan` requirement for declared masks, which can be dropped because a mask is always read in full.
 
+#### After Q5.1 (2026-11-02): both weaknesses fixed, not re-measured
+
+- **Masks.** A `rs.cloud_mask_applied` requirement no longer lists `processing_full_scan` as missing when `output_form = validity-mask`, since the mask is always read in full. A test shows a declared mask contract verifying at full-grid scope.
+- **Geographic slopes.**
+  - **Rule.** `terrain.slope_consistent` now uses a 1% relative tolerance on geographic DEMs, and keeps 0.1% on projected ones.
+  - **Derivation.** The tolerance was set from first principles, not from the spent cases. WGS84 ellipsoidal spacing, a mean-radius sphere and 111 320 m per degree differ by at most 0.674% from 0 to 88°N. The mistakes differ by far more: latitude ignored is off by 13% at 28°N and 380% at 78°N, and degrees as lengths by about 10⁵.
+  - **Mistake hypotheses** use the same tolerance.
+- **Test changes.**
+  - Two Phase 7 regression references and one V0 regression case used to warn ("another stencil"). They now pass, and their seeded mistakes still fail.
+  - New tests show a spherical-model slope passing and a latitude-ignored one failing at 78°N.
+- **Sanity run on spent cases, not a measurement.** On the spent Q0 outputs, both correct geographic Nepal slopes now pass (100% match), and both geographic wrong slopes fail (100% match to their mistake).
+- **Not re-measured.** Q0 is spent, so this does not show the fixes on fresh cases.
+
 ## 4. Order and delivery
 
 1. Q0 is sealed first.

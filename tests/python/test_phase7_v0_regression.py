@@ -77,10 +77,10 @@ def test_declared_qa_rule_catches_over_masking_with_the_source_band(v0, case_id,
     assert _status(results, "rs.cloud_mask_applied") == {expected}
 
 
-@pytest.mark.parametrize("case_id,expected", [("heldout-geom-04-wrong", "fail"), ("heldout-geom-08-correct", "warn")])
+@pytest.mark.parametrize("case_id,expected", [("heldout-geom-04-wrong", "fail"), ("heldout-geom-08-correct", "pass")])
 def test_declared_dem_unit_enables_slope_on_unlabelled_dems(v0, case_id, expected):
     results = _run(v0, case_id, dem="primary_source", dem_vertical_unit="metre")
-    assert _status(results, "terrain.slope_consistent") == {expected}  # the correct case uses another stencil
+    assert _status(results, "terrain.slope_consistent") == {expected}  # within the 1% geographic tolerance
 
 
 def test_constant_geoid_separation_is_minus_level(v0):

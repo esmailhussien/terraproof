@@ -207,3 +207,55 @@ def test_summary_cli_mcp_parity(make_raster, tmp_path, capsys):
     b = next(c for c in payload["report"]["checks"] if c["id"] == "report.summary_value")
     assert a == b and a["status"] == "pass"
     assert cli["next_step"]["profiles"] == ["summary-value"]
+
+
+# After Q5.1: fixes for the two weaknesses it found
+
+
+def test_a_declared_mask_needs_no_full_scan_flag_to_be_verified(make_raster, scl):
+    codes, qa = scl
+    mask = _mask(make_raster, "mask.tif", np.isin(codes, [4, 5, 6]))
+    args = dict(qa_path=qa, qa_kind="keep-codes", qa_keep_codes=[4, 5, 6], output_form="validity-mask")
+    contract = {"schema": "terraproof.verification-contract/1",
+                "requirements": [{"paths": [mask], "profiles": ["qa-masked"], "parameters": args}]}
+    results = _run(mask, **args)
+    report = build_report(inputs=[input_record(mask, "input", "raster")], results=results, parameters=args,
+                          contract=contract)
+    row = report["verification"]["requirements"][0]
+    assert row["status"] == "pass" and row["missing_bindings"] == [] and row["scope"] == "full-grid"
+
+
+def _geographic_dem(make_raster, lat=78.0, step=0.001):
+    """A DEM rising 0.2 m per ground metre eastward and 0.1 northward, on WGS84 degrees."""
+    from pyproj import Geod
+    geod = Geod(ellps="WGS84")
+    rows, cols = 30, 30
+    lats = lat + 0.5 * step - (np.arange(rows) + 0.5) * step
+    east = np.array([geod.inv(16.0, la, 16.0 + step, la)[2] for la in lats])
+    north = geod.inv(16.0, lat, 16.0, lat + step)[2]
+    z = 0.2 * np.arange(cols)[None, :] * east[:, None] - 0.1 * np.arange(rows)[:, None] * north + 500.0
+    dem = make_raster("geo_dem.tif", z.astype("float64"), crs="EPSG:4326", origin=(16.0, lat + 0.5 * step),
+                      resolution=step, nodata=-9999.0)
+    return dem, z, lats, step
+
+
+def _spherical_slope(z, lats, step, scale_longitude=True):
+    metres = 111320.0 * step
+    dx = metres * (np.cos(np.radians(lats)) if scale_longitude else np.ones_like(lats))
+    gx = (z[1:-1, 2:] - z[1:-1, :-2]) / (2 * dx[1:-1, None])
+    gy = (z[2:, 1:-1] - z[:-2, 1:-1]) / (2 * metres)
+    out = np.full(z.shape, -9999.0)
+    out[1:-1, 1:-1] = np.degrees(np.arctan(np.hypot(gx, gy)))
+    return out.astype("float32")
+
+
+def test_a_spherical_spacing_model_passes_and_ignoring_latitude_fails(make_raster):
+    dem, z, lats, step = _geographic_dem(make_raster)
+    args = dict(dem=inspect_dataset(dem), dem_vertical_unit="metre")
+    sphere = make_raster("sphere.tif", _spherical_slope(z, lats, step), crs="EPSG:4326",
+                         origin=(16.0, lats[0] + 0.5 * step), resolution=step, nodata=-9999.0)
+    passed = _only(_run(sphere, **args), "terrain.slope_consistent")
+    assert passed.status == "pass" and passed.evidence["tolerance"]["rtol"] == 0.01
+    ignored = make_raster("ignored.tif", _spherical_slope(z, lats, step, scale_longitude=False), crs="EPSG:4326",
+                          origin=(16.0, lats[0] + 0.5 * step), resolution=step, nodata=-9999.0)
+    assert _only(_run(ignored, **args), "terrain.slope_consistent").status == "fail"

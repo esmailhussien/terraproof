@@ -189,6 +189,9 @@ def _missing_bindings(check, values):
         missing += ['source_band:'+role for role in roles if role not in bound]
     if check == 'rs.cloud_mask_applied' and values.get('qa_kind') == 'keep-codes' and not values.get('qa_keep_codes'):
         missing.append('qa_keep_codes')
+    if check == 'rs.cloud_mask_applied' and values.get('output_form') == 'validity-mask':
+        # A declared validity mask is always read in full, so the full-scan flag adds nothing.
+        missing = [key for key in missing if key != 'processing_full_scan']
     if check == 'geometry.metric_values':
         missing += [key for key in (('buffer_distance_m', 'buffer_source') if values.get('metric_quantity') == 'buffer'
                                     else ('metric_property', 'metric_unit')) if values.get(key) is None]
