@@ -5,6 +5,24 @@ Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 r
 ---
 
 
+## v0.11.0 release — prepared 2026-11-02
+
+Phase 9: `--output-form validity-mask`, `--slope-unit`, the `report.summary_value` check and the
+`summary-value` profile, plain JSON objects inspected as reports, `next_step` on undeclared
+reports, a 1% tolerance for geographic slopes, and no full-scan flag needed for declared masks.
+Measured: Q5.1 on 36 sealed real-data cases (acceptance met in all three configurations) and Q5.2
+with 10 approved OpenCode/MiMo runs (zero false assurance).
+
+- [ ] PR CI green on the release head, then merged with a regular merge commit.
+- [ ] Tag the merge commit `v0.11.0` and push the tag (annotated); `publish-python.yml` runs.
+- [ ] Publish the npm tarball (`npm whoami` first; `npm publish --access public`; browser/2FA).
+- [ ] Approve the `pypi` deployment only after the TestPyPI install jobs pass.
+- [ ] GitHub release *Terraproof v0.11.0* with the npm tarball, wheel and sdist, verified against
+  both registries.
+- [ ] Post-release: `npx terraproof@0.11.0 --version` and `route` from a blank directory, and
+  `pip install "terraproof[mcp]==0.11.0"` in a fresh venv runs `inspect`, `check` (including a
+  JSON summary), `propose`, and lists seven MCP tools.
+
 ## v0.10.0 release — 2026-11-01
 
 Phase 8: `propose` and the MCP tool `propose_contract` (seven tools); new opt-in checks

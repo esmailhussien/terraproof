@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-11-02
+
+Phase 9: real deliverables. Validity masks, slopes in percent and JSON summaries are now checkable,
+and reports guide undeclared checks toward a declared goal. Measured once on 36 fresh sealed
+real-data cases (Phase 9 Q5.1): 33 of 36 deliverables got a requirement (Phase 8: 14 of 34), and
+declared checks caught 12 of 15 wrong outputs with no false assurance or false alarm. Proposals
+were judged correctly in both Sentinel-2 distributions. A 10-run agent measurement (Q5.2): 8 runs
+declared their goal, every offered `next_step` was followed, 10 of 10 deliverables were correct,
+and no wrong output was certified (Phase 8 P4: 2). No lift is claimed. Details are in
+[the Phase 9 plan](docs/plans/Terraproof_Phase9_PLAN.md).
+
 ### Real deliverable forms and the next step (Phase 9 Q1-Q4)
 
 - `--output-form validity-mask` (`--output-valid-value`, default 1): 1/0 mask outputs for
@@ -26,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that used to warn now pass, and latitude-ignored ones now fail.
 - A `qa-masked` requirement on a declared validity mask no longer needs `processing_full_scan`,
   because a declared mask is always read in full.
+- A declared validity mask with no QA layer and no support source gets a `next_step` that names
+  the missing bindings (`qa_path`, `qa_kind`, or `support_sources`, `support_rule`), never which file.
 
 ## [0.10.0] — 2026-11-01
 
