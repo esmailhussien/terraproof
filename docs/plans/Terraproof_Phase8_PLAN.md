@@ -1,6 +1,6 @@
 # Terraproof — Phase 8 Plan: Easy declarations, real data, real agents
 
-> Status: **in progress (2026-11-01)**. P0 is sealed; no product code yet. It follows [Phase 7](Terraproof_Phase7_PLAN.md) and release 0.9.0.
+> Status: **in progress (2026-11-01)**. P0 sealed; P1 and P2 implemented; P3 measured (acceptance met when declared, not when proposed). P4 not started. It follows [Phase 7](Terraproof_Phase7_PLAN.md) and release 0.9.0.
 
 ## 1. Why this phase
 
@@ -135,6 +135,64 @@ Reported measures are Phase 7's five, plus:
 - In the proposed configuration, no binding filled from metadata that contradicts the case's ground truth.
 
 Detection and the proposal fill rate are reported, not thresholded.
+
+#### P3 record (2026-11-01): measured once; acceptance met when declared, not when proposed
+
+**Run.**
+
+- The 34 sealed cases were fetched and derived with their own scripts, and their oracle agreed with all 34.
+- [`tests/phase8_p3.py`](../../tests/phase8_p3.py) maps each case to three configurations. It uses one rule per deliverable form, never reads `kind`, and gives each wrong/correct pair the same rule. It was committed (`122c35c`) before any result existed.
+- It ran once on the product at `4d9f360` (P1 and P2 included).
+- Result: `.terracache/phase8-p3.json`, SHA-256 `138b73d4023e3a1477b92c9b70f818ba73e219c0b2d7fd64eff8e9483a04a06c`.
+- These cases are now spent.
+
+**Coverage first.** 20 of the 34 real deliverables fall outside what any check verifies, so they get no requirement in any configuration:
+
+| Deliverable form | Cases | Why no check applies |
+| --- | --- | --- |
+| 1/0 validity mask | 12 (all of QA masking, 3 nodata, 1 scale) | Checks read nodata, not a 0 value |
+| JSON report | 5 | Not a dataset |
+| Slope in percent | 3 | `terrain.slope_consistent` takes degrees only |
+
+That leaves 7 wrong and 7 correct cases with a declared requirement.
+
+**Results.**
+
+| Measure | Declared | Proposed | Undeclared |
+| --- | --- | --- | --- |
+| Wrong outputs failing a required check | 7 of 7 covered (7 of 15 overall) | 3 | 0 |
+| Wrong outputs graded `decision-grade` (false assurance) | **0** | **0** | **0** |
+| Correct outputs with a failing check (false alarms) | **0** | **2** | 0 |
+| Correct outputs graded `decision-grade` | 1 | 0 | 0 |
+| Correct covered outputs graded `review-required` | 5 | 0 | — |
+| Requirements left incomplete | 1 | 13 | — |
+
+- **Declared.** All 7 covered wrong outputs failed a required check:
+  - raw DN, a sign-flipped offset, and fill decoded as data;
+  - metres labelled as feet, where fill kept as data also failed;
+  - area, perimeter and buffer computed in degrees.
+
+  Of the 7 correct covered outputs:
+  - 1 is `decision-grade` (the NDVI range).
+  - 5 are `review-required`, from genuine findings that are not errors: two reflectance outputs declare no nodata, and the three Natural Earth geometries break the RFC 7946 ring order.
+  - 1 is `incomplete`: the Svalbard slope was reprojected, so the DEM and the slope no longer share a grid and `terrain.slope_consistent` is not-run.
+  - Under the old `fail` severity for `geometry.winding`, the three correct metric outputs would have been false alarms. That severity was decided before this run (P2 record).
+- **Proposed.** The configuration gave goal profiles, source paths, and for each band file the STAC asset it came from. Acceptance was **not met**:
+  - **Wrong offset.** The scene's STAC item states `raster:bands` offset `-0.1` for every reflectance asset, and also `earthsearch:boa_offset_applied: true` in its properties. The stored values already include the offset: the lowest green DN is 35, which an offset would make negative reflectance. The case oracle anchors on that flag and physical plausibility. `propose` copied the `-0.1` (evidence: `assets.green.raster:bands[0].offset`). That contradicts the truth in all 5 scale cases and makes `rs.scale_applied_once` fail both correct decodes, which are the 2 false alarms.
+  - **No coverage from metadata.** Metadata filled none of the 45 required coverage bindings. Its 10 fills were `decode_scale` (right, 5 cases) and `decode_offset` (wrong, 5 cases); neither is a coverage binding. The 5 `expect` bindings came from the profile. (The script's `required_filled_from_metadata: 5` counts those profile bindings; this table corrects it from the same result file.)
+  - **Left undeclared.** The goal bindings: operations, the output unit, the support rule, and the metric quantity, property and unit.
+  - **Not stated.** The vertical units. 3DEP states metres only in its FGDC XML sidecar, which `propose` does not read, and GLO-30 states no unit at all.
+  - **Conflicts reported:** none. The flag that disagrees is a vendor property that `propose` does not read.
+  - **No false assurance.** Every requirement was `incomplete` or `failed`, so no output reached `decision-grade`.
+- **Undeclared.** No failures, and no false assurance. The two clean correct outputs were `checks-passed`.
+
+**What this shows.**
+
+1. **Declarations work.** With the declarations a careful user would make, Terraproof caught every covered real-data mistake, with no false assurance and no false alarm.
+2. **Proposals are not yet safe.** Metadata alone does not get users to coverage here, and real STAC metadata can be self-contradictory. A proposal must treat a stated "offset already applied" as a conflict, not copy the offset.
+3. **Coverage is the larger gap.** 59% of these real deliverables are forms no check verifies: validity masks, slope in percent, and summary reports.
+
+These findings cannot be fixed and re-measured on these cases. Any fix needs fresh sealed cases.
 
 ### P4. Agent verification behaviour (optional; separate approval)
 
