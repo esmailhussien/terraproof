@@ -1,6 +1,6 @@
 # Terraproof — Phase 9 Plan: Cover real deliverables, make declaring the default
 
-> Status: **proposed (2026-11-01)**. Nothing is implemented. It follows [Phase 8](Terraproof_Phase8_PLAN.md) and release 0.10.0.
+> Status: **in progress (2026-11-01)**. Q0 is sealed; no product code yet. It follows [Phase 8](Terraproof_Phase8_PLAN.md) and release 0.10.0.
 
 ## 1. Why this phase
 
@@ -35,6 +35,41 @@ Phase 8 measured Terraproof on real data and with a real agent. When the user de
   - Plain correct outputs.
 - **Two case fields.** Each case keeps `facts_in_metadata` from Phase 8, and adds `deliverable_form`: dataset, validity mask, or summary.
 - **Brief.** It is kept outside the repository, as for Phase 8.
+
+#### Q0 seal record (2026-11-01)
+
+- **Authoring.** An independent agent authored 36 cases (15 wrong, 21 correct) in a fresh clone of `main` (`a2205a2`), on branch `geova/verification-heldout-q0`, commit `d90fd15`.
+- **Counts by family.**
+  - validity masks: 4 wrong, 4 correct;
+  - slope: 3 and 3;
+  - summary reports: 3 and 4;
+  - Sentinel-2 decodes from two distributions: 3 and 4;
+  - fill and vertical units: 2 and 2;
+  - plain: 4 correct.
+- **Counts by form.** 16 datasets, 12 summaries and 8 validity masks.
+- **Sentinel-2 distributions.**
+  - Earth Search `sentinel-2-l2a`: 1 wrong, 2 correct. Its item states `earthsearch:boa_offset_applied`, and pixels confirm the offset is already in the stored values.
+  - Earth Search `sentinel-2-c1-l2a`: 2 wrong, 2 correct. The item has no such flag, and pixels show raw DNs, so the offset must still be applied. Its `raster:bands` declare the same −0.1, so the declaration alone does not tell the two distributions apart.
+- **Other sources.** The Copernicus DEM and 3DEP tiles are the same tiles P0 used.
+- **The agent's report.**
+  - 147 of 238 `facts` entries (61.8%) are stated by real metadata.
+  - Two cold fetches gave byte-identical manifests, and two derivations gave byte-identical outputs.
+  - The oracle agreed with all 36 cases.
+- **Maintainer checks.**
+  - The committed LF hashes match the hand-off.
+  - Imports were checked: no `terraproof`. Fetch hosts are public: Earth Search, both Sentinel-2 buckets, the Copernicus DEM bucket, `prd-tnm`, and GitHub raw.
+  - A fresh fetch reproduced the manifest hash, and the cases' own test passed 5 of 5.
+  - The case content was not read.
+- **Repository changes.** The commit adds `eol=lf` rules; the seal commit removes a duplicated V0b block it introduced in `.gitattributes`. The cases' test skips on CI without a cache unless `TERRAPROOF_HELDOUT_Q0_FETCH=1`.
+
+  | File | SHA-256 |
+  | --- | --- |
+  | `evals/verification-heldout-q0/cases.json` | `188f00537572e3f8a04f0d9a0a1e0bfdc247cec19623f1be375c3bfebce37130` |
+  | `evals/verification-heldout-q0/fetch.py` | `6a58013132997cf885e429ad692c198c6ee523ad461e7d261068e8652cabb75c` |
+  | `evals/verification-heldout-q0/derive.py` | `4c4df0a11d188ee3f66b5ad6cc250a65857d79172b0fd9ecce0f05d7ce7f76e2` |
+  | `evals/verification-heldout-q0/oracle.py` | `6127b66edc7be2c3e74cca6b0529a533673371dbf0470087afbac41d11ea0060` |
+  | `evals/verification-heldout-q0/README.md` | `86cfaa0f3f87a5482c331744b509ba2cbf9f52b3db30293127a1aad7a2e2c10d` |
+  | Fetched-file manifest (`manifest.json` in the cache) | `90d2690490dbd47f4f5aaaf1cb12f1349cbce0b37f7e56a10ed7db93e1902503` |
 
 ### Q1. Validity masks as a declared output form
 
