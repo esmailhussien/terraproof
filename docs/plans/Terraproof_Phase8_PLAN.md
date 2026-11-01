@@ -212,6 +212,29 @@ These findings cannot be fixed and re-measured on these cases. Any fix needs fre
   - false assurance on its outputs: wrong outputs it would hand over as `decision-grade`.
 - **Trace handling.** Traces keep Phase 6's contamination labels, and results are labelled "contamination screened".
 
+#### P4 design (2026-11-01): registered before any run
+
+- **Driver.** [`tests/phase8_p4.py`](../../tests/phase8_p4.py) is committed before any P4 run. Its label extraction is tested in `tests/python/test_phase8_p4.py`. It reuses Phase 6's OpenCode adapter, trace sanitising, install, brief and preflight, and runs the "with" condition only.
+- **Tasks.** Five, on windows of the P0 sources that are not its sealed cases. Each has one deliverable and an oracle that uses numpy, rasterio and pyproj, never Terraproof:
+  - `p4-s2-blue-reflectance`: blue DN to reflectance, with the STAC item. The offset is already applied, so the truth is DN × 1e-4, with fill as nodata.
+  - `p4-s2-swir-clear`: SWIR reflectance keeping SCL 4, 5, 6 and 11.
+  - `p4-kauai-feet`: 3DEP metres to international feet, keeping fill as nodata.
+  - `p4-svalbard-slope`: GLO-30 slope in degrees on a geographic grid. It passes if the median difference is at most 0.5° and the 95th percentile at most 3°.
+  - `p4-iceland-area`: geodesic area in km², within 1%.
+
+  Every oracle accepted a right deliverable and rejected a known mistake in calibration. The driver repeats that calibration before any run and stops if it fails.
+- **Brief.** Neutral: it asks for the deliverable and never mentions verification. Terraproof is installed as a user would install it: routed skills, the MCP server with seven tools, and its instructions.
+- **Host.** OpenCode 1.19.4 with `opencode-go/mimo-v2.6-flash`, 900 s per run, two runs per task: **10 invocations**, with no retries.
+  - The "with" interpreter is `C:\Users\mrsom\.venvs\agent-with-p8`. It holds this branch's wheel at `56f3108` (SHA-256 `572106fe…ea50`), with `terraproof.evals` excluded and dependencies pinned to R1's `agent-with-r1c`.
+  - The driver interpreter is `terraproof-py312` with this checkout's `src`. The 3.14 interpreter under `D:\AgentLayer\.venv` cannot host the run: its temp folder resolves to the checkout, and an `opencode` started from it cannot open its own log.
+- **Preflight.** All 10 prepared projects passed every no-model check: inputs, outputs, skills, MCP registered and serving the seven tools, interpreter isolation, and global OpenCode config. No model was called.
+- **What is reported.** Per run, from the trace, as names and enums only:
+  - whether `propose_contract` was called;
+  - whether `run_checks` targeted the deliverable, and with `profiles` or a `contract`;
+  - the grade and verification status of the last such check.
+
+  Also reported: the oracle verdict, the summary rates and false assurance (a wrong deliverable whose last check the agent saw as `decision-grade`). There is no acceptance threshold: P4 describes behaviour.
+
 ## 4. Order and delivery
 
 1. P0 is sealed first, by an independent agent, from a brief kept outside the repository.
