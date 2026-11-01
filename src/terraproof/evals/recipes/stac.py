@@ -317,11 +317,11 @@ def stac_loader_double_decode(root: Path):
 
     steps = [
         check_step(
-            "run_checks(['sr_red.tif'], expect='reflectance', reference_input='red_dn.tif', encoding='s2-l2a')",
+            "run_checks(['sr_red.tif'], expect='reflectance', reference_input='red_dn.tif', encoding='s2-l2a', decode_offset=-0.1)",
             [sr],
             expect="reflectance",
             reference_input=inspect_dataset(dn),
-            encoding="s2-l2a",
+            encoding="s2-l2a", decode_offset=-0.1,
         )
     ]
     delivered = read_raster(sr)
@@ -364,11 +364,11 @@ def stac_loader_double_decode(root: Path):
     double_path = write_raster(root / "sr_red_double.tif", double, crs=UTM, nodata=FLOAT_NODATA, dtype="float32")
     wrong_steps = [
         check_step(
-            "run_checks(['sr_red_double.tif'], expect='reflectance', reference_input='red_dn.tif', encoding='s2-l2a')",
+            "run_checks(['sr_red_double.tif'], expect='reflectance', reference_input='red_dn.tif', encoding='s2-l2a', decode_offset=-0.1)",
             [double_path],
             expect="reflectance",
             reference_input=inspect_dataset(dn),
-            encoding="s2-l2a",
+            encoding="s2-l2a", decode_offset=-0.1,
         )
     ]
     wrong_oracle = Oracle("double-decoded reflectance must not be published")
@@ -395,11 +395,11 @@ def stac_loader_double_decode(root: Path):
     zero_path = write_raster(root / "sr_red_zero_valid.tif", zero_valid, crs=UTM, nodata=FLOAT_NODATA, dtype="float32")
     zero_steps = [
         check_step(
-            "run_checks(['sr_red_zero_valid.tif'], expect='reflectance', reference_input='red_dn.tif', encoding='s2-l2a')",
+            "run_checks(['sr_red_zero_valid.tif'], expect='reflectance', reference_input='red_dn.tif', encoding='s2-l2a', decode_offset=-0.1)",
             [zero_path],
             expect="reflectance",
             reference_input=inspect_dataset(dn),
-            encoding="s2-l2a",
+            encoding="s2-l2a", decode_offset=-0.1,
         )
     ]
     zero_oracle = Oracle("DN 0 is nodata, so it must not decode to -0.1")

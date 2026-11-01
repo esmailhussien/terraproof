@@ -64,9 +64,10 @@ def test_optical_blindspot_cli_mcp_parity(make_raster, capsys, defect):
         decoded[0, 1] = -9999.0
     dn = make_raster("parity_dn.tif", raw, nodata=0)
     out = make_raster("parity_out.tif", decoded, nodata=-9999.0)
-    assert main(["check", out, "--reference-input", dn, "--encoding", "s2-l2a"]) == 3
+    assert main(["check", out, "--reference-input", dn, "--encoding", "s2-l2a", "--decode-offset", "-0.1"]) == 3
     cli = json.loads(capsys.readouterr().out)
-    payload = call("run_checks", {"paths": [out], "reference_input": dn, "encoding": "s2-l2a"}).structured_content
+    payload = call("run_checks", {"paths": [out], "reference_input": dn, "encoding": "s2-l2a",
+                                  "decode_offset": -0.1}).structured_content
     cli_check = next(c for c in cli["checks"] if c["id"] == "rs.scale_applied_once")
     mcp_check = next(c for c in payload["report"]["checks"] if c["id"] == "rs.scale_applied_once")
     assert cli_check == mcp_check
@@ -269,6 +270,7 @@ def test_run_checks_with_reference_input_and_encoding(make_raster):
         "paths": [str(out)],
         "reference_input": str(dn),
         "encoding": "s2-l2a",
+        "decode_offset": -0.1,
     }).structured_content
 
     ids = {check["id"]: check["status"] for check in payload["report"]["checks"]}

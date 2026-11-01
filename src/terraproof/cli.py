@@ -56,7 +56,8 @@ def build_parser() -> argparse.ArgumentParser:
     # Phase 4 processing-level check wiring.
     bindings.add_argument("--reference-input", metavar="PATH", help="raw DN raster to compare against an output")
     bindings.add_argument(
-        "--encoding", choices=["s2-l2a", "landsat-c2-l2"], help="known product encoding for scale/offset checks"
+        "--encoding", choices=["s2-l2a", "landsat-c2-l2"],
+        help="known product encoding for scale/offset checks; s2-l2a also needs --decode-offset (0 or -0.1)"
     )
     bindings.add_argument("--decode-scale", type=float, metavar="S",
                               help="declared scale of --reference-input DN (for example from a STAC item)")

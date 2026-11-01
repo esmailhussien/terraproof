@@ -156,6 +156,8 @@ def run_checks(
     counts or explicit raster identity; `resampling` is the method declared for the rasters and `categorical` says
     they hold class codes; `expect` is the value range the bands should hold (reflectance or
     index). Phase 4 options include `reference_input`/`encoding` for scale/offset checks
+    (`encoding="s2-l2a"` also needs `decode_offset`, 0 or -0.1: the offset depends on the
+    processing baseline and the distributor)
     (`decode_scale`/`decode_offset` declare a calibration the file lacks, and
     `unit_conversion="kelvin-to-celsius"` a unit change after decoding),
     `qa_path`/`qa_kind` for cloud-mask checks (`qa_kind="keep-codes"` with `qa_keep_codes`

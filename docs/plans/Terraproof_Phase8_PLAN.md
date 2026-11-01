@@ -270,6 +270,18 @@ These findings cannot be fixed and re-measured on these cases. Any fix needs fre
 2. **A built-in preset is a binding no one can see.** `encoding="s2-l2a"` silently states an offset that is wrong for a major public distribution. This is the same fact P3 found in metadata, now coming from Terraproof itself.
 3. **One required fix:** the `s2-l2a` preset must not certify a decode whose offset would make the source's own DNs implausible. It must also never override a STAC statement that the offset is already applied.
 
+#### After P4 (2026-11-01): the `s2-l2a` preset fixed, not re-measured
+
+- **Rule.** The fix uses a declaration rule, not a dark-pixel threshold. A threshold would be fragile: in the P4 windows only 3% of SWIR DNs and 1% of NIR DNs fall below 1000.
+  - `--encoding s2-l2a` now uses a declared `--decode-offset`.
+  - Without one, it tests both 0 and −0.1. An output matching either is `not-run`; it names the matching offset and lists `decode_offset` as missing. Only an output matching neither fails, so raw-DN and double decodes are still caught.
+  - This holds in both sampled and full-scan modes.
+- **Trade-off.** A decode that forgot the offset on pre-harmonised ESA data now gives `not-run` instead of `fail` unless `--decode-offset -0.1` is declared. It is never certified. The cost is one declaration: the offset was always a fact about the data's baseline and distributor, not about the product name.
+- **Tests.**
+  - Existing tests that relied on the preset's −0.1 now declare it.
+  - New tests cover both offsets and the double decode, in both scan modes.
+- **Not re-measured.** The P4 tasks are spent for measurement; any new agent run needs fresh tasks and a fresh approval.
+
 ## 4. Order and delivery
 
 1. P0 is sealed first, by an independent agent, from a brief kept outside the repository.

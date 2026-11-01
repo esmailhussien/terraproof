@@ -193,6 +193,7 @@ For source Items, add `--time-range START END` to run `rs.temporal_scope`.
 For individual decoded observations, `--qa QA.tif --qa-kind s2-scl` runs
 `rs.cloud_mask_applied`; use `landsat-qa-pixel` for Landsat. Compare a decoded
 observation to its raw source with `--reference-input RAW.tif --encoding s2-l2a`
+(with `--decode-offset`, since the S2 offset depends on baseline and distributor)
 or `landsat-c2-l2` for `rs.scale_applied_once`. These sampled pixel comparisons
 do not validate a composite against a single acquisition's QA or raw DN.
 `--manifest run.json --require-provenance` runs `provenance.reproducible`.

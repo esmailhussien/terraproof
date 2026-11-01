@@ -26,6 +26,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reflectance as wrong in the Phase 8 P3 measurement.
 - The MCP server now has seven tools.
 
+### The `s2-l2a` preset no longer certifies an offset it cannot know (Phase 8 P4)
+
+- **Changed:** `--encoding s2-l2a` needs `--decode-offset` (0 or -0.1). The Sentinel-2 L2A offset
+  depends on the processing baseline (-0.1 from 04.00) and on the distributor; Earth Search
+  `sentinel-2-l2a` COGs already include it. Without a declared offset, an output matching either
+  offset is `not-run` (naming the match), and only an output matching neither fails. In the
+  Phase 8 P4 agent run, the preset had graded two doubly offset decodes `decision-grade`.
+
 ### Three opt-in checks and a winding change (Phase 8 P2)
 
 - `raster.categorical_codes` (`--categorical-source`): every output class code must

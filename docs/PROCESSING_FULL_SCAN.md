@@ -21,9 +21,13 @@ It does not make every other check exhaustive or certify an entire workflow.
 Source/output dimensions, affine and declared CRS must agree, as must their band
 counts. Bands correspond by index; selecting or reordering bands cannot be
 inferred. Expected stored output is `source_stored * scale + offset`.
-Use `s2-l2a` (0.0001, -0.1), `landsat-c2-l2` (0.0000275, -0.2), explicit
+Use `s2-l2a` (scale 0.0001), `landsat-c2-l2` (0.0000275, -0.2), explicit
 scale/offset parameters, or each source band's metadata. Selecting an encoding
-overrides source metadata. An identity source metadata transform is a literal
+overrides source metadata. The Sentinel-2 L2A offset depends on the processing
+baseline (-0.1 from 04.00) and on the distributor: Earth Search `sentinel-2-l2a`
+COGs already include it. So `s2-l2a` needs `--decode-offset` (0 or -0.1). Without
+it, an output matching either offset is not-run, and only one matching neither
+fails. An identity source metadata transform is a literal
 identity relation, not evidence that the sensor needs no calibration.
 
 Output scale/offset must be identity. Every jointly valid output sample must
