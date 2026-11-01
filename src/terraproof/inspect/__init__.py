@@ -26,6 +26,22 @@ def _is_stac_item(path: str) -> bool:
     return isinstance(data, dict) and data.get("type") == "Feature" and "stac_version" in data
 
 
+GEOJSON_TYPES = frozenset({"FeatureCollection", "Feature", "Point", "MultiPoint", "LineString", "MultiLineString",
+                           "Polygon", "MultiPolygon", "GeometryCollection"})
+
+
+def _summary_report(path: str) -> dict | None:
+    """A `.json` object that is neither STAC nor GeoJSON: a summary report, described by its top-level keys."""
+    try:
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict) or data.get("type") in GEOJSON_TYPES:
+        return None
+    return {"kind": "report", "path": path, "keys": sorted(str(key) for key in data)[:200]}
+
+
 def inspect_dataset(path: str | os.PathLike) -> dict:
     """Inspect a file, choosing the inspector from its extension and, for JSON, its content."""
     path = os.fspath(path)
@@ -34,6 +50,10 @@ def inspect_dataset(path: str | os.PathLike) -> dict:
     suffix = os.path.splitext(path)[1].lower()
     if suffix in JSON_SUFFIXES and _is_stac_item(path):
         return inspect_stac_item(path)
+    if suffix == ".json":
+        report = _summary_report(path)
+        if report is not None:
+            return report
     if suffix in RASTER_SUFFIXES:
         return inspect_raster(path)
     if suffix in VECTOR_SUFFIXES:

@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Real deliverable forms and the next step (Phase 9 Q1-Q4)
+
+- `--output-form validity-mask` (`--output-valid-value`, default 1): 1/0 mask outputs for
+  `rs.cloud_mask_applied` and `raster.nodata_support`.
+- `--slope-unit degrees|percent` for `terrain.slope_consistent` and `terrain.slope_formula`.
+- New opt-in check `report.summary_value` and profile `summary-value`: one declared statistic in a
+  JSON report, recomputed from a declared raster or vector source. Plain JSON objects are now
+  inspected as reports instead of being rejected.
+- Reports without a contract carry `next_step` when the caller's arguments ran every check of a
+  goal profile, naming the `propose` / `propose_contract` call that would require them. Advisory;
+  the grade is unchanged. The MCP instructions state the two-step pattern.
+
 ## [0.10.0] — 2026-11-01
 
 Released 2026-11-01: merge `a2205a2` (#42), tag `v0.10.0`, PyPI through `publish-python.yml`,

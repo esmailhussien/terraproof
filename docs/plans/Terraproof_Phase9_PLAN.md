@@ -98,6 +98,22 @@ Phase 8 measured Terraproof on real data and with a real agent. When the user de
 - **Instructions.** The MCP instructions and `verify-with-terraproof` sections state the two-step pattern: propose, then check with the contract.
 - **Proposal limits.** P3 showed metadata fills few coverage bindings. Q4 therefore does not promise coverage from metadata; it makes the declaration step visible and cheap.
 
+#### Q1–Q4 record (2026-11-01): implemented, not yet measured
+
+- **Q1.** `output_form = validity-mask`, with `output_valid_value` (default 1).
+  - `rs.cloud_mask_applied` and `raster.nodata_support` count a cell as valid only where it holds that value. A declared mask always takes the exhaustive QA path.
+  - An unknown form is refused. A 1/0 raster without the binding is still read as data.
+- **Q2.** `slope_unit = degrees | percent` for `terrain.slope_consistent` and `terrain.slope_formula`. Percent is converted with arctan(p/100) before comparing, and an undeclared unit stays degrees.
+- **Q3.** New check `report.summary_value` and profile `summary-value`.
+  - Statistics: `mean`, `count`, `sum`, `min`, `max` of valid raster cells (file scale and offset applied, optional `summary_mask`), or `count`, `area`, `length` of vector features (geodesic, `summary_unit`, optional `summary_feature`).
+  - Tolerances: rtol 1e-4 for raster statistics, 1% for geodesic sums; counts must be exact.
+  - A plain `.json` object is now inspected as `kind: report`, listing only its top-level keys. STAC and GeoJSON are unchanged.
+- **Q4.**
+  - Without a contract, `build_report` adds `next_step` when every check of a goal profile ran from the caller's arguments. It holds the profiles, the `propose_contract` arguments and the CLI command, plus one Markdown line in English and Arabic.
+  - The MCP instructions now state the two-step pattern. The nine skill `Verify with Terraproof` sections were left unchanged: AGENTS.md rule 6 keeps a universal rule out of individual skills, and the MCP instructions reach every agent that has the tools.
+- **Tests.** [`tests/python/test_phase9.py`](../../tests/python/test_phase9.py) has 11 tests covering pass and fail for each binding, refused or missing declarations, the inspect change, the next step in both languages, and CLI/MCP parity.
+- **Open until Q5.** Whether the new forms close the coverage gap on real cases is for Q5.1 to measure, and whether agents follow `next_step` is for Q5.2.
+
 ### Q5. Measure once (offline, then agent)
 
 1. **Offline on Q0's sealed set.** Three configurations, as in Phase 8 P3: declared, proposed, and undeclared.

@@ -145,6 +145,26 @@ Other declarations that close a gap rather than guess one:
   window without overlapping. With `--stack-reduction weighted-sum`, they must also
   cover it without gaps, and each `--stack-weight` must equal its layer's hours.
 
+Phase 9 declarations for real deliverables:
+
+- `--output-form validity-mask` (with `--output-valid-value`, default 1) declares
+  outputs as 1/0 masks. `rs.cloud_mask_applied` (always exhaustive for a declared
+  mask) and `raster.nodata_support` then read every other value as invalid. A
+  1/0 raster without the binding is still read as data.
+- `--slope-unit percent` states a slope output in percent for `--dem` and
+  `--slope-method`; it is converted to degrees before comparing. The default stays
+  degrees.
+- `--summary-key KEY --summary-statistic STAT --summary-source PATH`
+  (`report.summary_value`, profile `summary-value`) checks one number in a JSON
+  report. It recomputes `mean`, `count`, `sum`, `min` or `max` over a raster's
+  valid cells (with an optional `--summary-mask`), or `count`, `area` or `length` of
+  vector features (with `--summary-unit` and an optional `--summary-feature
+  FIELD=VALUE`), geodesically. A plain JSON object is now inspected as a report
+  (its top-level keys only).
+- Without a contract, a report whose arguments ran every check of a goal profile
+  carries `next_step`: the profiles, and the `propose` / `propose_contract` call
+  that would make them required. It is advisory and never changes the grade.
+
 `geometry.winding` warns rather than fails (Phase 8). RFC 7946 binds GeoJSON
 writers to the right-hand rule but tells parsers not to reject other rings, and
 ring order changes no coordinate, area or topology. The warning still keeps a

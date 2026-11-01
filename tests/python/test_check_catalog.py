@@ -104,4 +104,4 @@ def test_enabling_parameters_are_real_run_checks_arguments():
     assert {"rs.cloud_mask_applied", "rs.scale_applied_once", "crs.metric_operation"} <= set(enabled)
     for check_id, entry in enabled.items():
         assert entry["enabled_by"] and set(entry["enabled_by"]) <= arguments, check_id
-        assert entry["applies_to"] and set(entry["applies_to"]) <= {"raster", "vector", "stac"}, check_id
+        assert entry["applies_to"] and set(entry["applies_to"]) <= {"raster", "vector", "stac", "report"}, check_id

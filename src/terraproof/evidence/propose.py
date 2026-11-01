@@ -140,9 +140,9 @@ def _absolute(given: dict) -> dict:
     return given
 
 
-def check_command(arguments: dict, contract: str = "CONTRACT.json") -> list[str]:
-    """The `check` command line for run_checks-style arguments and a saved contract."""
-    argv = ["python", "-m", "terraproof", "check", *arguments["paths"], "--contract", contract]
+def command_flags(arguments: dict) -> list[str]:
+    """Command-line flags for run_checks-style arguments (`paths` and `profiles` excluded)."""
+    argv = []
     for key, value in sorted(arguments.items()):
         if key in ("paths", "profiles") or value is None or value is False:
             continue
@@ -159,6 +159,12 @@ def check_command(arguments: dict, contract: str = "CONTRACT.json") -> list[str]
         else:
             argv += [flag(key), str(value)]
     return argv
+
+
+def check_command(arguments: dict, contract: str = "CONTRACT.json") -> list[str]:
+    """The `check` command line for run_checks-style arguments and a saved contract."""
+    return ["python", "-m", "terraproof", "check", *arguments["paths"], "--contract", contract,
+            *command_flags(arguments)]
 
 
 def propose_contract(paths: list[str], names: list[str], arguments: dict, stac: list[str] | None = None) -> dict:

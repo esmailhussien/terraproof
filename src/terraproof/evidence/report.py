@@ -40,6 +40,8 @@ LABELS = {
                        "the output is fit for a decision."),
         "not_checked": "Applicable checks that did not run, and what would enable them:",
         "all_ran": "Every applicable catalogue check ran.",
+        "next_step": ("Next step: your arguments ran every check of the goal {0}. Declare it with `propose` "
+                      "(MCP: `propose_contract`), then check with the contract to make them required."),
         "cols_checks": ("Check", "Status", "Input", "Message"),
         "cols_inputs": ("Role", "Path", "Kind", "SHA-256", "Bytes"),
         "roles": {
@@ -54,6 +56,8 @@ LABELS = {
             "qa-source": "QA source band",
             "buffer-source": "buffer source",
             "categorical-source": "class source",
+            "summary-source": "summary source",
+            "summary-mask": "summary mask",
             "sar-filter-source": "unfiltered SAR source",
             "nir": "NIR source",
             "red": "red source",
@@ -85,6 +89,8 @@ LABELS = {
                        "لاتخاذ قرار."),
         "not_checked": "فحوصات تنطبق ولم تُنفَّذ، وما يلزم لتشغيلها:",
         "all_ran": "نُفِّذ كل فحص منطبق من الكتالوج.",
+        "next_step": ("الخطوة التالية: وسائطك شغّلت كل فحوصات الهدف {0}. أعلِنه بـ `propose` "
+                      "(في MCP: `propose_contract`)، ثم افحص بالعقد لتصبح هذه الفحوصات مطلوبة."),
         "cols_checks": ("الفحص", "الحالة", "المدخل", "الرسالة"),
         "cols_inputs": ("الدور", "المسار", "النوع", "SHA-256", "الحجم (بايت)"),
         "roles": {
@@ -99,6 +105,8 @@ LABELS = {
             "qa-source": "النطاق المصدر لضبط الجودة",
             "buffer-source": "مصدر النطاق العازل",
             "categorical-source": "مصدر الفئات",
+            "summary-source": "مصدر الملخص",
+            "summary-mask": "قناع الملخص",
             "sar-filter-source": "مصدر الرادار قبل الترشيح",
             "nir": "مصدر الأشعة تحت الحمراء القريبة",
             "red": "مصدر الحزمة الحمراء",
@@ -171,7 +179,34 @@ def build_report(
         report["diagnostics"] = diagnostics(report)
         report["grade"] = report["verification"]["grade"]
     report["coverage"] = coverage_summary(report)
+    step = next_step(report)
+    if step:
+        report["next_step"] = step
     return report
+
+
+def next_step(report: dict) -> dict | None:
+    """Without a contract: the goal profiles whose every check the caller's own arguments ran, and the
+    `propose_contract` call that would make them required. Advisory; it never changes the grade and
+    reads only the caller's arguments, never task text."""
+    if "verification" in report or "plan" in report["parameters"]:
+        return None
+    from terraproof.evidence.contract import profiles, recheck_arguments
+    from terraproof.evidence.propose import command_flags
+    ran = {check["id"] for check in report["checks"]}
+    enabled = sorted(name for name, entry in profiles().items() if set(entry["checks"]) <= ran)
+    if not enabled:
+        return None
+    outputs = [record["path"] for record in report["inputs"] if record["role"] == "input"]
+    given = {key: value for key, value in report["parameters"].items() if value not in (None, False, [], {}, ())}
+    arguments = {key: value for key, value in recheck_arguments({"paths": outputs, "parameters": given}).items()
+                 if key != "paths"}
+    return {"profiles": enabled,
+            "why": "These checks ran from your arguments but are not required, so the grade cannot be "
+                   "decision-grade. Declare the goal to make them required.",
+            "propose_contract": {"paths": outputs, "profiles": enabled, "arguments": arguments},
+            "command": ["python", "-m", "terraproof", "propose", *outputs,
+                        *[part for name in enabled for part in ("--profile", name)], *command_flags(arguments)]}
 
 
 def coverage_summary(report: dict) -> dict:
@@ -246,6 +281,8 @@ def render_markdown(report: dict, lang: str = "en") -> str:
                 for item in coverage["not_checked"]] + [""]
         else:
             section += [labels["all_ran"], ""]
+        if report.get("next_step"):
+            section += [labels["next_step"].format(", ".join(_code(n) for n in report["next_step"]["profiles"])), ""]
         lines[lines.index(f"## {labels['checks']}"):lines.index(f"## {labels['checks']}")] = section
 
     if report["checks"]:

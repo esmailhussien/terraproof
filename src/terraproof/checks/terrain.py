@@ -22,6 +22,7 @@ from terraproof.checks.base import FAIL, NOT_RUN, PASS, WARN, result
 from terraproof.checks.rs_processing import _grid_problems
 
 CHECK_ID = "terrain.slope_consistent"
+SLOPE_UNITS = (None, "degrees", "percent")
 
 # Metres per declared vertical unit. An empty unit is assumed to match the horizontal unit.
 VERTICAL_UNITS = {
@@ -75,12 +76,17 @@ def _geographic_spacing(crs, transform, rows: int):
             abs(transform[4]) * np.radians(1.0) * meridional)
 
 
-def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = None) -> list:
-    """Compare a slope-in-degrees raster with the slope its DEM's units and spacing imply.
+def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = None,
+                           slope_unit: str | None = None) -> list:
+    """Compare a slope raster with the slope its DEM's units and spacing imply.
 
     `declared_unit` states the DEM's vertical unit when the file carries no label; a label that
-    contradicts it is a conflict, not something to choose between."""
-    evidence = {"output": output.get("path"), "dem": dem.get("path"), "declared_vertical_unit": declared_unit}
+    contradicts it is a conflict, not something to choose between. `slope_unit` declares the output
+    in degrees (the default) or percent; a percent slope is converted to degrees before comparing."""
+    evidence = {"output": output.get("path"), "dem": dem.get("path"), "declared_vertical_unit": declared_unit,
+                "slope_unit": slope_unit}
+    if slope_unit not in SLOPE_UNITS:
+        return [result(CHECK_ID, NOT_RUN, "slope_unit must be degrees or percent.", **evidence)]
     if dem.get("kind") != "raster" or output.get("kind") != "raster":
         return [result(CHECK_ID, NOT_RUN, "Slope consistency needs a raster output and a raster DEM.", **evidence)]
     problems = _grid_problems(dem, output)
@@ -96,6 +102,8 @@ def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = 
             z = src.read(1, masked=True)
         with rasterio.open(output["path"]) as dst:
             slope = dst.read(1, masked=True)
+        if slope_unit == "percent":
+            slope = np.degrees(np.arctan(slope.astype("float64") / 100.0))  # ufuncs keep the mask
     except rasterio.errors.RasterioIOError as error:
         return [result(CHECK_ID, NOT_RUN, f"Cannot read pixel values: {error}", **evidence)]
     if crs is None or not (crs.is_projected or crs.is_geographic):
