@@ -175,6 +175,29 @@ No S0 case content was read. The resampled-slope rule was calibrated on syntheti
   - S3: all numbers checked and the undeclared one listed; one wrong number among right ones; a share over all cells; contract coverage and missing fields; CLI/MCP parity and the proposed command.
 - **Open until S4.** Whether these meet the per-direction acceptance on real cases.
 
+#### Before S4.1 (2026-11-02): two design gaps fixed, disclosed
+
+The S4.1 mapping was written from the bundle README and a pooled view of the facts. The pooled view
+showed keys, types and the distinct values of each vocabulary field across all cases. It showed no
+ids, `kind`, scenarios, goals, outputs or oracle fields. It still showed two things:
+
+- **Trap wording in the facts.** Some report-number `mask` texts describe a mistake ("genuine 0 m
+  heights wrongly evicted", "denominator all pixels"). The mapping therefore never reads `mask` text to
+  build a declaration. A number is declared only when its mask text is empty or one of a fixed list of
+  fill-exclusion phrases, since the check always honours the source's own nodata.
+- **Inexpressible numbers.** Several report numbers cannot be expressed by the check: NDVI, a mean
+  restricted to a QA class, a share of a class. They stay undeclared.
+
+Writing the mapping exposed two gaps in S1 and S3, fixed before any result:
+
+1. **S1 scope.** As built, S1 would not have caught the Q5.1 miss it was meant to fix. That mask was
+   declared with `keep-codes`, and S1 excluded `keep-codes`. The QA file's nodata is "no observation"
+   under any rule, so a declared mask now fails there for every QA kind. SCL 0 and the QA_PIXEL fill
+   bit still apply only to their own kinds.
+2. **S3 grade.** Undeclared report numbers used to be listed only. A wrong number left undeclared
+   could then let the report reach `decision-grade`, which is false assurance. Now a warning names the
+   undeclared numbers, so such a report is at best `review-required`.
+
 ### S4. Measure once (offline, then agent)
 
 1. **Offline on S0's sealed set.** Three configurations, as in Q5.1: declared, proposed and undeclared. The mapping is committed before any result.

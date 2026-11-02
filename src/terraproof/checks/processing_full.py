@@ -138,14 +138,19 @@ def cloud_mask(output, qa_path, qa_kind, keep_codes=None, qa_source=None, valid_
                 return answer(NOT_RUN, "Cloud-mask verification needs real-valued output bands.")
             source = rasterio.open(qa_source) if qa_source and qa_kind == "keep-codes" else None
             # A declared mask may not call a cell valid where the QA records no observation: the QA file's
-            # nodata, SCL class 0 (no data) or QA_PIXEL bit 0 (fill), by those products' own definitions.
-            observed_only = valid_value is not None and qa_kind in ("s2-scl", "landsat-qa-pixel")
+            # nodata under any rule, and SCL class 0 (no data) or QA_PIXEL bit 0 (fill) by those products'
+            # own definitions.
+            observed_only = valid_value is not None
             flagged_count = unmasked_count = band_count = unavailable = over_masked = unobserved_valid = 0
             for window in windows(src):
                 codes = src.read(1, window=window)
                 known = src.read_masks(1, window=window) > 0
                 in_range = (codes >= 0) & (codes <= (11 if qa_kind == "s2-scl" else 65535))
-                unobserved = ~known | (codes == 0 if qa_kind == "s2-scl" else (codes.astype("uint64") & 1) != 0)
+                unobserved = ~known
+                if qa_kind == "s2-scl":
+                    unobserved |= codes == 0
+                elif qa_kind == "landsat-qa-pixel":
+                    unobserved |= (codes.astype("uint64") & 1) != 0
                 known &= in_range
                 if qa_kind == "keep-codes":
                     flagged = known & ~np.isin(codes, keep_codes)

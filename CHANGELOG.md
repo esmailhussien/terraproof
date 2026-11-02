@@ -11,10 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Masks, reprojected slopes and multi-value reports (Phase 10 S1-S3)
 
-- A declared validity mask with `s2-scl` or `landsat-qa-pixel` QA now fails `rs.cloud_mask_applied`
-  where it marks a cell valid that the QA records as no observation (the QA file's nodata, SCL class
-  0, the QA_PIXEL fill bit), instead of leaving it unverifiable. Data outputs and `keep-codes` rules
-  are unchanged.
+- A declared validity mask now fails `rs.cloud_mask_applied` where it marks a cell valid that the QA
+  records as no observation (the QA file's nodata under any QA kind, SCL class 0, the QA_PIXEL fill
+  bit), instead of leaving it unverifiable. Data outputs are unchanged.
 - `terrain.slope_consistent` compares a slope on another grid than its DEM after resampling instead of
   returning `not-run` (`comparison: resampled`). It passes only when a common way of making it (slope
   then warp or warp then slope; nearest, bilinear, cubic or average; central differences or Horn)
@@ -26,7 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   JSON report, one `report.summary_value` result each. Keys may index lists (`bands.0.mean`). New
   statistic `fraction` (share of valid cells, or of the mask's 1s) in `fraction` or `percent`.
   Numbers match within rounding to the decimals they are written with. Undeclared numbers are listed
-  in `coverage.unchecked_numbers`, never judged.
+  in `coverage.unchecked_numbers`, never judged, and a warning names them, so the report needs
+  review instead of being decision-grade.
 
 ## [0.11.0] — 2026-11-02
 

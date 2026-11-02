@@ -14,8 +14,8 @@ check recomputes the statistic and compares, one result per summary:
 
 A number is accepted when it matches within the statistic's tolerance, or within rounding to the decimals
 it is written with. Numbers in the report that no summary declares are listed (`undeclared_numbers`), never
-judged. Nothing is read from free text, and nothing is inferred: an undeclared key, statistic, source or
-unit is not-run, naming it.
+judged; while any remain, the report also carries a warning, so it needs review. Nothing is read from free
+text, and nothing is inferred: an undeclared key, statistic, source or unit is not-run, naming it.
 """
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ import numpy as np
 import rasterio
 from rasterio.windows import Window
 
-from terraproof.checks.base import FAIL, NOT_RUN, PASS, result
+from terraproof.checks.base import FAIL, NOT_RUN, PASS, WARN, result
 from terraproof.checks.metric_values import UNITS, _geod, _read, _to_geographic
 from terraproof.checks.rs_processing import _grid_problems
 
@@ -200,4 +200,10 @@ def check_summaries(output: dict, entries: list[dict]) -> list:
             for r in results:
                 r.evidence.update(undeclared_numbers=undeclared[:MAX_LISTED],
                                   undeclared_number_count=len(undeclared))
+        if undeclared:
+            # The report is its numbers: one no summary declares is unchecked, so the report needs review.
+            results.append(result(CHECK_ID, WARN, f"{len(undeclared)} number(s) in the report are not declared as "
+                                  "summaries and were not checked: " + ", ".join(undeclared[:MAX_LISTED]) + ".",
+                                  output=output.get("path"), undeclared_numbers=undeclared[:MAX_LISTED],
+                                  undeclared_number_count=len(undeclared)))
     return results

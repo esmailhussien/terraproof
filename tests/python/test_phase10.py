@@ -64,7 +64,7 @@ def test_a_mask_that_keeps_landsat_fill_fails(make_raster):
     assert wrong.status == "fail" and wrong.evidence["valid_without_qa_observation"] == 2 * SHAPE[1]
 
 
-def test_data_outputs_and_keep_code_rules_keep_missing_qa_unverifiable(make_raster, swath_edge_scl):
+def test_data_outputs_keep_missing_qa_unverifiable_and_keep_code_masks_fail_on_it(make_raster, swath_edge_scl):
     codes = swath_edge_scl
     qa = make_raster("scl.tif", codes, nodata=0)
     reflectance = np.where(np.isin(codes, [3, 8, 9]), np.nan, 0.2).astype("float32")  # values over the edge too
@@ -74,7 +74,11 @@ def test_data_outputs_and_keep_code_rules_keep_missing_qa_unverifiable(make_rast
     kept = _mask(make_raster, "edge.tif", np.isin(codes, [4, 5, 6]) | (codes == 0))
     rule = _only(_run(kept, output_form="validity-mask", qa_path=qa, qa_kind="keep-codes", qa_keep_codes=[4, 5, 6]),
                  "rs.cloud_mask_applied")
-    assert rule.status == "not-run"  # a declared keep-codes rule says nothing about cells with no QA
+    assert rule.status == "fail"  # under any rule, the QA file's nodata is no observation
+    unlabelled = make_raster("scl_no_nodata.tif", codes, nodata=None)
+    rule = _only(_run(kept, output_form="validity-mask", qa_path=unlabelled, qa_kind="keep-codes",
+                      qa_keep_codes=[4, 5, 6]), "rs.cloud_mask_applied")
+    assert rule.status == "fail"  # code 0 is simply not kept: the rule itself flags it
 
 
 # S2: slopes delivered on another grid
@@ -172,19 +176,19 @@ def _inspected(entries):
             for e in entries]
 
 
-def _document(valid, keep, mean=None):
+def _document(valid, keep, mean=None, extra=True):
     share = 100.0 * float(keep[1:].sum()) / valid.size
     return json.dumps({"stats": {"mean": round(float(valid.mean()) if mean is None else mean, 1),
                                  "max": float(valid.max())},
                        "bands": [{"name": "B1", "count": int(valid.size)}],
-                       "high_share_pct": round(share, 2), "runtime_s": 12.5})
+                       "high_share_pct": round(share, 2), **({"runtime_s": 12.5} if extra else {})})
 
 
 def test_every_declared_number_is_checked_and_undeclared_ones_are_listed(tmp_path, heights):
     source, mask, valid, keep = heights
     report = _report(tmp_path, "report.json", _document(valid, keep))
     results = [r for r in _run(report, summaries=_inspected(_summaries(source, mask))) if r.id == "report.summary_value"]
-    assert [r.status for r in results] == ["pass"] * 4
+    assert [r.status for r in results] == ["pass"] * 4 + ["warn"]  # the undeclared number needs review
     assert results[0].evidence["written_rounding"] == pytest.approx(0.05)  # mean written with one decimal
     assert results[0].evidence["undeclared_numbers"] == ["runtime_s"]
     built = build_report(inputs=[input_record(report, "input", "report")], results=results,
@@ -196,7 +200,7 @@ def test_every_declared_number_is_checked_and_undeclared_ones_are_listed(tmp_pat
 def test_one_wrong_number_among_right_ones_fails_only_its_summary(tmp_path, heights):
     source, mask, valid, keep = heights
     with_fill = float((valid.sum() - 9999.0 * SHAPE[1]) / (SHAPE[0] * SHAPE[1]))  # fill averaged in
-    report = _report(tmp_path, "report.json", _document(valid, keep, mean=with_fill))
+    report = _report(tmp_path, "report.json", _document(valid, keep, mean=with_fill, extra=False))
     results = [r for r in _run(report, summaries=_inspected(_summaries(source, mask))) if r.id == "report.summary_value"]
     assert [r.status for r in results] == ["fail", "pass", "pass", "pass"]
 
@@ -217,7 +221,7 @@ def test_a_share_over_all_cells_instead_of_valid_cells_fails(tmp_path, heights):
 
 def test_a_contract_requires_every_summary_and_names_missing_fields(tmp_path, heights):
     source, mask, valid, keep = heights
-    report = _report(tmp_path, "report.json", _document(valid, keep))
+    report = _report(tmp_path, "report.json", _document(valid, keep, extra=False))
     entries = _summaries(source, mask)
     results = _run(report, summaries=_inspected(entries))
     contract = {"schema": CONTRACT, "requirements": [{"paths": [report], "profiles": ["summary-value"],
@@ -242,12 +246,12 @@ def test_summaries_cli_mcp_parity_and_the_proposed_command(tmp_path, heights, ca
     entries = _summaries(source, mask)
     flags = command_flags({"summaries": entries})
     assert flags.count("--summary") == 4 and f"key=stats.mean,statistic=mean,source={source}" in flags
-    assert main(["check", report, *flags]) == 0
+    assert main(["check", report, *flags]) == 2  # review-required: runtime_s is not declared
     cli = json.loads(capsys.readouterr().out)
     payload = call("run_checks", {"paths": [report], "summaries": entries}).structured_content
     a = [c for c in cli["checks"] if c["id"] == "report.summary_value"]
     b = [c for c in payload["report"]["checks"] if c["id"] == "report.summary_value"]
-    assert a == b and [c["status"] for c in a] == ["pass"] * 4
+    assert a == b and sorted(c["status"] for c in a) == ["pass"] * 4 + ["warn"]
     assert cli["coverage"]["unchecked_numbers"] == payload["report"]["coverage"]["unchecked_numbers"]
     with pytest.raises(SystemExit):
         main(["check", report, "--summary", "key=x,colour=red"])

@@ -168,10 +168,10 @@ Phase 9 declarations for real deliverables:
 
 Phase 10 declarations:
 
-- A declared validity mask with `--qa-kind s2-scl` or `landsat-qa-pixel` fails
-  `rs.cloud_mask_applied` where it marks a cell valid that the QA layer records as
-  no observation: the QA file's nodata, SCL class 0, or the QA_PIXEL fill bit.
-  Data outputs and `keep-codes` rules keep missing QA unverifiable.
+- A declared validity mask fails `rs.cloud_mask_applied` where it marks a cell
+  valid that the QA layer records as no observation: the QA file's nodata under
+  any `--qa-kind`, and also SCL class 0 (`s2-scl`) or the QA_PIXEL fill bit
+  (`landsat-qa-pixel`). Data outputs keep missing QA unverifiable.
 - `terrain.slope_consistent` now compares a slope on another grid than its DEM
   (another CRS, resolution or origin) after resampling, instead of `not-run`. The
   reference is the DEM's slope made each common way: slope then warp, or warp then
@@ -190,7 +190,9 @@ Phase 10 declarations:
   valid cells the mask marks 1, or of all cells that are valid without a mask,
   with `unit` `fraction` or `percent`. A number matches within the statistic's
   tolerance or within rounding to the decimals it is written with. Numbers no
-  summary declares are listed in `coverage.unchecked_numbers`, never judged.
+  summary declares are listed in `coverage.unchecked_numbers`, never judged, and
+  a warning names them, so such a report needs review rather than being
+  decision-grade.
 
 `geometry.winding` warns rather than fails (Phase 8). RFC 7946 binds GeoJSON
 writers to the right-hand rule but tells parsers not to reject other rings, and
