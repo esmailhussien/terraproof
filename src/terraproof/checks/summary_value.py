@@ -5,9 +5,11 @@ A JSON report delivers numbers under declared keys (dots for nesting, integers f
 check recomputes the statistic and compares, one result per summary:
 
 - raster source: ``mean``, ``count``, ``sum``, ``min`` or ``max`` of band 1's valid cells (not
-  nodata, finite), decoded with the file's own scale and offset; an optional validity mask
-  (`summary_mask`, 1 = include) on the same grid restricts the cells. ``fraction`` is the share of the
-  source's valid cells the mask marks 1, or without a mask the share of all cells that are valid, in
+  nodata, finite), decoded with the file's own scale and offset, or with a declared ``scale`` and
+  ``offset`` when the file states none (a different one in the file is a conflict, not-run). ``codes``
+  keeps only source cells holding those raw codes (a class or QA raster); an optional mask
+  (`summary_mask`) on the same grid keeps cells holding ``mask_codes`` (default 1). ``fraction`` is the
+  share of the kept source cells the mask keeps, or without a mask the share of all cells kept, in
   `summary_unit` ``fraction`` or ``percent``
 - vector source: ``count`` of features, or their summed geodesic ``area`` or ``length`` in
   `summary_unit`; `summary_feature` (``FIELD=VALUE``) selects features
@@ -77,22 +79,32 @@ def numeric_keys(document, prefix: str = "") -> list[str]:
     return [key for name, value in items for key in numeric_keys(value, f"{prefix}.{name}" if prefix else name)]
 
 
-def _raster(source: dict, statistic: str, mask: dict | None):
+def _raster(source: dict, statistic: str, mask: dict | None, codes=None, mask_codes=None, scale=None, offset=None):
     count, cells, total, low, high = 0, 0, 0.0, math.inf, -math.inf
     with rasterio.open(source["path"]) as src:
-        scale, offset = src.scales[0], src.offsets[0]
+        stated = (src.scales[0], src.offsets[0])
+        if scale is not None or offset is not None:
+            declared = (1.0 if scale is None else float(scale), 0.0 if offset is None else float(offset))
+            if stated != (1.0, 0.0) and not np.allclose(stated, declared):
+                raise ValueError(f"the declared scale and offset {declared} conflict with the file's {stated}")
+            stated = declared
+        scale, offset = stated
+        keep_values = [1] if mask_codes is None else list(mask_codes)
         keep_src = rasterio.open(mask["path"]) if mask else None
         try:
             for row in range(0, src.height, WINDOW_SIZE):
                 for col in range(0, src.width, WINDOW_SIZE):
                     window = Window(col, row, min(WINDOW_SIZE, src.width - col), min(WINDOW_SIZE, src.height - row))
                     read = src.read(1, window=window, masked=True)
-                    values = np.ma.getdata(read).astype("float64") * scale + offset
+                    raw = np.ma.getdata(read)
+                    values = raw.astype("float64") * scale + offset
                     valid = ~np.ma.getmaskarray(read) & np.isfinite(values)
-                    # fraction: the share of all cells that are valid, or of valid cells the mask keeps
+                    if codes is not None:
+                        valid &= np.isin(raw, list(codes))
+                    # fraction: the share of all cells kept, or of kept cells the mask keeps
                     cells += int(valid.sum()) if keep_src is not None else valid.size
                     if keep_src is not None:
-                        valid &= keep_src.read(1, window=window) == 1
+                        valid &= np.isin(keep_src.read(1, window=window), keep_values)
                     chosen = values[valid]
                     count += chosen.size
                     if chosen.size:
@@ -135,10 +147,13 @@ def _vector(source: dict, statistic: str, feature: str | None, unit: str | None)
 
 
 def check_summary_value(output: dict, key: str | None, statistic: str | None, source: dict | None,
-                        unit: str | None = None, feature: str | None = None, mask: dict | None = None) -> list:
+                        unit: str | None = None, feature: str | None = None, mask: dict | None = None,
+                        codes=None, mask_codes=None, scale=None, offset=None) -> list:
     evidence = {"output": output.get("path"), "summary_key": key, "summary_statistic": statistic,
                 "summary_source": (source or {}).get("path"), "summary_unit": unit, "summary_feature": feature,
                 "summary_mask": (mask or {}).get("path")}
+    evidence.update({name: value for name, value in (("codes", codes), ("mask_codes", mask_codes),
+                                                     ("scale", scale), ("offset", offset)) if value is not None})
     missing = [name for name, value in (("summary_key", key), ("summary_statistic", statistic),
                                         ("summary_source", source)) if value is None]
     if statistic in UNIT_STATISTICS and unit is None:
@@ -158,12 +173,14 @@ def check_summary_value(output: dict, key: str | None, statistic: str | None, so
                        **evidence)]
     if mask is not None and (kind != "raster" or mask.get("kind") != "raster" or _grid_problems(source, mask)):
         return [result(CHECK_ID, NOT_RUN, "summary_mask must be a raster on the source's grid.", **evidence)]
+    if kind != "raster" and any(v is not None for v in (codes, mask_codes, scale, offset)):
+        return [result(CHECK_ID, NOT_RUN, "codes, mask_codes, scale and offset apply to raster sources.", **evidence)]
     try:
         delivered = _lookup(_load(output["path"]), key)
         if delivered is None:
             return [result(CHECK_ID, NOT_RUN, f"The report holds no finite number under '{key}'.", **evidence)]
         delivered, rounding = delivered
-        expected, used = (_raster(source, statistic, mask) if kind == "raster"
+        expected, used = (_raster(source, statistic, mask, codes, mask_codes, scale, offset) if kind == "raster"
                           else _vector(source, statistic, feature, unit))
     except (OSError, ValueError, KeyError, rasterio.errors.RasterioError) as error:
         return [result(CHECK_ID, NOT_RUN, f"Cannot recompute the summary ({error}).", **evidence)]
@@ -189,7 +206,8 @@ def check_summaries(output: dict, entries: list[dict]) -> list:
     report's numbers that no summary declares."""
     results = [r for entry in entries for r in check_summary_value(
         output, entry.get("key"), entry.get("statistic"), entry.get("source"), entry.get("unit"),
-        entry.get("feature"), entry.get("mask"))]
+        entry.get("feature"), entry.get("mask"), entry.get("codes"), entry.get("mask_codes"), entry.get("scale"),
+        entry.get("offset"))]
     if output.get("kind") == "report":
         try:
             declared = {entry.get("key") for entry in entries}

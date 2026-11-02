@@ -22,7 +22,7 @@ PARAMETERS = FILE_PARAMETERS | set('operation resampling categorical expect enco
     'categorical_source sar_filter sar_filter_size sar_filter_source stack_times stack_window '
     'output_form output_valid_value slope_unit summary_key summary_statistic summary_source summary_unit '
     'summary_feature summary_mask summaries'.split())
-SUMMARY_FIELDS = ('key', 'statistic', 'source', 'unit', 'feature', 'mask')
+SUMMARY_FIELDS = ('key', 'statistic', 'source', 'unit', 'feature', 'mask', 'codes', 'mask_codes', 'scale', 'offset')
 LIST_FILE_PARAMETERS = ('stack', 'vertical_sources', 'support_sources')
 
 

@@ -10,6 +10,12 @@ A DEM in a geographic CRS is supported when its vertical unit is declared: each 
 spacing is converted from degrees to metres on the CRS ellipsoid at that row's latitude. Its named
 mistakes are degrees used as lengths and longitude spacing not scaled by latitude.
 
+A projected grid whose point scale factor strays more than 1% from 1 somewhere (Web Mercator away
+from the equator, a polar stereographic grid) is measured in ground metres, cell by cell: projected
+units taken as ground lengths is then a named mistake. Within 1% (UTM), nominal spacing is kept, as
+spacing models within 1% are accepted on geographic grids. Heights in metres converted to feet over
+metre spacing is a named mistake on every grid.
+
 A slope delivered on another grid (another CRS, resolution or origin) is compared after resampling
 (`comparison: resampled`). The reference is made each common way: slope then warp, or warp then slope;
 nearest, bilinear, cubic or average resampling; central differences or Horn; warped in the delivered
@@ -53,6 +59,9 @@ ATOL = 0.01
 # more: longitude not scaled by latitude is 13% at 28 degrees and 380% at 78; degrees as lengths ~1e5.
 GEOGRAPHIC_RTOL = 0.01
 MIN_MATCH_FRACTION = 0.95
+# A projected grid is measured in ground metres when its point scale factor strays more than this from 1.
+SCALE_FACTOR_TOLERANCE = 0.01
+FOOT = 0.3048
 # Cells flatter than this are skipped: every hypothesis predicts about zero there.
 MIN_SLOPE_DEGREES = 0.5
 # Slopes on another grid (Phase 10 S2), set from synthetic terrain before any held-out case was read (see
@@ -69,13 +78,20 @@ RESAMPLING = {"nearest": Resampling.nearest, "bilinear": Resampling.bilinear, "c
 STENCILS = ("central", "horn")
 
 
+def _interior(spacing, shape):
+    """One spacing, one per row (a geographic grid) or one per cell (ground metres), at interior cells."""
+    spacing = np.asarray(spacing, float)
+    if spacing.ndim == 2:
+        return spacing[1:-1, 1:-1]
+    return np.broadcast_to(np.reshape(spacing, (-1, 1)), (shape[0], 1))[1:-1]
+
+
 def _slope_degrees(z: np.ndarray, valid: np.ndarray, factor: float, dx, dy):
     """Central-difference slope at interior cells whose centre and four direct neighbours are valid.
 
-    dx and dy are one spacing, or one spacing per row (a geographic grid)."""
+    dx and dy are one spacing, one per row, or one per cell."""
     values = z * factor
-    dx = np.broadcast_to(np.reshape(np.asarray(dx, float), (-1, 1)), (z.shape[0], 1))[1:-1]
-    dy = np.broadcast_to(np.reshape(np.asarray(dy, float), (-1, 1)), (z.shape[0], 1))[1:-1]
+    dx, dy = _interior(dx, z.shape), _interior(dy, z.shape)
     gx = (values[1:-1, 2:] - values[1:-1, :-2]) / (2 * dx)
     gy = (values[2:, 1:-1] - values[:-2, 1:-1]) / (2 * dy)
     out = np.full(z.shape, np.nan)
@@ -104,24 +120,47 @@ def _geographic_spacing(crs, transform, rows: int):
             abs(transform[4]) * np.radians(1.0) * meridional)
 
 
-def _grid_model(crs, transform, rows: int, vertical_metres: float):
-    """(factor, dx, dy, geographic): DEM values times factor are in the grid's horizontal length unit."""
-    if crs.is_projected:
-        return vertical_metres / crs.linear_units_factor[1], abs(transform[0]), abs(transform[4]), False
-    dx, dy = _geographic_spacing(crs, transform, rows)
-    return vertical_metres, dx, dy, True
+def _scale_factors(crs, transform, shape):
+    """Parallel and meridional point scale factors at every cell centre of a projected grid."""
+    from pyproj import CRS, Proj, Transformer
+    projected = CRS.from_wkt(crs.to_wkt())
+    rows, cols = np.meshgrid(np.arange(shape[0]) + 0.5, np.arange(shape[1]) + 0.5, indexing="ij")
+    x = transform[2] + cols * transform[0] + rows * transform[1]
+    y = transform[5] + cols * transform[3] + rows * transform[4]
+    lon, lat = Transformer.from_crs(projected, projected.geodetic_crs, always_xy=True).transform(x, y)
+    factors = Proj(projected).get_factors(lon, lat)
+    return np.asarray(factors.parallel_scale, float), np.asarray(factors.meridional_scale, float)
 
 
-def _mistakes(factor: float, dx, dy, geographic: bool, transform) -> dict:
+def _grid_model(crs, transform, shape, vertical_metres: float):
+    """(factor, dx, dy, model): DEM values times factor are in the units of dx and dy. The model is
+    "geographic" (metres per row on the ellipsoid), "ground" (metres per cell, a projection whose scale
+    factor strays beyond SCALE_FACTOR_TOLERANCE) or "projected" (nominal CRS units)."""
+    if not crs.is_projected:
+        dx, dy = _geographic_spacing(crs, transform, shape[0])
+        return vertical_metres, dx, dy, "geographic"
+    unit = crs.linear_units_factor[1]
+    parallel, meridional = _scale_factors(crs, transform, shape)
+    if max(np.nanmax(np.abs(parallel - 1)), np.nanmax(np.abs(meridional - 1))) > SCALE_FACTOR_TOLERANCE:
+        return (vertical_metres, abs(transform[0]) * unit / parallel, abs(transform[4]) * unit / meridional,
+                "ground")
+    return vertical_metres / unit, abs(transform[0]), abs(transform[4]), "projected"
+
+
+def _mistakes(factor: float, dx, dy, model: str, transform, vertical_metres: float = 1.0) -> dict:
     """Named mistakes on one grid, as (factor, x spacing, y spacing)."""
     mistakes = {}
-    if geographic:
+    if model == "geographic":
         degrees_x, degrees_y = abs(transform[0]), abs(transform[4])
         mistakes["degrees used as lengths"] = (factor, degrees_x, degrees_y)
         mistakes["longitude spacing not scaled by latitude"] = (factor, dy * degrees_x / degrees_y, dy)
-    elif not np.isclose(factor, 1.0):
+    if model == "ground":
+        mistakes["projected units taken as ground lengths"] = (factor, abs(transform[0]), abs(transform[4]))
+    if not np.isclose(factor, 1.0):
         mistakes["vertical units ignored"] = (1.0, dx, dy)
-    if not geographic and not np.isclose(dx, dy):
+    elif np.isclose(vertical_metres, 1.0):  # heights and spacing both in metres
+        mistakes["heights in feet over metre spacing"] = (1.0 / FOOT, dx, dy)
+    if model == "projected" and not np.isclose(dx, dy):
         mistakes["square pixels assumed (x spacing)"] = (factor, dx, dx)
         mistakes["square pixels assumed (y spacing)"] = (factor, dy, dy)
     return mistakes
@@ -130,8 +169,7 @@ def _mistakes(factor: float, dx, dy, geographic: bool, transform) -> dict:
 def _horn_degrees(z: np.ndarray, valid: np.ndarray, factor: float, dx, dy):
     """Horn's 3x3 slope (the GDAL default) at interior cells whose 3x3 window is valid."""
     v = np.where(valid, z * factor, np.nan)
-    dx = np.broadcast_to(np.reshape(np.asarray(dx, float), (-1, 1)), (z.shape[0], 1))[1:-1]
-    dy = np.broadcast_to(np.reshape(np.asarray(dy, float), (-1, 1)), (z.shape[0], 1))[1:-1]
+    dx, dy = _interior(dx, z.shape), _interior(dy, z.shape)
     gx = ((v[:-2, 2:] + 2 * v[1:-1, 2:] + v[2:, 2:]) - (v[:-2, :-2] + 2 * v[1:-1, :-2] + v[2:, :-2])) / (8 * dx)
     gy = ((v[2:, :-2] + 2 * v[2:, 1:-1] + v[2:, 2:]) - (v[:-2, :-2] + 2 * v[:-2, 1:-1] + v[:-2, 2:])) / (8 * dy)
     out = np.full(z.shape, np.nan)
@@ -185,10 +223,10 @@ def _references(output, dem, values, valid, shape, dem_crs, out_crs, vertical_me
     delivered unit), or warp then slope; each RESAMPLING method; central differences or Horn. Besides the
     unit and spacing mistakes, one reading is the declared slope written in the other unit."""
     other = None if unit == "percent" else "percent"
-    dem_model = _grid_model(dem_crs, dem["transform"], values.shape[0], vertical_metres)
-    out_model = _grid_model(out_crs, output["transform"], shape[0], vertical_metres)
-    dem_readings = {"declared": dem_model[:3], **_mistakes(*dem_model, dem["transform"])}
-    out_readings = {"declared": out_model[:3], **_mistakes(*out_model, output["transform"])}
+    dem_model = _grid_model(dem_crs, dem["transform"], values.shape, vertical_metres)
+    out_model = _grid_model(out_crs, output["transform"], shape, vertical_metres)
+    dem_readings = {"declared": dem_model[:3], **_mistakes(*dem_model, dem["transform"], vertical_metres)}
+    out_readings = {"declared": out_model[:3], **_mistakes(*out_model, output["transform"], vertical_metres)}
     for stencil in STENCILS:
         native = {name: _slope(values, valid, h, stencil) for name, h in dem_readings.items()}
         written = {name: (_in_unit(slope, unit), unit) for name, slope in native.items()}
@@ -345,8 +383,14 @@ def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = 
         except (ValueError, rasterio.errors.RasterioError) as error:
             return [result(CHECK_ID, NOT_RUN, f"Cannot resample the DEM onto the output grid: {error}", **evidence)]
 
-    factor, dx, dy, _ = _grid_model(crs, dem["transform"], z.shape[0], vertical_metres)
-    if geographic:
+    factor, dx, dy, model = _grid_model(crs, dem["transform"], z.shape, vertical_metres)
+    if model == "ground":
+        evidence.update(vertical_unit=unit or None, vertical_factor=factor, ground_metres=True,
+                        pixel_size_metres_range={"x": [float(dx.min()), float(dx.max())],
+                                                 "y": [float(dy.min()), float(dy.max())]},
+                        tolerance={"rtol": GEOGRAPHIC_RTOL, "atol_degrees": ATOL},
+                        min_match_fraction=MIN_MATCH_FRACTION)
+    elif geographic:
         evidence.update(vertical_unit=unit, vertical_factor=factor, geographic=True,
                         pixel_size_degrees=[abs(dem["transform"][0]), abs(dem["transform"][4])],
                         pixel_size_metres_range={"x": [float(dx.min()), float(dx.max())],
@@ -367,17 +411,18 @@ def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = 
                        "delivered value, so nothing could be compared.", **evidence)]
 
     observed = delivered[keep]
-    rtol = GEOGRAPHIC_RTOL if geographic else RTOL
+    rtol = RTOL if model == "projected" else GEOGRAPHIC_RTOL
     declared = _fraction(observed, expected[keep], rtol)
     evidence["declared_match_fraction"] = declared
     if declared >= MIN_MATCH_FRACTION:
-        spacing = "ellipsoidal pixel spacing" if geographic else f"{dx:g} x {dy:g} pixel spacing"
+        spacing = ("ellipsoidal pixel spacing" if model == "geographic" else "ground pixel spacing"
+                   if model == "ground" else f"{dx:g} x {dy:g} pixel spacing")
         return [result(CHECK_ID, PASS,
                        f"Slope in {output['path']} matches central differences on {dem['path']} with its "
                        f"declared vertical unit and {spacing}.", **evidence)]
 
     matches = {}
-    for name, hypothesis in _mistakes(factor, dx, dy, geographic, dem["transform"]).items():
+    for name, hypothesis in _mistakes(factor, dx, dy, model, dem["transform"], vertical_metres).items():
         alternative, _ = _slope_degrees(values, valid, *hypothesis)
         matches[name] = _fraction(observed, alternative[keep], rtol)
     evidence["mistake_match_fractions"] = matches

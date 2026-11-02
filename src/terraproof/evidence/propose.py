@@ -157,7 +157,8 @@ def command_flags(arguments: dict) -> list[str]:
             argv += [flag(key), *map(str, value)]
         elif key == "summaries":
             argv += [part for entry in value for part in ("--summary", ",".join(
-                f"{name}={entry[name]}" for name in SUMMARY_FIELDS if entry.get(name) is not None))]
+                f"{name}=" + (";".join(map(str, entry[name])) if isinstance(entry[name], list) else str(entry[name]))
+                for name in SUMMARY_FIELDS if entry.get(name) is not None))]
         elif isinstance(value, list):
             argv += [part for item in value for part in (flag(key), "file" if item is None else str(item))]
         else:

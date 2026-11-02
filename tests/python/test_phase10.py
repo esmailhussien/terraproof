@@ -255,3 +255,88 @@ def test_summaries_cli_mcp_parity_and_the_proposed_command(tmp_path, heights, ca
     assert cli["coverage"]["unchecked_numbers"] == payload["report"]["coverage"]["unchecked_numbers"]
     with pytest.raises(SystemExit):
         main(["check", report, "--summary", "key=x,colour=red"])
+
+
+# After S4.1: the measured gaps
+
+
+def test_a_mercator_slope_is_measured_in_ground_metres(make_raster):
+    from rasterio.crs import CRS
+    from rasterio.transform import from_origin
+    from rasterio.warp import Resampling, calculate_default_transform, reproject
+
+    from terraproof.checks import terrain
+
+    step, rows, cols = 0.0005, 60, 60
+    y, x = np.mgrid[0:rows, 0:cols].astype("float64")
+    z = 400 + 30 * np.sin(x / 7) * np.cos(y / 9) + 1.5 * y
+    dem = _units(make_raster("dem.tif", z, crs="EPSG:4326", origin=(16.0, 78.6), resolution=step, nodata=-9999.0), "m")
+    transform, width, height = calculate_default_transform("EPSG:4326", "EPSG:3857", cols, rows, 16.0,
+                                                           78.6 - rows * step, 16.0 + cols * step, 78.6)
+    warped = np.full((height, width), np.nan)
+    reproject(z, warped, src_transform=from_origin(16.0, 78.6, step, step), src_crs="EPSG:4326", dst_transform=transform, dst_crs="EPSG:3857", resampling=Resampling.bilinear,
+              src_nodata=np.nan, dst_nodata=np.nan)
+    parallel, meridional = terrain._scale_factors(CRS.from_epsg(3857), list(transform)[:6], warped.shape)
+    assert parallel.min() > 4.9  # 1 / cos(78.5 degrees)
+    ground = terrain._slope(warped, np.isfinite(warped), (1.0, transform.a / parallel, -transform.e / meridional),
+                            "central")
+    nominal = terrain._slope(warped, np.isfinite(warped), (1.0, transform.a, -transform.e), "central")
+
+    def write(name, values):
+        return make_raster(name, np.where(np.isfinite(values), values, -9999.0).astype("float32"), crs="EPSG:3857",
+                           origin=(transform.c, transform.f), resolution=transform.a, nodata=-9999.0)
+
+    right = _only(_run(write("ground.tif", ground), dem=inspect_dataset(dem)), "terrain.slope_consistent")
+    assert right.status == "pass"
+    wrong = _only(_run(write("nominal.tif", nominal), dem=inspect_dataset(dem)), "terrain.slope_consistent")
+    assert wrong.status == "fail" and "projected units taken as ground lengths" in wrong.message
+
+
+def test_heights_converted_to_feet_over_metre_spacing_fail(make_raster, hills):
+    from terraproof.checks import terrain
+    dem, z, delivered = hills
+    feet = terrain._slope(z, np.isfinite(z), (1 / 0.3048, 30.0, 30.0), "central")
+    same_grid = make_raster("feet.tif", np.where(np.isfinite(feet), feet, -9999.0).astype("float32"), resolution=30.0,
+                            nodata=-9999.0)
+    check = _only(_run(same_grid, dem=inspect_dataset(dem)), "terrain.slope_consistent")
+    assert check.status == "fail" and "heights in feet over metre spacing" in check.message
+    warped = _only(_run(delivered("feet_warped.tif", z / 0.3048), dem=inspect_dataset(dem)), "terrain.slope_consistent")
+    assert warped.status == "fail" and "heights in feet over metre spacing" in warped.message
+
+
+def test_a_declared_mask_needs_no_nodata_value(make_raster, swath_edge_scl):
+    codes = swath_edge_scl
+    qa = make_raster("scl.tif", codes, nodata=0)
+    mask = _mask(make_raster, "right.tif", np.isin(codes, [4, 5, 6]))
+    assert _only(_run(mask), "raster.nodata_declared").status == "warn"  # read as data, nodata is missing
+    declared = _only(_run(mask, output_form="validity-mask", qa_path=qa, qa_kind="s2-scl"), "raster.nodata_declared")
+    assert declared.status == "pass" and declared.evidence["output_valid_value"] == 1.0
+
+
+def test_class_restricted_and_declared_scale_summaries(tmp_path, make_raster, swath_edge_scl):
+    codes = swath_edge_scl
+    scl = make_raster("scl.tif", codes, nodata=0)
+    dn = (np.arange(SHAPE[0] * SHAPE[1]).reshape(SHAPE) + 1000).astype("uint16")
+    band = make_raster("b02.tif", dn, nodata=0)
+    valid = np.isin(codes, [4, 5, 6])
+    document = {"class_4_count": int((codes == 4).sum()),
+                "class_4_share_of_valid": round(float((codes == 4).sum() / valid.sum()), 4),
+                "mean_reflectance_class_5": round(float((dn[codes == 5] * 1e-4).mean()), 6)}
+    report = _report(tmp_path, "report.json", json.dumps(document))
+    entries = [{"key": "class_4_count", "statistic": "count", "source": scl, "codes": [4]},
+               {"key": "class_4_share_of_valid", "statistic": "fraction", "source": scl, "codes": [4, 5, 6],
+                "mask": scl, "mask_codes": [4], "unit": "fraction"},
+               {"key": "mean_reflectance_class_5", "statistic": "mean", "source": band, "mask": scl,
+                "mask_codes": [5], "scale": 0.0001}]
+    results = [r for r in _run(report, summaries=_inspected(entries)) if r.id == "report.summary_value"]
+    assert [r.status for r in results] == ["pass", "pass", "pass"]
+    def only_entry(entry):
+        return [r for r in _run(report, summaries=_inspected([entry])) if "summary_key" in r.evidence][0]
+
+    undecoded = only_entry(dict(entries[2], scale=None))
+    assert undecoded.status == "fail"  # raw DN averaged, not reflectance
+    scaled = make_raster("b02_scaled.tif", dn, nodata=0, scale=0.0002)
+    conflict = only_entry(dict(entries[2], source=scaled))
+    assert conflict.status == "not-run" and "conflict" in conflict.message
+    flags = command_flags({"summaries": entries[1:2]})
+    assert "codes=4;5;6" in flags[1] and "mask_codes=4" in flags[1]

@@ -210,7 +210,9 @@ def run_checks(
     `summary_unit`, `summary_feature` ("FIELD=VALUE") and `summary_mask`; `fraction` is the
     share of valid cells (of the mask's 1s with `summary_mask`) in `summary_unit` fraction or percent.
     A report holding several numbers lists them in `summaries`, one {key, statistic, source, unit,
-    feature, mask} object each; keys may index lists ("bands.0.mean"). Numbers no summary declares
+    feature, mask} object each; keys may index lists ("bands.0.mean"). On a raster source, `codes`
+    keeps cells holding those class codes, `mask_codes` the mask values to include (default [1]), and
+    `scale`/`offset` decode a band whose file states no calibration. Numbers no summary declares
     are listed in `report.coverage.unchecked_numbers`, never judged.
     `profiles` names declared
     goal profiles (routing/profiles.json) required on every path, bound to the arguments

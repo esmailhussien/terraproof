@@ -283,6 +283,37 @@ Writing the mapping exposed two gaps in S1 and S3, fixed before any result:
    - the format screens holding correct declared masks and slopes at `review-required`;
    - class-restricted and declared-scale report statistics.
 
+#### After S4.1 (2026-11-02): the measured gaps fixed, not re-measured
+
+- **Projected scale factor (the false assurance).**
+  - **Rule.** `terrain.slope_consistent` computes each cell's point scale factor (pyproj) on projected grids. Where it strays more than 1% from 1 anywhere, spacing is taken in ground metres, cell by cell, and "projected units taken as ground lengths" is a named mistake. Within 1% (UTM is within 0.1%), nominal spacing is kept, as before.
+  - **Paths.** It applies to same-grid slopes and to both resampled orders.
+- **Feet over metres.** "Heights in feet over metre spacing" is a named mistake wherever heights and spacing are both in metres.
+- **Masks.** A declared validity mask passes `raster.nodata_declared`, since its form says how invalid cells are written. `raster.cog_layout` is unchanged: whether a deliverable is cloud-optimized is a fair finding, and the grading policy is not changed to meet an acceptance.
+- **Report statistics.** A summary entry on a raster source accepts four more fields:
+  - `codes` (class codes kept);
+  - `mask_codes` (mask values included, default 1, so a QA layer can be the mask);
+  - `scale` and `offset` (a declared calibration when the file states none, and a conflict with a different stated one).
+- **Still out.** Band math such as NDVI, wildcard keys, and selections such as "zeros only" stay inexpressible.
+- **Recalibration** on the same synthetic terrain, with the new named mistake:
+  - **At the chosen setting:** still no correct slope failed and no wrong one passed. Wrong slopes failing rose from 3,191 to 3,254 of 3,456.
+  - **Across the sweep:** every envelope from 0.15 to 0.4 stays clean. The synthetic grids are UTM and geographic only, so the scale-factor rule leaves them unchanged.
+- **Sanity run on the spent S0 slopes, not a measurement.** All 9 wrong slopes now fail, including the Web Mercator and both feet-over-metres slopes, and all 9 correct ones pass.
+- **Tests.** Four more in [`tests/python/test_phase10.py`](../../tests/python/test_phase10.py) (15 in all):
+  - a Web Mercator slope at 78.6°N, in ground metres versus nominal units;
+  - feet over metres, same grid and warped;
+  - the mask nodata screen;
+  - class-restricted, mask-coded and declared-scale summaries, with a scale conflict.
+- **Not re-measured.** S0 is spent. A fresh sealed set (S0b) measures these fixes.
+
+#### S5 (planned 2026-11-02): re-measure on a fresh sealed set, S0b
+
+- **Authoring.** An independent agent authors S0b, at least 44 cases, from `S0B_REAL_DATA_CASES_BRIEF.md`, kept outside the repository. The brief follows S0's, with three changes:
+  - new places, including one above 65°;
+  - projections with large scale factors and feet/metres confusion among the slopes, and class-restricted and decoded numbers among the reports;
+  - **facts state the intended computation, never the mistake.** Some S0 facts described the trap, which forced the mapping to leave those numbers undeclared.
+- **Measurement.** It is the same as S4.1: a new mapping committed before any result, three configurations, the same per-direction and overall acceptance, and the same release rule.
+
 ## 4. Order and delivery
 
 1. S0 is sealed first.

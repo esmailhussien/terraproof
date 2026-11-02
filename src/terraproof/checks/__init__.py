@@ -109,7 +109,7 @@ def run_checks(
         results += scope.check_record_count(vectors, compare_to)
 
     for dataset in rasters:
-        results += raster.check_nodata(dataset)
+        results += raster.check_nodata(dataset, valid_value)
         results += raster.check_cog_layout(dataset)
     if len(rasters) >= 2:
         results += raster.check_grid_alignment(rasters)

@@ -148,7 +148,7 @@ def build_parser() -> argparse.ArgumentParser:
     bindings.add_argument("--summary-mask", metavar="PATH",
                           help="validity mask (1 = include) on the raster source's grid")
     bindings.add_argument("--summary", action="append", default=[],
-                          metavar="key=K,statistic=S,source=PATH[,unit=U][,feature=FIELD=VALUE][,mask=PATH]",
+                          metavar="key=K,statistic=S,source=PATH[,unit=U][,codes=C;C][,mask=PATH,...]",
                           help="one declared report number; repeat for each number a report holds")
     bindings.add_argument("--sar-filter", choices=["boxcar"],
                           help="speckle filter applied to --sar-filter-source; recomputed in linear power")
@@ -269,18 +269,26 @@ def _float_arg(value: str, flag: str) -> float:
         raise SystemExit(f"terraproof check: {flag} expects a number or 'file', got {value!r}") from None
 
 
+SUMMARY_SYNTAX = ("key=K,statistic=S,source=PATH[,unit=U][,feature=FIELD=VALUE][,mask=PATH][,codes=C;C]"
+                  "[,mask_codes=C;C][,scale=X][,offset=X]")
+
+
 def _summary_entries(values: list[str]) -> list[dict]:
-    """`key=K,statistic=S,source=PATH[,unit=U][,feature=FIELD=VALUE][,mask=PATH]` per --summary."""
+    """One declared summary per --summary; code lists are separated by semicolons."""
     from terraproof.evidence.contract import SUMMARY_FIELDS
     entries = []
     for value in values:
         entry = {}
         for part in value.split(","):
             name, sep, item = part.partition("=")
-            if not sep or name.strip() not in SUMMARY_FIELDS or not item or name.strip() in entry:
-                raise SystemExit(f"terraproof: --summary expects key=K,statistic=S,source=PATH[,unit=U]"
-                                 f"[,feature=FIELD=VALUE][,mask=PATH], got {value!r}")
-            entry[name.strip()] = item
+            name = name.strip()
+            if not sep or name not in SUMMARY_FIELDS or not item or name in entry:
+                raise SystemExit(f"terraproof: --summary expects {SUMMARY_SYNTAX}, got {value!r}")
+            try:
+                entry[name] = ([int(code) for code in item.split(";")] if name in ("codes", "mask_codes")
+                               else float(item) if name in ("scale", "offset") else item)
+            except ValueError:
+                raise SystemExit(f"terraproof: --summary {name} must be numeric, got {item!r}") from None
         entries.append(entry)
     return entries
 

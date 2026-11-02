@@ -21,6 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   percent confused), or for a gross mistake outside the area-mean envelope correct resampling stays
   inside; otherwise it warns. On synthetic terrain (1,536 correct and 3,456 wrong slopes, set before
   any held-out case was read), no correct slope failed and no wrong slope passed.
+- Slopes on projected grids whose scale factor strays more than 1% from 1 (Web Mercator, polar
+  stereographic) are measured in ground metres, and projected units taken as ground lengths is a
+  named mistake; UTM keeps nominal spacing. Heights converted to feet over metre spacing is a named
+  mistake. Found by the Phase 10 S4.1 measurement, where a Web Mercator slope was certified.
+- A declared validity mask passes `raster.nodata_declared`.
+- Summaries on a raster source accept `codes`, `mask_codes`, `scale` and `offset`: class-restricted
+  statistics, a QA layer as the mask, and a declared calibration when the file states none.
 - `--summary key=…,statistic=…,source=…` (repeatable; MCP `summaries`) declares every number of a
   JSON report, one `report.summary_value` result each. Keys may index lists (`bands.0.mean`). New
   statistic `fraction` (share of valid cells, or of the mask's 1s) in `fraction` or `percent`.
