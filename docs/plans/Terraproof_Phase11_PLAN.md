@@ -1,6 +1,6 @@
 # Terraproof Phase 11 plan: one declaration per pipeline, tested on agents
 
-> Status: **T1 done (local commit `460af3c`); T2 designed, not run (2026-11-02).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
+> Status: **T1 done (local commit `460af3c`); T2 driver built and calibrated, not run (2026-11-02).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
 
 ## 1. Why
 
@@ -74,7 +74,7 @@ Derived:
 - **False assurance.** An oracle-wrong deliverable whose status the agent saw as `verified` or `decision-grade`. It is counted per call (certified wrong at any call) and on the final outputs.
 - **Save.**
   - A deliverable that is oracle-wrong in a snapshot.
-  - That call did not verify it.
+  - That call reported it `failed` (amended before any run; see Amendments).
   - It is oracle-correct at the end.
 - **False alarm.** An oracle-correct deliverable in a snapshot that the call reported `failed`.
 - **Shipped wrong.** An oracle-wrong final deliverable, and whether the agent's last call flagged it.
@@ -101,13 +101,31 @@ If any of these fails, nothing starts.
 
 So if an agent applies −0.1 and also declares `decode_offset = -0.1`, `verify` certifies the wrong reflectance. This is the false-assurance route T2 is built to expose. It is left in on purpose, so that any fix follows observed agent behaviour.
 
+### Amendments from calibration (2026-11-02, before any run)
+
+The first calibration (no host, no model) changed four things. Each one is fixed here before any agent runs.
+
+1. **A layout warning holds every correct raster at review.**
+   - On a plain striped GeoTIFF, which is what agents write, `raster.cog_layout` warns. So a correct raster is `review-required`, never `verified`.
+   - Calibration therefore counts a right output as passing when it is `verified`, or `review-required` with the layout warning as its only non-pass finding.
+   - For the same reason, "the call did not verify it" would hold for every raster. **A save now needs the call to have reported the deliverable `failed`** (a required check failed), and a correct final output.
+   - A wrong output held only at review is reported as wrong-unflagged, not as a save.
+2. **The NIR reference needed `expect = "reflectance"`.** `verify --plan` reported it missing, and calibration refused to start until it was added.
+3. **Slope uses central differences.**
+   - The calibration slopes are built with `numpy.gradient`. The reference fails the latitude-ignored slope as "longitude spacing not scaled by latitude".
+   - **Known limit, registered:** on a Horn-stencil slope at 69° N, `terrain.slope_consistent` only warns, whether the slope is right (30 % of cells match central differences) or latitude-ignored (7 %).
+   - The oracle accepts either stencil. An agent's Horn slope that ignores latitude will show as wrong-unflagged.
+4. **The driver can stop after calibration.** `--calibrate-only` runs the oracles and the reference declarations with no host.
+
+Calibration then passed on all three tasks. Every right output passed the reference, and every trap was oracle-wrong and reference-`failed`.
+
 ## 4. Reading, registered before the run
 
 | Measure | Bar |
 | --- | --- |
 | False assurance (any call, and final) | **0**. Required. |
 | Adoption: a valid project file and at least one `verify_project` call | ≥ 6 of 12 runs |
-| Value: saves | ≥ 2, in ≥ 2 different runs |
+| Value: saves (flagged `failed`, correct at the end) | ≥ 2, in ≥ 2 different runs |
 
 | Outcome | Next |
 | --- | --- |
@@ -123,7 +141,7 @@ Everything else is reported, not thresholded: the faithfulness of declarations, 
 
 ## 5. Order
 
-1. The driver `tests/phase11_t2_agent.py`, the wrapper and their offline tests are committed before any run, and so is the reference project file for each task.
+1. The driver [`tests/phase11_t2_agent.py`](../../tests/phase11_t2_agent.py) (with each task's reference declaration), the wrapper [`tests/phase11_snapshot_server.py`](../../tests/phase11_snapshot_server.py) and their offline tests are committed before any run.
 2. Calibration and preflight run with no model.
 3. The user approves the exact command and the count (12).
 4. The run follows; its record is committed before any product change.
