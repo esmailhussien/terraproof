@@ -135,6 +135,26 @@ Calibration then passed on all three tasks. Every right output passed the refere
   - The installed `AGENTS.md` names only `run_checks` (`check` on the command line). Its footer shows the stock server command.
   - The project file and `verify_project` appear only in the MCP instructions and the tool's own description. This is the nudge T2 measures.
 
+### Run attempt 1 (2026-11-02): the driver crashed after 1 of 12 invocations
+
+**What happened.**
+- The approved command started. Calibration and preflight passed again, and the first run (`t2-s2-pipeline`, run 0) ran.
+- After that run, the driver crashed before scoring it. `write_reference` wrote into a `reference/` folder that it never created. No other run started.
+- **One invocation was used.** The approval covered that one command, so any rerun needs a new approval.
+
+**What the run did.** The host stream was held only in memory and was lost with the crash. The following comes from OpenCode's own log (tool names and file names only):
+- The run used the full 1200 s, in 18 model steps of roughly 30 to 80 s each. It wrote no output, no project file and no script, and made no verification call.
+- It inspected the inputs (`inspect_dataset` twice) and read the STAC item.
+- It engaged with the offset question: it searched the installed package for `boa_offset` and `decode_offset`, and read `OFFSET_APPLIED` in `evidence/propose.py`.
+- **It tried to write a project file.** It searched for `terraproof.project/1` and read `project.py`. It then read the source for goal names (`contract.profiles`), check ids and summary fields (`checks/__init__.py`, `summary_value.py`, `evidence/contract.py`) until the timeout.
+- **Reading.** One run is not a measurement. It is consistent with a gap: the format, goals and binding names cannot be found from the tool, so an agent reverse-engineers the package.
+
+**Driver fixed** (no model was called):
+- The reference folder is created.
+- Each run's raw host stream is kept in `trace.jsonl` beside the project, not in the report.
+- The report is written after every run.
+- A new offline test drives the whole loop with a fake agent: calibration, install, preflight, wrapping, a wrong output fixed after a flagged verify, snapshots, scoring and checkpoints. It shows 5 saves and 0 false assurance across 8 deliverables.
+
 ## 4. Reading, registered before the run
 
 | Measure | Bar |

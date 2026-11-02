@@ -518,6 +518,7 @@ class SnapshotAdapter(p4.VerificationAdapter):
             result.turn["status"], result.turn["reason"] = "error", "nonzero host exit or invalid JSONL"
         self.last_calls = p4.verification_calls(events, self.deliverables[request.task_id])
         self.last_trace = trace_labels(events)
+        self.last_lines = [line for _stamp, line in lines]
         return result
 
 
@@ -621,7 +622,9 @@ def reading(summary: dict) -> str:
 # -- run ---------------------------------------------------------------------------------------------------
 
 
-def run(adapter, cache: Path, work: Path, *, runs: int, mode: str, approved: int | None) -> dict:
+def run(adapter, cache: Path, work: Path, *, runs: int, mode: str, approved: int | None,
+        checkpoint=None) -> dict:
+    """`checkpoint(report)` is called after every agent run, so a later failure keeps the runs before it."""
     planned = len(TASKS) * runs
     if mode == "run" and approved != planned:
         raise SystemExit(f"approval {approved} does not equal the planned {planned} invocations; nothing started")
@@ -670,10 +673,13 @@ def run(adapter, cache: Path, work: Path, *, runs: int, mode: str, approved: int
             if started > planned:  # pragma: no cover - guarded by the approval check
                 raise SystemExit("approved invocation count exhausted")
             result = adapter.run(request)
+            # The raw host stream stays outside the project and out of the report (names and enums only there).
+            (base / "trace.jsonl").write_text("".join(getattr(adapter, "last_lines", [])), encoding="utf-8")
             deliverables = task.deliverable_names
             final = score(task.task_id, project / "inputs", project / "outputs")
             calls = read_snapshots(task.task_id, project / "inputs", snapshots, deliverables)
             state, declared = read_project_file(project)
+            (base / "reference").mkdir()
             reference = write_reference(entry, base / "reference")
             shutil.copytree(project / "inputs", base / "reference" / "inputs")
             shutil.copytree(project / "outputs", base / "reference" / "outputs")
@@ -688,6 +694,8 @@ def run(adapter, cache: Path, work: Path, *, runs: int, mode: str, approved: int
                        verification_calls=adapter.last_calls,
                        agent={key: value for key, value in asdict(result).items() if key != "status"})
             rows.append(row)
+            if checkpoint:
+                checkpoint(dict(report, runs=_sanitize(rows, work), design=dict(report["design"], started=started)))
     report["runs"] = _sanitize(rows, work)
     report["design"]["started"] = started
     report["summary"] = summarize(rows) if mode == "run" else None
@@ -737,11 +745,17 @@ def main(argv=None) -> int:
                                   deliverables={e["task"].task_id: e["task"].deliverable_names for e in TASKS},
                                   inputs={e["task"].task_id: e["task"].inputs for e in TASKS})
     work.mkdir(parents=True, exist_ok=True)
-    report = run(adapter, args.cache.resolve(), work, runs=RUNS, mode=mode, approved=args.approve_model_calls)
-    report["host"] = {"name": "opencode", "version": version}
     out = args.out if mode == "run" else args.out.with_name(f"{args.out.stem}-{mode}{args.out.suffix}")
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(to_json(report), encoding="utf-8", newline="\n")
+    host = {"name": "opencode", "version": version}
+
+    def write(report: dict) -> None:
+        out.write_text(to_json(dict(report, host=host)), encoding="utf-8", newline="\n")
+
+    report = run(adapter, args.cache.resolve(), work, runs=RUNS, mode=mode, approved=args.approve_model_calls,
+                 checkpoint=lambda partial: write(dict(partial, status="partial")))
+    report["host"] = host
+    write(report)
     failed = [f"{r['task']}:{r['run']}" for r in report["runs"] if r.get("adapter_status") == PREFLIGHT_FAILED]
     print(json.dumps({"status": f"{mode} complete", "report": str(out), "preflight_failures": failed,
                       "started": report["design"].get("started", 0), "summary": report["summary"]},

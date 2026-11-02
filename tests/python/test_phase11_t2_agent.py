@@ -144,3 +144,48 @@ def test_the_wrapper_serves_exactly_the_stock_tools_and_instructions(tmp_path):
     wrapped = t2.served(sys.executable, [str(t2.WRAPPER), str(tmp_path / "snaps"), str(tmp_path)], tmp_path, env=env)
     assert stock and stock["tools"] and "verify_project" in {tool["name"] for tool in stock["tools"]}
     assert wrapped == stock
+
+
+class FakeAgent:
+    """Writes each task's first trap, verifies through the snapshot wrapper, fixes it, verifies again."""
+
+    agent_python_with = sys.executable
+
+    def preflight(self, request):
+        return {}
+
+    def run(self, request):
+        from terraproof import project as tp_project
+        from terraproof.evals.lift import AgentResult
+
+        task_id, project = request.task_id, request.project
+        entry = next(e for e in t2.TASKS if e["task"].task_id == task_id)
+        (project / "terraproof.json").write_text(json.dumps({"schema": tp_project.SCHEMA,
+                                                             "deliverables": entry["reference"]}))
+        verify = server.snapshotting("verify_project", lambda **kw: tp_project.verify(project / "terraproof.json"),
+                                     project.parent / "snapshots", project)
+        t2.write_outputs(task_id, project / "inputs", project / "outputs", trap=t2.TRAPS[task_id][0])
+        verify(path=None, plan=False, only=None)
+        t2.write_outputs(task_id, project / "inputs", project / "outputs")
+        verify(path=None, plan=False, only=None)
+        self.last_calls, self.last_lines = [], ['{"type": "step_start"}\n']
+        self.last_trace = t2.trace_labels([])
+        return AgentResult("completed")
+
+
+@pytest.mark.skipif(not (t2.CACHE / "q0").is_dir() or not (t2.CACHE / "s0b-seal-fetch").is_dir(),
+                    reason="needs the local Q0 and S0b source caches")
+def test_the_whole_run_loop_scores_snapshots_and_checkpoints_every_run(tmp_path, monkeypatch):
+    monkeypatch.setattr(t2, "identity_checks", lambda *a: {"wrapper_serves_stock_tools": True})
+    checkpoints = []
+    report = t2.run(FakeAgent(), t2.CACHE, tmp_path / "work", runs=1, mode="run", approved=3,
+                    checkpoint=checkpoints.append)
+    assert len(checkpoints) == 3 and report["design"]["started"] == 3
+    summary = report["summary"]
+    # S2's offset and SoCal's dropped zeros also make each summary wrong: 2 + 1 + 2 saves
+    assert summary["adopted"] == 3 and summary["saves"] == 5 and summary["save_runs"] == 3
+    assert summary["false_assurance_any_call"] == 0 and summary["false_alarm_calls"] == 0
+    assert summary["final_correct"] == summary["deliverables"] == 8
+    assert summary["reference_agrees_with_oracle"] == 8
+    assert summary["reading"].startswith("adoption not met")  # 3 of the registered 6
+    assert (tmp_path / "work" / "t2-s2-pipeline-0" / "trace.jsonl").read_text() == '{"type": "step_start"}\n'
