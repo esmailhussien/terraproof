@@ -1,6 +1,6 @@
 # Terraproof Phase 11 plan: one declaration per pipeline, tested on agents
 
-> Status: **T1 done (local commit `460af3c`); T2 attempt 1 stopped after 1 of 12 (driver bug); format guide added and attempt 2 registered, not run (2026-11-02).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
+> Status: **T1 done; T2 attempt 2 ran (12 of 12): adoption 11/12, 0 false assurance, 0 saves because no agent made a mistake. Reading: inconclusive, no push (2026-11-03).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
 
 ## 1. Why
 
@@ -190,6 +190,40 @@ The user chose to fix the gap attempt 1 pointed to before spending the 12 runs.
   - Calibration passed on all three tasks: the right outputs pass, every trap is oracle-wrong and reference-`failed`, and every reference plan is complete.
   - All 12 projects passed every OpenCode check and every wrapper check, at 1800 s per run.
   - Every project's product fingerprint matches the checkout: `cac0ff82…f991`.
+
+### Attempt 2 result (2026-11-02 to 11-03): adoption met, no mistake to catch; inconclusive
+
+The approved command ran all 12 invocations, from 23:29 to about 02:20, and exited `0`. Report: `.terracache/phase11-t2-agent-run2.json`, with each run's host stream in `trace.jsonl` beside its project.
+
+| Measure | Result | Bar |
+| --- | --- | --- |
+| False assurance (any call, and final) | **0** and **0** | 0, required: met |
+| Adoption: a valid project file and at least one `verify_project` call | **11 of 12** | ≥ 6: met |
+| Saves | **0**, in 0 runs | ≥ 2 in ≥ 2 runs: not met |
+| Wrong snapshots | **0** of 31 verification calls | fewer than 2 |
+
+**Reading (section 4): "adoption met, fewer than 2 wrong snapshots": the tasks were too easy. Inconclusive. No push.**
+
+What happened:
+- **The guide was used.** All 12 runs called the plan before their first verify. 11 wrote a valid project file. None wrote an invalid one.
+- **Declarations were faithful.**
+  - 29 of 32 deliverables were declared, all except the timed-out run's 3. 28 of them used goals covering the reference's.
+  - One S2 run named the mask's check directly instead of the `qa-masked` goal.
+  - Every S2 declaration bound `decode_offset = 0`, and no run applied −0.1. So the registered STAC-offset risk was never exercised.
+  - Some differences from the reference are form, not substance: summary keys, and `qa_kind` instead of keep codes. The outputs they declare are still correct.
+- **No agent wrote a wrong output at any verification call.** Every one of the 31 snapshots was oracle-correct, and the 11 runs that finished shipped 29 of 29 deliverables correct.
+  - The checks raised no false alarm.
+  - The reference project file agreed with the oracle on all 32 deliverables.
+- **The layout warning was acted on.** In 5 runs, a first verify held a correct raster at `review-required`. The agent rewrote it, and the next call showed it `verified`. Every final raster passes the reference with no layout warning.
+- **The one failure, `t2-s2-pipeline` run 0, timed out with no output.**
+  - It called the plan once, and received the guide.
+  - It then read the package's source (`propose.py`, `rs_processing.py`, `cli.py`, `contract.py` and others), as attempt 1 did, until 1800 s ran out.
+  - The guide answered the format, but this run still went to the source for how the checks treat the S2 offset and QA codes.
+- **The 3 deliverables shipped wrong unchecked** are that run's missing outputs.
+
+**What this does and does not show.**
+- **It shows** that, given the guide, an agent writes and uses the project file without being told to (11 of 12; 0 of 1 before the guide). It also shows that the checks gave no false assurance and no false alarm on 32 deliverables.
+- **It does not show** that the file catches agents' mistakes, because this model made none on these tasks. That is the value bar, and it stays unmeasured.
 
 ## 4. Reading, registered before the run
 
