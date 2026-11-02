@@ -150,6 +150,7 @@ def run_checks(
     summary_unit: str | None = None,
     summary_feature: str | None = None,
     summary_mask: str | None = None,
+    summaries: list[dict] | None = None,
     contract: dict | str | None = None,
     profiles: list[str] | None = None,
     lang: str = "en",
@@ -177,7 +178,8 @@ def run_checks(
     a sampled screen. This option does not expand other checks' scope.
     Use `sar_expect` for SAR domain checks, and `accuracy_samples`/`class_areas` for accuracy
     assessment. `dem` is the DEM a slope-in-degrees output was derived from; it checks the
-    slope against the DEM's vertical unit and pixel spacing. Explicit
+    slope against the DEM's vertical unit and pixel spacing; a slope on another grid is compared
+    after resampling (`comparison: resampled`). Explicit
     `slope_method="central-difference"` instead verifies all values and the complete
     stencil/edge mask. `raster_identity=True` with `compare_to` compares all valid
     samples, masks and grid/band metadata; COG layout remains a separate screen. `index_formula="ndvi"` with
@@ -205,7 +207,11 @@ def run_checks(
     ("degrees" or "percent") states a slope output's unit for the `dem` checks. A JSON report
     output is checked with `summary_key`, `summary_statistic` (mean, count, sum, min, max of a
     raster; count, area, length of vector features), `summary_source`, and where needed
-    `summary_unit`, `summary_feature` ("FIELD=VALUE") and `summary_mask`.
+    `summary_unit`, `summary_feature` ("FIELD=VALUE") and `summary_mask`; `fraction` is the
+    share of valid cells (of the mask's 1s with `summary_mask`) in `summary_unit` fraction or percent.
+    A report holding several numbers lists them in `summaries`, one {key, statistic, source, unit,
+    feature, mask} object each; keys may index lists ("bands.0.mean"). Numbers no summary declares
+    are listed in `report.coverage.unchecked_numbers`, never judged.
     `profiles` names declared
     goal profiles (routing/profiles.json) required on every path, bound to the arguments
     given; a binding a profile needs but you did not give leaves it incomplete.
@@ -236,6 +242,12 @@ def run_checks(
         filter_layer = _inspect_dataset(sar_filter_source) if sar_filter_source else None
         summary_layer = _inspect_dataset(summary_source) if summary_source else None
         summary_mask_layer = _inspect_dataset(summary_mask) if summary_mask else None
+        if summaries is not None and (not isinstance(summaries, list)
+                                      or not all(isinstance(entry, dict) for entry in summaries)):
+            raise ToolError("summaries must be a list of {key, statistic, source, unit, feature, mask} objects")
+        summary_entries = [dict(entry, source=_inspect_dataset(entry["source"]) if entry.get("source") else None,
+                                mask=_inspect_dataset(entry["mask"]) if entry.get("mask") else None)
+                           for entry in summaries or []]
 
         inputs = [input_record(path, "input", dataset["kind"]) for path, dataset in zip(paths, inspections)]
         if compare is not None:
@@ -270,6 +282,11 @@ def run_checks(
             inputs.append(input_record(summary_source, "summary-source", summary_layer["kind"]))
         if summary_mask_layer is not None:
             inputs.append(input_record(summary_mask, "summary-mask", summary_mask_layer["kind"]))
+        for declared, entry in zip(summaries or [], summary_entries):
+            for field, role in (("source", "summary-source"), ("mask", "summary-mask")):
+                if entry[field] is not None and not any(r["path"] == declared[field] and r["role"] == role
+                                                        for r in inputs):
+                    inputs.append(input_record(declared[field], role, entry[field]["kind"]))
         if isinstance(accuracy_samples, str) and Path(accuracy_samples).is_file():
             inputs.append(input_record(accuracy_samples, "accuracy-samples", "accuracy-samples"))
         if isinstance(class_areas, str) and Path(class_areas).is_file():
@@ -344,13 +361,14 @@ def run_checks(
             summary_unit=summary_unit,
             summary_feature=summary_feature,
             summary_mask=summary_mask_layer,
+            summaries=summary_entries or None,
         )
 
         checked_paths = list(paths)
         for path in (compare_to, reference_input, dem, nir, red, *(bands or {}).values(), *(stack or []),
                      *(vertical_sources or []), *(support_sources or []), qa_source, buffer_source, qa_path,
                      categorical_source, sar_filter_source, summary_source, summary_mask,
-                     accuracy_samples,
+                     *(e.get(f) for e in summaries or [] for f in ("source", "mask")), accuracy_samples,
                      class_areas):
             if isinstance(path, str):
                 checked_paths.append(path)
@@ -434,6 +452,7 @@ def run_checks(
         "summary_unit": summary_unit,
         "summary_feature": summary_feature,
         "summary_mask": summary_mask,
+        "summaries": summaries or None,
     }
     try:
         if profiles and contract is not None:

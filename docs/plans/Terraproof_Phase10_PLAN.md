@@ -1,6 +1,6 @@
 # Terraproof — Phase 10 Plan: Masks, reprojected slopes and multi-value reports
 
-> Status: **S0 sealed (2026-11-02)**; S1–S3 next. It follows [Phase 9](Terraproof_Phase9_PLAN.md) and release 0.11.0.
+> Status: **S0 sealed; S1–S3 implemented (2026-11-02)**; S4 next. It follows [Phase 9](Terraproof_Phase9_PLAN.md) and release 0.11.0.
 
 ## 1. Why this phase
 
@@ -125,6 +125,55 @@ Phase 9 closed most of the coverage gap: 33 of 36 real deliverables got a requir
   - The report adds a `next_step.missing` line naming them.
   - The grade covers the declared numbers only, as for any other output.
 - **Progress measure.** In Phase 9, a report was checked one number at a time, and lists and shares were not checkable.
+
+#### S1–S3 record (2026-11-02): implemented, not yet measured
+
+No S0 case content was read. The resampled-slope rule was calibrated on synthetic terrain only.
+
+- **S1, as planned.**
+  - The rule applies to masks declared with `s2-scl` or `landsat-qa-pixel`. They fail where they mark valid a cell the QA records as no observation: the QA file's nodata, SCL 0, or QA_PIXEL bit 0. The evidence counts these as `valid_without_qa_observation`.
+  - Data outputs and `keep-codes` rules are unchanged.
+- **S2, changed from the plan after a first rule failed calibration.**
+  - **The planned rule failed.** It used an area-mean distribution test with a correlation floor. On synthetic terrain it was unsafe at every setting: 6 to 101 wrong slopes passed, and 20 to 32 correct ones failed. On rough terrain, the resampling choice alone moves the mean gradient by up to 13%, as much as latitude ignored or a confused unit.
+  - **The rule as built** (`terrain.resampled_fits`, `resampled_outcome`):
+    1. The reference is made every common way: slope then warp (in the delivered unit), or warp then slope; nearest, bilinear, cubic or average resampling; central differences or Horn.
+    2. A slope passes only when one way reproduces it cell by cell, with 95% of cells within 1% (the geographic tolerance).
+    3. It fails when one way reproduces a named mistake instead. "Degrees and percent confused" is a new named mistake.
+    4. Otherwise it fails only for a gross mistake: the declared reading lies outside the area-mean envelope (|ln ratio| ≤ 0.25), and a mistake lies inside it with correlation ≥ 0.5.
+    5. The rest warns.
+  - **Disclosure.** The four emulated methods are GDAL's common ones. They were fixed after the S0 hand-off, whose counts name the same four methods (bilinear 5, average 3, cubic 2, nearest 2). The case content was not read.
+  - **Calibration.** [`tests/phase10_s2_calibration.py`](../../tests/phase10_s2_calibration.py) covers:
+    - 8 terrains: a plane, a cone, a sinusoid and fractals with β 2 to 4;
+    - 16 grids: geographic at 28.7°, 46.6°, 60° and 78.6° to UTM at 1×, 1.25× and 2×; UTM at 1.5× to 3×; and UTM 33 to UTM 32;
+    - correct slopes made with six methods, two of them never emulated (cubic spline, Lanczos), WGS84 or spherical spacing, float32 or float64, in degrees or percent;
+    - each named mistake, made the same ways.
+  - **Calibration results** at the chosen setting: 1,536 correct and 3,456 wrong slopes.
+
+    | Outcome | Pass | Warn | Fail |
+    | --- | --- | --- | --- |
+    | Correct slopes | 1,124 | 412 | **0** |
+    | Wrong slopes | **0** | 265 | 3,191 |
+
+    - **Correct, by method.** All 1,024 made with an emulated method were reproduced. Of those made with cubic spline or Lanczos, 100 of 512 were reproduced, and the rest warn.
+    - **The envelope.** The largest correct |ln ratio| was 0.189 (the roughest fractal), so 0.25 leaves a margin. Across every envelope from 0.15 to 0.4 and correlation from 0.3 to 0.7, no correct slope failed and no wrong one passed.
+    - **Wrong, by mistake.**
+      - Degrees as lengths: 576 of 576 failed.
+      - Unit confused: 729 of 768 and 712 of 768.
+      - Vertical units ignored: 687 of 768.
+      - Latitude ignored: 487 of 576, from 111 of 144 at 28.7° to 138 of 144 at 78.6°.
+      - The rest warn.
+  - **Unchanged.** Same-grid slopes keep the per-cell test. A slope merely relabelled half a pixel off now warns, where before it was `not-run`; its test was updated.
+- **S3, as planned, with one addition.**
+  - **As planned.**
+    - `summaries` is in `run_checks`, the CLI (`--summary`, repeatable), MCP and contracts. Each entry's missing fields are named, as in `summaries[0].unit`.
+    - Keys may index lists, and `fraction` is a new statistic.
+    - Undeclared numbers are listed per result and in `coverage.unchecked_numbers`, with one Markdown line in English and Arabic. They are listed in coverage rather than `next_step`, because `next_step` is absent under a contract.
+  - **Addition: rounding.** A number also matches within half a unit of its last written decimal. This is read from the JSON text, so a mean written as `12.3` is not a false alarm.
+- **Tests.** [`tests/python/test_phase10.py`](../../tests/python/test_phase10.py) has 11 tests:
+  - S1: swath edge with and without QA nodata, Landsat fill, and data and keep-codes outputs unchanged;
+  - S2: bilinear and average warps, percent, vertical units ignored, unit confused, and an unrelated slope that warns;
+  - S3: all numbers checked and the undeclared one listed; one wrong number among right ones; a share over all cells; contract coverage and missing fields; CLI/MCP parity and the proposed command.
+- **Open until S4.** Whether these meet the per-direction acceptance on real cases.
 
 ### S4. Measure once (offline, then agent)
 

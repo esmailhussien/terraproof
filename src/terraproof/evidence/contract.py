@@ -21,7 +21,8 @@ PARAMETERS = FILE_PARAMETERS | set('operation resampling categorical expect enco
     'decode_scale decode_offset unit_conversion vertical_source_units vertical_unit vertical_level support_sources support_source_nodata support_rule '
     'categorical_source sar_filter sar_filter_size sar_filter_source stack_times stack_window '
     'output_form output_valid_value slope_unit summary_key summary_statistic summary_source summary_unit '
-    'summary_feature summary_mask'.split())
+    'summary_feature summary_mask summaries'.split())
+SUMMARY_FIELDS = ('key', 'statistic', 'source', 'unit', 'feature', 'mask')
 LIST_FILE_PARAMETERS = ('stack', 'vertical_sources', 'support_sources')
 
 
@@ -69,6 +70,13 @@ def parameters(values, base):
             if not isinstance(values[key], list):
                 raise InputError(key+' must be an ordered list of local paths')
             values[key] = [path_key(p, base) for p in values[key]]
+    if values.get('summaries') is not None:
+        entries = values['summaries']
+        if not isinstance(entries, list) or not all(isinstance(e, dict) and set(e) <= set(SUMMARY_FIELDS)
+                                                    for e in entries):
+            raise InputError('summaries must be a list of {'+', '.join(SUMMARY_FIELDS)+'} objects')
+        values['summaries'] = [{k: (path_key(v, base) if k in ('source', 'mask') and isinstance(v, str) else v)
+                                for k, v in e.items() if v is not None} for e in entries]
     if values.get('index_bands') is not None:
         if not isinstance(values['index_bands'], dict):
             raise InputError('index_bands must map roles to [path, band number or null]')
@@ -198,9 +206,16 @@ def _missing_bindings(check, values):
     if check == 'raster.vertical_units' and values.get('vertical_operation') in ('depth-below-level', 'minus-level'):
         if values.get('vertical_level') is None:
             missing.append('vertical_level')
-    if check == 'report.summary_value' and values.get('summary_statistic') in ('area', 'length'):
-        if values.get('summary_unit') is None:
-            missing.append('summary_unit')
+    if check == 'report.summary_value':
+        # Several declared summaries, the single summary_* bindings being one more; each needs its own fields.
+        entries = [(f'summaries[{i}].', e) for i, e in enumerate(values.get('summaries') or [])]
+        if not entries or any(values.get('summary_'+k) is not None for k in ('key', 'statistic', 'source')):
+            entries.append(('summary_', {k: values.get('summary_'+k) for k in SUMMARY_FIELDS}))
+        missing = []
+        for prefix, entry in entries:
+            needed = ['key', 'statistic', 'source'] + (['unit'] if entry.get('statistic') in ('area', 'length',
+                                                                                             'fraction') else [])
+            missing += [prefix+k for k in needed if entry.get(k) is None]
     if check == 'rs.stack_reduction' and values.get('stack_reduction') in ('weighted-sum', 'ols-slope'):
         if not values.get('stack_weights'):
             missing.append('stack_weights')

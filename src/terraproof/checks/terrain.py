@@ -10,13 +10,25 @@ A DEM in a geographic CRS is supported when its vertical unit is declared: each 
 spacing is converted from degrees to metres on the CRS ellipsoid at that row's latitude. Its named
 mistakes are degrees used as lengths and longitude spacing not scaled by latitude.
 
+A slope delivered on another grid (another CRS, resolution or origin) is compared after resampling
+(`comparison: resampled`). The reference is made each common way: slope then warp, or warp then slope;
+nearest, bilinear, cubic or average resampling; central differences or Horn; warped in the delivered
+unit. It passes only when one way reproduces it cell by cell, and fails when one way reproduces a named
+mistake instead. Otherwise the area-mean gradient decides only gross mistakes: it fails when the declared
+reading lies outside the envelope any correct resampling stays inside, and a mistake lies within it with
+the DEM's pattern (correlation). The rest warns.
+
 Nothing here checks the slope's nodata mask or edge policy beyond the cells compared.
 """
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 import rasterio
+from rasterio.transform import Affine
+from rasterio.warp import Resampling, reproject
 
 from terraproof.checks.base import FAIL, NOT_RUN, PASS, WARN, result
 from terraproof.checks.rs_processing import _grid_problems
@@ -43,6 +55,18 @@ GEOGRAPHIC_RTOL = 0.01
 MIN_MATCH_FRACTION = 0.95
 # Cells flatter than this are skipped: every hypothesis predicts about zero there.
 MIN_SLOPE_DEGREES = 0.5
+# Slopes on another grid (Phase 10 S2), set from synthetic terrain before any held-out case was read (see
+# tests/phase10_s2_calibration.py and the Phase 10 plan). A way reproduces a slope when MIN_MATCH_FRACTION of
+# cells agree within RESAMPLED_RTOL (spacing models differ by 0.674%). The envelope bounds
+# |ln(mean delivered tan / mean reference tan)| for correct slopes made any way, including ways not emulated.
+RESAMPLED_RTOL = GEOGRAPHIC_RTOL
+RESAMPLED_LOG_ENVELOPE = 0.25
+# A gross mistake must also keep the DEM's pattern: the Pearson correlation of tan(slope) with that reading.
+RESAMPLED_MIN_CORRELATION = 0.5
+# The common ways a slope reaches another grid, each tried for every reading (declared and mistakes).
+RESAMPLING = {"nearest": Resampling.nearest, "bilinear": Resampling.bilinear, "cubic": Resampling.cubic,
+              "average": Resampling.average}
+STENCILS = ("central", "horn")
 
 
 def _slope_degrees(z: np.ndarray, valid: np.ndarray, factor: float, dx, dy):
@@ -80,13 +104,183 @@ def _geographic_spacing(crs, transform, rows: int):
             abs(transform[4]) * np.radians(1.0) * meridional)
 
 
+def _grid_model(crs, transform, rows: int, vertical_metres: float):
+    """(factor, dx, dy, geographic): DEM values times factor are in the grid's horizontal length unit."""
+    if crs.is_projected:
+        return vertical_metres / crs.linear_units_factor[1], abs(transform[0]), abs(transform[4]), False
+    dx, dy = _geographic_spacing(crs, transform, rows)
+    return vertical_metres, dx, dy, True
+
+
+def _mistakes(factor: float, dx, dy, geographic: bool, transform) -> dict:
+    """Named mistakes on one grid, as (factor, x spacing, y spacing)."""
+    mistakes = {}
+    if geographic:
+        degrees_x, degrees_y = abs(transform[0]), abs(transform[4])
+        mistakes["degrees used as lengths"] = (factor, degrees_x, degrees_y)
+        mistakes["longitude spacing not scaled by latitude"] = (factor, dy * degrees_x / degrees_y, dy)
+    elif not np.isclose(factor, 1.0):
+        mistakes["vertical units ignored"] = (1.0, dx, dy)
+    if not geographic and not np.isclose(dx, dy):
+        mistakes["square pixels assumed (x spacing)"] = (factor, dx, dx)
+        mistakes["square pixels assumed (y spacing)"] = (factor, dy, dy)
+    return mistakes
+
+
+def _horn_degrees(z: np.ndarray, valid: np.ndarray, factor: float, dx, dy):
+    """Horn's 3x3 slope (the GDAL default) at interior cells whose 3x3 window is valid."""
+    v = np.where(valid, z * factor, np.nan)
+    dx = np.broadcast_to(np.reshape(np.asarray(dx, float), (-1, 1)), (z.shape[0], 1))[1:-1]
+    dy = np.broadcast_to(np.reshape(np.asarray(dy, float), (-1, 1)), (z.shape[0], 1))[1:-1]
+    gx = ((v[:-2, 2:] + 2 * v[1:-1, 2:] + v[2:, 2:]) - (v[:-2, :-2] + 2 * v[1:-1, :-2] + v[2:, :-2])) / (8 * dx)
+    gy = ((v[2:, :-2] + 2 * v[2:, 1:-1] + v[2:, 2:]) - (v[:-2, :-2] + 2 * v[:-2, 1:-1] + v[:-2, 2:])) / (8 * dy)
+    out = np.full(z.shape, np.nan)
+    out[1:-1, 1:-1] = np.degrees(np.arctan(np.hypot(gx, gy)))
+    return out, np.isfinite(out)
+
+
+def _slope(values, valid, hypothesis, stencil):
+    """Slope in degrees of one hypothesis, NaN where the stencil is incomplete."""
+    degrees, support = (_horn_degrees if stencil == "horn" else _slope_degrees)(values, valid, *hypothesis)
+    return np.where(support, degrees, np.nan)
+
+
+def _warp(array, src_crs, src_transform, shape, dst_crs, dst_transform, method):
+    out = np.full(shape, np.nan)
+    reproject(np.ascontiguousarray(array, dtype="float64"), out, src_transform=Affine(*src_transform[:6]),
+              src_crs=src_crs, dst_transform=Affine(*dst_transform[:6]), dst_crs=dst_crs,
+              resampling=RESAMPLING[method], src_nodata=np.nan, dst_nodata=np.nan)
+    return out
+
+
+def _tan(degrees):
+    inside = np.isfinite(degrees) & (degrees >= 0) & (degrees < 90)
+    return np.where(inside, np.tan(np.radians(np.where(inside, degrees, 0.0))), np.nan)
+
+
+def _fit(observed, expected, keep):
+    """Cell-wise agreement (in degrees, as the same-grid test) and |ln| of the area-mean gradient ratio."""
+    o, e = observed[keep], expected[keep]
+    total = float(e.sum())
+    ratio = float(o.sum()) / total if total > 0 else math.inf
+    match = _fraction(np.degrees(np.arctan(o)), np.degrees(np.arctan(e)), RESAMPLED_RTOL) if o.size else 0.0
+    correlation = float(np.corrcoef(o, e)[0, 1]) if o.size > 1 and o.std() > 0 and e.std() > 0 else 0.0
+    return {"match_fraction": match, "abs_log_mean_ratio": abs(math.log(ratio)) if 0 < ratio < math.inf else math.inf,
+            "correlation": correlation, "cells": int(o.size)}
+
+
+def _in_unit(degrees, unit):
+    return np.tan(np.radians(degrees)) * 100 if unit == "percent" else degrees
+
+
+def _from_unit(values, unit):
+    return values / 100 if unit == "percent" else _tan(values)
+
+
+CONFUSED = "degrees and percent confused"
+
+
+def _references(output, dem, values, valid, shape, dem_crs, out_crs, vertical_metres, unit):
+    """tan(slope) on the output grid per reading, for every common way of making it: slope then warp (in the
+    delivered unit), or warp then slope; each RESAMPLING method; central differences or Horn. Besides the
+    unit and spacing mistakes, one reading is the declared slope written in the other unit."""
+    other = None if unit == "percent" else "percent"
+    dem_model = _grid_model(dem_crs, dem["transform"], values.shape[0], vertical_metres)
+    out_model = _grid_model(out_crs, output["transform"], shape[0], vertical_metres)
+    dem_readings = {"declared": dem_model[:3], **_mistakes(*dem_model, dem["transform"])}
+    out_readings = {"declared": out_model[:3], **_mistakes(*out_model, output["transform"])}
+    for stencil in STENCILS:
+        native = {name: _slope(values, valid, h, stencil) for name, h in dem_readings.items()}
+        written = {name: (_in_unit(slope, unit), unit) for name, slope in native.items()}
+        written[CONFUSED] = (_in_unit(native["declared"], other), unit)
+        for method in RESAMPLING:
+            yield f"slope then warp, {method}, {stencil}", {
+                name: _from_unit(_warp(slope, dem_crs, dem["transform"], shape, out_crs, output["transform"], method),
+                                 read_as)
+                for name, (slope, read_as) in written.items()}
+    for method in RESAMPLING:
+        warped = _warp(np.where(valid, values, np.nan), dem_crs, dem["transform"], shape, out_crs,
+                       output["transform"], method)
+        for stencil in STENCILS:
+            slopes = {name: _slope(warped, np.isfinite(warped), h, stencil) for name, h in out_readings.items()}
+            yield f"warp then slope, {method}, {stencil}", {
+                **{name: _tan(slope) for name, slope in slopes.items()},
+                CONFUSED: _from_unit(_in_unit(slopes["declared"], other), unit)}
+
+
+def resampled_fits(output, dem, values, valid, delivered_tan, dem_crs, out_crs, vertical_metres, unit=None):
+    """Each reading's best cell-wise match and best area-mean ratio over the common ways of making a slope on
+    another grid, each with the way that gave it."""
+    fits = {}
+    minimum = math.tan(math.radians(MIN_SLOPE_DEGREES))
+    for way, expected in _references(output, dem, values, valid, delivered_tan.shape, dem_crs, out_crs,
+                                     vertical_metres, unit):
+        keep = np.isfinite(delivered_tan) & np.isfinite(expected["declared"]) & (expected["declared"] >= minimum)
+        if np.count_nonzero(keep) < 2:
+            continue
+        for name, gradient in expected.items():
+            fit = _fit(delivered_tan, gradient, keep & np.isfinite(gradient))
+            best = fits.setdefault(name, {"match_fraction": -1.0, "abs_log_mean_ratio": math.inf})
+            if fit["match_fraction"] > best["match_fraction"]:
+                best.update(match_fraction=fit["match_fraction"], match_way=way, cells=fit["cells"])
+            if fit["abs_log_mean_ratio"] < best["abs_log_mean_ratio"]:
+                best.update(abs_log_mean_ratio=fit["abs_log_mean_ratio"], mean_way=way,
+                            mean_correlation=fit["correlation"])
+    return fits
+
+
+def resampled_outcome(fits) -> tuple[str, str | None]:
+    """(status, mistake) from resampled_fits: a cell-wise reproduction decides; otherwise only a gross
+    mistake fails: the declared reading outside the correct envelope, the mistake inside it and correlated."""
+    declared = fits["declared"]
+    if declared["match_fraction"] >= MIN_MATCH_FRACTION:
+        return PASS, None
+    mistakes = {name: fit for name, fit in fits.items() if name != "declared"}
+    reproduced = sorted((-fit["match_fraction"], name) for name, fit in mistakes.items()
+                        if fit["match_fraction"] >= MIN_MATCH_FRACTION)
+    if reproduced:
+        return FAIL, reproduced[0][1]
+    gross = sorted((fit["abs_log_mean_ratio"], name) for name, fit in mistakes.items()
+                   if fit["abs_log_mean_ratio"] <= RESAMPLED_LOG_ENVELOPE
+                   and fit["mean_correlation"] >= RESAMPLED_MIN_CORRELATION)
+    if gross and declared["abs_log_mean_ratio"] > RESAMPLED_LOG_ENVELOPE:
+        return FAIL, gross[0][1]
+    return WARN, None
+
+
+def _check_resampled(output, dem, values, valid, delivered_tan, dem_crs, out_crs, vertical_metres, unit, evidence):
+    evidence.update(comparison="resampled", tolerance={"rtol": RESAMPLED_RTOL, "atol_degrees": ATOL,
+                                                       "min_match_fraction": MIN_MATCH_FRACTION,
+                                                       "abs_log_mean_ratio_envelope": RESAMPLED_LOG_ENVELOPE})
+    fits = resampled_fits(output, dem, values, valid, delivered_tan, dem_crs, out_crs, vertical_metres, unit)
+    if "declared" not in fits:
+        return [result(CHECK_ID, NOT_RUN, "No sloping cell of the delivered grid has a full reference stencil, so "
+                       "nothing could be compared.", **evidence)]
+    status, mistake = resampled_outcome(fits)
+    declared = fits.pop("declared")
+    evidence.update(declared_fit=declared, mistake_fits=fits)
+    if status == PASS:
+        return [result(CHECK_ID, PASS,
+                       f"Slope in {output['path']} is on another grid than {dem['path']}; made "
+                       f"{declared['match_way']}, the DEM's slope reproduces it at "
+                       f"{declared['match_fraction']:.0%} of compared cells.", **evidence)]
+    if status == FAIL:
+        return [result(CHECK_ID, FAIL,
+                       f"Slope in {output['path']} matches the DEM resampled with {mistake}, not its declared "
+                       "vertical unit and real pixel spacing.", **evidence)]
+    return [result(CHECK_ID, WARN,
+                   f"Slope in {output['path']} is on another grid than {dem['path']}; no common way of resampling "
+                   "reproduces it from the DEM, and it shows no gross unit or spacing mistake.", **evidence)]
+
+
 def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = None,
                            slope_unit: str | None = None) -> list:
     """Compare a slope raster with the slope its DEM's units and spacing imply.
 
     `declared_unit` states the DEM's vertical unit when the file carries no label; a label that
     contradicts it is a conflict, not something to choose between. `slope_unit` declares the output
-    in degrees (the default) or percent; a percent slope is converted to degrees before comparing."""
+    in degrees (the default) or percent; a percent slope is converted to degrees before comparing.
+    A slope on another grid than its DEM is compared after resampling."""
     evidence = {"output": output.get("path"), "dem": dem.get("path"), "declared_vertical_unit": declared_unit,
                 "slope_unit": slope_unit}
     if slope_unit not in SLOPE_UNITS:
@@ -94,10 +288,11 @@ def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = 
     if dem.get("kind") != "raster" or output.get("kind") != "raster":
         return [result(CHECK_ID, NOT_RUN, "Slope consistency needs a raster output and a raster DEM.", **evidence)]
     problems = _grid_problems(dem, output)
-    if problems:
+    if any(p in ("one raster has no CRS", "non-finite transform", "rotated or sheared grids are unsupported")
+           for p in problems):
         return [result(CHECK_ID, NOT_RUN,
                        f"Output {output['path']} and DEM {dem['path']} are not on the same grid "
-                       f"({'; '.join(problems)}), so no cell-wise comparison is possible.",
+                       f"({'; '.join(problems)}), and cannot be resampled onto each other.",
                        problems=problems, **evidence)]
     try:
         with rasterio.open(dem["path"]) as src:
@@ -105,6 +300,7 @@ def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = 
             unit = (src.units[0] or "").strip()
             z = src.read(1, masked=True)
         with rasterio.open(output["path"]) as dst:
+            out_crs = dst.crs
             slope = dst.read(1, masked=True)
         if slope_unit == "percent":
             slope = np.degrees(np.arctan(slope.astype("float64") / 100.0))  # ufuncs keep the mask
@@ -130,9 +326,27 @@ def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = 
     if geographic and not unit:
         return [result(CHECK_ID, NOT_RUN, f"DEM {dem['path']} is geographic and declares no vertical unit, so "
                        "heights cannot be related to metres on the ground.", **evidence)]
+    # Metres per DEM value; an empty unit on a projected DEM is its horizontal unit.
+    vertical_metres = VERTICAL_UNITS[unit.lower()] if unit else crs.linear_units_factor[1]
+    values = np.ma.getdata(z).astype(np.float64)
+    valid = ~np.ma.getmaskarray(z) & np.isfinite(values)
+    delivered = np.ma.getdata(slope).astype(np.float64)
+    delivered_valid = ~np.ma.getmaskarray(slope) & np.isfinite(delivered)
+
+    if problems:
+        if out_crs is None or not (out_crs.is_projected or out_crs.is_geographic):
+            return [result(CHECK_ID, NOT_RUN, f"Output {output['path']} is on another grid and has no projected "
+                           "or geographic CRS to resample onto.", problems=problems, **evidence)]
+        evidence.update(vertical_unit=unit or None, problems=problems)
+        delivered_tan = _tan(np.where(delivered_valid, delivered, np.nan))
+        try:
+            return _check_resampled(output, dem, values, valid, delivered_tan, crs, out_crs, vertical_metres,
+                                    slope_unit, evidence)
+        except (ValueError, rasterio.errors.RasterioError) as error:
+            return [result(CHECK_ID, NOT_RUN, f"Cannot resample the DEM onto the output grid: {error}", **evidence)]
+
+    factor, dx, dy, _ = _grid_model(crs, dem["transform"], z.shape[0], vertical_metres)
     if geographic:
-        factor = VERTICAL_UNITS[unit.lower()]  # DEM values -> metres
-        dx, dy = _geographic_spacing(crs, dem["transform"], z.shape[0])
         evidence.update(vertical_unit=unit, vertical_factor=factor, geographic=True,
                         pixel_size_degrees=[abs(dem["transform"][0]), abs(dem["transform"][4])],
                         pixel_size_metres_range={"x": [float(dx.min()), float(dx.max())],
@@ -140,17 +354,9 @@ def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = 
                         tolerance={"rtol": GEOGRAPHIC_RTOL, "atol_degrees": ATOL},
                         min_match_fraction=MIN_MATCH_FRACTION)
     else:
-        horizontal = crs.linear_units_factor[1]
-        vertical = VERTICAL_UNITS[unit.lower()] if unit else horizontal
-        factor = vertical / horizontal  # DEM values -> horizontal CRS units
-        dx, dy = abs(dem["transform"][0]), abs(dem["transform"][4])
         evidence.update(vertical_unit=unit or None, vertical_factor=factor, pixel_size=[dx, dy],
                         tolerance={"rtol": RTOL, "atol_degrees": ATOL}, min_match_fraction=MIN_MATCH_FRACTION)
 
-    values = np.ma.getdata(z).astype(np.float64)
-    valid = ~np.ma.getmaskarray(z) & np.isfinite(values)
-    delivered = np.ma.getdata(slope).astype(np.float64)
-    delivered_valid = ~np.ma.getmaskarray(slope) & np.isfinite(delivered)
     expected, support = _slope_degrees(values, valid, factor, dx, dy)
     keep = support & delivered_valid & (expected >= MIN_SLOPE_DEGREES)
     compared = int(np.count_nonzero(keep))
@@ -170,19 +376,9 @@ def check_slope_consistent(output: dict, dem: dict, declared_unit: str | None = 
                        f"Slope in {output['path']} matches central differences on {dem['path']} with its "
                        f"declared vertical unit and {spacing}.", **evidence)]
 
-    mistakes = {}
-    if geographic:
-        degrees_x, degrees_y = abs(dem["transform"][0]), abs(dem["transform"][4])
-        mistakes["degrees used as lengths"] = (factor, degrees_x, degrees_y)
-        mistakes["longitude spacing not scaled by latitude"] = (factor, dy * degrees_x / degrees_y, dy)
-    elif not np.isclose(factor, 1.0):
-        mistakes["vertical units ignored"] = (1.0, dx, dy)
-    if not geographic and not np.isclose(dx, dy):
-        mistakes["square pixels assumed (x spacing)"] = (factor, dx, dx)
-        mistakes["square pixels assumed (y spacing)"] = (factor, dy, dy)
     matches = {}
-    for name, (f, sx, sy) in mistakes.items():
-        alternative, _ = _slope_degrees(values, valid, f, sx, sy)
+    for name, hypothesis in _mistakes(factor, dx, dy, geographic, dem["transform"]).items():
+        alternative, _ = _slope_degrees(values, valid, *hypothesis)
         matches[name] = _fraction(observed, alternative[keep], rtol)
     evidence["mistake_match_fractions"] = matches
     found = [name for name, fraction in matches.items() if fraction >= MIN_MATCH_FRACTION]

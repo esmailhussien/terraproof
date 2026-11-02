@@ -18,7 +18,8 @@ import rasterio
 
 from terraproof._common import InputError
 from terraproof.checks.vertical_units import unit_name
-from terraproof.evidence.contract import (FILE_PARAMETERS, LIST_FILE_PARAMETERS, PARAMETERS, _missing_bindings,
+from terraproof.evidence.contract import (FILE_PARAMETERS, LIST_FILE_PARAMETERS, PARAMETERS, SUMMARY_FIELDS,
+                                          _missing_bindings,
                                           profile_contract, profiles, recheck_arguments)
 
 # Units terrain.slope_consistent accepts, by canonical unit; it has no fathom.
@@ -154,6 +155,9 @@ def command_flags(arguments: dict) -> list[str]:
             argv.append(flag(key))
         elif key in ("time_range", "stack_window"):
             argv += [flag(key), *map(str, value)]
+        elif key == "summaries":
+            argv += [part for entry in value for part in ("--summary", ",".join(
+                f"{name}={entry[name]}" for name in SUMMARY_FIELDS if entry.get(name) is not None))]
         elif isinstance(value, list):
             argv += [part for item in value for part in (flag(key), "file" if item is None else str(item))]
         else:

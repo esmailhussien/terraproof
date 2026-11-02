@@ -44,6 +44,7 @@ LABELS = {
                       "(MCP: `propose_contract`), then check with the contract to make them required."),
         "next_step_mask": ("Next step: a validity mask was declared with nothing to verify it against. Supply its "
                            "QA layer (`qa_path`, `qa_kind`) or its sources (`support_sources`, `support_rule`)."),
+        "unchecked_numbers": "Numbers in {0} that no declared summary checks: {1}.",
         "cols_checks": ("Check", "Status", "Input", "Message"),
         "cols_inputs": ("Role", "Path", "Kind", "SHA-256", "Bytes"),
         "roles": {
@@ -95,6 +96,7 @@ LABELS = {
                       "(في MCP: `propose_contract`)، ثم افحص بالعقد لتصبح هذه الفحوصات مطلوبة."),
         "next_step_mask": ("الخطوة التالية: أُعلن قناع صلاحية بلا ما يُتحقق منه به. قدّم طبقة ضبط الجودة "
                            "(`qa_path`، `qa_kind`) أو مصادره (`support_sources`، `support_rule`)."),
+        "unchecked_numbers": "أرقام في {0} لا يفحصها أي ملخص مُعلَن: {1}.",
         "cols_checks": ("الفحص", "الحالة", "المدخل", "الرسالة"),
         "cols_inputs": ("الدور", "المسار", "النوع", "SHA-256", "الحجم (بايت)"),
         "roles": {
@@ -233,7 +235,14 @@ def coverage_summary(report: dict) -> dict:
     not_checked = [{"check": check_id, "description": entry["description"], "enabled_by": entry["enabled_by"]}
                    for check_id, entry in sorted(catalog.items())
                    if entry.get("enabled_by") and kinds & set(entry["applies_to"]) and check_id not in ran]
-    return {"assessed": "verification" in report, "not_checked": not_checked}
+    # Report numbers no declared summary covers: listed so a grade is never read as covering them.
+    unchecked = {}
+    for check in report["checks"]:
+        if check["id"] == "report.summary_value" and check["evidence"].get("undeclared_numbers"):
+            unchecked[check["evidence"]["output"]] = check["evidence"]["undeclared_numbers"]
+    return {"assessed": "verification" in report, "not_checked": not_checked,
+            **({"unchecked_numbers": [{"path": path, "keys": keys} for path, keys in sorted(unchecked.items())]}
+               if unchecked else {})}
 
 
 def report_exit_code(report: dict) -> int:
@@ -298,6 +307,9 @@ def render_markdown(report: dict, lang: str = "en") -> str:
             section += [labels["next_step"].format(", ".join(_code(n) for n in report["next_step"]["profiles"])), ""]
         if report.get("next_step", {}).get("missing"):
             section += [labels["next_step_mask"], ""]
+        for item in coverage.get("unchecked_numbers", []):
+            section += [labels["unchecked_numbers"].format(_code(item["path"]),
+                                                           ", ".join(_code(key) for key in item["keys"])), ""]
         lines[lines.index(f"## {labels['checks']}"):lines.index(f"## {labels['checks']}")] = section
 
     if report["checks"]:

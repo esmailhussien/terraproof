@@ -322,14 +322,15 @@
     },
     "report.summary_value": {
       "family": "report",
-      "description": "A JSON report's declared number matches the declared statistic recomputed from its declared raster or vector source (nodata, an optional validity mask and a feature filter honoured).",
+      "description": "Each declared number of a JSON report matches its declared statistic recomputed from its declared raster or vector source (nodata, an optional validity mask and a feature filter honoured); undeclared numbers are listed, not judged.",
       "applies_to": [
         "report"
       ],
       "enabled_by": [
         "summary_key",
         "summary_statistic",
-        "summary_source"
+        "summary_source",
+        "summaries"
       ]
     }
   }

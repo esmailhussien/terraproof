@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Masks, reprojected slopes and multi-value reports (Phase 10 S1-S3)
+
+- A declared validity mask with `s2-scl` or `landsat-qa-pixel` QA now fails `rs.cloud_mask_applied`
+  where it marks a cell valid that the QA records as no observation (the QA file's nodata, SCL class
+  0, the QA_PIXEL fill bit), instead of leaving it unverifiable. Data outputs and `keep-codes` rules
+  are unchanged.
+- `terrain.slope_consistent` compares a slope on another grid than its DEM after resampling instead of
+  returning `not-run` (`comparison: resampled`). It passes only when a common way of making it (slope
+  then warp or warp then slope; nearest, bilinear, cubic or average; central differences or Horn)
+  reproduces it cell by cell. It fails when one reproduces a named mistake (now including degrees and
+  percent confused), or for a gross mistake outside the area-mean envelope correct resampling stays
+  inside; otherwise it warns. On synthetic terrain (1,536 correct and 3,456 wrong slopes, set before
+  any held-out case was read), no correct slope failed and no wrong slope passed.
+- `--summary key=…,statistic=…,source=…` (repeatable; MCP `summaries`) declares every number of a
+  JSON report, one `report.summary_value` result each. Keys may index lists (`bands.0.mean`). New
+  statistic `fraction` (share of valid cells, or of the mask's 1s) in `fraction` or `percent`.
+  Numbers match within rounding to the decimals they are written with. Undeclared numbers are listed
+  in `coverage.unchecked_numbers`, never judged.
+
 ## [0.11.0] — 2026-11-02
 
 Released 2026-11-02: merge `9e69f54` (#43), tag `v0.11.0`, PyPI through `publish-python.yml`,
