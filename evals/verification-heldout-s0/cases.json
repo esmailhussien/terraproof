@@ -1,0 +1,2946 @@
+{
+  "cases": [
+    {
+      "id": "mask_s2_w_reject_only_medium_clouds_wa",
+      "family": "qa_validity_masks",
+      "kind": "wrong",
+      "deliverable_form": "validity-mask",
+      "scenario": "A forest-plot analyst assembles a 2025 summer clear-land layer for tile 32TMS. The colleague who delivered the mask rejected only the medium-probability-cloud class and shipped everything else as usable.",
+      "goal": "Decide the pixel-validity mask for this alpine scene so that no pixel of a cloudy, shadowed, cirrus or dark class is treated as usable land.",
+      "sources": [
+        {
+          "path": "cache/s2/item.json",
+          "role": "STAC item of the scene (Earth Search sentinel-2-l2a; SCL asset title, per-band raster:bands nodata/scale/offset, earthsearch:boa_offset_applied=true) - as found"
+        },
+        {
+          "path": "cache/s2/tileinfo_metadata.json",
+          "role": "tileinfo metadata: dataCoveragePercentage 93.36 and tileDataGeometry document the swath-edge wedge - as found"
+        },
+        {
+          "path": "cache/s2/granule_metadata.xml",
+          "role": "granule metadata XML of the same scene - as found"
+        },
+        {
+          "path": "cache/s2/wa_SCL.tif",
+          "role": "512x512 window of the scene classification layer (Bernese Oberland window A: vegetation, snow, water, shadow and clouds)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_window": {
+          "path": "cache/s2/wa_SCL.tif",
+          "resolution_m": 20,
+          "role": "Bernese Oberland window A: vegetation, snow, water, shadow and clouds"
+        },
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6,
+          7,
+          11
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        },
+        "mask_usable_value": 1
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_window": {
+          "stated": true,
+          "where": "cache/s2/wa_SCL.tif is a fetched window of the scene's SCL asset (its own CRS/geotransform)"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "pixel_qa_class_meanings": false,
+        "mask_usable_value": false
+      },
+      "output": {
+        "path": "outputs/mask_s2_w_reject_only_medium_clouds_wa/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the usable value is 1; summary.json holds the counts."
+      },
+      "oracle": {
+        "reason": "SCL class meanings and the valid/invalid split come from the ESA Sentinel-2 L2A classification table, not from the fetched files; the asset title names the layer 'Scene classification map (SCL)'. Rejecting only class 8 leaves cloud shadows, dark pixels and thin cirrus in the usable set, so documented invalid pixels are counted as clear land.",
+        "value_metric": "count_of_documented_invalid_pixels_kept_usable",
+        "value": 53109
+      }
+    },
+    {
+      "id": "mask_s2_w_reject_only_shadow_wa",
+      "family": "qa_validity_masks",
+      "kind": "wrong",
+      "deliverable_form": "validity-mask",
+      "scenario": "A shadow-removal study needs a usable mask over the same window; the delivered mask rejected only the cloud-shadow class, keeping every cloud class usable.",
+      "goal": "Decide the pixel-validity mask for this alpine scene so that cloudy, shadow and cirrus pixels are not treated as usable.",
+      "sources": [
+        {
+          "path": "cache/s2/item.json",
+          "role": "STAC item of the scene (Earth Search sentinel-2-l2a; SCL asset title, per-band raster:bands nodata/scale/offset, earthsearch:boa_offset_applied=true) - as found"
+        },
+        {
+          "path": "cache/s2/tileinfo_metadata.json",
+          "role": "tileinfo metadata: dataCoveragePercentage 93.36 and tileDataGeometry document the swath-edge wedge - as found"
+        },
+        {
+          "path": "cache/s2/granule_metadata.xml",
+          "role": "granule metadata XML of the same scene - as found"
+        },
+        {
+          "path": "cache/s2/wa_SCL.tif",
+          "role": "512x512 window of the scene classification layer (Bernese Oberland window A: vegetation, snow, water, shadow and clouds)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_window": {
+          "path": "cache/s2/wa_SCL.tif",
+          "resolution_m": 20,
+          "role": "Bernese Oberland window A: vegetation, snow, water, shadow and clouds"
+        },
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6,
+          7,
+          11
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        },
+        "mask_usable_value": 1
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_window": {
+          "stated": true,
+          "where": "cache/s2/wa_SCL.tif is a fetched window of the scene's SCL asset (its own CRS/geotransform)"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "pixel_qa_class_meanings": false,
+        "mask_usable_value": false
+      },
+      "output": {
+        "path": "outputs/mask_s2_w_reject_only_shadow_wa/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the usable value is 1; summary.json holds the counts."
+      },
+      "oracle": {
+        "reason": "SCL class meanings and the valid/invalid split come from the ESA Sentinel-2 L2A classification table, not from the fetched files; the asset title names the layer 'Scene classification map (SCL)'. Rejecting only class 3 leaves medium/high-probability clouds and thin cirrus in the usable set, so documented invalid pixels are counted as clear.",
+        "value_metric": "count_of_documented_invalid_pixels_kept_usable",
+        "value": 53078
+      }
+    },
+    {
+      "id": "mask_s2_w_reject_water_wc",
+      "family": "qa_validity_masks",
+      "kind": "wrong",
+      "deliverable_form": "validity-mask",
+      "scenario": "A lake study masks the swath-edge window; the delivered mask treated the water class as unreliable and evicted all open-water pixels.",
+      "goal": "Confirm the pixel-validity mask the documented rule gives for a water-inclusive analysis over the swath-edge window.",
+      "sources": [
+        {
+          "path": "cache/s2/item.json",
+          "role": "STAC item of the scene (Earth Search sentinel-2-l2a; SCL asset title, per-band raster:bands nodata/scale/offset, earthsearch:boa_offset_applied=true) - as found"
+        },
+        {
+          "path": "cache/s2/tileinfo_metadata.json",
+          "role": "tileinfo metadata: dataCoveragePercentage 93.36 and tileDataGeometry document the swath-edge wedge - as found"
+        },
+        {
+          "path": "cache/s2/granule_metadata.xml",
+          "role": "granule metadata XML of the same scene - as found"
+        },
+        {
+          "path": "cache/s2/wc_SCL.tif",
+          "role": "512x512 window of the scene classification layer (swath-edge window C: fill wedge, land, water and clouds mixed)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_window": {
+          "path": "cache/s2/wc_SCL.tif",
+          "resolution_m": 20,
+          "role": "swath-edge window C: fill wedge, land, water and clouds mixed"
+        },
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6,
+          7,
+          11
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        },
+        "mask_usable_value": 1
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_window": {
+          "stated": true,
+          "where": "cache/s2/wc_SCL.tif is a fetched window of the scene's SCL asset (its own CRS/geotransform)"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "pixel_qa_class_meanings": false,
+        "mask_usable_value": false
+      },
+      "output": {
+        "path": "outputs/mask_s2_w_reject_water_wc/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the usable value is 1; summary.json holds the counts."
+      },
+      "oracle": {
+        "reason": "SCL class meanings and the valid/invalid split come from the ESA Sentinel-2 L2A classification table, not from the fetched files; the asset title names the layer 'Scene classification map (SCL)'. Rejecting class 6 evicts genuine open-water pixels that the documented rule counts as valid.",
+        "value_metric": "count_of_documented_valid_pixels_evicted",
+        "value": 17484
+      }
+    },
+    {
+      "id": "mask_s2_w_reject_snow_wa",
+      "family": "qa_validity_masks",
+      "kind": "wrong",
+      "deliverable_form": "validity-mask",
+      "scenario": "A glaciology survey masked the alpine window; a bug in the class list (off by one) dropped the snow/ice class from the usable set.",
+      "goal": "Produce the pixel-validity mask with snow/ice as a valid class, per the documented rule, for the alpine window.",
+      "sources": [
+        {
+          "path": "cache/s2/item.json",
+          "role": "STAC item of the scene (Earth Search sentinel-2-l2a; SCL asset title, per-band raster:bands nodata/scale/offset, earthsearch:boa_offset_applied=true) - as found"
+        },
+        {
+          "path": "cache/s2/tileinfo_metadata.json",
+          "role": "tileinfo metadata: dataCoveragePercentage 93.36 and tileDataGeometry document the swath-edge wedge - as found"
+        },
+        {
+          "path": "cache/s2/granule_metadata.xml",
+          "role": "granule metadata XML of the same scene - as found"
+        },
+        {
+          "path": "cache/s2/wa_SCL.tif",
+          "role": "512x512 window of the scene classification layer (Bernese Oberland window A: vegetation, snow, water, shadow and clouds)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_window": {
+          "path": "cache/s2/wa_SCL.tif",
+          "resolution_m": 20,
+          "role": "Bernese Oberland window A: vegetation, snow, water, shadow and clouds"
+        },
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6,
+          7,
+          11
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        },
+        "mask_usable_value": 1
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_window": {
+          "stated": true,
+          "where": "cache/s2/wa_SCL.tif is a fetched window of the scene's SCL asset (its own CRS/geotransform)"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "pixel_qa_class_meanings": false,
+        "mask_usable_value": false
+      },
+      "output": {
+        "path": "outputs/mask_s2_w_reject_snow_wa/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the usable value is 1; summary.json holds the counts."
+      },
+      "oracle": {
+        "reason": "SCL class meanings and the valid/invalid split come from the ESA Sentinel-2 L2A classification table, not from the fetched files; the asset title names the layer 'Scene classification map (SCL)'. The class list is off by one and drops class 11; genuine snow/ice pixels that the snow-inclusive documented rule counts as valid are evicted.",
+        "value_metric": "count_of_documented_valid_pixels_evicted",
+        "value": 1414
+      }
+    },
+    {
+      "id": "mask_s2_w_fill_kept_valid_wb",
+      "family": "qa_validity_masks",
+      "kind": "wrong",
+      "deliverable_form": "validity-mask",
+      "scenario": "The swath-edge window is entirely the no-data class. The colleague who delivered the validity mask marked the whole window usable anyway.",
+      "goal": "Deliver the pixel-validity mask of the swath-edge classification window under the documented rule; no-data pixels are not usable.",
+      "sources": [
+        {
+          "path": "cache/s2/item.json",
+          "role": "STAC item of the scene (Earth Search sentinel-2-l2a; SCL asset title, per-band raster:bands nodata/scale/offset, earthsearch:boa_offset_applied=true) - as found"
+        },
+        {
+          "path": "cache/s2/tileinfo_metadata.json",
+          "role": "tileinfo metadata: dataCoveragePercentage 93.36 and tileDataGeometry document the swath-edge wedge - as found"
+        },
+        {
+          "path": "cache/s2/granule_metadata.xml",
+          "role": "granule metadata XML of the same scene - as found"
+        },
+        {
+          "path": "cache/s2/wb_SCL.tif",
+          "role": "512x512 window of the scene classification layer (swath-edge window B: classification layer is 100% no-data)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_window": {
+          "path": "cache/s2/wb_SCL.tif",
+          "resolution_m": 20,
+          "role": "swath-edge window B: classification layer is 100% no-data"
+        },
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10,
+          11
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        },
+        "mask_usable_value": 1
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_window": {
+          "stated": true,
+          "where": "cache/s2/wb_SCL.tif is a fetched window of the scene's SCL asset (its own CRS/geotransform)"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "pixel_qa_class_meanings": false,
+        "mask_usable_value": false
+      },
+      "output": {
+        "path": "outputs/mask_s2_w_fill_kept_valid_wb/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the usable value is 1; summary.json holds the counts."
+      },
+      "oracle": {
+        "reason": "SCL class meanings and the valid/invalid split come from the ESA Sentinel-2 L2A classification table, not from the fetched files; the asset title names the layer 'Scene classification map (SCL)'. The window holds nothing but the no-data class, so under the documented rule every pixel is rejected; marking all of it usable declares fill as observations.",
+        "value_metric": "count_of_documented_invalid_pixels_kept_usable",
+        "value": 262144
+      }
+    },
+    {
+      "id": "mask_s2_c_standard_rule_wa",
+      "family": "qa_validity_masks",
+      "kind": "correct",
+      "deliverable_form": "validity-mask",
+      "scenario": "A land-cover modeller needs a QA-clean alpine window and asks that the Sentinel-2 L2A classification rule be applied as documented.",
+      "goal": "Produce the pixel-validity mask for a generic analysis: classes 4, 5, 6, 7 usable; no-data, dark, shadow, cloud, cirrus rejected.",
+      "sources": [
+        {
+          "path": "cache/s2/item.json",
+          "role": "STAC item of the scene (Earth Search sentinel-2-l2a; SCL asset title, per-band raster:bands nodata/scale/offset, earthsearch:boa_offset_applied=true) - as found"
+        },
+        {
+          "path": "cache/s2/tileinfo_metadata.json",
+          "role": "tileinfo metadata: dataCoveragePercentage 93.36 and tileDataGeometry document the swath-edge wedge - as found"
+        },
+        {
+          "path": "cache/s2/granule_metadata.xml",
+          "role": "granule metadata XML of the same scene - as found"
+        },
+        {
+          "path": "cache/s2/wa_SCL.tif",
+          "role": "512x512 window of the scene classification layer (Bernese Oberland window A: vegetation, snow, water, shadow and clouds)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_window": {
+          "path": "cache/s2/wa_SCL.tif",
+          "resolution_m": 20,
+          "role": "Bernese Oberland window A: vegetation, snow, water, shadow and clouds"
+        },
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10,
+          11
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        },
+        "mask_usable_value": 1
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_window": {
+          "stated": true,
+          "where": "cache/s2/wa_SCL.tif is a fetched window of the scene's SCL asset (its own CRS/geotransform)"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "pixel_qa_class_meanings": false,
+        "mask_usable_value": false
+      },
+      "output": {
+        "path": "outputs/mask_s2_c_standard_rule_wa/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the usable value is 1; summary.json holds the counts."
+      },
+      "oracle": {
+        "evidence": "The delivered mask matches the documented rule applied to the classification window pixel for pixel.",
+        "value_metric": "usable_pixel_count",
+        "value": 206206
+      }
+    },
+    {
+      "id": "mask_s2_c_snow_valid_wa",
+      "family": "qa_validity_masks",
+      "kind": "correct",
+      "deliverable_form": "validity-mask",
+      "scenario": "A glaciologist needs the documented rule with snow/ice included as a usable class for the alpine window.",
+      "goal": "Produce the pixel-validity mask with classes 4, 5, 6, 7 and 11 usable; everything the documented rule rejects is 0.",
+      "sources": [
+        {
+          "path": "cache/s2/item.json",
+          "role": "STAC item of the scene (Earth Search sentinel-2-l2a; SCL asset title, per-band raster:bands nodata/scale/offset, earthsearch:boa_offset_applied=true) - as found"
+        },
+        {
+          "path": "cache/s2/tileinfo_metadata.json",
+          "role": "tileinfo metadata: dataCoveragePercentage 93.36 and tileDataGeometry document the swath-edge wedge - as found"
+        },
+        {
+          "path": "cache/s2/granule_metadata.xml",
+          "role": "granule metadata XML of the same scene - as found"
+        },
+        {
+          "path": "cache/s2/wa_SCL.tif",
+          "role": "512x512 window of the scene classification layer (Bernese Oberland window A: vegetation, snow, water, shadow and clouds)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_window": {
+          "path": "cache/s2/wa_SCL.tif",
+          "resolution_m": 20,
+          "role": "Bernese Oberland window A: vegetation, snow, water, shadow and clouds"
+        },
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6,
+          7,
+          11
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        },
+        "mask_usable_value": 1
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_window": {
+          "stated": true,
+          "where": "cache/s2/wa_SCL.tif is a fetched window of the scene's SCL asset (its own CRS/geotransform)"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "pixel_qa_class_meanings": false,
+        "mask_usable_value": false
+      },
+      "output": {
+        "path": "outputs/mask_s2_c_snow_valid_wa/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the usable value is 1; summary.json holds the counts."
+      },
+      "oracle": {
+        "evidence": "The delivered mask matches the documented rule applied to the classification window pixel for pixel.",
+        "value_metric": "usable_pixel_count",
+        "value": 207620
+      }
+    },
+    {
+      "id": "mask_s2_c_water_veg_only_wc",
+      "family": "qa_validity_masks",
+      "kind": "correct",
+      "deliverable_form": "validity-mask",
+      "scenario": "A river-restoration project masks the swath-edge window keeping only vegetation, bare ground and water usable.",
+      "goal": "Produce the pixel-validity mask with classes 4, 5 and 6 usable; fill, shadow and cloud classes rejected.",
+      "sources": [
+        {
+          "path": "cache/s2/item.json",
+          "role": "STAC item of the scene (Earth Search sentinel-2-l2a; SCL asset title, per-band raster:bands nodata/scale/offset, earthsearch:boa_offset_applied=true) - as found"
+        },
+        {
+          "path": "cache/s2/tileinfo_metadata.json",
+          "role": "tileinfo metadata: dataCoveragePercentage 93.36 and tileDataGeometry document the swath-edge wedge - as found"
+        },
+        {
+          "path": "cache/s2/granule_metadata.xml",
+          "role": "granule metadata XML of the same scene - as found"
+        },
+        {
+          "path": "cache/s2/wc_SCL.tif",
+          "role": "512x512 window of the scene classification layer (swath-edge window C: fill wedge, land, water and clouds mixed)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_window": {
+          "path": "cache/s2/wc_SCL.tif",
+          "resolution_m": 20,
+          "role": "swath-edge window C: fill wedge, land, water and clouds mixed"
+        },
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10,
+          11
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        },
+        "mask_usable_value": 1
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_window": {
+          "stated": true,
+          "where": "cache/s2/wc_SCL.tif is a fetched window of the scene's SCL asset (its own CRS/geotransform)"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "pixel_qa_class_meanings": false,
+        "mask_usable_value": false
+      },
+      "output": {
+        "path": "outputs/mask_s2_c_water_veg_only_wc/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the usable value is 1; summary.json holds the counts."
+      },
+      "oracle": {
+        "evidence": "The delivered mask matches the documented rule applied to the classification window pixel for pixel.",
+        "value_metric": "usable_pixel_count",
+        "value": 204720
+      }
+    },
+    {
+      "id": "mask_s2_c_standard_rule_wc",
+      "family": "qa_validity_masks",
+      "kind": "correct",
+      "deliverable_form": "validity-mask",
+      "scenario": "A composite builder needs the swath-edge window masked exactly by the documented generic rule, recording honestly that the wedge pixels are rejected.",
+      "goal": "Produce the pixel-validity mask for a generic analysis over the swath-edge window: classes 4, 5, 6, 7 usable; the no-data wedge class 0 rejected.",
+      "sources": [
+        {
+          "path": "cache/s2/item.json",
+          "role": "STAC item of the scene (Earth Search sentinel-2-l2a; SCL asset title, per-band raster:bands nodata/scale/offset, earthsearch:boa_offset_applied=true) - as found"
+        },
+        {
+          "path": "cache/s2/tileinfo_metadata.json",
+          "role": "tileinfo metadata: dataCoveragePercentage 93.36 and tileDataGeometry document the swath-edge wedge - as found"
+        },
+        {
+          "path": "cache/s2/granule_metadata.xml",
+          "role": "granule metadata XML of the same scene - as found"
+        },
+        {
+          "path": "cache/s2/wc_SCL.tif",
+          "role": "512x512 window of the scene classification layer (swath-edge window C: fill wedge, land, water and clouds mixed)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_window": {
+          "path": "cache/s2/wc_SCL.tif",
+          "resolution_m": 20,
+          "role": "swath-edge window C: fill wedge, land, water and clouds mixed"
+        },
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10,
+          11
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        },
+        "mask_usable_value": 1
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_window": {
+          "stated": true,
+          "where": "cache/s2/wc_SCL.tif is a fetched window of the scene's SCL asset (its own CRS/geotransform)"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "pixel_qa_class_meanings": false,
+        "mask_usable_value": false
+      },
+      "output": {
+        "path": "outputs/mask_s2_c_standard_rule_wc/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the usable value is 1; summary.json holds the counts."
+      },
+      "oracle": {
+        "evidence": "The delivered mask matches the documented rule applied to the classification window pixel for pixel.",
+        "value_metric": "usable_pixel_count",
+        "value": 205706
+      }
+    },
+    {
+      "id": "mask_s2_c_vegetation_bare_only_wa",
+      "family": "qa_validity_masks",
+      "kind": "correct",
+      "deliverable_form": "validity-mask",
+      "scenario": "A crop-mask run keeps only vegetation and bare-ground pixels as usable over the alpine window, excluding even water.",
+      "goal": "Produce the pixel-validity mask with only classes 4 and 5 usable, per the documented classification.",
+      "sources": [
+        {
+          "path": "cache/s2/item.json",
+          "role": "STAC item of the scene (Earth Search sentinel-2-l2a; SCL asset title, per-band raster:bands nodata/scale/offset, earthsearch:boa_offset_applied=true) - as found"
+        },
+        {
+          "path": "cache/s2/tileinfo_metadata.json",
+          "role": "tileinfo metadata: dataCoveragePercentage 93.36 and tileDataGeometry document the swath-edge wedge - as found"
+        },
+        {
+          "path": "cache/s2/granule_metadata.xml",
+          "role": "granule metadata XML of the same scene - as found"
+        },
+        {
+          "path": "cache/s2/wa_SCL.tif",
+          "role": "512x512 window of the scene classification layer (Bernese Oberland window A: vegetation, snow, water, shadow and clouds)"
+        }
+      ],
+      "facts": {
+        "pixel_qa_layer_title": "Scene classification map (SCL)",
+        "pixel_qa_window": {
+          "path": "cache/s2/wa_SCL.tif",
+          "resolution_m": 20,
+          "role": "Bernese Oberland window A: vegetation, snow, water, shadow and clouds"
+        },
+        "pixel_qa_valid_classes": [
+          4,
+          5
+        ],
+        "pixel_qa_invalid_classes": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10,
+          11
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        },
+        "mask_usable_value": 1
+      },
+      "facts_in_metadata": {
+        "pixel_qa_layer_title": {
+          "stated": true,
+          "where": "cache/s2/item.json: assets.scl.title = 'Scene classification map (SCL)'"
+        },
+        "pixel_qa_window": {
+          "stated": true,
+          "where": "cache/s2/wa_SCL.tif is a fetched window of the scene's SCL asset (its own CRS/geotransform)"
+        },
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_invalid_classes": false,
+        "pixel_qa_class_meanings": false,
+        "mask_usable_value": false
+      },
+      "output": {
+        "path": "outputs/mask_s2_c_vegetation_bare_only_wa/validity_mask.tif",
+        "form": "validity-mask",
+        "description": "1/0 mask; the usable value is 1; summary.json holds the counts."
+      },
+      "oracle": {
+        "evidence": "The delivered mask matches the documented rule applied to the classification window pixel for pixel.",
+        "value_metric": "usable_pixel_count",
+        "value": 202200
+      }
+    },
+    {
+      "id": "slope_rs_w_degrees_as_lengths_nepal_sw",
+      "family": "reprojected_slopes",
+      "kind": "wrong",
+      "deliverable_form": "dataset",
+      "scenario": "A terrain QC engineer computed a slope-percent grid over the Nepal window with the decimal-degree spacings taken straight from the geotransform and used as metre lengths, then warped the result to UTM 45N.",
+      "goal": "Report the delivered mean slope value and the factor by which an honest metre-based chain on the same target grid disagrees with it.",
+      "sources": [
+        {
+          "path": "cache/copdem/nepal_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N28 E084 (Nepal, EPSG:4326)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/nepal_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "percent",
+        "slope_method": "central-difference gradient of neighbouring pixels",
+        "computation_order": "slope_then_warp",
+        "resampling": "bilinear",
+        "target_crs": "EPSG:32645",
+        "target_resolution_m": 50.0
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false,
+        "computation_order": false,
+        "resampling": false,
+        "target_crs": false,
+        "target_resolution_m": false
+      },
+      "output": {
+        "path": "outputs/slope_rs_w_degrees_as_lengths_nepal_sw/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope raster labelled percent on the target grid (summary.json holds the mean)."
+      },
+      "oracle": {
+        "reason": "the Copernicus DEM COG states its CRS and pixel sizes but no vertical unit; honest slope work converts degree spacings to ground metres (cos-latitude aware) before differencing. Degree spacings used as metre lengths inflate the slope percent by about a factor of 1e5.",
+        "value_metric": "delivered_mean_over_honest_mean",
+        "value": 105057.684038
+      }
+    },
+    {
+      "id": "slope_rs_w_latitude_ignored_svalbard_sw",
+      "family": "reprojected_slopes",
+      "kind": "wrong",
+      "deliverable_form": "dataset",
+      "scenario": "A terrain QC engineer computed a slope-percent grid over the Svalbard window with a flat '111.32 km per degree' metre conversion and no cos(latitude) term, then warped to UTM 33N.",
+      "goal": "Report the delivered mean slope value and the factor by which an honest latitude-aware chain on the same target grid disagrees with it.",
+      "sources": [
+        {
+          "path": "cache/copdem/svalbard_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N78 E016 (Svalbard; X spacing in degrees is 3x the Y spacing)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/svalbard_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0008333333333333333,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "percent",
+        "slope_method": "central-difference gradient of neighbouring pixels",
+        "computation_order": "slope_then_warp",
+        "resampling": "cubic",
+        "target_crs": "EPSG:32633",
+        "target_resolution_m": 50.0
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false,
+        "computation_order": false,
+        "resampling": false,
+        "target_crs": false,
+        "target_resolution_m": false
+      },
+      "output": {
+        "path": "outputs/slope_rs_w_latitude_ignored_svalbard_sw/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope raster labelled percent on the target grid (summary.json holds the mean)."
+      },
+      "oracle": {
+        "reason": "the Copernicus DEM COG states its CRS and pixel sizes but no vertical unit; honest slope work converts degree spacings to ground metres (cos-latitude aware) before differencing. At 78.5 N one degree of longitude covers only about a fifth of the equatorial metre length; omitting the cos(latitude) reduction shrinks the east-west gradient and with it the slope mean.",
+        "value_metric": "delivered_mean_over_honest_mean",
+        "value": 0.578119
+      }
+    },
+    {
+      "id": "slope_rs_w_degrees_labelled_percent_nepal_ws",
+      "family": "reprojected_slopes",
+      "kind": "wrong",
+      "deliverable_form": "dataset",
+      "scenario": "A terrain engineer warped the Nepal DEM to a UTM 45N grid, computed the slope in degrees - and delivered the grid under the label 'slope percent'.",
+      "goal": "Report the delivered mean value under its percent label and the factor by which the honest percent computation on the same warped grid disagrees with it.",
+      "sources": [
+        {
+          "path": "cache/copdem/nepal_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N28 E084 (Nepal, EPSG:4326)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/nepal_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "percent",
+        "slope_method": "central-difference gradient of neighbouring pixels",
+        "computation_order": "warp_then_slope",
+        "resampling": "bilinear",
+        "target_crs": "EPSG:32645",
+        "target_resolution_m": 50.0
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false,
+        "computation_order": false,
+        "resampling": false,
+        "target_crs": false,
+        "target_resolution_m": false
+      },
+      "output": {
+        "path": "outputs/slope_rs_w_degrees_labelled_percent_nepal_ws/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope raster labelled percent on the target grid (summary.json holds the mean)."
+      },
+      "oracle": {
+        "reason": "the Copernicus DEM COG states its CRS and pixel sizes but no vertical unit; honest slope work converts degree spacings to ground metres (cos-latitude aware) before differencing. Degrees values shipped under a percent label disagree with the honest percent chain on the same grid by the degrees-to-percent ratio, well beyond any resampling choice.",
+        "value_metric": "delivered_mean_over_honest_mean",
+        "value": 0.211488
+      }
+    },
+    {
+      "id": "slope_rs_w_feet_over_metres_alps_ws",
+      "family": "reprojected_slopes",
+      "kind": "wrong",
+      "deliverable_form": "dataset",
+      "scenario": "A US-side consultant converted the Alps window's elevations to feet for a US report, warped to UTM 32N, and computed slope percent with metre east-west steps - mixing feet in the numerator with metres in the denominator.",
+      "goal": "Report the delivered mean slope percent and the factor by which the unit-consistent chain on the same grid disagrees with it.",
+      "sources": [
+        {
+          "path": "cache/copdem/alps_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N46 E008 (Bernese Oberland, EPSG:4326)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/alps_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "percent",
+        "slope_method": "central-difference gradient of neighbouring pixels",
+        "computation_order": "warp_then_slope",
+        "resampling": "average",
+        "target_crs": "EPSG:32632",
+        "target_resolution_m": 30.0
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false,
+        "computation_order": false,
+        "resampling": false,
+        "target_crs": false,
+        "target_resolution_m": false
+      },
+      "output": {
+        "path": "outputs/slope_rs_w_feet_over_metres_alps_ws/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope raster labelled percent on the target grid (summary.json holds the mean)."
+      },
+      "oracle": {
+        "reason": "the Copernicus DEM COG states its CRS and pixel sizes but no vertical unit; honest slope work converts degree spacings to ground metres (cos-latitude aware) before differencing. Elevations in the numerator converted to feet while the denominator stays metres inflates percent by exactly the metre-to-foot factor.",
+        "value_metric": "delivered_mean_over_honest_mean",
+        "value": 3.28084
+      }
+    },
+    {
+      "id": "slope_rs_w_mercator_spacing_svalbard_ws",
+      "family": "reprojected_slopes",
+      "kind": "wrong",
+      "deliverable_form": "dataset",
+      "scenario": "A web map team warped the Svalbard DEM to EPSG:3857 at 500 m and computed slope percent straight from the Web-Mercator grid spacings at 78.5 N.",
+      "goal": "Report the delivered mean slope percent and the factor by which a chain that uses the ground-metre spacing (cos latitude reduction of the 3857 grid) disagrees with it.",
+      "sources": [
+        {
+          "path": "cache/copdem/svalbard_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N78 E016 (Svalbard; X spacing in degrees is 3x the Y spacing)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/svalbard_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0008333333333333333,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "percent",
+        "slope_method": "central-difference gradient of neighbouring pixels",
+        "computation_order": "warp_then_slope",
+        "resampling": "bilinear",
+        "target_crs": "EPSG:3857",
+        "target_resolution_m": 500.0
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false,
+        "computation_order": false,
+        "resampling": false,
+        "target_crs": false,
+        "target_resolution_m": false
+      },
+      "output": {
+        "path": "outputs/slope_rs_w_mercator_spacing_svalbard_ws/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope raster labelled percent on the target grid (summary.json holds the mean)."
+      },
+      "oracle": {
+        "reason": "the Copernicus DEM COG states its CRS and pixel sizes but no vertical unit; honest slope work converts degree spacings to ground metres (cos-latitude aware) before differencing. Web Mercator grid metres overstate ground distance by 1/cos(latitude); at 78.5 N slope computed straight from 3857 spacing is a fifth of the ground-metre value.",
+        "value_metric": "delivered_mean_over_honest_mean",
+        "value": 0.198415
+      }
+    },
+    {
+      "id": "slope_rs_w_percent_labelled_degrees_alps_sw",
+      "family": "reprojected_slopes",
+      "kind": "wrong",
+      "deliverable_form": "dataset",
+      "scenario": "A terrain QC engineer computed the Alps slope percent on the geographic grid, warped it to UTM 32N - and shipped it under the label 'slope degrees'.",
+      "goal": "Report the delivered mean value under its degrees label and the factor by which the honest degrees computation on the same chain disagrees with it.",
+      "sources": [
+        {
+          "path": "cache/copdem/alps_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N46 E008 (Bernese Oberland, EPSG:4326)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/alps_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "degrees",
+        "slope_method": "central-difference gradient of neighbouring pixels",
+        "computation_order": "slope_then_warp",
+        "resampling": "nearest",
+        "target_crs": "EPSG:32632",
+        "target_resolution_m": 50.0
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false,
+        "computation_order": false,
+        "resampling": false,
+        "target_crs": false,
+        "target_resolution_m": false
+      },
+      "output": {
+        "path": "outputs/slope_rs_w_percent_labelled_degrees_alps_sw/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope raster labelled degrees on the target grid (summary.json holds the mean)."
+      },
+      "oracle": {
+        "reason": "the Copernicus DEM COG states its CRS and pixel sizes but no vertical unit; honest slope work converts degree spacings to ground metres (cos-latitude aware) before differencing. Percent values shipped under a degrees label disagree with the honest degrees chain by the percent-to-degrees ratio on the same chain.",
+        "value_metric": "delivered_mean_over_honest_mean",
+        "value": 2.136011
+      }
+    },
+    {
+      "id": "slope_rs_c_nepal_bilinear_pct_sw",
+      "family": "reprojected_slopes",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "A terrain team computed slope percent on the Nepal geographic grid with latitude-aware metre steps and bilinearly warped it to a 50 m UTM 45N grid.",
+      "goal": "Report the delivered mean slope percent of the warped grid.",
+      "sources": [
+        {
+          "path": "cache/copdem/nepal_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N28 E084 (Nepal, EPSG:4326)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/nepal_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "percent",
+        "slope_method": "central-difference gradient of neighbouring pixels",
+        "computation_order": "slope_then_warp",
+        "resampling": "bilinear",
+        "target_crs": "EPSG:32645",
+        "target_resolution_m": 50.0
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false,
+        "computation_order": false,
+        "resampling": false,
+        "target_crs": false,
+        "target_resolution_m": false
+      },
+      "output": {
+        "path": "outputs/slope_rs_c_nepal_bilinear_pct_sw/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope raster labelled percent on the target grid (summary.json holds the mean)."
+      },
+      "oracle": {
+        "evidence": "The delivered grid is the declared chain (order, metre or ground-metre steps, resampling, target grid) recomputed from the source DEM; its mean matches to within rounding.",
+        "value_metric": "mean_slope_percent",
+        "value": 67.876393
+      }
+    },
+    {
+      "id": "slope_rs_c_svalbard_cubic_pct_sw",
+      "family": "reprojected_slopes",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "A terrain team computed slope percent on the Svalbard geographic grid (metre steps reduced by cos latitude) and cubically warped it to a 50 m UTM 33N grid.",
+      "goal": "Report the delivered mean slope percent of the warped grid.",
+      "sources": [
+        {
+          "path": "cache/copdem/svalbard_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N78 E016 (Svalbard; X spacing in degrees is 3x the Y spacing)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/svalbard_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0008333333333333333,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "percent",
+        "slope_method": "central-difference gradient of neighbouring pixels",
+        "computation_order": "slope_then_warp",
+        "resampling": "cubic",
+        "target_crs": "EPSG:32633",
+        "target_resolution_m": 50.0
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false,
+        "computation_order": false,
+        "resampling": false,
+        "target_crs": false,
+        "target_resolution_m": false
+      },
+      "output": {
+        "path": "outputs/slope_rs_c_svalbard_cubic_pct_sw/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope raster labelled percent on the target grid (summary.json holds the mean)."
+      },
+      "oracle": {
+        "evidence": "The delivered grid is the declared chain (order, metre or ground-metre steps, resampling, target grid) recomputed from the source DEM; its mean matches to within rounding.",
+        "value_metric": "mean_slope_percent",
+        "value": 11.723523
+      }
+    },
+    {
+      "id": "slope_rs_c_svalbard_bilinear_deg_ws",
+      "family": "reprojected_slopes",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "A polar team bilinearly warped the Svalbard DEM to a 30 m UTM 33N grid and computed the slope in degrees on that metre grid.",
+      "goal": "Report the delivered mean slope degrees of the reprojected grid.",
+      "sources": [
+        {
+          "path": "cache/copdem/svalbard_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N78 E016 (Svalbard; X spacing in degrees is 3x the Y spacing)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/svalbard_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0008333333333333333,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "degrees",
+        "slope_method": "central-difference gradient of neighbouring pixels",
+        "computation_order": "warp_then_slope",
+        "resampling": "bilinear",
+        "target_crs": "EPSG:32633",
+        "target_resolution_m": 30.0
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false,
+        "computation_order": false,
+        "resampling": false,
+        "target_crs": false,
+        "target_resolution_m": false
+      },
+      "output": {
+        "path": "outputs/slope_rs_c_svalbard_bilinear_deg_ws/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope raster labelled degrees on the target grid (summary.json holds the mean)."
+      },
+      "oracle": {
+        "evidence": "The delivered grid is the declared chain (order, metre or ground-metre steps, resampling, target grid) recomputed from the source DEM; its mean matches to within rounding.",
+        "value_metric": "mean_slope_degrees",
+        "value": 6.237232
+      }
+    },
+    {
+      "id": "slope_rs_c_nepal_average_pct_ws",
+      "family": "reprojected_slopes",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "A hazard team averaged-warped the Nepal DEM onto a 60 m UTM 45N grid and computed slope percent from the uniform metre steps.",
+      "goal": "Report the delivered mean slope percent of the reprojected grid.",
+      "sources": [
+        {
+          "path": "cache/copdem/nepal_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N28 E084 (Nepal, EPSG:4326)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/nepal_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "percent",
+        "slope_method": "central-difference gradient of neighbouring pixels",
+        "computation_order": "warp_then_slope",
+        "resampling": "average",
+        "target_crs": "EPSG:32645",
+        "target_resolution_m": 60.0
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false,
+        "computation_order": false,
+        "resampling": false,
+        "target_crs": false,
+        "target_resolution_m": false
+      },
+      "output": {
+        "path": "outputs/slope_rs_c_nepal_average_pct_ws/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope raster labelled percent on the target grid (summary.json holds the mean)."
+      },
+      "oracle": {
+        "evidence": "The delivered grid is the declared chain (order, metre or ground-metre steps, resampling, target grid) recomputed from the source DEM; its mean matches to within rounding.",
+        "value_metric": "mean_slope_percent",
+        "value": 137.292551
+      }
+    },
+    {
+      "id": "slope_rs_c_alps_nearest_deg_ws",
+      "family": "reprojected_slopes",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "A web-gis team nearest-warped the Alps DEM onto a 30 m UTM 32N grid and computed the slope in degrees on that grid.",
+      "goal": "Report the delivered mean slope degrees of the reprojected grid.",
+      "sources": [
+        {
+          "path": "cache/copdem/alps_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N46 E008 (Bernese Oberland, EPSG:4326)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/alps_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "degrees",
+        "slope_method": "central-difference gradient of neighbouring pixels",
+        "computation_order": "warp_then_slope",
+        "resampling": "nearest",
+        "target_crs": "EPSG:32632",
+        "target_resolution_m": 30.0
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false,
+        "computation_order": false,
+        "resampling": false,
+        "target_crs": false,
+        "target_resolution_m": false
+      },
+      "output": {
+        "path": "outputs/slope_rs_c_alps_nearest_deg_ws/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope raster labelled degrees on the target grid (summary.json holds the mean)."
+      },
+      "oracle": {
+        "evidence": "The delivered grid is the declared chain (order, metre or ground-metre steps, resampling, target grid) recomputed from the source DEM; its mean matches to within rounding.",
+        "value_metric": "mean_slope_degrees",
+        "value": 29.980502
+      }
+    },
+    {
+      "id": "slope_rs_c_alps_average_deg_sw",
+      "family": "reprojected_slopes",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "A terrain team computed slope degrees on the Alps geographic grid (latitude-aware metre steps) and average-warped it to a 50 m UTM 32N grid.",
+      "goal": "Report the delivered mean slope degrees of the warped grid.",
+      "sources": [
+        {
+          "path": "cache/copdem/alps_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N46 E008 (Bernese Oberland, EPSG:4326)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/alps_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "degrees",
+        "slope_method": "central-difference gradient of neighbouring pixels",
+        "computation_order": "slope_then_warp",
+        "resampling": "average",
+        "target_crs": "EPSG:32632",
+        "target_resolution_m": 50.0
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false,
+        "computation_order": false,
+        "resampling": false,
+        "target_crs": false,
+        "target_resolution_m": false
+      },
+      "output": {
+        "path": "outputs/slope_rs_c_alps_average_deg_sw/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope raster labelled degrees on the target grid (summary.json holds the mean)."
+      },
+      "oracle": {
+        "evidence": "The delivered grid is the declared chain (order, metre or ground-metre steps, resampling, target grid) recomputed from the source DEM; its mean matches to within rounding.",
+        "value_metric": "mean_slope_degrees",
+        "value": 29.341596
+      }
+    },
+    {
+      "id": "slope_sg_w_latitude_ignored_svalbard",
+      "family": "same_grid_geographic_slopes",
+      "kind": "wrong",
+      "deliverable_form": "dataset",
+      "scenario": "A terrain engineer computed slope percent on the Svalbard geographic grid with a flat metres-per-degree conversion and no cos(latitude) term.",
+      "goal": "Report the delivered mean slope percent on the source grid and the factor by which the latitude-aware chain disagrees with it.",
+      "sources": [
+        {
+          "path": "cache/copdem/svalbard_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N78 E016 (Svalbard; X spacing in degrees is 3x the Y spacing)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/svalbard_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0008333333333333333,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "percent",
+        "slope_method": "central-difference gradient of neighbouring pixels on the DEM's own geographic grid"
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false
+      },
+      "output": {
+        "path": "outputs/slope_sg_w_latitude_ignored_svalbard/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope grid labelled percent."
+      },
+      "oracle": {
+        "reason": "the Copernicus DEM COG states its CRS and pixel sizes but no vertical unit; honest slope work converts degree spacings to ground metres (cos-latitude aware) before differencing. At 78.5 N omitting the cos(latitude) reduction of the longitude step shrinks the east-west gradient and the slope mean by the same ratio.",
+        "value_metric": "delivered_mean_over_honest_mean",
+        "value": 0.578053
+      }
+    },
+    {
+      "id": "slope_sg_w_degrees_as_lengths_alps",
+      "family": "same_grid_geographic_slopes",
+      "kind": "wrong",
+      "deliverable_form": "dataset",
+      "scenario": "A terrain engineer computed slope percent on the Alps geographic grid treating the decimal-degree spacings themselves as metre lengths.",
+      "goal": "Report the delivered mean slope percent on the source grid and the factor by which the metre-converted chain disagrees with it.",
+      "sources": [
+        {
+          "path": "cache/copdem/alps_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N46 E008 (Bernese Oberland, EPSG:4326)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/alps_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "percent",
+        "slope_method": "central-difference gradient of neighbouring pixels on the DEM's own geographic grid"
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false
+      },
+      "output": {
+        "path": "outputs/slope_sg_w_degrees_as_lengths_alps/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope grid labelled percent."
+      },
+      "oracle": {
+        "reason": "the Copernicus DEM COG states its CRS and pixel sizes but no vertical unit; honest slope work converts degree spacings to ground metres (cos-latitude aware) before differencing. Using 0.00027778 degree spacings directly as metre lengths inflates the slope percent by about a factor of 1e5.",
+        "value_metric": "delivered_mean_over_honest_mean",
+        "value": 94548.86579
+      }
+    },
+    {
+      "id": "slope_sg_w_feet_over_metres_nepal",
+      "family": "same_grid_geographic_slopes",
+      "kind": "wrong",
+      "deliverable_form": "dataset",
+      "scenario": "A terrain engineer converted the Nepal window's elevations to feet, computed slope percent with metre steps, and reported the mean.",
+      "goal": "Report the delivered mean slope percent and the factor by which the unit-consistent chain disagrees with it.",
+      "sources": [
+        {
+          "path": "cache/copdem/nepal_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N28 E084 (Nepal, EPSG:4326)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/nepal_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "percent",
+        "slope_method": "central-difference gradient of neighbouring pixels on the DEM's own geographic grid"
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false
+      },
+      "output": {
+        "path": "outputs/slope_sg_w_feet_over_metres_nepal/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope grid labelled percent."
+      },
+      "oracle": {
+        "reason": "the Copernicus DEM COG states its CRS and pixel sizes but no vertical unit; honest slope work converts degree spacings to ground metres (cos-latitude aware) before differencing. Feet in the elevation differences over metres in the horizontal steps inflate percent by exactly the metre-to-foot factor.",
+        "value_metric": "delivered_mean_over_honest_mean",
+        "value": 3.28084
+      }
+    },
+    {
+      "id": "slope_sg_c_nepal_pct",
+      "family": "same_grid_geographic_slopes",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "A terrain team computed slope percent on the Nepal geographic grid, converting the degree spacings to latitude-aware metre lengths before differencing.",
+      "goal": "Report the delivered mean slope percent on the source grid.",
+      "sources": [
+        {
+          "path": "cache/copdem/nepal_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N28 E084 (Nepal, EPSG:4326)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/nepal_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "percent",
+        "slope_method": "central-difference gradient of neighbouring pixels on the DEM's own geographic grid"
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false
+      },
+      "output": {
+        "path": "outputs/slope_sg_c_nepal_pct/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope grid labelled percent."
+      },
+      "oracle": {
+        "evidence": "The delivered grid converts the degree steps to ground metres at its own latitude before differencing; its mean matches the recomputation to within rounding.",
+        "value_metric": "mean_slope_percent",
+        "value": 67.858156
+      }
+    },
+    {
+      "id": "slope_sg_c_svalbard_deg",
+      "family": "same_grid_geographic_slopes",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "A polar team computed slope degrees on the Svalbard geographic grid with latitude-aware metre steps (its X spacing is 3x the Y spacing in degrees).",
+      "goal": "Report the delivered mean slope degrees on the source grid.",
+      "sources": [
+        {
+          "path": "cache/copdem/svalbard_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N78 E016 (Svalbard; X spacing in degrees is 3x the Y spacing)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/svalbard_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0008333333333333333,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "degrees",
+        "slope_method": "central-difference gradient of neighbouring pixels on the DEM's own geographic grid"
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false
+      },
+      "output": {
+        "path": "outputs/slope_sg_c_svalbard_deg/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope grid labelled degrees."
+      },
+      "oracle": {
+        "evidence": "The delivered grid converts the degree steps to ground metres at its own latitude before differencing; its mean matches the recomputation to within rounding.",
+        "value_metric": "mean_slope_degrees",
+        "value": 5.979137
+      }
+    },
+    {
+      "id": "slope_sg_c_alps_pct",
+      "family": "same_grid_geographic_slopes",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "A terrain team computed slope percent on the Alps geographic grid with latitude-aware metre steps.",
+      "goal": "Report the delivered mean slope percent on the source grid.",
+      "sources": [
+        {
+          "path": "cache/copdem/alps_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N46 E008 (Bernese Oberland, EPSG:4326)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/alps_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "EGM2008 orthometric heights (per Copernicus DEM product documentation)",
+        "horizontal_crs": "EPSG:4326 (geographic; pixel spacing in degrees)",
+        "pixel_spacing_deg_east_west": 0.0002777777777777778,
+        "pixel_spacing_deg_north_south": 0.0002777777777777778,
+        "slope_unit": "percent",
+        "slope_method": "central-difference gradient of neighbouring pixels on the DEM's own geographic grid"
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "elevation_vertical_datum": false,
+        "horizontal_crs": {
+          "stated": true,
+          "where": "window GeoTIFF CRS (EPSG:4326)"
+        },
+        "pixel_spacing_deg_east_west": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "pixel_spacing_deg_north_south": {
+          "stated": true,
+          "where": "window GeoTIFF geotransform"
+        },
+        "slope_unit": false,
+        "slope_method": false
+      },
+      "output": {
+        "path": "outputs/slope_sg_c_alps_pct/slope.tif",
+        "form": "dataset",
+        "description": "Delivered slope grid labelled percent."
+      },
+      "oracle": {
+        "evidence": "The delivered grid converts the degree steps to ground metres at its own latitude before differencing; its mean matches the recomputation to within rounding.",
+        "value_metric": "mean_slope_percent",
+        "value": 62.661782
+      }
+    },
+    {
+      "id": "report_w_fill_averaged_in_kauai",
+      "family": "multi_value_reports",
+      "kind": "wrong",
+      "deliverable_form": "summary",
+      "scenario": "An island habitat mapper delivered a multi-number elevation report for the Kauai 3DEP window; the mean was taken over every cell, fill included, while the other numbers were computed correctly.",
+      "goal": "Check the delivered report: every number must be the stated statistic over the declared-fill-excluded cells. Report the size of the one broken number's deviation.",
+      "sources": [
+        {
+          "path": "cache/usgs3dep/USGS_13_n22w159.xml",
+          "role": "FGDC sidecar of the 3DEP tile (states metres, NAVD 88, 1/3 arc-second, public domain) - as found"
+        },
+        {
+          "path": "cache/usgs3dep/USGS_13_n22w159_win.tif",
+          "role": "512x512 window of the 3DEP tile n22w159 (Kauai coast: declared fill and genuine 0 m cells)"
+        }
+      ],
+      "facts": {
+        "fill_value": -999999.0,
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "NAVD 88",
+        "horizontal_crs": "EPSG:4269 (geographic, 1/3 arc-second pixel spacing)",
+        "report_numbers": {
+          "extremes.mean_elevation_m": {
+            "statistic": "mean",
+            "data": "window n22w159",
+            "mask": "declared fill -999999 excluded",
+            "unit": "m"
+          },
+          "extremes.max_elevation_m": {
+            "statistic": "maximum",
+            "data": "window n22w159",
+            "mask": "declared fill excluded",
+            "unit": "m"
+          },
+          "extremes.min_elevation_m": {
+            "statistic": "minimum",
+            "data": "window n22w159",
+            "mask": "declared fill excluded",
+            "unit": "m"
+          },
+          "usable_pixel_count": {
+            "statistic": "count",
+            "data": "window n22w159",
+            "mask": "declared fill excluded",
+            "unit": "pixels"
+          },
+          "usable_share": {
+            "statistic": "share",
+            "data": "window n22w159",
+            "mask": "declared fill excluded, denominator all pixels",
+            "unit": "fraction"
+          }
+        }
+      },
+      "facts_in_metadata": {
+        "fill_value": {
+          "stated": true,
+          "where": "window GeoTIFF GDAL NODATA tag (-999999)"
+        },
+        "elevation_unit": {
+          "stated": true,
+          "where": "sidecar abstract: 'All elevation values are in meters'"
+        },
+        "elevation_vertical_datum": {
+          "stated": true,
+          "where": "sidecar abstract: 'NAVD 88'"
+        },
+        "horizontal_crs": {
+          "stated": true,
+          "where": "sidecar abstract (geographic, NAD 83) and window GeoTIFF CRS (EPSG:4269)"
+        },
+        "report_numbers": false
+      },
+      "output": {
+        "path": "outputs/report_w_fill_averaged_in_kauai/report.json",
+        "form": "summary",
+        "description": "Delivered report (extremes, count, share)."
+      },
+      "oracle": {
+        "reason": "The tile declares -999999 as fill and about a third of the window is ocean void; averaging it into the mean (the one wrong number) drags it hundreds of thousands of metres negative while every other number uses the honest fill-excluded set.",
+        "value_metric": "mismatch_factor_abs_fill_averaged_in",
+        "value": 13477.832335
+      }
+    },
+    {
+      "id": "report_w_zeros_evicted_delta",
+      "family": "multi_value_reports",
+      "kind": "wrong",
+      "deliverable_form": "summary",
+      "scenario": "The coastal delta report was built honestly except that the usable-cell count treated exact 0 m sea-level cells as missing data and dropped them.",
+      "goal": "Check the delivered report against the product's declared fill; the usable count must keep 0 m heights. Report how many real cells the one wrong number evicted.",
+      "sources": [
+        {
+          "path": "cache/usgs3dep/USGS_13_n31w091.xml",
+          "role": "FGDC sidecar of the 3DEP tile (states metres, NAVD 88) - as found"
+        },
+        {
+          "path": "cache/usgs3dep/USGS_13_n31w091_win.tif",
+          "role": "604x604 window of the 3DEP tile n31w091 (Mississippi delta coastline)"
+        }
+      ],
+      "facts": {
+        "fill_value": -999999.0,
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "NAVD 88",
+        "horizontal_crs": "EPSG:4269 (geographic, 1/3 arc-second pixel spacing)",
+        "report_numbers": {
+          "extremes.mean_elevation_m": {
+            "statistic": "mean",
+            "data": "window n31w091",
+            "mask": "declared fill excluded, zeros kept",
+            "unit": "m"
+          },
+          "extremes.max_elevation_m": {
+            "statistic": "maximum",
+            "data": "window n31w091",
+            "mask": "declared fill excluded",
+            "unit": "m"
+          },
+          "usable_pixel_count": {
+            "statistic": "count",
+            "data": "window n31w091",
+            "mask": "declared fill excluded and genuine 0 m heights wrongly evicted",
+            "unit": "pixels"
+          },
+          "zero_height_valid_count": {
+            "statistic": "count",
+            "data": "window n31w091",
+            "mask": "cells at exactly 0 m that the product keeps valid",
+            "unit": "pixels"
+          }
+        }
+      },
+      "facts_in_metadata": {
+        "fill_value": {
+          "stated": true,
+          "where": "window GeoTIFF GDAL NODATA tag (-999999)"
+        },
+        "elevation_unit": {
+          "stated": true,
+          "where": "sidecar abstract: 'All elevation values are in meters'"
+        },
+        "elevation_vertical_datum": {
+          "stated": true,
+          "where": "sidecar abstract: 'NAVD 88'"
+        },
+        "horizontal_crs": {
+          "stated": true,
+          "where": "sidecar abstract (geographic, NAD 83) and window GeoTIFF CRS (EPSG:4269)"
+        },
+        "report_numbers": false
+      },
+      "output": {
+        "path": "outputs/report_w_zeros_evicted_delta/report.json",
+        "form": "summary",
+        "description": "Delivered report (extremes, usable count, zero count)."
+      },
+      "oracle": {
+        "reason": "The 3DEP tile declares -999999 as fill and states elevations in metres with no exclusion of zero, so the coastal 0 m cells are valid data; the usable count that drops them evicts them.",
+        "value_metric": "evicted_zero_height_pixels",
+        "value": 1211
+      }
+    },
+    {
+      "id": "report_w_area_in_degrees_vector",
+      "family": "multi_value_reports",
+      "kind": "wrong",
+      "deliverable_form": "summary",
+      "scenario": "An agency report lists the dataset's feature count, Iceland's area and Switzerland's boundary length; only the area was computed as the planar degree-squared area of the CRS84 geometry under the sq_km label.",
+      "goal": "Check every number of the delivered report; the area must be an honest metric area. Report the factor by which the one wrong number deviates from the geodesic area of the same geometry.",
+      "sources": [
+        {
+          "path": "cache/naturalearth/ne_110m_admin_0_countries.geojson",
+          "role": "Natural Earth 110m admin-0 countries GeoJSON, public domain, tag v5.1.2"
+        }
+      ],
+      "facts": {
+        "report_numbers": {
+          "feature_count": {
+            "statistic": "count",
+            "data": "Natural Earth 110m admin-0 GeoJSON features",
+            "unit": "features"
+          },
+          "iceland.area_sq_km": {
+            "statistic": "area",
+            "data": "Iceland polygon",
+            "mask": null,
+            "unit": "sq_km"
+          },
+          "switzerland.boundary_perimeter_km": {
+            "statistic": "length",
+            "data": "Switzerland exterior rings",
+            "unit": "km"
+          }
+        },
+        "boundary_source": "Natural Earth 110m admin-0 countries boundary geometry",
+        "deliverable_crs": "OGC:CRS84 (as the source itself states in its crs field)"
+      },
+      "facts_in_metadata": {
+        "report_numbers": false,
+        "boundary_source": {
+          "stated": true,
+          "where": "the file is the Natural Earth 110m admin-0 countries dataset; per-feature 'featurecla' property identifies each admin-0 boundary"
+        },
+        "deliverable_crs": {
+          "stated": true,
+          "where": "crs.name = 'urn:ogc:def:crs:OGC:1.3:CRS84'"
+        }
+      },
+      "output": {
+        "path": "outputs/report_w_area_in_degrees_vector/report.json",
+        "form": "summary",
+        "description": "Delivered report (count, area, perimeter)."
+      },
+      "oracle": {
+        "reason": "The planar area of a CRS84 polygon is in square degrees; relabelled square kilometres it is smaller than the WGS84 geodesic area of the same geometry by the metre-per-degree scale factor.",
+        "value_metric": "area_degrees_mismatch_factor",
+        "value": 5237.709196
+      }
+    },
+    {
+      "id": "report_w_one_share_over_all_cells_scl_wc",
+      "family": "multi_value_reports",
+      "kind": "wrong",
+      "deliverable_form": "summary",
+      "scenario": "A land-cover report lists per-class pixel counts and each class's share of the usable pixels over the swath-edge window; the share for class 6 was divided by all pixels instead of by the valid pixels only.",
+      "goal": "Check every number of the delivered list; each share must be relative to the valid-class count. Report the ratio of the honest share to the delivered share of the one wrong entry.",
+      "sources": [
+        {
+          "path": "cache/s2/item.json",
+          "role": "STAC item of the scene (Earth Search sentinel-2-l2a; SCL asset title, per-band raster:bands nodata/scale/offset, earthsearch:boa_offset_applied=true) - as found"
+        },
+        {
+          "path": "cache/s2/tileinfo_metadata.json",
+          "role": "tileinfo metadata: dataCoveragePercentage 93.36 and tileDataGeometry document the swath-edge wedge - as found"
+        },
+        {
+          "path": "cache/s2/granule_metadata.xml",
+          "role": "granule metadata XML of the same scene - as found"
+        },
+        {
+          "path": "cache/s2/wc_SCL.tif",
+          "role": "512x512 swath-edge window C of the scene classification layer"
+        }
+      ],
+      "facts": {
+        "report_numbers": {
+          "valid_pixel_count": {
+            "statistic": "count",
+            "data": "swath-edge classification window C",
+            "mask": "documented valid classes 4,5,6,7,11",
+            "unit": "pixels"
+          },
+          "per_class[*].pixel_count": {
+            "statistic": "count",
+            "data": "window C",
+            "unit": "pixels"
+          },
+          "per_class[*].share_of_valid": {
+            "statistic": "share",
+            "data": "window C",
+            "mask": "valid classes 4,5,6,7,11",
+            "unit": "fraction"
+          }
+        },
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6,
+          7,
+          11
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        }
+      },
+      "facts_in_metadata": {
+        "report_numbers": false,
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_class_meanings": false
+      },
+      "output": {
+        "path": "outputs/report_w_one_share_over_all_cells_scl_wc/report.json",
+        "form": "summary",
+        "description": "Delivered per-class list report."
+      },
+      "oracle": {
+        "reason": "SCL class meanings and the valid/invalid split come from the ESA Sentinel-2 L2A classification table, not from the fetched files; the asset title names the layer 'Scene classification map (SCL)'. The denominator of a per-class share of the usable pixels must be the valid-class count; using all window pixels instead (the one wrong number) scales that class's share down by valid-over-total.",
+        "value_metric": "share_ratio_honest_over_delivered",
+        "value": 1.274364
+      }
+    },
+    {
+      "id": "report_w_nir_taken_from_green_v0",
+      "family": "multi_value_reports",
+      "kind": "wrong",
+      "deliverable_form": "summary",
+      "scenario": "A vegetation report for the alpine scene delivers per-band mean reflectance and a NDVI mean; the NIR entry was copied from the green band's value by mistake, while the other two numbers are honest.",
+      "goal": "Check every number of the delivered report against an independent decode of the two bands; the NIR mean must come from the near-infrared band. Report the ratio of the honest NIR mean to the delivered one.",
+      "sources": [
+        {
+          "path": "cache/s2/item.json",
+          "role": "STAC item of the scene (Earth Search sentinel-2-l2a; SCL asset title, per-band raster:bands nodata/scale/offset, earthsearch:boa_offset_applied=true) - as found"
+        },
+        {
+          "path": "cache/s2/wa_B03.tif",
+          "role": "1024x1024 green (B03) band window (DN as served, scale 0.0001, offset declared -0.1, nodata 0, boa_offset_applied=true)"
+        },
+        {
+          "path": "cache/s2/wa_B08.tif",
+          "role": "1024x1024 near-infrared (B08) band window (same convention)"
+        }
+      ],
+      "facts": {
+        "report_numbers": {
+          "bands.green_B03.mean_reflectance": {
+            "statistic": "mean",
+            "data": "green band window",
+            "mask": "declared fill 0 excluded",
+            "unit": "reflectance"
+          },
+          "bands.nir_B08.mean_reflectance": {
+            "statistic": "mean",
+            "data": "near-infrared band window",
+            "mask": "declared fill 0 excluded",
+            "unit": "reflectance"
+          },
+          "ndvi_mean_over_valid": {
+            "statistic": "mean",
+            "data": "NDVI from the two decoded bands",
+            "mask": "cells where both bands are non-fill",
+            "unit": "index"
+          }
+        },
+        "reflectance_scale": 0.0001,
+        "reflectance_offset_applied_in_stored_values": true,
+        "fill_value": 0
+      },
+      "facts_in_metadata": {
+        "report_numbers": false,
+        "reflectance_scale": {
+          "stated": true,
+          "where": "cache/s2/item.json: raster:bands[0].scale = 0.0001"
+        },
+        "reflectance_offset_applied_in_stored_values": {
+          "stated": true,
+          "where": "cache/s2/item.json: properties.earthsearch:boa_offset_applied = true"
+        },
+        "fill_value": {
+          "stated": true,
+          "where": "cache/s2/item.json: raster:bands[0].nodata = 0"
+        }
+      },
+      "output": {
+        "path": "outputs/report_w_nir_taken_from_green_v0/report.json",
+        "form": "summary",
+        "description": "Delivered per-band + NDVI report."
+      },
+      "oracle": {
+        "reason": "The near-infrared entry of the report repeats the green band's honest mean instead of decoding the B08 window, so it is smaller than the NIR mean by the two bands' ratio.",
+        "value_metric": "nir_mean_over_green_mean",
+        "value": 2.823762
+      }
+    },
+    {
+      "id": "report_c_kauai_multi",
+      "family": "multi_value_reports",
+      "kind": "correct",
+      "deliverable_form": "summary",
+      "scenario": "The Kauai elevation report built honestly: extremes over the declared-fill-excluded cells, the usable count, and the share of usable pixels.",
+      "goal": "Check every number of the delivered report; report the honest usable share.",
+      "sources": [
+        {
+          "path": "cache/usgs3dep/USGS_13_n22w159.xml",
+          "role": "FGDC sidecar of the 3DEP tile (states metres, NAVD 88, 1/3 arc-second, public domain) - as found"
+        },
+        {
+          "path": "cache/usgs3dep/USGS_13_n22w159_win.tif",
+          "role": "512x512 window of the 3DEP tile n22w159 (Kauai coast: declared fill and genuine 0 m cells)"
+        }
+      ],
+      "facts": {
+        "fill_value": -999999.0,
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "NAVD 88",
+        "horizontal_crs": "EPSG:4269 (geographic, 1/3 arc-second pixel spacing)",
+        "report_numbers": {
+          "extremes.mean_elevation_m": {
+            "statistic": "mean",
+            "data": "window n22w159",
+            "mask": "declared fill -999999 excluded",
+            "unit": "m"
+          },
+          "extremes.max_elevation_m": {
+            "statistic": "maximum",
+            "data": "window n22w159",
+            "mask": "declared fill excluded",
+            "unit": "m"
+          },
+          "extremes.min_elevation_m": {
+            "statistic": "minimum",
+            "data": "window n22w159",
+            "mask": "declared fill excluded",
+            "unit": "m"
+          },
+          "usable_pixel_count": {
+            "statistic": "count",
+            "data": "window n22w159",
+            "mask": "declared fill excluded",
+            "unit": "pixels"
+          },
+          "usable_share": {
+            "statistic": "share",
+            "data": "window n22w159",
+            "mask": "declared fill excluded, denominator all pixels",
+            "unit": "fraction"
+          }
+        }
+      },
+      "facts_in_metadata": {
+        "fill_value": {
+          "stated": true,
+          "where": "window GeoTIFF GDAL NODATA tag (-999999)"
+        },
+        "elevation_unit": {
+          "stated": true,
+          "where": "sidecar abstract: 'All elevation values are in meters'"
+        },
+        "elevation_vertical_datum": {
+          "stated": true,
+          "where": "sidecar abstract: 'NAVD 88'"
+        },
+        "horizontal_crs": {
+          "stated": true,
+          "where": "sidecar abstract (geographic, NAD 83) and window GeoTIFF CRS (EPSG:4269)"
+        },
+        "report_numbers": false
+      },
+      "output": {
+        "path": "outputs/report_c_kauai_multi/report.json",
+        "form": "summary",
+        "description": "Delivered multi-number elevation report."
+      },
+      "oracle": {
+        "evidence": "Every delivered number equals the recomputation: fill is excluded from all statistics, and the share's denominator is the whole window as declared.",
+        "value_metric": "usable_share",
+        "value": 0.695312
+      }
+    },
+    {
+      "id": "report_c_delta_multi",
+      "family": "multi_value_reports",
+      "kind": "correct",
+      "deliverable_form": "summary",
+      "scenario": "The coastal delta report built honestly: mean and maximum over the non-fill cells, the usable count keeping every real 0 m height, and the count of genuine zero cells.",
+      "goal": "Check every number of the delivered report; report the usable count that keeps zeros valid.",
+      "sources": [
+        {
+          "path": "cache/usgs3dep/USGS_13_n31w091.xml",
+          "role": "FGDC sidecar of the 3DEP tile (states metres, NAVD 88) - as found"
+        },
+        {
+          "path": "cache/usgs3dep/USGS_13_n31w091_win.tif",
+          "role": "604x604 window of the 3DEP tile n31w091 (Mississippi delta coastline)"
+        }
+      ],
+      "facts": {
+        "fill_value": -999999.0,
+        "elevation_unit": "m",
+        "elevation_vertical_datum": "NAVD 88",
+        "horizontal_crs": "EPSG:4269 (geographic, 1/3 arc-second pixel spacing)",
+        "report_numbers": {
+          "extremes.mean_elevation_m": {
+            "statistic": "mean",
+            "data": "window n31w091",
+            "mask": "declared fill excluded, zeros kept",
+            "unit": "m"
+          },
+          "extremes.max_elevation_m": {
+            "statistic": "maximum",
+            "data": "window n31w091",
+            "mask": "declared fill excluded",
+            "unit": "m"
+          },
+          "usable_pixel_count": {
+            "statistic": "count",
+            "data": "window n31w091",
+            "mask": "declared fill excluded and genuine 0 m heights wrongly evicted",
+            "unit": "pixels"
+          },
+          "zero_height_valid_count": {
+            "statistic": "count",
+            "data": "window n31w091",
+            "mask": "cells at exactly 0 m that the product keeps valid",
+            "unit": "pixels"
+          }
+        }
+      },
+      "facts_in_metadata": {
+        "fill_value": {
+          "stated": true,
+          "where": "window GeoTIFF GDAL NODATA tag (-999999)"
+        },
+        "elevation_unit": {
+          "stated": true,
+          "where": "sidecar abstract: 'All elevation values are in meters'"
+        },
+        "elevation_vertical_datum": {
+          "stated": true,
+          "where": "sidecar abstract: 'NAVD 88'"
+        },
+        "horizontal_crs": {
+          "stated": true,
+          "where": "sidecar abstract (geographic, NAD 83) and window GeoTIFF CRS (EPSG:4269)"
+        },
+        "report_numbers": false
+      },
+      "output": {
+        "path": "outputs/report_c_delta_multi/report.json",
+        "form": "summary",
+        "description": "Delivered multi-number elevation report."
+      },
+      "oracle": {
+        "evidence": "Every delivered number equals the recomputation; genuine 0 m cells stay in both the usable count and the zero count.",
+        "value_metric": "usable_pixel_count",
+        "value": 364816
+      }
+    },
+    {
+      "id": "report_c_vector_multi",
+      "family": "multi_value_reports",
+      "kind": "correct",
+      "deliverable_form": "summary",
+      "scenario": "The agency report redone honestly: feature count, Iceland's geodesic area and Switzerland's geodesic boundary length on the same CRS84 geometries.",
+      "goal": "Check every number of the delivered report; report the honest geodesic area.",
+      "sources": [
+        {
+          "path": "cache/naturalearth/ne_110m_admin_0_countries.geojson",
+          "role": "Natural Earth 110m admin-0 countries GeoJSON, public domain, tag v5.1.2"
+        }
+      ],
+      "facts": {
+        "report_numbers": {
+          "feature_count": {
+            "statistic": "count",
+            "data": "Natural Earth 110m admin-0 GeoJSON features",
+            "unit": "features"
+          },
+          "iceland.area_sq_km": {
+            "statistic": "area",
+            "data": "Iceland polygon",
+            "mask": null,
+            "unit": "sq_km"
+          },
+          "switzerland.boundary_perimeter_km": {
+            "statistic": "length",
+            "data": "Switzerland exterior rings",
+            "unit": "km"
+          }
+        },
+        "boundary_source": "Natural Earth 110m admin-0 countries boundary geometry",
+        "deliverable_crs": "OGC:CRS84 (as the source itself states in its crs field)"
+      },
+      "facts_in_metadata": {
+        "report_numbers": false,
+        "boundary_source": {
+          "stated": true,
+          "where": "the file is the Natural Earth 110m admin-0 countries dataset"
+        },
+        "deliverable_crs": {
+          "stated": true,
+          "where": "crs.name = 'urn:ogc:def:crs:OGC:1.3:CRS84'"
+        }
+      },
+      "output": {
+        "path": "outputs/report_c_vector_multi/report.json",
+        "form": "summary",
+        "description": "Delivered honest multi-number vector report."
+      },
+      "oracle": {
+        "evidence": "Each delivered number equals an independent recomputation from the source geometry (geodesic area and perimeter via the WGS84 ellipsoid; count from the feature list).",
+        "value_metric": "area_sq_km_geodesic",
+        "value": 107735.718461
+      }
+    },
+    {
+      "id": "report_c_scl_class_list_wc",
+      "family": "multi_value_reports",
+      "kind": "correct",
+      "deliverable_form": "summary",
+      "scenario": "The per-class land-cover report built honestly over the swath-edge window: per-class counts and shares of the usable pixels, with the valid-class count.",
+      "goal": "Check every number of the delivered list; report the valid-class count.",
+      "sources": [
+        {
+          "path": "cache/s2/item.json",
+          "role": "STAC item of the scene (Earth Search sentinel-2-l2a; SCL asset title, per-band raster:bands nodata/scale/offset, earthsearch:boa_offset_applied=true) - as found"
+        },
+        {
+          "path": "cache/s2/tileinfo_metadata.json",
+          "role": "tileinfo metadata: dataCoveragePercentage 93.36 and tileDataGeometry document the swath-edge wedge - as found"
+        },
+        {
+          "path": "cache/s2/granule_metadata.xml",
+          "role": "granule metadata XML of the same scene - as found"
+        },
+        {
+          "path": "cache/s2/wc_SCL.tif",
+          "role": "512x512 swath-edge window C of the scene classification layer"
+        }
+      ],
+      "facts": {
+        "report_numbers": {
+          "valid_pixel_count": {
+            "statistic": "count",
+            "data": "swath-edge classification window C",
+            "mask": "documented valid classes 4,5,6,7,11",
+            "unit": "pixels"
+          },
+          "per_class[*].pixel_count": {
+            "statistic": "count",
+            "data": "window C",
+            "unit": "pixels"
+          },
+          "per_class[*].share_of_valid": {
+            "statistic": "share",
+            "data": "window C",
+            "mask": "valid classes 4,5,6,7,11",
+            "unit": "fraction"
+          }
+        },
+        "pixel_qa_valid_classes": [
+          4,
+          5,
+          6,
+          7,
+          11
+        ],
+        "pixel_qa_class_meanings": {
+          "0": "no data",
+          "2": "dark area pixels",
+          "3": "cloud shadows",
+          "4": "vegetation",
+          "5": "not vegetated",
+          "6": "water",
+          "7": "low probability clouds",
+          "8": "medium probability clouds",
+          "9": "high probability clouds",
+          "10": "thin cirrus",
+          "11": "snow or ice"
+        }
+      },
+      "facts_in_metadata": {
+        "report_numbers": false,
+        "pixel_qa_valid_classes": false,
+        "pixel_qa_class_meanings": false
+      },
+      "output": {
+        "path": "outputs/report_c_scl_class_list_wc/report.json",
+        "form": "summary",
+        "description": "Delivered per-class list report."
+      },
+      "oracle": {
+        "evidence": "The list matches the recomputation exactly: counts per class over the window and each share over the valid-class count.",
+        "value_metric": "valid_pixel_count",
+        "value": 205706
+      }
+    },
+    {
+      "id": "report_c_bands_multi_v0",
+      "family": "multi_value_reports",
+      "kind": "correct",
+      "deliverable_form": "summary",
+      "scenario": "The vegetation report built honestly: green and near-infrared means decoded scale-only (offset already applied in storage) and the NDVI mean over the two-band-valid cells.",
+      "goal": "Check every number of the delivered report; report the NDVI mean over valid cells.",
+      "sources": [
+        {
+          "path": "cache/s2/item.json",
+          "role": "STAC item of the scene (Earth Search sentinel-2-l2a; SCL asset title, per-band raster:bands nodata/scale/offset, earthsearch:boa_offset_applied=true) - as found"
+        },
+        {
+          "path": "cache/s2/wa_B03.tif",
+          "role": "1024x1024 green (B03) band window"
+        },
+        {
+          "path": "cache/s2/wa_B08.tif",
+          "role": "1024x1024 near-infrared (B08) band window"
+        }
+      ],
+      "facts": {
+        "report_numbers": {
+          "bands.green_B03.mean_reflectance": {
+            "statistic": "mean",
+            "data": "green band window",
+            "mask": "declared fill 0 excluded",
+            "unit": "reflectance"
+          },
+          "bands.nir_B08.mean_reflectance": {
+            "statistic": "mean",
+            "data": "near-infrared band window",
+            "mask": "declared fill 0 excluded",
+            "unit": "reflectance"
+          },
+          "ndvi_mean_over_valid": {
+            "statistic": "mean",
+            "data": "NDVI from the two decoded bands",
+            "mask": "cells where both bands are non-fill",
+            "unit": "index"
+          }
+        },
+        "reflectance_scale": 0.0001,
+        "reflectance_offset_applied_in_stored_values": true,
+        "fill_value": 0
+      },
+      "facts_in_metadata": {
+        "report_numbers": false,
+        "reflectance_scale": {
+          "stated": true,
+          "where": "cache/s2/item.json: raster:bands[0].scale = 0.0001"
+        },
+        "reflectance_offset_applied_in_stored_values": {
+          "stated": true,
+          "where": "cache/s2/item.json: properties.earthsearch:boa_offset_applied = true"
+        },
+        "fill_value": {
+          "stated": true,
+          "where": "cache/s2/item.json: raster:bands[0].nodata = 0"
+        }
+      },
+      "output": {
+        "path": "outputs/report_c_bands_multi_v0/report.json",
+        "form": "summary",
+        "description": "Delivered per-band + NDVI report."
+      },
+      "oracle": {
+        "evidence": "Each delivered number equals the independent scale-only decode of its own band; the NDVI mean uses cells where both bands carry observations.",
+        "value_metric": "ndvi_mean_over_valid",
+        "value": 0.482539
+      }
+    },
+    {
+      "id": "plain_nepal_elevation_multi",
+      "family": "plain",
+      "kind": "correct",
+      "deliverable_form": "summary",
+      "scenario": "A mountain-team lead shipped a plain elevation summary of the Nepal window: mean, minimum and maximum in metres, straight from the delivered values.",
+      "goal": "Check the three numbers of the delivered report; report the mean.",
+      "sources": [
+        {
+          "path": "cache/copdem/nepal_win.tif",
+          "role": "400x400 window of Copernicus DEM GLO-30, tile N28 E084 (Nepal, EPSG:4326)"
+        }
+      ],
+      "facts": {
+        "source_dem": {
+          "path": "cache/copdem/nepal_win.tif",
+          "product": "Copernicus DEM GLO-30"
+        },
+        "elevation_unit": "m",
+        "report_numbers": {
+          "mean_elevation_m": {
+            "statistic": "mean_elevation_m",
+            "data": "window nepal",
+            "unit": "m"
+          },
+          "min_elevation_m": {
+            "statistic": "min_elevation_m",
+            "data": "window nepal",
+            "unit": "m"
+          },
+          "max_elevation_m": {
+            "statistic": "max_elevation_m",
+            "data": "window nepal",
+            "unit": "m"
+          }
+        }
+      },
+      "facts_in_metadata": {
+        "source_dem": false,
+        "elevation_unit": false,
+        "report_numbers": false
+      },
+      "output": {
+        "path": "outputs/plain_nepal_elevation_multi/report.json",
+        "form": "summary",
+        "description": "Delivered plain elevation summary."
+      },
+      "oracle": {
+        "evidence": "The three numbers are the honest metre statistics of the window itself; no unit, scale or fill trap is involved.",
+        "value_metric": "mean_elevation_m",
+        "value": 5261.979411
+      }
+    },
+    {
+      "id": "plain_ndvi_v0_window_a",
+      "family": "plain",
+      "kind": "correct",
+      "deliverable_form": "dataset",
+      "scenario": "A vegetation analyst decoded the alpine green and near-infrared windows and shipped the NDVI map with class-wise means; clear water carries a genuinely negative NDVI.",
+      "goal": "Check the delivered NDVI map and its summary numbers; report the water-class NDVI mean.",
+      "sources": [
+        {
+          "path": "cache/s2/item.json",
+          "role": "STAC item of the scene (Earth Search sentinel-2-l2a; SCL asset title, per-band raster:bands nodata/scale/offset, earthsearch:boa_offset_applied=true) - as found"
+        },
+        {
+          "path": "cache/s2/wa_B03.tif",
+          "role": "green band window"
+        },
+        {
+          "path": "cache/s2/wa_B08.tif",
+          "role": "near-infrared band window"
+        },
+        {
+          "path": "cache/s2/wa_SCL.tif",
+          "role": "matching scene-classification window"
+        }
+      ],
+      "facts": {
+        "reflectance_scale": 0.0001,
+        "fill_value": 0,
+        "report_numbers": {
+          "ndvi_mean_over_valid": {
+            "statistic": "mean",
+            "data": "decoded NDVI window ndvi_mean_over_valid",
+            "unit": "index"
+          },
+          "ndvi_class_4_mean": {
+            "statistic": "mean",
+            "data": "decoded NDVI window ndvi_class_4_mean",
+            "unit": "index"
+          },
+          "ndvi_class_6_mean": {
+            "statistic": "mean",
+            "data": "decoded NDVI window ndvi_class_6_mean",
+            "unit": "index"
+          }
+        }
+      },
+      "facts_in_metadata": {
+        "reflectance_scale": {
+          "stated": true,
+          "where": "cache/s2/item.json: raster:bands[0].scale"
+        },
+        "fill_value": {
+          "stated": true,
+          "where": "cache/s2/item.json: raster:bands[0].nodata"
+        },
+        "report_numbers": false
+      },
+      "output": {
+        "path": "outputs/plain_ndvi_v0_window_a/ndvi_map.tif",
+        "form": "dataset",
+        "description": "Delivered NDVI raster plus summary."
+      },
+      "oracle": {
+        "evidence": "The map and its class means equal the recomputation from the decoded bands; the water class is negative because clear water genuinely reflects little red and less NIR.",
+        "value_metric": "ndvi_class_6_mean",
+        "value": -0.64294
+      }
+    },
+    {
+      "id": "plain_blue_reflectance_snow_v0",
+      "family": "plain",
+      "kind": "correct",
+      "deliverable_form": "summary",
+      "scenario": "A snow albedo engineer shipped the blue-band mean surface reflectance over the snow/ice class of the alpine window, decoded scale-only.",
+      "goal": "Check the delivered value; report the mean blue reflectance over the snow class.",
+      "sources": [
+        {
+          "path": "cache/s2/item.json",
+          "role": "STAC item of the scene (Earth Search sentinel-2-l2a; SCL asset title, per-band raster:bands nodata/scale/offset, earthsearch:boa_offset_applied=true) - as found"
+        },
+        {
+          "path": "cache/s2/wa_B02.tif",
+          "role": "blue band window"
+        },
+        {
+          "path": "cache/s2/wa_SCL.tif",
+          "role": "matching scene-classification window"
+        }
+      ],
+      "facts": {
+        "reflectance_scale": 0.0001,
+        "fill_value": 0,
+        "report_numbers": {
+          "mean_blue_reflectance_snow": {
+            "statistic": "mean",
+            "data": "decoded blue band over SCL class 11",
+            "unit": "reflectance"
+          }
+        }
+      },
+      "facts_in_metadata": {
+        "reflectance_scale": {
+          "stated": true,
+          "where": "cache/s2/item.json: raster:bands[0].scale"
+        },
+        "fill_value": {
+          "stated": true,
+          "where": "cache/s2/item.json: raster:bands[0].nodata"
+        },
+        "report_numbers": false
+      },
+      "output": {
+        "path": "outputs/plain_blue_reflectance_snow_v0/summary.json",
+        "form": "summary",
+        "description": "Delivered snow-albedo summary."
+      },
+      "oracle": {
+        "evidence": "The value equals the recomputed mean of the decoded blue reflectance over the documented snow/ice class.",
+        "value_metric": "mean_blue_reflectance_snow",
+        "value": 0.547693
+      }
+    },
+    {
+      "id": "plain_feature_count_ne",
+      "family": "plain",
+      "kind": "correct",
+      "deliverable_form": "summary",
+      "scenario": "A data librarian counted the country records of the Natural Earth 110m admin-0 GeoJSON and shipped the plain feature count.",
+      "goal": "Report the delivered feature count.",
+      "sources": [
+        {
+          "path": "cache/naturalearth/ne_110m_admin_0_countries.geojson",
+          "role": "Natural Earth 110m admin-0 countries GeoJSON, public domain, tag v5.1.2"
+        }
+      ],
+      "facts": {
+        "report_numbers": {
+          "feature_count": {
+            "statistic": "count",
+            "data": "source GeoJSON features",
+            "unit": "features"
+          }
+        }
+      },
+      "facts_in_metadata": {
+        "report_numbers": false
+      },
+      "output": {
+        "path": "outputs/plain_feature_count_ne/summary.json",
+        "form": "summary",
+        "description": "Delivered feature count."
+      },
+      "oracle": {
+        "evidence": "The count equals the number of features in the source file, recomputed independently.",
+        "value_metric": "feature_count",
+        "value": 177
+      }
+    }
+  ]
+}

@@ -496,3 +496,22 @@ SHA-256 of every fetched file is recorded in the bundle's cache manifest.
 - **Data:** `ne_110m_admin_0_countries.geojson` pinned at tag v5.1.2 of
   `https://github.com/nvkelso/natural-earth-vector` (published via GitHub raw).
 - **Licence:** public domain (no restrictions, no attribution required).
+
+---
+
+## Phase 10 (verification-heldout-s0) data sources
+
+- **Sentinel-2 L2A** — scene `S2B_32TMS_20250831_0_L2A` (Earth Search
+  `sentinel-2-l2a` COGs with SCL classification layer), same ESA licence and
+  attribution as above: *"Contains modified Copernicus Sentinel data 2025"*.
+- **Copernicus DEM GLO-30** — tiles N28 E084, N46 E008 and N78 E016 from the
+  public AWS Open Data bucket; © DLR, attribution *"Contains Copernicus DEM
+  data"*.
+- **USGS 3DEP 1/3 arc-second** — tiles `n31w091` and `n22w159` with FGDC
+  sidecars; public domain (sidecar statement).
+- **Natural Earth 110m admin-0 countries** — GeoJSON at tag v5.1.2; public
+  domain.
+- **Landsat Collection 2 Level-2 QA_PIXEL** was **not** used: its COGs live
+  in the requester-pays `usgs-landsat` bucket (403 without credentials), and
+  no credential-free mirror was found; the bundle stays on Sentinel-2 as the
+  brief allows.
