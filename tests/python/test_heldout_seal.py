@@ -1,4 +1,4 @@
-"""Phase 7 V0 and V0b, Phase 8 real data, Phase 9 Q0 and Phase 10 S0: the held-out verification cases are sealed by hash and must not be edited for product tuning."""
+"""Phase 7 V0 and V0b, Phase 8 real data, Phase 9 Q0 and Phase 10 S0 and S0b: the held-out verification cases are sealed by hash and must not be edited for product tuning."""
 from __future__ import annotations
 
 import hashlib
@@ -31,6 +31,11 @@ SEALED = {
     "verification-heldout-s0/fetch.py": "88b904965cc7cf428a4310bc5f5495bd8324bdf73a91d9afb79f6022e247e1b6",
     "verification-heldout-s0/oracle.py": "82d0a153985457dd0a11d9f196a898dab4359f6b4c357137f1bd2935b41643a3",
     "verification-heldout-s0/README.md": "3b4d8cefefe8224ac7cb935a9454d31fee4b0a3c1afac3b4a741ede97a9f5fce",
+    "verification-heldout-s0b/cases.json": "62b3558e803c9dec7914193d42a28454c007d7d5caa312c92ecb491f24392b5c",
+    "verification-heldout-s0b/derive.py": "7c2f6184cb4b6c8285d19e91b7f41024a6c29c9786766bf90b11c70b09ce7892",
+    "verification-heldout-s0b/fetch.py": "f2c37af34c89639bedfcf5b096647a07b07460bf1f729539aac689a160f114d8",
+    "verification-heldout-s0b/oracle.py": "1081594d8899711142a8120c67a047554808fa851870337a089224fcb9056b80",
+    "verification-heldout-s0b/README.md": "0f16a1802f806fea9bb222bb374564fbb2057de29a969e5ff8fb562719971954",
 }
 
 

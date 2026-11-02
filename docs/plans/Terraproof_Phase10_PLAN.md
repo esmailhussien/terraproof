@@ -1,6 +1,6 @@
 # Terraproof — Phase 10 Plan: Masks, reprojected slopes and multi-value reports
 
-> Status: **S4.1 measured (2026-11-02): acceptance not met, one false assurance; no release from this measurement.** It follows [Phase 9](Terraproof_Phase9_PLAN.md) and release 0.11.0.
+> Status: **S4.1 measured (2026-11-02): acceptance not met, one false assurance; no release from this measurement. The measured gaps are fixed and S0b is sealed; the S5 mapping is next.** It follows [Phase 9](Terraproof_Phase9_PLAN.md) and release 0.11.0.
 
 ## 1. Why this phase
 
@@ -313,6 +313,57 @@ Writing the mapping exposed two gaps in S1 and S3, fixed before any result:
   - projections with large scale factors and feet/metres confusion among the slopes, and class-restricted and decoded numbers among the reports;
   - **facts state the intended computation, never the mistake.** Some S0 facts described the trap, which forced the mapping to leave those numbers undeclared.
 - **Measurement.** It is the same as S4.1: a new mapping committed before any result, three configurations, the same per-direction and overall acceptance, and the same release rule.
+
+#### S0b seal record (2026-11-02)
+
+- **Authoring.** An independent agent authored 45 cases (20 wrong, 25 correct) in a fresh clone of `main` (`9e69f54`), on branch `geova/verification-heldout-s0b`, commit `c1cfd97`. Here it is cherry-picked as `637c7c6`.
+- **Counts by family.**
+  - QA validity masks: 5 wrong, 5 correct;
+  - reprojected slopes: 6 and 6;
+  - multi-value reports: 6 wrong, 7 correct;
+  - same-grid geographic slopes: 3 and 3;
+  - plain: 4 correct.
+- **Counts by form.** 19 datasets, 16 summaries and 10 validity masks.
+- **Reprojected slopes.**
+  - By order: 4 slope then warp, 8 warp then slope.
+  - By resampling: bilinear 6, average 3, cubic 2, nearest 1.
+  - By target CRS: EPSG:32632 5, EPSG:32633 3, EPSG:3413 2 (polar stereographic, scale factor about 1.0008 there), EPSG:3857 2 (Web Mercator near 69.3°N, scale factor about 2.83).
+- **Sources.** All in new places:
+  - Sentinel-2 L2A tile 33WXT on 2025-09-15 (about 69–70°N), with its SCL layer;
+  - GLO-30 tiles N69 E019 and N46 E007;
+  - 3DEP `n33w118`;
+  - Natural Earth.
+
+  As in S0, masks use SCL only.
+- **The agent's report.**
+  - 99 of 334 `facts` entries (29.6%) are stated by real metadata.
+  - Two cold fetches gave byte-identical manifests, and two derivations gave byte-identical outputs.
+  - The oracle agreed with all 45 cases.
+  - The cases' own test checks that wrong cases' facts match the honest chain.
+- **Maintainer checks.**
+  - The committed LF hashes and sizes match the hand-off, including the test file (`2ad3b473…9c72`).
+  - Imports were checked: no `terraproof`. The fetch hosts are public: Earth Search, `sentinel-cogs`, the Copernicus DEM bucket, `prd-tnm`, and GitHub raw.
+  - A cold fetch into a new cache reproduced the manifest hash, and the cases' own test passed 6 of 6. With `CI` set and no cache, it skips.
+  - The case content was not read.
+- **Disclosed.**
+  - **The hand-off said more than the counts.** It described the Web Mercator slopes: correct ones scale grid metres by cos(latitude), wrong ones are in grid metres. It also named four wrong-report kinds:
+    - a stretched band over 0 m coastal cells;
+    - an area in square degrees;
+    - a band decoded with its offset applied twice;
+    - a per-class share taken over all cells.
+
+    The maintainer read this before any measurement. The product is not changed between this seal and the S5 measurement, so nothing in the hand-off can tune it. The scale-factor and feet-over-metres rules were committed in `e146e9c`, before the hand-off.
+  - **Same-grid slopes.** The brief asked that at least one same-grid slope be on a projection whose scale factor is far from 1. The hand-off names that family "geographic" and does not say whether it does, and the cases were not read to check.
+  - **One repair outside the sealed files.** The S0b commit joined two lines of an earlier `sources/SOURCES.md` entry (`sidecars.- **Licence:**`). The cherry-pick restores the line break and keeps both the S0 and S0b sections.
+
+  | File | SHA-256 |
+  | --- | --- |
+  | `evals/verification-heldout-s0b/cases.json` | `62b3558e803c9dec7914193d42a28454c007d7d5caa312c92ecb491f24392b5c` |
+  | `evals/verification-heldout-s0b/fetch.py` | `f2c37af34c89639bedfcf5b096647a07b07460bf1f729539aac689a160f114d8` |
+  | `evals/verification-heldout-s0b/derive.py` | `7c2f6184cb4b6c8285d19e91b7f41024a6c29c9786766bf90b11c70b09ce7892` |
+  | `evals/verification-heldout-s0b/oracle.py` | `1081594d8899711142a8120c67a047554808fa851870337a089224fcb9056b80` |
+  | `evals/verification-heldout-s0b/README.md` | `0f16a1802f806fea9bb222bb374564fbb2057de29a969e5ff8fb562719971954` |
+  | Fetched-file manifest (`manifest.json` in the cache) | `b18cb86a4ecf61b434a4cb8bfddf98f19d46f2dd6ec8fc9bbdbd0a828acc045b` |
 
 ## 4. Order and delivery
 
