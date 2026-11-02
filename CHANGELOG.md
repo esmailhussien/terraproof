@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.12.0] — 2026-11-02
 
+Released 2026-11-02: merge `0467d44` (#44), tag `v0.12.0`, PyPI through `publish-python.yml`,
+npm `terraproof@0.12.0` (shasum `3375dc18…`), and GitHub release *Terraproof v0.12.0*.
+
 Phase 10: QA masks, reprojected slopes and multi-value reports.
 
 - **First measurement (S4.1).** On 42 sealed real-data cases (S0), it certified one wrong Web Mercator slope and met no direction's acceptance. The gaps it found were fixed.
