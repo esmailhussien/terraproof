@@ -41,7 +41,10 @@ INSTRUCTIONS = (
     "a plausible value range alone does not verify the derivation. Declare the goal in two steps: "
     "`propose_contract` drafts a contract for its goal profiles from explicit metadata; review it "
     "and pass it to `run_checks`. Only a fully verified contract is decision-grade, so when "
-    "`run_checks` returns `next_step`, follow it. For NDVI, use "
+    "`run_checks` returns `next_step`, follow it. When a task produces deliverables, write each one's "
+    "outputs, goal and bindings in the project file `terraproof.toml` before producing them, call "
+    "`verify_project` with `plan=true` to see what is still undeclared, and call it again on the "
+    "finished outputs. For NDVI, use "
     "`index_formula=\"ndvi\"`, `nir` and `red` on the saved output; for NBR, dNBR, NDWI, MNDWI, "
     "NDMI, SAVI or EVI pass `bands` by role (and `band_numbers` for multi-band sources). For "
     "composites, accumulations and trends pass the ordered input layers as `stack` with "
@@ -505,6 +508,27 @@ def propose_contract(
         return jsonable(_propose(paths, profiles, values, stac))
     except (OSError, ValueError, TypeError) as exc:
         raise ToolError(f"cannot propose a verification contract: {exc}") from exc
+
+
+@mcp.tool()
+def verify_project(path: str | None = None, plan: bool = False, only: list[str] | None = None) -> dict[str, Any]:
+    """Check every deliverable a project file declares; the verdict to report before you claim a task is done.
+
+    The project file (`terraproof.toml`, or `terraproof.json`; default: in the current folder) holds
+    `schema = "terraproof.project/1"` and one `[[deliverables]]` table per deliverable: a unique `name`,
+    its `outputs`, its `goals` (goal profiles) or `checks`, and its bindings named as for `run_checks`
+    (paths relative to the file). Write it when the task starts, before producing outputs, and call this
+    tool with `plan=true`: it runs nothing and lists each declaration's required checks and
+    `missing_bindings`. On finished outputs, call it without `plan`: each deliverable gets its grade,
+    its verification status and the findings of every check that did not pass, and `exit_code` is the
+    worst deliverable's. `only` names deliverables to check. Matches `python -m terraproof verify`.
+    """
+    from terraproof import project
+
+    try:
+        return jsonable(project.plan(path, only) if plan else project.verify(path, only))
+    except (OSError, ValueError, TypeError) as exc:
+        raise ToolError(f"cannot verify the project: {exc}") from exc
 
 
 @mcp.tool()

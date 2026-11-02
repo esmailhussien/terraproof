@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Project verification
+
+- `terraproof verify` checks every deliverable a project file (`terraproof.toml`, or
+  `terraproof.json`) declares, in one run.
+  - **Each deliverable** names its outputs, its goal profiles or check ids, and its bindings, under
+    the names `run_checks` uses. Paths are relative to the file.
+  - **The result** is graded on that declaration as its contract, with one exit code for CI: the
+    worst deliverable's.
+  - **`--plan`** runs nothing and lists what each declaration still lacks, so the file can be
+    written before outputs exist.
+  - **Other options:** `--only` (one deliverable), `--format json`, and `--reports DIR` (full
+    reports).
+- New MCP tool `verify_project` (eight tools), matching `verify`. The server instructions ask agents to
+  write the project file before producing deliverables.
+- See [project verification](docs/PROJECT_VERIFICATION.md).
+
 ## [0.12.0] — 2026-11-02
 
 Released 2026-11-02: merge `0467d44` (#44), tag `v0.12.0`, PyPI through `publish-python.yml`,
