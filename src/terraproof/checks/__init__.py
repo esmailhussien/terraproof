@@ -80,11 +80,14 @@ def run_checks(
     summary_unit: str | None = None,
     summary_feature: str | None = None,
     summary_mask: dict | None = None,
+    summaries: list | None = None,
 ) -> list[CheckResult]:
     """Run every check that applies to the inspected inputs, in a fixed order.
 
     `output_form="validity-mask"` declares outputs as masks whose valid cells hold `output_valid_value`
-    (default 1); the QA-mask and support checks then read every other value as invalid."""
+    (default 1); the QA-mask and support checks then read every other value as invalid. `summaries` lists
+    several declared report numbers ({key, statistic, source, unit, feature, mask}, sources inspected); the
+    single `summary_*` arguments are one more entry."""
     if output_form not in (None, "validity-mask"):
         raise ValueError(f"unknown output_form {output_form!r}; the only declared form is validity-mask")
     valid_value = (1.0 if output_valid_value is None else float(output_valid_value)) if output_form else None
@@ -106,7 +109,7 @@ def run_checks(
         results += scope.check_record_count(vectors, compare_to)
 
     for dataset in rasters:
-        results += raster.check_nodata(dataset)
+        results += raster.check_nodata(dataset, valid_value)
         results += raster.check_cog_layout(dataset)
     if len(rasters) >= 2:
         results += raster.check_grid_alignment(rasters)
@@ -178,10 +181,13 @@ def run_checks(
             results += metric_value_checks.check_metric_values(dataset, metric_quantity, metric_property,
                                                                metric_unit, buffer_distance_m, buffer_source)
 
+    entries = list(summaries or [])
     if summary_key is not None or summary_statistic is not None or summary_source is not None:
+        entries.append({"key": summary_key, "statistic": summary_statistic, "source": summary_source,
+                        "unit": summary_unit, "feature": summary_feature, "mask": summary_mask})
+    if entries:
         for dataset in inputs:
-            results += summary_checks.check_summary_value(dataset, summary_key, summary_statistic, summary_source,
-                                                          summary_unit, summary_feature, summary_mask)
+            results += summary_checks.check_summaries(dataset, entries)
 
     if sar_expect is not None:
         results += sar.check_value_domain(rasters, sar_expect)

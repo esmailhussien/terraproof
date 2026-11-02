@@ -166,6 +166,44 @@ Phase 9 declarations for real deliverables:
   carries `next_step`: the profiles, and the `propose` / `propose_contract` call
   that would make them required. It is advisory and never changes the grade.
 
+Phase 10 declarations:
+
+- A declared validity mask fails `rs.cloud_mask_applied` where it marks a cell
+  valid that the QA layer records as no observation: the QA file's nodata under
+  any `--qa-kind`, and also SCL class 0 (`s2-scl`) or the QA_PIXEL fill bit
+  (`landsat-qa-pixel`). Data outputs keep missing QA unverifiable.
+- `terrain.slope_consistent` now compares a slope on another grid than its DEM
+  (another CRS, resolution or origin) after resampling, instead of `not-run`. The
+  reference is the DEM's slope made each common way: slope then warp, or warp then
+  slope, with nearest, bilinear, cubic or average resampling, central differences
+  or Horn, warped in the delivered unit. The delivered slope passes only when one
+  way reproduces it cell by cell (95% of cells within 1%), and fails when one way
+  reproduces a named mistake instead, including degrees and percent confused.
+  Otherwise it fails only for a gross mistake: the declared reading's area-mean
+  gradient lies outside the envelope correct resampling stays inside (set in Phase
+  10 S2), and a mistake's lies within it with the DEM's pattern. The rest warns.
+  The evidence says `comparison: resampled`.
+- On a projected grid whose point scale factor strays more than 1% from 1 (Web
+  Mercator away from the equator, polar stereographic), slope is measured in
+  ground metres cell by cell, and projected units taken as ground lengths is a
+  named mistake. UTM and other grids within 1% keep nominal spacing. Heights in
+  metres converted to feet over metre spacing is a named mistake on every grid.
+- A declared validity mask passes `raster.nodata_declared`: its form already
+  says that every value but the valid one is invalid.
+- `--summary key=K,statistic=S,source=PATH[,unit=U][,feature=FIELD=VALUE][,mask=PATH]`
+  (repeatable; MCP `summaries`, a list of objects) declares every number a report
+  holds, one `report.summary_value` result each. Keys may index lists
+  (`bands.0.mean`). On a raster source, `codes=C;C` keeps cells holding those
+  class codes, `mask_codes=C;C` names the mask values to include (default 1, so
+  a QA layer can be the mask), and `scale=`/`offset=` decode a band whose file
+  states no calibration (a different one in the file is a conflict, `not-run`). `--summary-statistic fraction` is the share of the source's
+  valid cells the mask marks 1, or of all cells that are valid without a mask,
+  with `unit` `fraction` or `percent`. A number matches within the statistic's
+  tolerance or within rounding to the decimals it is written with. Numbers no
+  summary declares are listed in `coverage.unchecked_numbers`, never judged, and
+  a warning names them, so such a report needs review rather than being
+  decision-grade.
+
 `geometry.winding` warns rather than fails (Phase 8). RFC 7946 binds GeoJSON
 writers to the right-hand rule but tells parsers not to reject other rings, and
 ring order changes no coordinate, area or topology. The warning still keeps a

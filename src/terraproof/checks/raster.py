@@ -11,8 +11,14 @@ GRID_TOLERANCE = 1e-6
 SAFE_CATEGORICAL_METHODS = frozenset({"nearest", "mode"})
 
 
-def check_nodata(dataset: dict) -> list:
+def check_nodata(dataset: dict, valid_value: float | None = None) -> list:
+    """Every band declares nodata, unless the output is a declared validity mask (`valid_value`): its
+    form already says how invalid cells are written, as every value but the valid one."""
     path = dataset["path"]
+    if valid_value is not None:
+        return [result("raster.nodata_declared", PASS, f"{path} is a declared validity mask: {valid_value:g} is "
+                       "valid and every other value invalid, so it needs no nodata value.", input=path,
+                       output_valid_value=valid_value)]
     missing = [band["index"] for band in dataset["bands"] if band["nodata"] is None]
     if missing:
         return [

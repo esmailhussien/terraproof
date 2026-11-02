@@ -5,7 +5,26 @@ Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 r
 ---
 
 
-## v0.11.0 release — prepared 2026-11-02
+## v0.12.0 release — prepared 2026-11-02
+
+Phase 10: declared validity masks verified against the QA layer's no-data, `terrain.slope_consistent`
+on another grid than the DEM (`comparison: resampled`, ground metres where the projection's scale
+factor strays from 1, feet over metres named), repeatable `--summary` (MCP `summaries`) with list
+keys, `fraction`, `codes`, `mask_codes`, `scale` and `offset`, and `coverage.unchecked_numbers`.
+Measured: S4.1 on 42 sealed cases (one false assurance, fixed) and S5 on 45 fresh sealed cases (S1 and
+S2 met, S3 not met, zero false assurance). No agent run.
+
+- [ ] PR CI green on the release head, then merged with a regular merge commit.
+- [ ] Tag the merge commit `v0.12.0` and push the tag (annotated); `publish-python.yml` runs.
+- [ ] Publish the npm tarball (`npm whoami` first; `npm publish --access public`; browser/2FA).
+- [ ] Approve the `pypi` deployment only after the TestPyPI install jobs pass.
+- [ ] GitHub release *Terraproof v0.12.0* with the npm tarball, wheel and sdist, verified against
+  both registries.
+- [ ] Post-release: `npx terraproof@0.12.0 --version` and `route` from a blank directory, and
+  `pip install "terraproof[mcp]==0.12.0"` in a fresh venv runs `inspect`, `check` (including a
+  JSON report with two `--summary` entries), `propose`, and lists seven MCP tools.
+
+## v0.11.0 release — 2026-11-02
 
 Phase 9: `--output-form validity-mask`, `--slope-unit`, the `report.summary_value` check and the
 `summary-value` profile, plain JSON objects inspected as reports, `next_step` on undeclared
@@ -13,15 +32,15 @@ reports, a 1% tolerance for geographic slopes, and no full-scan flag needed for 
 Measured: Q5.1 on 36 sealed real-data cases (acceptance met in all three configurations) and Q5.2
 with 10 approved OpenCode/MiMo runs (zero false assurance).
 
-- [ ] PR CI green on the release head, then merged with a regular merge commit.
-- [ ] Tag the merge commit `v0.11.0` and push the tag (annotated); `publish-python.yml` runs.
-- [ ] Publish the npm tarball (`npm whoami` first; `npm publish --access public`; browser/2FA).
-- [ ] Approve the `pypi` deployment only after the TestPyPI install jobs pass.
-- [ ] GitHub release *Terraproof v0.11.0* with the npm tarball, wheel and sdist, verified against
-  both registries.
-- [ ] Post-release: `npx terraproof@0.11.0 --version` and `route` from a blank directory, and
+- [x] PR CI green on the release head, then merged with a regular merge commit. 2026-11-02: #43, 20/20 on `bdfb36f`, merge `9e69f54`.
+- [x] Tag the merge commit `v0.11.0` and push the tag (annotated); `publish-python.yml` runs.
+- [x] Publish the npm tarball (`npm whoami` first; `npm publish --access public`; browser/2FA). Shasum `734c442d…`, `latest`; 183 files match the tag apart from CRLF in 166 text files, and the 8 built `dist/router/*.js` match a rebuild from the tag; `bin/terraproof.js` has no CR.
+- [x] Approve the `pypi` deployment only after the TestPyPI install jobs pass. Publish run succeeded; PyPI wheel SHA-256 `3cd031aa…`, sdist `4b14428f…`.
+- [x] GitHub release *Terraproof v0.11.0* with the npm tarball, wheel and sdist, verified against
+  both registries. Marked Latest.
+- [x] Post-release: `npx terraproof@0.11.0 --version` and `route` from a blank directory, and
   `pip install "terraproof[mcp]==0.11.0"` in a fresh venv runs `inspect`, `check` (including a
-  JSON summary), `propose`, and lists seven MCP tools.
+  JSON summary), `propose`, and lists seven MCP tools. 2026-11-02, Windows: `terraproof v0.11.0`, route exit 0; pip 0.11.0 (the simple index lagged the JSON API by about a minute); `inspect` exit 0; a clean COG `checks-passed` with schema `terraproof.evidence/0.2`; a JSON summary `pass` with `next_step` `summary-value`; `propose` left only the goal bindings undeclared; seven tools.
 
 ## v0.10.0 release — 2026-11-01
 

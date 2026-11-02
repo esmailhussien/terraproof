@@ -78,7 +78,7 @@ def test_a_dem_without_a_vertical_unit_is_read_in_horizontal_units(tmp_path):
     assert found.status == "pass" and found.evidence["vertical_unit"] is None
 
 
-def test_unknown_units_undeclared_geographic_units_and_unaligned_grids_are_not_run(tmp_path):
+def test_unknown_units_and_undeclared_geographic_units_are_not_run_and_unaligned_grids_resampled(tmp_path):
     dem, z = _dem(tmp_path, unit="furlong")
     assert _check(tmp_path, _slope(z, 1.0, 30, 60), dem).status == "not-run"
 
@@ -96,7 +96,9 @@ def test_unknown_units_undeclared_geographic_units_and_unaligned_grids_are_not_r
     dem, z = _dem(tmp_path)
     shifted = from_origin(500015, 5000000, 30, 60)
     found = _check(tmp_path, _slope(z, 0.3048, 30, 60), dem, name="shifted.tif", transform=shifted)
-    assert found.status == "not-run" and "same grid" in found.message
+    # Phase 10: another grid is compared after resampling instead of not-run. Values merely relabelled half a
+    # pixel off are no resampling of the DEM's slope, so they warn rather than pass.
+    assert found.status == "warn" and found.evidence["comparison"] == "resampled"
 
 
 def test_run_checks_emits_the_check_only_when_a_dem_is_given(tmp_path):

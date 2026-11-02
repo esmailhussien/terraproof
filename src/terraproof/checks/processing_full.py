@@ -137,11 +137,20 @@ def cloud_mask(output, qa_path, qa_kind, keep_codes=None, qa_source=None, valid_
             if any(np.dtype(dtype).kind not in "iuf" for dtype in dst.dtypes):
                 return answer(NOT_RUN, "Cloud-mask verification needs real-valued output bands.")
             source = rasterio.open(qa_source) if qa_source and qa_kind == "keep-codes" else None
-            flagged_count = unmasked_count = band_count = unavailable = over_masked = 0
+            # A declared mask may not call a cell valid where the QA records no observation: the QA file's
+            # nodata under any rule, and SCL class 0 (no data) or QA_PIXEL bit 0 (fill) by those products'
+            # own definitions.
+            observed_only = valid_value is not None
+            flagged_count = unmasked_count = band_count = unavailable = over_masked = unobserved_valid = 0
             for window in windows(src):
                 codes = src.read(1, window=window)
                 known = src.read_masks(1, window=window) > 0
                 in_range = (codes >= 0) & (codes <= (11 if qa_kind == "s2-scl" else 65535))
+                unobserved = ~known
+                if qa_kind == "s2-scl":
+                    unobserved |= codes == 0
+                elif qa_kind == "landsat-qa-pixel":
+                    unobserved |= (codes.astype("uint64") & 1) != 0
                 known &= in_range
                 if qa_kind == "keep-codes":
                     flagged = known & ~np.isin(codes, keep_codes)
@@ -161,6 +170,9 @@ def cloud_mask(output, qa_path, qa_kind, keep_codes=None, qa_source=None, valid_
                     any_band_unmasked |= bad
                     any_band_valid |= valid
                 unmasked_count += int(np.count_nonzero(any_band_unmasked))
+                if observed_only:
+                    unobserved_valid += int(np.count_nonzero(unobserved & any_band_valid))
+                    known |= unobserved  # judged above, not unverifiable
                 # Missing QA is unverifiable only where the output still holds a value there.
                 unavailable += int(np.count_nonzero(~known & any_band_valid))
                 if qa_kind == "keep-codes":
@@ -171,7 +183,8 @@ def cloud_mask(output, qa_path, qa_kind, keep_codes=None, qa_source=None, valid_
                     over_masked += int(np.count_nonzero(kept))
             if source is not None:
                 source.close()
-            evidence.update(over_masked_kept_pixels=over_masked if qa_kind == "keep-codes" else None)
+            evidence.update(over_masked_kept_pixels=over_masked if qa_kind == "keep-codes" else None,
+                            valid_without_qa_observation=unobserved_valid if observed_only else None)
             evidence.update(flagged_pixels=flagged_count, unmasked_flagged_pixels=unmasked_count,
                 unmasked_flagged_band_pixels=band_count, unavailable_qa_pixels=unavailable, bands=dst.count,
                 unmasked_fraction=unmasked_count/flagged_count if flagged_count else None)
@@ -179,6 +192,9 @@ def cloud_mask(output, qa_path, qa_kind, keep_codes=None, qa_source=None, valid_
         return answer(NOT_RUN, f"Cannot compare QA ({type(error).__name__}).")
     if unmasked_count:
         return answer(FAIL, "At least one QA-flagged location still has a value in an output band.")
+    if unobserved_valid:
+        return answer(FAIL, f"The mask marks {unobserved_valid} cells valid where the QA layer records no "
+                      "observation (its nodata, SCL class 0 or the QA_PIXEL fill bit).")
     if over_masked and qa_source:
         return answer(FAIL, "Locations whose QA code the declared rule keeps, and whose source holds a value, "
                       "are nodata in the output: valid data was masked.")

@@ -9,7 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-11-02
+
+Phase 10: QA masks, reprojected slopes and multi-value reports.
+
+- **First measurement (S4.1).** On 42 sealed real-data cases (S0), it certified one wrong Web Mercator slope and met no direction's acceptance. The gaps it found were fixed.
+- **Second measurement (S5).** On 45 fresh sealed cases (S0b), the declared checks:
+  - caught all 5 wrong masks, with 3 of 5 correct masks `decision-grade`;
+  - caught 5 of 6 wrong reprojected slopes and verified all 6 correct ones;
+  - certified no wrong output in any configuration, with no false alarm.
+- **Reports did not meet their bar.** 4 of 6 wrong reports failed. The other two hold only numbers the check cannot express (NDVI, a selection joint across bands, a decode), so they stayed `advisory-only`.
+- **Known misses that warn rather than fail:**
+  - horizontal spacing read as feet;
+  - degrees and percent confused on a same-grid slope.
+- **No agent run** was measured for this release.
+
+Details are in [the Phase 10 plan](docs/plans/Terraproof_Phase10_PLAN.md).
+
+### Masks, reprojected slopes and multi-value reports (Phase 10 S1-S3)
+
+- A declared validity mask now fails `rs.cloud_mask_applied` where it marks a cell valid that the QA
+  records as no observation (the QA file's nodata under any QA kind, SCL class 0, the QA_PIXEL fill
+  bit), instead of leaving it unverifiable. Data outputs are unchanged.
+- `terrain.slope_consistent` compares a slope on another grid than its DEM after resampling instead of
+  returning `not-run` (`comparison: resampled`). It passes only when a common way of making it (slope
+  then warp or warp then slope; nearest, bilinear, cubic or average; central differences or Horn)
+  reproduces it cell by cell. It fails when one reproduces a named mistake (now including degrees and
+  percent confused), or for a gross mistake outside the area-mean envelope correct resampling stays
+  inside; otherwise it warns. On synthetic terrain (1,536 correct and 3,456 wrong slopes, set before
+  any held-out case was read), no correct slope failed and no wrong slope passed.
+- Slopes on projected grids whose scale factor strays more than 1% from 1 (Web Mercator, polar
+  stereographic) are measured in ground metres, and projected units taken as ground lengths is a
+  named mistake; UTM keeps nominal spacing. Heights converted to feet over metre spacing is a named
+  mistake. Found by the Phase 10 S4.1 measurement, where a Web Mercator slope was certified.
+- A declared validity mask passes `raster.nodata_declared`.
+- Summaries on a raster source accept `codes`, `mask_codes`, `scale` and `offset`: class-restricted
+  statistics, a QA layer as the mask, and a declared calibration when the file states none.
+- `--summary key=…,statistic=…,source=…` (repeatable; MCP `summaries`) declares every number of a
+  JSON report, one `report.summary_value` result each. Keys may index lists (`bands.0.mean`). New
+  statistic `fraction` (share of valid cells, or of the mask's 1s) in `fraction` or `percent`.
+  Numbers match within rounding to the decimals they are written with. Undeclared numbers are listed
+  in `coverage.unchecked_numbers`, never judged, and a warning names them, so the report needs
+  review instead of being decision-grade.
+
 ## [0.11.0] — 2026-11-02
+
+Released 2026-11-02: merge `9e69f54` (#43), tag `v0.11.0`, PyPI through `publish-python.yml`,
+npm `terraproof@0.11.0` (shasum `734c442d…`), and GitHub release *Terraproof v0.11.0*.
 
 Phase 9: real deliverables. Validity masks, slopes in percent and JSON summaries are now checkable,
 and reports guide undeclared checks toward a declared goal. Measured once on 36 fresh sealed

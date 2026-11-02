@@ -1,0 +1,482 @@
+# Terraproof — Phase 10 Plan: Masks, reprojected slopes and multi-value reports
+
+> Status: **S5 measured (2026-11-02): S1 and S2 met, S3 not met, zero false assurance; the release rule is met for 0.12.0.** S4.1 (acceptance not met, one false assurance) came first. It follows [Phase 9](Terraproof_Phase9_PLAN.md) and release 0.11.0.
+
+## 1. Why this phase
+
+Phase 9 closed most of the coverage gap: 33 of 36 real deliverables got a requirement, and with declarations 12 of 15 real mistakes were caught, with no false assurance. Three gaps remain. This phase works on these three only.
+
+1. **Masks.**
+   - In Q5.1, a wrong mask kept a swath edge, where the QA layer holds no data, as valid. The check returned `not-run`.
+   - In Q5.2, both mask runs declared the form but never passed the QA layer, so the mask was never verified.
+   - Two later fixes are unmeasured: the dropped `processing_full_scan` requirement and the `next_step.missing` hint.
+2. **Reprojected slopes.** A slope delivered on another grid than its DEM is `not-run`, for example warped to UTM. In Q0, 2 of 6 slopes were delivered that way. The geographic tolerance fix is also unmeasured.
+3. **Multi-value reports.** `report.summary_value` checks one number per call. Real reports hold several (a mean, a min, a max, a valid share), and nested keys or lists are common.
+
+**Release rule.** 0.12.0 ships only if at least two of the three directions meet their acceptance on fresh cases (S4), with zero false assurance everywhere. A direction that misses is reported as missed, and the release notes claim nothing for it.
+
+## 2. Principles (unchanged)
+
+- **Nothing is inferred.** No binding is inferred from task text, file names or value ranges. The goal is always the caller's.
+- **Not-run, never guessed.** A check that cannot tell is `not-run`; it never picks.
+- **Cases first.** Held-out cases are sealed before product code, measured once, then spent.
+- **Mapping first.** Each measurement's mapping is committed before its results.
+- **Tolerances from first principles.** Every new tolerance is derived from synthetic data or published specifications before a fresh case is read, never from spent cases.
+- **Approved runs only.** Model runs need an approved exact count.
+- **One branch, one PR.** It also carries the v0.11.0 release ticks (`794e33e`).
+
+## 3. Workstreams
+
+### S0. Seal a fresh real-data set (first)
+
+- **Authoring.** An independent agent authors at least 40 cases from public data, with the Phase 9 Q0 rules: no credentials, licences recorded, `fetch.py` with SHA-256, no committed rasters, and metadata as found. The brief is kept outside the repository.
+- **Families, one per direction plus regression.**
+
+  | Family | Wrong | Correct | Traps |
+  | --- | --- | --- | --- |
+  | QA validity masks | ≥ 5 | ≥ 5 | Sentinel-2 SCL and Landsat QA_PIXEL. Wrong cases include swath-edge or fill kept as valid, a rejected class kept, and a valid class rejected. |
+  | Reprojected slopes | ≥ 5 | ≥ 5 | Slopes warped to another CRS or resolution, both "slope then warp" and "warp then slope", several resampling methods, degrees and percent, projected and geographic DEMs. Wrong cases include vertical units ignored, latitude ignored, degrees used as lengths, and the unit confused. |
+  | Multi-value reports | ≥ 5 | ≥ 5 | JSON with 3 or more numbers, including nested keys and lists, raster statistics, vector area, length and count, and a valid share. Each wrong report has one wrong number among right ones. |
+  | Same-grid geographic slopes | ≥ 2 | ≥ 2 | To measure the Phase 9 tolerance fix. |
+  | Plain | — | ≥ 4 | Real outputs with no trap. |
+
+- **Complete facts.** Three Q0 summaries could not be declared because their facts named no key or statistic. Every S0 case must state every fact a declaration needs: for each number in a report, its key, statistic, source, and unit; for a mask, its QA layer and rule.
+
+#### S0 seal record (2026-11-02)
+
+- **Authoring.** An independent agent authored 42 cases (19 wrong, 23 correct) in a fresh clone of `main` (`9e69f54`), on branch `geova/verification-heldout-s0`, commit `09036d0`. Here it is cherry-picked as `b05dddd`.
+- **Counts by family.**
+  - QA validity masks: 5 wrong, 5 correct;
+  - reprojected slopes: 6 and 6;
+  - multi-value reports: 5 and 5;
+  - same-grid geographic slopes: 3 and 3, at about 28.7°, 46.6° and 78.6°N;
+  - plain: 4 correct.
+- **Counts by form.** 19 datasets, 13 summaries and 10 validity masks.
+- **Reprojected slopes.**
+  - By order: 6 slope then warp, 6 warp then slope.
+  - By resampling: bilinear 5, average 3, cubic 2, nearest 2.
+- **Reports.** Every report holds 3 or more numbers; 2 hold lists. Each wrong report has exactly one wrong number.
+- **Sources.** One Sentinel-2 L2A scene from Earth Search with its SCL layer, Copernicus DEM GLO-30, USGS 3DEP and Natural Earth.
+  - **No Landsat.** Landsat Collection 2 QA_PIXEL was not used: it is requester-pays, so masks use Sentinel-2 SCL only, as the brief allows.
+  - **Projected grids.** Public DEMs are geographic, so projected slopes come from each case's declared warp.
+- **The agent's report.**
+  - 104 of 298 `facts` entries (34.4%) are stated by real metadata. The set states complete facts on purpose, and most of them are the practitioner's.
+  - Two cold fetches gave byte-identical manifests, and two derivations gave byte-identical outputs.
+  - The oracle agreed with all 42 cases.
+  - For reprojected slopes, a different resampling choice moves the mean slope by at most 1.03%; the wrong cases differ by factors of 0.198 to 105 058.
+- **Maintainer checks.**
+  - The committed LF hashes match the hand-off, including the test file (`fd559b52…98f08`).
+  - Imports were checked: no `terraproof`. Fetch hosts are public: Earth Search, `sentinel-cogs`, the Copernicus DEM bucket, `prd-tnm`, and GitHub raw.
+  - A cold fetch into a new cache reproduced the manifest hash, and the cases' own test passed 5 of 5. With `CI` set and no cache, it skips.
+  - The case content was not read.
+
+  | File | SHA-256 |
+  | --- | --- |
+  | `evals/verification-heldout-s0/cases.json` | `4549f04db22382930b65ad779c85f6dc44cb2575b738378fd111191688e9d724` |
+  | `evals/verification-heldout-s0/fetch.py` | `88b904965cc7cf428a4310bc5f5495bd8324bdf73a91d9afb79f6022e247e1b6` |
+  | `evals/verification-heldout-s0/derive.py` | `78218c9131205bfa5029b28f685ff46de219dec2fd5a53353213d73324d29906` |
+  | `evals/verification-heldout-s0/oracle.py` | `82d0a153985457dd0a11d9f196a898dab4359f6b4c357137f1bd2935b41643a3` |
+  | `evals/verification-heldout-s0/README.md` | `3b4d8cefefe8224ac7cb935a9454d31fee4b0a3c1afac3b4a741ede97a9f5fce` |
+  | Fetched-file manifest (`manifest.json` in the cache) | `be0986e067f942c8b9a9b0eaccd93d34c9f22985ebca4d1682a4d3f1558aa1ad` |
+
+### S1. Masks: verify the QA layer's own no-data, and measure the hint
+
+- **Rule.** For a declared validity mask (`output_form = validity-mask`) with `qa_kind` `s2-scl` or `landsat-qa-pixel`, a cell marked valid where the QA layer records no observation fails `rs.cloud_mask_applied`.
+  - **Basis.** The QA specifications themselves: SCL class 0 is "no data", and QA_PIXEL bit 0 is "fill". This is not inferred from values.
+  - **Scope.**
+    - `keep-codes` rules are unchanged, since there the caller declares which codes are kept.
+    - Data outputs (not masks) are unchanged: missing QA there stays unverifiable.
+- **Hint.** The `next_step.missing` hint, already shipped, names `qa_path` and `qa_kind` when a mask is declared without a QA layer. It is measured in S4.2, not changed.
+- **Progress measure.** In Phase 9:
+  - 3 of 4 wrong masks failed;
+  - 0 of 8 masks were `decision-grade`;
+  - 0 of 2 agent mask runs reached a QA verdict.
+
+### S2. Slopes delivered on another grid
+
+- **Today.** `terrain.slope_consistent` returns `not-run` when the slope and DEM grids differ.
+- **New path.**
+  1. The check computes the reference slope on the DEM's own grid, as today.
+  2. It maps each output cell centre into the DEM's CRS, and reads the reference there by bilinear interpolation. A cell is used only where all four neighbours have full stencils.
+  3. Per-cell agreement is replaced by a distribution test: the median absolute difference and the share of cells within a per-cell bound.
+  4. The named mistakes use the same test. The check fails only when a mistake fits and the declared reading does not; otherwise it warns.
+- **Tolerances.** Both bounds are set from synthetic terrain (planes, cones, sinusoids, and fractal surfaces of several roughnesses), warped by nearest, bilinear and cubic resampling, in both orders. This is done before S0 cases are read, and recorded with the margins to every named mistake.
+  - A bound that cannot separate correct from wrong on synthetic terrain stops the work. In that case the direction is reported as missed.
+- **Unchanged.**
+  - Same-grid slopes keep the per-cell test.
+  - `terrain.slope_formula` stays same-grid only.
+  - The evidence says `comparison: resampled`, so a resampled pass is never read as a cell-exact one.
+- **Progress measure.** In Phase 9, 0 of 2 reprojected slopes got a verdict.
+
+### S3. Multi-value reports
+
+- **Several summaries in one check.** A `summaries` binding lists entries of `{key, statistic, source, unit?, feature?, mask?}`.
+  - `report.summary_value` returns one result per entry.
+  - A contract requires every entry.
+  - The single `summary_*` bindings stay as shorthand for one entry.
+  - CLI: repeatable `--summary key=…,statistic=…,source=…`. MCP: a `summaries` list.
+- **Paths into lists.** Keys may index lists, as in `bands.0.mean`.
+- **One new statistic: `fraction`.**
+  - With `summary_mask`, it is the share of the source's valid cells that the mask marks valid.
+  - Without a mask, it is the share of all cells that are valid.
+  - `summary_unit` is `fraction` or `percent`.
+- **Unchecked numbers are listed, never judged.**
+  - The evidence lists every numeric leaf of the report that no entry declared.
+  - The report adds a `next_step.missing` line naming them.
+  - The grade covers the declared numbers only, as for any other output.
+- **Progress measure.** In Phase 9, a report was checked one number at a time, and lists and shares were not checkable.
+
+#### S1–S3 record (2026-11-02): implemented, not yet measured
+
+No S0 case content was read. The resampled-slope rule was calibrated on synthetic terrain only.
+
+- **S1, as planned.**
+  - The rule applies to masks declared with `s2-scl` or `landsat-qa-pixel`. They fail where they mark valid a cell the QA records as no observation: the QA file's nodata, SCL 0, or QA_PIXEL bit 0. The evidence counts these as `valid_without_qa_observation`.
+  - Data outputs and `keep-codes` rules are unchanged.
+- **S2, changed from the plan after a first rule failed calibration.**
+  - **The planned rule failed.** It used an area-mean distribution test with a correlation floor. On synthetic terrain it was unsafe at every setting: 6 to 101 wrong slopes passed, and 20 to 32 correct ones failed. On rough terrain, the resampling choice alone moves the mean gradient by up to 13%, as much as latitude ignored or a confused unit.
+  - **The rule as built** (`terrain.resampled_fits`, `resampled_outcome`):
+    1. The reference is made every common way: slope then warp (in the delivered unit), or warp then slope; nearest, bilinear, cubic or average resampling; central differences or Horn.
+    2. A slope passes only when one way reproduces it cell by cell, with 95% of cells within 1% (the geographic tolerance).
+    3. It fails when one way reproduces a named mistake instead. "Degrees and percent confused" is a new named mistake.
+    4. Otherwise it fails only for a gross mistake: the declared reading lies outside the area-mean envelope (|ln ratio| ≤ 0.25), and a mistake lies inside it with correlation ≥ 0.5.
+    5. The rest warns.
+  - **Disclosure.** The four emulated methods are GDAL's common ones. They were fixed after the S0 hand-off, whose counts name the same four methods (bilinear 5, average 3, cubic 2, nearest 2). The case content was not read.
+  - **Calibration.** [`tests/phase10_s2_calibration.py`](../../tests/phase10_s2_calibration.py) covers:
+    - 8 terrains: a plane, a cone, a sinusoid and fractals with β 2 to 4;
+    - 16 grids: geographic at 28.7°, 46.6°, 60° and 78.6° to UTM at 1×, 1.25× and 2×; UTM at 1.5× to 3×; and UTM 33 to UTM 32;
+    - correct slopes made with six methods, two of them never emulated (cubic spline, Lanczos), WGS84 or spherical spacing, float32 or float64, in degrees or percent;
+    - each named mistake, made the same ways.
+  - **Calibration results** at the chosen setting: 1,536 correct and 3,456 wrong slopes.
+
+    | Outcome | Pass | Warn | Fail |
+    | --- | --- | --- | --- |
+    | Correct slopes | 1,124 | 412 | **0** |
+    | Wrong slopes | **0** | 265 | 3,191 |
+
+    - **Correct, by method.** All 1,024 made with an emulated method were reproduced. Of those made with cubic spline or Lanczos, 100 of 512 were reproduced, and the rest warn.
+    - **The envelope.** The largest correct |ln ratio| was 0.189 (the roughest fractal), so 0.25 leaves a margin. Across every envelope from 0.15 to 0.4 and correlation from 0.3 to 0.7, no correct slope failed and no wrong one passed.
+    - **Wrong, by mistake.**
+      - Degrees as lengths: 576 of 576 failed.
+      - Unit confused: 729 of 768 and 712 of 768.
+      - Vertical units ignored: 687 of 768.
+      - Latitude ignored: 487 of 576, from 111 of 144 at 28.7° to 138 of 144 at 78.6°.
+      - The rest warn.
+  - **Unchanged.** Same-grid slopes keep the per-cell test. A slope merely relabelled half a pixel off now warns, where before it was `not-run`; its test was updated.
+- **S3, as planned, with one addition.**
+  - **As planned.**
+    - `summaries` is in `run_checks`, the CLI (`--summary`, repeatable), MCP and contracts. Each entry's missing fields are named, as in `summaries[0].unit`.
+    - Keys may index lists, and `fraction` is a new statistic.
+    - Undeclared numbers are listed per result and in `coverage.unchecked_numbers`, with one Markdown line in English and Arabic. They are listed in coverage rather than `next_step`, because `next_step` is absent under a contract.
+  - **Addition: rounding.** A number also matches within half a unit of its last written decimal. This is read from the JSON text, so a mean written as `12.3` is not a false alarm.
+- **Tests.** [`tests/python/test_phase10.py`](../../tests/python/test_phase10.py) has 11 tests:
+  - S1: swath edge with and without QA nodata, Landsat fill, and data and keep-codes outputs unchanged;
+  - S2: bilinear and average warps, percent, vertical units ignored, unit confused, and an unrelated slope that warns;
+  - S3: all numbers checked and the undeclared one listed; one wrong number among right ones; a share over all cells; contract coverage and missing fields; CLI/MCP parity and the proposed command.
+- **Open until S4.** Whether these meet the per-direction acceptance on real cases.
+
+#### Before S4.1 (2026-11-02): two design gaps fixed, disclosed
+
+The S4.1 mapping was written from the bundle README and a pooled view of the facts. The pooled view
+showed keys, types and the distinct values of each vocabulary field across all cases. It showed no
+ids, `kind`, scenarios, goals, outputs or oracle fields. It still showed two things:
+
+- **Trap wording in the facts.** Some report-number `mask` texts describe a mistake ("genuine 0 m
+  heights wrongly evicted", "denominator all pixels"). The mapping therefore never reads `mask` text to
+  build a declaration. A number is declared only when its mask text is empty or one of a fixed list of
+  fill-exclusion phrases, since the check always honours the source's own nodata.
+- **Inexpressible numbers.** Several report numbers cannot be expressed by the check: NDVI, a mean
+  restricted to a QA class, a share of a class. They stay undeclared.
+
+Writing the mapping exposed two gaps in S1 and S3, fixed before any result:
+
+1. **S1 scope.** As built, S1 would not have caught the Q5.1 miss it was meant to fix. That mask was
+   declared with `keep-codes`, and S1 excluded `keep-codes`. The QA file's nodata is "no observation"
+   under any rule, so a declared mask now fails there for every QA kind. SCL 0 and the QA_PIXEL fill
+   bit still apply only to their own kinds.
+2. **S3 grade.** Undeclared report numbers used to be listed only. A wrong number left undeclared
+   could then let the report reach `decision-grade`, which is false assurance. Now a warning names the
+   undeclared numbers, so such a report is at best `review-required`.
+
+### S4. Measure once (offline, then agent)
+
+1. **Offline on S0's sealed set.** Three configurations, as in Q5.1: declared, proposed and undeclared. The mapping is committed before any result.
+   - **Overall acceptance:** zero false assurance in every configuration; zero confirmed false alarms within declared coverage; no metadata-filled binding that contradicts the truth.
+   - **Per-direction acceptance (declared configuration):**
+
+     | Direction | Met when |
+     | --- | --- |
+     | S1 masks | Every wrong QA mask fails, and at least half of the correct masks reach `decision-grade` |
+     | S2 reprojected slopes | At least 4 of 5 wrong reprojected slopes fail, and no correct one fails |
+     | S3 multi-value reports | Every declared number is checked, every wrong report fails, and at least half of the correct reports reach `decision-grade` |
+
+   - **Reported, not thresholded:** same-grid geographic slopes, coverage by form, and the comparison with Q5.1.
+2. **Agent run on fresh tasks** (not S0's cases), with the same host, model and protocol as Q5.2.
+   - **Tasks.** Two per direction: a QA mask, a reprojected slope and a multi-value report. At two runs per task, that is **12 invocations**, to be approved before any run.
+   - **Requirement.** Zero false assurance.
+   - **Reported:** whether mask runs reached a QA verdict (0 of 2 in Q5.2), the declared share, `next_step` offered and followed, and correctness.
+
+#### S4.1 record (2026-11-02): measured once; acceptance not met, one false assurance
+
+**Run.**
+
+- The 42 sealed S0 cases were derived with their own scripts, and their oracle agreed with all 42.
+- The mapping, [`tests/phase10_s4.py`](../../tests/phase10_s4.py), was committed (`b134244`) before any result.
+  - It ran once on the product at that commit.
+  - A declaration-only dry run before the commit printed pooled counts only, with no check results.
+- Result: `.terracache/phase10-s4.json`, SHA-256 `ee7c9385255d57af449c94525a1b80dbaa1ab3ab8bcc92ae3fae81e25571165d`.
+- These cases are now spent.
+
+**Coverage.** 36 of 42 deliverables got a requirement: all 10 masks, all 18 slopes, and 8 of 13 reports. The other 5 reports hold no number the check can express, and one dataset had no rule.
+
+**Overall acceptance: not met.**
+
+| Measure | Declared | Proposed | Undeclared |
+| --- | --- | --- | --- |
+| Wrong outputs failing a check (of 19) | 13 | 0 | 0 |
+| **False assurance** (wrong graded `decision-grade`) | **1** | 0 | 0 |
+| False alarms within declared coverage | 0 | 0 | 0 |
+| Correct outputs graded `decision-grade` (of 23) | 9 | 0 | 0 |
+| Metadata bindings contradicting the truth | — | 0 | — |
+
+**Per direction (declared): none met.**
+
+| Direction | Acceptance | Result | Met |
+| --- | --- | --- | --- |
+| S1 masks | every wrong fails; at least half the correct `decision-grade` | 5 of 5 wrong failed; 0 of 5 correct `decision-grade` | no |
+| S2 reprojected slopes | at least 5 of 6 wrong fail; no correct fails | 4 of 6 failed, 1 certified, 1 warned; 0 correct failed, 6 of 6 `decision-grade` | no |
+| S3 multi-value reports | no declared number not-run; every wrong fails; at least half the correct `decision-grade` | 0 not-run; 2 of 5 wrong failed; 1 of 5 correct `decision-grade` | no |
+
+**What happened, by direction.**
+
+- **S1 masks.**
+  - **Wrong masks: all caught.** All 5 wrong masks failed, against 3 of 4 in Q5.1. That includes the swath-edge mask (fill kept valid), the case the S1 fix targets.
+  - **Correct masks: none reached `decision-grade`.** Each correct mask has a failing check count of zero and passed `rs.cloud_mask_applied`. But every one is `review-required`, because of two format screens: `raster.cog_layout` (the masks are not COGs) and `raster.nodata_declared` (a 1/0 mask declares no nodata). The Phase 9 grading policy is unchanged, so these screens still cap the grade.
+- **S2 reprojected slopes.**
+  - **Correct slopes: all verified.** All 6 correct slopes were reproduced cell by cell, across nearest, bilinear, cubic and average and both orders, and reached `decision-grade`.
+  - **The false assurance is a design flaw.** The Web Mercator slope (EPSG:3857, warp then slope, 78.6°N) was certified. On the warp-then-slope path, the check took projected units as ground lengths. Mercator overstates ground distance by 1/cos(latitude), about 5 times here, so the check's own reference repeated the mistake, at 100% of cells. The same flaw affects same-grid slopes in any projection whose scale factor is far from 1. UTM's (0.9996–1.001) is negligible.
+  - **The second miss is a missing named mistake.** "Feet over metres" (heights converted to feet over metre spacing) warned, as did its same-grid twin. "Vertical units ignored" exists only for a DEM labelled in feet.
+- **S3 multi-value reports.**
+  - **Declared numbers.** Every declared number ran, and the wrong ones failed: fill averaged in, and area in degrees.
+  - **Most wrong numbers were not expressible:**
+    - zeros evicted: the trap number's selection text describes the mistake, so the mapping left it undeclared, and the report only warned;
+    - a share over all cells, a class share: a share restricted to QA classes cannot be expressed;
+    - a band taken from the wrong band: the source COGs state no scale in the file, so reflectance means cannot be decoded.
+  - **No false assurance from those.** The undeclared-number warning held two correct reports at `review-required` and left reports with nothing declared `advisory-only`. That cap, added before the run, is what kept them from being certified.
+- **Same-grid geographic slopes.**
+  - **Wrong:** 2 of 3 failed; the third is the feet-over-metres mistake, which warned.
+  - **Correct:** all 3 passed the slope check, and were held at `review-required` by `raster.nodata_declared`.
+- **Proposed.** Metadata filled none of the 62 required bindings, as in Q5.1, and contradicted nothing.
+- **Undeclared.** No `next_step` was offered.
+
+**What this shows.**
+
+1. **Release rule not met.** No direction met its acceptance, and there was one false assurance. By the rule in §1, there is no 0.12.0 from this measurement.
+2. **Real progress, but not to the bar.**
+   - Every wrong mask was caught.
+   - Off-grid slopes went from 0 verdicts to 6 of 6 correct verified and 4 of 6 wrong caught.
+   - Multi-value reports are checked number by number.
+3. **One must-fix flaw.** The Mercator false assurance is a defect in S2's design: projected spacing is taken as ground spacing.
+4. **Measured gaps to close before another measurement:**
+   - scale factor in projected spacing;
+   - "metres read as feet" as a named mistake;
+   - the format screens holding correct declared masks and slopes at `review-required`;
+   - class-restricted and declared-scale report statistics.
+
+#### After S4.1 (2026-11-02): the measured gaps fixed, not re-measured
+
+- **Projected scale factor (the false assurance).**
+  - **Rule.** `terrain.slope_consistent` computes each cell's point scale factor (pyproj) on projected grids. Where it strays more than 1% from 1 anywhere, spacing is taken in ground metres, cell by cell, and "projected units taken as ground lengths" is a named mistake. Within 1% (UTM is within 0.1%), nominal spacing is kept, as before.
+  - **Paths.** It applies to same-grid slopes and to both resampled orders.
+- **Feet over metres.** "Heights in feet over metre spacing" is a named mistake wherever heights and spacing are both in metres.
+- **Masks.** A declared validity mask passes `raster.nodata_declared`, since its form says how invalid cells are written. `raster.cog_layout` is unchanged: whether a deliverable is cloud-optimized is a fair finding, and the grading policy is not changed to meet an acceptance.
+- **Report statistics.** A summary entry on a raster source accepts four more fields:
+  - `codes` (class codes kept);
+  - `mask_codes` (mask values included, default 1, so a QA layer can be the mask);
+  - `scale` and `offset` (a declared calibration when the file states none, and a conflict with a different stated one).
+- **Still out.** Band math such as NDVI, wildcard keys, and selections such as "zeros only" stay inexpressible.
+- **Recalibration** on the same synthetic terrain, with the new named mistake:
+  - **At the chosen setting:** still no correct slope failed and no wrong one passed. Wrong slopes failing rose from 3,191 to 3,254 of 3,456.
+  - **Across the sweep:** every envelope from 0.15 to 0.4 stays clean. The synthetic grids are UTM and geographic only, so the scale-factor rule leaves them unchanged.
+- **Sanity run on the spent S0 slopes, not a measurement.** All 9 wrong slopes now fail, including the Web Mercator and both feet-over-metres slopes, and all 9 correct ones pass.
+- **Tests.** Four more in [`tests/python/test_phase10.py`](../../tests/python/test_phase10.py) (15 in all):
+  - a Web Mercator slope at 78.6°N, in ground metres versus nominal units;
+  - feet over metres, same grid and warped;
+  - the mask nodata screen;
+  - class-restricted, mask-coded and declared-scale summaries, with a scale conflict.
+- **Not re-measured.** S0 is spent. A fresh sealed set (S0b) measures these fixes.
+
+#### S5 (planned 2026-11-02): re-measure on a fresh sealed set, S0b
+
+- **Authoring.** An independent agent authors S0b, at least 44 cases, from `S0B_REAL_DATA_CASES_BRIEF.md`, kept outside the repository. The brief follows S0's, with three changes:
+  - new places, including one above 65°;
+  - projections with large scale factors and feet/metres confusion among the slopes, and class-restricted and decoded numbers among the reports;
+  - **facts state the intended computation, never the mistake.** Some S0 facts described the trap, which forced the mapping to leave those numbers undeclared.
+- **Measurement.** It is the same as S4.1: a new mapping committed before any result, three configurations, the same per-direction and overall acceptance, and the same release rule.
+
+#### S0b seal record (2026-11-02)
+
+- **Authoring.** An independent agent authored 45 cases (20 wrong, 25 correct) in a fresh clone of `main` (`9e69f54`), on branch `geova/verification-heldout-s0b`, commit `c1cfd97`. Here it is cherry-picked as `637c7c6`.
+- **Counts by family.**
+  - QA validity masks: 5 wrong, 5 correct;
+  - reprojected slopes: 6 and 6;
+  - multi-value reports: 6 wrong, 7 correct;
+  - same-grid geographic slopes: 3 and 3;
+  - plain: 4 correct.
+- **Counts by form.** 19 datasets, 16 summaries and 10 validity masks.
+- **Reprojected slopes.**
+  - By order: 4 slope then warp, 8 warp then slope.
+  - By resampling: bilinear 6, average 3, cubic 2, nearest 1.
+  - By target CRS: EPSG:32632 5, EPSG:32633 3, EPSG:3413 2 (polar stereographic, scale factor about 1.0008 there), EPSG:3857 2 (Web Mercator near 69.3°N, scale factor about 2.83).
+- **Sources.** All in new places:
+  - Sentinel-2 L2A tile 33WXT on 2025-09-15 (about 69–70°N), with its SCL layer;
+  - GLO-30 tiles N69 E019 and N46 E007;
+  - 3DEP `n33w118`;
+  - Natural Earth.
+
+  As in S0, masks use SCL only.
+- **The agent's report.**
+  - 99 of 334 `facts` entries (29.6%) are stated by real metadata.
+  - Two cold fetches gave byte-identical manifests, and two derivations gave byte-identical outputs.
+  - The oracle agreed with all 45 cases.
+  - The cases' own test checks that wrong cases' facts match the honest chain.
+- **Maintainer checks.**
+  - The committed LF hashes and sizes match the hand-off, including the test file (`2ad3b473…9c72`).
+  - Imports were checked: no `terraproof`. The fetch hosts are public: Earth Search, `sentinel-cogs`, the Copernicus DEM bucket, `prd-tnm`, and GitHub raw.
+  - A cold fetch into a new cache reproduced the manifest hash, and the cases' own test passed 6 of 6. With `CI` set and no cache, it skips.
+  - The case content was not read.
+- **Disclosed.**
+  - **The hand-off said more than the counts.** It described the Web Mercator slopes: correct ones scale grid metres by cos(latitude), wrong ones are in grid metres. It also named four wrong-report kinds:
+    - a stretched band over 0 m coastal cells;
+    - an area in square degrees;
+    - a band decoded with its offset applied twice;
+    - a per-class share taken over all cells.
+
+    The maintainer read this before any measurement. The product is not changed between this seal and the S5 measurement, so nothing in the hand-off can tune it. The scale-factor and feet-over-metres rules were committed in `e146e9c`, before the hand-off.
+  - **Same-grid slopes.** The brief asked that at least one same-grid slope be on a projection whose scale factor is far from 1. The hand-off names that family "geographic" and does not say whether it does, and the cases were not read to check.
+  - **One repair outside the sealed files.** The S0b commit joined two lines of an earlier `sources/SOURCES.md` entry (`sidecars.- **Licence:**`). The cherry-pick restores the line break and keeps both the S0 and S0b sections.
+
+  | File | SHA-256 |
+  | --- | --- |
+  | `evals/verification-heldout-s0b/cases.json` | `62b3558e803c9dec7914193d42a28454c007d7d5caa312c92ecb491f24392b5c` |
+  | `evals/verification-heldout-s0b/fetch.py` | `f2c37af34c89639bedfcf5b096647a07b07460bf1f729539aac689a160f114d8` |
+  | `evals/verification-heldout-s0b/derive.py` | `7c2f6184cb4b6c8285d19e91b7f41024a6c29c9786766bf90b11c70b09ce7892` |
+  | `evals/verification-heldout-s0b/oracle.py` | `1081594d8899711142a8120c67a047554808fa851870337a089224fcb9056b80` |
+  | `evals/verification-heldout-s0b/README.md` | `0f16a1802f806fea9bb222bb374564fbb2057de29a969e5ff8fb562719971954` |
+  | Fetched-file manifest (`manifest.json` in the cache) | `b18cb86a4ecf61b434a4cb8bfddf98f19d46f2dd6ec8fc9bbdbd0a828acc045b` |
+
+#### Before S5 (2026-11-02): the mapping, written before any result
+
+- **How it was written.** [`tests/phase10_s5.py`](../../tests/phase10_s5.py) was written from two things:
+  - the bundle README;
+  - a pooled view of the facts: keys, types, vocabularies and report-number combinations, with no ids or kinds.
+
+  It reuses S4.1's configurations, acceptance and reporting. The product is unchanged since `e146e9c`.
+- **What the pooled view showed.** Every report number is structured: its file, a typed selection, its denominator and its decode. No selection text describes a mistake, so, unlike S4.1, no number is left out for its wording.
+- **Dry run.** Declarations only; no check ran.
+  - 10 masks, 18 slopes and 12 reports get a requirement.
+  - 4 reports and 1 dataset do not. The dataset is a decoded raster with no stated reflectance scale key, so S4.1's rules have none for it.
+  - 58 of 73 report numbers are declared.
+- **The 15 undeclared numbers, which the check cannot express:**
+  - 5 NDVI;
+  - 8 reflectance means over cells where all three bands are non-zero (a joint selection);
+  - 1 reflectance mean restricted to an SCL class on the 20 m layer, against a 10 m band;
+  - 1 count of classes that include SCL's nodata code 0.
+- **One acknowledged consequence.** The decoded-reflectance numbers the brief asked for are all among those undeclared. So S5 does not measure declared `scale`/`offset` on real reports; the S3 tests cover it only on fixtures.
+- **A count discrepancy.** The README gives the resampling counts as bilinear 5 and nearest 2. The hand-off and the facts give bilinear 6 and nearest 1. The facts are what the mapping reads.
+
+#### S5 record (2026-11-02): measured once; two directions met, zero false assurance
+
+**Run.**
+
+- The 45 sealed S0b cases were derived with their own scripts, and their oracle agreed with all of them (exit 0).
+- The mapping was committed (`0a5dc56`) before any result. It ran once on the product at that commit, which is unchanged since `e146e9c`.
+- Result: `.terracache/phase10-s5.json`, SHA-256 `c240df37cd0788471426d54bff81c8e739863617df9d3817cc93a3fc6e74bfd8`.
+- These cases are now spent.
+
+**Coverage.** 40 of 45 deliverables got a requirement: all 10 masks, all 18 slopes, and 12 of 16 reports.
+
+- 4 reports hold no number the check can express.
+- One plain decoded raster had no rule.
+- 58 of 73 report numbers were declared.
+
+**Overall acceptance: met.**
+
+| Measure | Declared | Proposed | Undeclared |
+| --- | --- | --- | --- |
+| Wrong outputs failing a check (of 20) | 16 | 0 | 0 |
+| **False assurance** (wrong graded `decision-grade`) | **0** | 0 | 0 |
+| False alarms within declared coverage | 0 | 0 | 0 |
+| Correct outputs graded `decision-grade` (of 25) | 15 | 0 | 0 |
+| Metadata bindings contradicting the truth | — | 0 | — |
+
+**Per direction (declared): two of three met.**
+
+| Direction | Acceptance | Result | Met |
+| --- | --- | --- | --- |
+| S1 masks | every wrong fails; at least half the correct `decision-grade` | 5 of 5 wrong failed; 3 of 5 correct `decision-grade` | **yes** |
+| S2 reprojected slopes | at least 5 of 6 wrong fail; no correct fails | 5 of 6 failed, 1 warned; 0 correct failed, 6 of 6 `decision-grade` | **yes** |
+| S3 multi-value reports | no declared number not-run; every wrong fails; at least half the correct `decision-grade` | 0 not-run; 4 of 6 wrong failed; 4 of 7 correct `decision-grade` | no |
+
+**What happened, by direction.**
+
+- **S1 masks.**
+  - **Wrong masks.** All 5 failed `rs.cloud_mask_applied`:
+    - a rejected class kept, three times;
+    - a usable class rejected;
+    - swath-edge fill kept valid.
+  - **Correct masks.**
+    - 3 reached `decision-grade`. The mask nodata screen no longer holds them back.
+    - 1 was held at `review-required` by `raster.cog_layout`, a fair format finding.
+    - The all-invalid swath-edge mask stayed `advisory-only`. Its QA window holds no observed cell, so `rs.cloud_mask_applied` had nothing to verify and was not-run.
+- **S2 reprojected slopes.**
+  - **Wrong slopes failed: 5 of 6.**
+    - The Web Mercator slope in grid metres, the S4.1 false-assurance shape, now fails.
+    - So do feet over metres, degrees used as lengths, latitude ignored, and degrees labelled as percent.
+  - **The one miss warned, and was not certified.** It is horizontal spacing multiplied by 0.3048, the reverse of the feet mistake. That is not a named mistake.
+  - **Correct slopes: all 6 verified cell by cell**, across bilinear, cubic, average and nearest, both orders, and UTM, polar stereographic and Web Mercator targets.
+- **S3 multi-value reports.**
+  - **Declared numbers.** Every one ran.
+  - **Wrong reports failed: 4 of 6:**
+    - fill averaged in;
+    - real 0 m cells evicted;
+    - an area in square degrees;
+    - a class share over all cells.
+  - **Wrong reports missed: 2 of 6.** Each holds only numbers the check cannot express: a joint all-bands selection, and a decode with its offset applied twice. Both stayed `advisory-only`, so neither was certified.
+  - **Correct reports: 4 of 7 reached `decision-grade`.**
+    - 2 were held at `review-required` by the undeclared-number warning.
+    - 1 had nothing declared.
+- **Same-grid geographic slopes** (reported, not thresholded).
+  - **Wrong:** 2 of 3 failed, the Web Mercator metres and feet over metres.
+  - **The miss warned.** It is percent delivered where degrees were stated. "Degrees and percent confused" is named on the resampled path but not on the same-grid path.
+  - **Correct:** all 3 passed the slope check. They were held at `review-required` by `raster.nodata_declared`.
+- **Proposed.** Metadata filled none of the 74 required bindings, and contradicted nothing.
+- **Undeclared.** No `next_step` was offered.
+
+**What this shows.**
+
+1. **Release rule met.** S1 and S2 met their acceptance on fresh cases, and there was zero false assurance in every configuration. By §1, 0.12.0 may ship. The release notes claim nothing for S3 beyond what was measured.
+2. **The S4.1 false assurance is closed.** The Web Mercator slope fails, both reprojected and on the same grid.
+3. **Gaps measured, not fixed in this release:**
+   - spacing read as feet;
+   - degrees and percent confused on same-grid slopes;
+   - report numbers over joint selections, NDVI, and QA classes on another grid.
+
+## 4. Order and delivery
+
+1. S0 is sealed first.
+2. Then S1, S2 and S3, each with its tests.
+3. Then S4.1, and S4.2 if it is approved.
+4. Then 0.12.0, if the release rule is met (met by S5; prepared 2026-11-02).
+5. One branch (`geova/post-0.11.0`) and one PR.
+
+## 5. Out of scope
+
+- New check families or output forms beyond these three directions.
+- Lift studies, an evaluator boundary, large-data performance, and automatic repair.
+- Any rule that infers a goal, a QA layer or a report key from task text or file names.
+
+## 6. Decisions needed
+
+1. **S0 authoring.** Who authors S0: an independent agent from a brief, as before (`S0_REAL_DATA_CASES_BRIEF.md`).
+2. **S4.2.** Whether to run the agent measurement at 12 invocations. Not run: 0.12.0 ships on the offline S5 measurement, and its notes claim no agent result.

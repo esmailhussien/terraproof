@@ -137,14 +137,19 @@ def build_parser() -> argparse.ArgumentParser:
     bindings.add_argument("--slope-unit", choices=["degrees", "percent"],
                           help="unit of a slope output checked with --dem (default degrees)")
     bindings.add_argument("--summary-key", metavar="KEY", help="JSON key (dots for nesting) holding a delivered number")
-    bindings.add_argument("--summary-statistic", choices=["mean", "count", "sum", "min", "max", "area", "length"],
+    bindings.add_argument("--summary-statistic",
+                          choices=["mean", "count", "sum", "min", "max", "fraction", "area", "length"],
                           help="statistic the --summary-key number reports, recomputed from --summary-source")
     bindings.add_argument("--summary-source", metavar="PATH", help="raster or vector the summary was computed from")
     bindings.add_argument("--summary-unit", metavar="UNIT",
-                          help="unit of an area or length summary (square_kilometre, hectare, metre, kilometre, ...)")
+                          help="unit of a fraction (fraction, percent), area or length summary "
+                               "(square_kilometre, hectare, metre, kilometre, ...)")
     bindings.add_argument("--summary-feature", metavar="FIELD=VALUE", help="vector features the summary covers")
     bindings.add_argument("--summary-mask", metavar="PATH",
                           help="validity mask (1 = include) on the raster source's grid")
+    bindings.add_argument("--summary", action="append", default=[],
+                          metavar="key=K,statistic=S,source=PATH[,unit=U][,codes=C;C][,mask=PATH,...]",
+                          help="one declared report number; repeat for each number a report holds")
     bindings.add_argument("--sar-filter", choices=["boxcar"],
                           help="speckle filter applied to --sar-filter-source; recomputed in linear power")
     bindings.add_argument("--sar-filter-size", type=int, metavar="N", help="odd window size of --sar-filter")
@@ -264,6 +269,30 @@ def _float_arg(value: str, flag: str) -> float:
         raise SystemExit(f"terraproof check: {flag} expects a number or 'file', got {value!r}") from None
 
 
+SUMMARY_SYNTAX = ("key=K,statistic=S,source=PATH[,unit=U][,feature=FIELD=VALUE][,mask=PATH][,codes=C;C]"
+                  "[,mask_codes=C;C][,scale=X][,offset=X]")
+
+
+def _summary_entries(values: list[str]) -> list[dict]:
+    """One declared summary per --summary; code lists are separated by semicolons."""
+    from terraproof.evidence.contract import SUMMARY_FIELDS
+    entries = []
+    for value in values:
+        entry = {}
+        for part in value.split(","):
+            name, sep, item = part.partition("=")
+            name = name.strip()
+            if not sep or name not in SUMMARY_FIELDS or not item or name in entry:
+                raise SystemExit(f"terraproof: --summary expects {SUMMARY_SYNTAX}, got {value!r}")
+            try:
+                entry[name] = ([int(code) for code in item.split(";")] if name in ("codes", "mask_codes")
+                               else float(item) if name in ("scale", "offset") else item)
+            except ValueError:
+                raise SystemExit(f"terraproof: --summary {name} must be numeric, got {item!r}") from None
+        entries.append(entry)
+    return entries
+
+
 def _binding_parameters(args: argparse.Namespace) -> dict:
     """The declared bindings, keyed as verification-contract parameters."""
     band_paths = _role_pairs(args.band, "--band")
@@ -335,6 +364,7 @@ def _binding_parameters(args: argparse.Namespace) -> dict:
         "summary_unit": args.summary_unit,
         "summary_feature": args.summary_feature,
         "summary_mask": args.summary_mask,
+        "summaries": _summary_entries(args.summary) or None,
     }
 
 
@@ -356,6 +386,9 @@ def _cmd_check(args: argparse.Namespace) -> int:
     sar_filter_source = _inspect_if_exists(args.sar_filter_source)
     summary_source = _inspect_if_exists(args.summary_source)
     summary_mask = _inspect_if_exists(args.summary_mask)
+    summary_entries = _summary_entries(args.summary)
+    summaries = [dict(entry, source=_inspect_if_exists(entry.get("source")), mask=_inspect_if_exists(entry.get("mask")))
+                 for entry in summary_entries]
     support_nodata = [None if value == "file" else _float_arg(value, "--support-source-nodata")
                       for value in args.support_source_nodata] or None
 
@@ -382,6 +415,10 @@ def _cmd_check(args: argparse.Namespace) -> int:
                   sar_filter_source["kind"] if sar_filter_source else "unknown")
     _record_input(inputs, args.summary_source, "summary-source", summary_source["kind"] if summary_source else "unknown")
     _record_input(inputs, args.summary_mask, "summary-mask", summary_mask["kind"] if summary_mask else "unknown")
+    for declared, entry in zip(summary_entries, summaries):
+        for field, role in (("source", "summary-source"), ("mask", "summary-mask")):
+            if entry[field] is not None and not any(r["path"] == declared[field] and r["role"] == role for r in inputs):
+                _record_input(inputs, declared[field], role, entry[field]["kind"])
     _record_input(inputs, args.accuracy_samples, "accuracy-samples", "accuracy-samples")
     _record_input(inputs, args.class_areas, "class-areas", "class-areas")
     _record_input(inputs, args.manifest, "manifest", "manifest")
@@ -453,9 +490,10 @@ def _cmd_check(args: argparse.Namespace) -> int:
         summary_unit=args.summary_unit,
         summary_feature=args.summary_feature,
         summary_mask=summary_mask,
+        summaries=summaries or None,
     )
 
-    checked_paths = list(args.paths)
+    checked_paths = list(args.paths) + [e[f] for e in summary_entries for f in ("source", "mask") if e.get(f)]
     for path in (args.compare_to, args.reference_input, args.dem, args.nir, args.red, *band_paths.values(), *args.stack,
                  *args.vertical_source, *args.support_source, args.qa_source, args.buffer_source,
                  args.categorical_source, args.sar_filter_source, args.summary_source, args.summary_mask,

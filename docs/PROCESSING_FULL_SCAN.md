@@ -48,6 +48,12 @@ unmasked flagged location fails. Missing QA or unsupported codes leave the
 result `not-run` if no definite violation was found. An image with no flagged
 locations cannot confirm that masking was performed.
 
+A declared validity mask (`--output-form validity-mask`) also fails where it
+marks a cell valid that the QA records as no observation: the QA file's nodata
+under any QA kind, and also SCL class 0 (no data) for `s2-scl` or the QA_PIXEL
+fill bit for `landsat-qa-pixel`. Those cells are then judged, not unverifiable.
+Data outputs are unchanged.
+
 This checks compliance with supplied QA, not cloud detection accuracy, dilation,
 clear-pixel retention or the scientific choice of classes/bits.
 
