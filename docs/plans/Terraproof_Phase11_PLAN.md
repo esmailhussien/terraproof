@@ -176,6 +176,21 @@ The user chose to fix the gap attempt 1 pointed to before spending the 12 runs.
 - The bars, tasks, brief, labels and reading (section 4) are unchanged.
 - **Count:** attempt 2 is 12 new invocations, so 13 in all with attempt 1. Attempt 1's single run is left out of the reading, because it ran on the earlier product.
 
+### Preflight for attempt 2 (2026-11-02): all 12 projects ready; no model called
+
+- **Change.** The guide is in commit `53ec8c7`, together with this amendment.
+  - Two new tests: the guide covers every goal and binding, and the MCP, CLI and library agree; the template plans as complete.
+  - The full Python suite passes (2008 passed, 6 skipped), and so do repository validation and the router suite.
+- **Agent interpreter.** `C:\Users\mrsom\.venvs\agent-with-p11b`, Python 3.12.10.
+  - It holds the wheel built from a clean `git archive` of `53ec8c7`: `terraproof-0.12.0-py3-none-any.whl`, SHA-256 `da937318148ac821baa56648e34c0b944f8bad0a8325c9b96bfed77b34e1c17c`.
+  - `terraproof.evals` is absent.
+  - Its dependencies are exactly `agent-with-p11`'s.
+  - In an empty folder, its `verify_project(plan=true)` returns the guide: 8 goals and 66 bindings.
+- **Preflight.** `--preflight-only` ran on a new work root, with no model call. Report: `.terracache/phase11-t2-agent-preflight2-preflight.json`.
+  - Calibration passed on all three tasks: the right outputs pass, every trap is oracle-wrong and reference-`failed`, and every reference plan is complete.
+  - All 12 projects passed every OpenCode check and every wrapper check, at 1800 s per run.
+  - Every project's product fingerprint matches the checkout: `cac0ff82…f991`.
+
 ## 4. Reading, registered before the run
 
 | Measure | Bar |
