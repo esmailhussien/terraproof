@@ -1,6 +1,6 @@
 # Terraproof — Phase 10 Plan: Masks, reprojected slopes and multi-value reports
 
-> Status: **proposed (2026-11-02)**. It follows [Phase 9](Terraproof_Phase9_PLAN.md) and release 0.11.0.
+> Status: **S0 sealed (2026-11-02)**; S1–S3 next. It follows [Phase 9](Terraproof_Phase9_PLAN.md) and release 0.11.0.
 
 ## 1. Why this phase
 
@@ -41,6 +41,43 @@ Phase 9 closed most of the coverage gap: 33 of 36 real deliverables got a requir
   | Plain | — | ≥ 4 | Real outputs with no trap. |
 
 - **Complete facts.** Three Q0 summaries could not be declared because their facts named no key or statistic. Every S0 case must state every fact a declaration needs: for each number in a report, its key, statistic, source, and unit; for a mask, its QA layer and rule.
+
+#### S0 seal record (2026-11-02)
+
+- **Authoring.** An independent agent authored 42 cases (19 wrong, 23 correct) in a fresh clone of `main` (`9e69f54`), on branch `geova/verification-heldout-s0`, commit `09036d0`. Here it is cherry-picked as `b05dddd`.
+- **Counts by family.**
+  - QA validity masks: 5 wrong, 5 correct;
+  - reprojected slopes: 6 and 6;
+  - multi-value reports: 5 and 5;
+  - same-grid geographic slopes: 3 and 3, at about 28.7°, 46.6° and 78.6°N;
+  - plain: 4 correct.
+- **Counts by form.** 19 datasets, 13 summaries and 10 validity masks.
+- **Reprojected slopes.**
+  - By order: 6 slope then warp, 6 warp then slope.
+  - By resampling: bilinear 5, average 3, cubic 2, nearest 2.
+- **Reports.** Every report holds 3 or more numbers; 2 hold lists. Each wrong report has exactly one wrong number.
+- **Sources.** One Sentinel-2 L2A scene from Earth Search with its SCL layer, Copernicus DEM GLO-30, USGS 3DEP and Natural Earth.
+  - **No Landsat.** Landsat Collection 2 QA_PIXEL was not used: it is requester-pays, so masks use Sentinel-2 SCL only, as the brief allows.
+  - **Projected grids.** Public DEMs are geographic, so projected slopes come from each case's declared warp.
+- **The agent's report.**
+  - 104 of 298 `facts` entries (34.4%) are stated by real metadata. The set states complete facts on purpose, and most of them are the practitioner's.
+  - Two cold fetches gave byte-identical manifests, and two derivations gave byte-identical outputs.
+  - The oracle agreed with all 42 cases.
+  - For reprojected slopes, a different resampling choice moves the mean slope by at most 1.03%; the wrong cases differ by factors of 0.198 to 105 058.
+- **Maintainer checks.**
+  - The committed LF hashes match the hand-off, including the test file (`fd559b52…98f08`).
+  - Imports were checked: no `terraproof`. Fetch hosts are public: Earth Search, `sentinel-cogs`, the Copernicus DEM bucket, `prd-tnm`, and GitHub raw.
+  - A cold fetch into a new cache reproduced the manifest hash, and the cases' own test passed 5 of 5. With `CI` set and no cache, it skips.
+  - The case content was not read.
+
+  | File | SHA-256 |
+  | --- | --- |
+  | `evals/verification-heldout-s0/cases.json` | `4549f04db22382930b65ad779c85f6dc44cb2575b738378fd111191688e9d724` |
+  | `evals/verification-heldout-s0/fetch.py` | `88b904965cc7cf428a4310bc5f5495bd8324bdf73a91d9afb79f6022e247e1b6` |
+  | `evals/verification-heldout-s0/derive.py` | `78218c9131205bfa5029b28f685ff46de219dec2fd5a53353213d73324d29906` |
+  | `evals/verification-heldout-s0/oracle.py` | `82d0a153985457dd0a11d9f196a898dab4359f6b4c357137f1bd2935b41643a3` |
+  | `evals/verification-heldout-s0/README.md` | `3b4d8cefefe8224ac7cb935a9454d31fee4b0a3c1afac3b4a741ede97a9f5fce` |
+  | Fetched-file manifest (`manifest.json` in the cache) | `be0986e067f942c8b9a9b0eaccd93d34c9f22985ebca4d1682a4d3f1558aa1ad` |
 
 ### S1. Masks: verify the QA layer's own no-data, and measure the hint
 
