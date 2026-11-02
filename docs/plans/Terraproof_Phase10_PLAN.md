@@ -365,6 +365,26 @@ Writing the mapping exposed two gaps in S1 and S3, fixed before any result:
   | `evals/verification-heldout-s0b/README.md` | `0f16a1802f806fea9bb222bb374564fbb2057de29a969e5ff8fb562719971954` |
   | Fetched-file manifest (`manifest.json` in the cache) | `b18cb86a4ecf61b434a4cb8bfddf98f19d46f2dd6ec8fc9bbdbd0a828acc045b` |
 
+#### Before S5 (2026-11-02): the mapping, written before any result
+
+- **How it was written.** [`tests/phase10_s5.py`](../../tests/phase10_s5.py) was written from two things:
+  - the bundle README;
+  - a pooled view of the facts: keys, types, vocabularies and report-number combinations, with no ids or kinds.
+
+  It reuses S4.1's configurations, acceptance and reporting. The product is unchanged since `e146e9c`.
+- **What the pooled view showed.** Every report number is structured: its file, a typed selection, its denominator and its decode. No selection text describes a mistake, so, unlike S4.1, no number is left out for its wording.
+- **Dry run.** Declarations only; no check ran.
+  - 10 masks, 18 slopes and 12 reports get a requirement.
+  - 4 reports and 1 dataset do not. The dataset is a decoded raster with no stated reflectance scale key, so S4.1's rules have none for it.
+  - 58 of 73 report numbers are declared.
+- **The 15 undeclared numbers, which the check cannot express:**
+  - 5 NDVI;
+  - 8 reflectance means over cells where all three bands are non-zero (a joint selection);
+  - 1 reflectance mean restricted to an SCL class on the 20 m layer, against a 10 m band;
+  - 1 count of classes that include SCL's nodata code 0.
+- **One acknowledged consequence.** The decoded-reflectance numbers the brief asked for are all among those undeclared. So S5 does not measure declared `scale`/`offset` on real reports; the S3 tests cover it only on fixtures.
+- **A count discrepancy.** The README gives the resampling counts as bilinear 5 and nearest 2. The hand-off and the facts give bilinear 6 and nearest 1. The facts are what the mapping reads.
+
 ## 4. Order and delivery
 
 1. S0 is sealed first.
