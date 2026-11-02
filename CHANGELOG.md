@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-11-02
+
+Phase 10: QA masks, reprojected slopes and multi-value reports.
+
+- **First measurement (S4.1).** On 42 sealed real-data cases (S0), it certified one wrong Web Mercator slope and met no direction's acceptance. The gaps it found were fixed.
+- **Second measurement (S5).** On 45 fresh sealed cases (S0b), the declared checks:
+  - caught all 5 wrong masks, with 3 of 5 correct masks `decision-grade`;
+  - caught 5 of 6 wrong reprojected slopes and verified all 6 correct ones;
+  - certified no wrong output in any configuration, with no false alarm.
+- **Reports did not meet their bar.** 4 of 6 wrong reports failed. The other two hold only numbers the check cannot express (NDVI, a selection joint across bands, a decode), so they stayed `advisory-only`.
+- **Known misses that warn rather than fail:**
+  - horizontal spacing read as feet;
+  - degrees and percent confused on a same-grid slope.
+- **No agent run** was measured for this release.
+
+Details are in [the Phase 10 plan](docs/plans/Terraproof_Phase10_PLAN.md).
+
 ### Masks, reprojected slopes and multi-value reports (Phase 10 S1-S3)
 
 - A declared validity mask now fails `rs.cloud_mask_applied` where it marks a cell valid that the QA

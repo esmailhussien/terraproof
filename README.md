@@ -12,7 +12,7 @@ Terraproof helps AI coding agents do geospatial work they can prove. It gives an
 
 Everything runs locally and offline. No model API key is needed.
 
-**Status:** experimental (v0.11.0). See [Evaluation status](#evaluation-status) for what has and has not been measured.
+**Status:** experimental (v0.12.0). See [Evaluation status](#evaluation-status) for what has and has not been measured.
 
 ---
 
@@ -197,6 +197,7 @@ Each skill lives in `skills/<name>/` with a `SKILL.md`, references, and a `skill
 - **Harder cohort:** a one-repeat Claude Code screen passed all six tasks both with and without Terraproof. That small screen shows no observed benefit and is separate from the original nine-task study. API pilots are exploratory and do not establish lift.
 - **Real data (Phase 8):** on 34 sealed cases built from public Sentinel-2, Copernicus DEM, 3DEP and Natural Earth data, declared checks caught 7 of 7 covered wrong outputs with no false assurance and no false alarm. 20 of the 34 deliverables (validity masks, slope in percent, JSON reports) are forms no check covers yet. Contracts proposed from metadata alone did not meet acceptance. In a 10-run agent measurement, the agent rarely declared a goal, and the `s2-l2a` preset certified two wrong decodes; that preset now requires `--decode-offset`. See [`docs/plans/Terraproof_Phase8_PLAN.md`](docs/plans/Terraproof_Phase8_PLAN.md).
 - **Real deliverables (Phase 9):** validity masks, slopes in percent and JSON summaries are now checkable. On 36 fresh sealed real-data cases, 33 deliverables got a declared requirement, and declared checks caught 12 of 15 wrong outputs with no false assurance or false alarm. In a 10-run agent measurement, 8 runs declared their goal (every offered `next_step` was followed), all 10 deliverables were correct, and no wrong output was certified. There was no comparison run, so no lift is claimed.
+- **QA masks and reprojected slopes (Phase 10):** a declared validity mask is checked against the QA layer's own no-data, a slope on another grid than its DEM is checked after resampling (in ground metres on projections such as Web Mercator), and every number of a JSON report can be declared. A first measurement certified one wrong Web Mercator slope, and that was fixed. On 45 fresh sealed real-data cases, declared checks then caught every wrong mask (5 of 5) and 5 of 6 wrong reprojected slopes, verified all 6 correct ones, and certified no wrong output. Multi-value reports did not meet their bar: 4 of 6 wrong reports failed, and the other two held only numbers the check cannot express (NDVI, joint band selections), so they were not certified either. No agent run was measured for this release.
 - **Real hosts:** tool use through MCP has been verified with Codex, Claude Code, Antigravity (Gemini) and OpenCode (Phase 8 P4, ten runs with real tool calls). Cursor and Copilot are unit-tested against their documented layouts only.
 
 ---

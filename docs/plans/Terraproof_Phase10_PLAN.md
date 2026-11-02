@@ -467,7 +467,7 @@ Writing the mapping exposed two gaps in S1 and S3, fixed before any result:
 1. S0 is sealed first.
 2. Then S1, S2 and S3, each with its tests.
 3. Then S4.1, and S4.2 if it is approved.
-4. Then 0.12.0, if the release rule is met.
+4. Then 0.12.0, if the release rule is met (met by S5; prepared 2026-11-02).
 5. One branch (`geova/post-0.11.0`) and one PR.
 
 ## 5. Out of scope
@@ -479,4 +479,4 @@ Writing the mapping exposed two gaps in S1 and S3, fixed before any result:
 ## 6. Decisions needed
 
 1. **S0 authoring.** Who authors S0: an independent agent from a brief, as before (`S0_REAL_DATA_CASES_BRIEF.md`).
-2. **S4.2.** Whether to run the agent measurement at 12 invocations; decided after S4.1.
+2. **S4.2.** Whether to run the agent measurement at 12 invocations. Not run: 0.12.0 ships on the offline S5 measurement, and its notes claim no agent result.
