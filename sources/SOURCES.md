@@ -515,3 +515,18 @@ SHA-256 of every fetched file is recorded in the bundle's cache manifest.
   in the requester-pays `usgs-landsat` bucket (403 without credentials), and
   no credential-free mirror was found; the bundle stays on Sentinel-2 as the
   brief allows.
+
+## Phase 10 S0b (verification-heldout-s0b) data sources
+
+- **Sentinel-2 L2A** - scene `S2C_33WXT_20250915_0_L2A` (MGRS tile 33WXT,
+  acquired 2025-09-15, Tromso area, lat ~69-70 N; Earth Search
+  `sentinel-2-l2a` COGs with SCL classification layer), ESA Copernicus
+  Sentinel data; attribution *"Contains modified Copernicus Sentinel data
+  2025."*
+- **Copernicus DEM GLO-30** - tiles N69 E019 (Lyngen, Norway) and N46 E007
+  (Matterhorn/Zermatt region) from the public AWS Open Data bucket; © DLR,
+  attribution *"Contains Copernicus DEM data"*.
+- **USGS 3DEP 1/3 arc-second** - tile `n33w118` (Los Angeles coast) with its
+  FGDC sidecar; public domain (sidecar statement).
+- **Natural Earth 110m admin-0 countries** - GeoJSON at tag v5.1.2; public
+  domain.
