@@ -1,6 +1,6 @@
 # Terraproof — Phase 10 Plan: Masks, reprojected slopes and multi-value reports
 
-> Status: **S0 sealed; S1–S3 implemented (2026-11-02)**; S4 next. It follows [Phase 9](Terraproof_Phase9_PLAN.md) and release 0.11.0.
+> Status: **S4.1 measured (2026-11-02): acceptance not met, one false assurance; no release from this measurement.** It follows [Phase 9](Terraproof_Phase9_PLAN.md) and release 0.11.0.
 
 ## 1. Why this phase
 
@@ -215,6 +215,73 @@ Writing the mapping exposed two gaps in S1 and S3, fixed before any result:
    - **Tasks.** Two per direction: a QA mask, a reprojected slope and a multi-value report. At two runs per task, that is **12 invocations**, to be approved before any run.
    - **Requirement.** Zero false assurance.
    - **Reported:** whether mask runs reached a QA verdict (0 of 2 in Q5.2), the declared share, `next_step` offered and followed, and correctness.
+
+#### S4.1 record (2026-11-02): measured once; acceptance not met, one false assurance
+
+**Run.**
+
+- The 42 sealed S0 cases were derived with their own scripts, and their oracle agreed with all 42.
+- The mapping, [`tests/phase10_s4.py`](../../tests/phase10_s4.py), was committed (`b134244`) before any result.
+  - It ran once on the product at that commit.
+  - A declaration-only dry run before the commit printed pooled counts only, with no check results.
+- Result: `.terracache/phase10-s4.json`, SHA-256 `ee7c9385255d57af449c94525a1b80dbaa1ab3ab8bcc92ae3fae81e25571165d`.
+- These cases are now spent.
+
+**Coverage.** 36 of 42 deliverables got a requirement: all 10 masks, all 18 slopes, and 8 of 13 reports. The other 5 reports hold no number the check can express, and one dataset had no rule.
+
+**Overall acceptance: not met.**
+
+| Measure | Declared | Proposed | Undeclared |
+| --- | --- | --- | --- |
+| Wrong outputs failing a check (of 19) | 13 | 0 | 0 |
+| **False assurance** (wrong graded `decision-grade`) | **1** | 0 | 0 |
+| False alarms within declared coverage | 0 | 0 | 0 |
+| Correct outputs graded `decision-grade` (of 23) | 9 | 0 | 0 |
+| Metadata bindings contradicting the truth | — | 0 | — |
+
+**Per direction (declared): none met.**
+
+| Direction | Acceptance | Result | Met |
+| --- | --- | --- | --- |
+| S1 masks | every wrong fails; at least half the correct `decision-grade` | 5 of 5 wrong failed; 0 of 5 correct `decision-grade` | no |
+| S2 reprojected slopes | at least 5 of 6 wrong fail; no correct fails | 4 of 6 failed, 1 certified, 1 warned; 0 correct failed, 6 of 6 `decision-grade` | no |
+| S3 multi-value reports | no declared number not-run; every wrong fails; at least half the correct `decision-grade` | 0 not-run; 2 of 5 wrong failed; 1 of 5 correct `decision-grade` | no |
+
+**What happened, by direction.**
+
+- **S1 masks.**
+  - **Wrong masks: all caught.** All 5 wrong masks failed, against 3 of 4 in Q5.1. That includes the swath-edge mask (fill kept valid), the case the S1 fix targets.
+  - **Correct masks: none reached `decision-grade`.** Each correct mask has a failing check count of zero and passed `rs.cloud_mask_applied`. But every one is `review-required`, because of two format screens: `raster.cog_layout` (the masks are not COGs) and `raster.nodata_declared` (a 1/0 mask declares no nodata). The Phase 9 grading policy is unchanged, so these screens still cap the grade.
+- **S2 reprojected slopes.**
+  - **Correct slopes: all verified.** All 6 correct slopes were reproduced cell by cell, across nearest, bilinear, cubic and average and both orders, and reached `decision-grade`.
+  - **The false assurance is a design flaw.** The Web Mercator slope (EPSG:3857, warp then slope, 78.6°N) was certified. On the warp-then-slope path, the check took projected units as ground lengths. Mercator overstates ground distance by 1/cos(latitude), about 5 times here, so the check's own reference repeated the mistake, at 100% of cells. The same flaw affects same-grid slopes in any projection whose scale factor is far from 1. UTM's (0.9996–1.001) is negligible.
+  - **The second miss is a missing named mistake.** "Feet over metres" (heights converted to feet over metre spacing) warned, as did its same-grid twin. "Vertical units ignored" exists only for a DEM labelled in feet.
+- **S3 multi-value reports.**
+  - **Declared numbers.** Every declared number ran, and the wrong ones failed: fill averaged in, and area in degrees.
+  - **Most wrong numbers were not expressible:**
+    - zeros evicted: the trap number's selection text describes the mistake, so the mapping left it undeclared, and the report only warned;
+    - a share over all cells, a class share: a share restricted to QA classes cannot be expressed;
+    - a band taken from the wrong band: the source COGs state no scale in the file, so reflectance means cannot be decoded.
+  - **No false assurance from those.** The undeclared-number warning held two correct reports at `review-required` and left reports with nothing declared `advisory-only`. That cap, added before the run, is what kept them from being certified.
+- **Same-grid geographic slopes.**
+  - **Wrong:** 2 of 3 failed; the third is the feet-over-metres mistake, which warned.
+  - **Correct:** all 3 passed the slope check, and were held at `review-required` by `raster.nodata_declared`.
+- **Proposed.** Metadata filled none of the 62 required bindings, as in Q5.1, and contradicted nothing.
+- **Undeclared.** No `next_step` was offered.
+
+**What this shows.**
+
+1. **Release rule not met.** No direction met its acceptance, and there was one false assurance. By the rule in §1, there is no 0.12.0 from this measurement.
+2. **Real progress, but not to the bar.**
+   - Every wrong mask was caught.
+   - Off-grid slopes went from 0 verdicts to 6 of 6 correct verified and 4 of 6 wrong caught.
+   - Multi-value reports are checked number by number.
+3. **One must-fix flaw.** The Mercator false assurance is a defect in S2's design: projected spacing is taken as ground spacing.
+4. **Measured gaps to close before another measurement:**
+   - scale factor in projected spacing;
+   - "metres read as feet" as a named mistake;
+   - the format screens holding correct declared masks and slopes at `review-required`;
+   - class-restricted and declared-scale report statistics.
 
 ## 4. Order and delivery
 
