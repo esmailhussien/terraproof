@@ -96,6 +96,8 @@ python -m terraproof verify --reports out/terraproof   # also write each full JS
 
 **`--plan`.** It needs no outputs. It exits `0` when every declaration has the bindings its checks require, and `3` otherwise, naming them (for example `dem` or `summaries[0].unit`).
 
+Before the file exists, `--plan` prints the guide to writing it, and exits `3`. The guide lists every goal with its checks and required bindings, and gives a template. With `--format json`, it also gives every binding's value type, choices and meaning, taken from the `check` command's own help.
+
 **Agents.** Through MCP, the same runs are `verify_project` (`plan=true` for the plan). An agent can write the file when a task starts, before producing anything, check it with `plan=true`, and verify the finished outputs before it reports the task as done.
 
 ## In CI

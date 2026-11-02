@@ -43,7 +43,8 @@ INSTRUCTIONS = (
     "and pass it to `run_checks`. Only a fully verified contract is decision-grade, so when "
     "`run_checks` returns `next_step`, follow it. When a task produces deliverables, write each one's "
     "outputs, goal and bindings in the project file `terraproof.toml` before producing them, call "
-    "`verify_project` with `plan=true` to see what is still undeclared, and call it again on the "
+    "`verify_project` with `plan=true` to see what is still undeclared (before the file exists, it "
+    "returns the goals, their bindings and a template), and call it again on the "
     "finished outputs. For NDVI, use "
     "`index_formula=\"ndvi\"`, `nir` and `red` on the saved output; for NBR, dNBR, NDWI, MNDWI, "
     "NDMI, SAVI or EVI pass `bands` by role (and `band_numbers` for multi-band sources). For "
@@ -519,7 +520,9 @@ def verify_project(path: str | None = None, plan: bool = False, only: list[str] 
     its `outputs`, its `goals` (goal profiles) or `checks`, and its bindings named as for `run_checks`
     (paths relative to the file). Write it when the task starts, before producing outputs, and call this
     tool with `plan=true`: it runs nothing and lists each declaration's required checks and
-    `missing_bindings`. On finished outputs, call it without `plan`: each deliverable gets its grade,
+    `missing_bindings`. Before the file exists, `plan=true` returns the guide to writing it: every
+    goal with its checks and required bindings, every binding's meaning, and a template. On finished
+    outputs, call it without `plan`: each deliverable gets its grade,
     its verification status and the findings of every check that did not pass, and `exit_code` is the
     worst deliverable's. `only` names deliverables to check. Matches `python -m terraproof verify`.
     """

@@ -18,7 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **The result** is graded on that declaration as its contract, with one exit code for CI: the
     worst deliverable's.
   - **`--plan`** runs nothing and lists what each declaration still lacks, so the file can be
-    written before outputs exist.
+    written before outputs exist. Before the file exists, it returns the guide to writing one:
+    each goal with its checks and required bindings, every binding's meaning, and a template.
   - **Other options:** `--only` (one deliverable), `--format json`, and `--reports DIR` (full
     reports).
 - New MCP tool `verify_project` (eight tools), matching `verify`. The server instructions ask agents to

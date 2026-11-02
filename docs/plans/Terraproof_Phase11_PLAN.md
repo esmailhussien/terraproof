@@ -1,6 +1,6 @@
 # Terraproof Phase 11 plan: one declaration per pipeline, tested on agents
 
-> Status: **T1 done (local commit `460af3c`); T2 driver built and calibrated, not run (2026-11-02).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
+> Status: **T1 done (local commit `460af3c`); T2 attempt 1 stopped after 1 of 12 (driver bug); format guide added and attempt 2 registered, not run (2026-11-02).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
 
 ## 1. Why
 
@@ -154,6 +154,27 @@ Calibration then passed on all three tasks. Every right output passed the refere
 - Each run's raw host stream is kept in `trace.jsonl` beside the project, not in the report.
 - The report is written after every run.
 - A new offline test drives the whole loop with a fake agent: calibration, install, preflight, wrapping, a wrong output fixed after a flagged verify, snapshots, scoring and checkpoints. It shows 5 saves and 0 false assurance across 8 deliverables.
+
+### Amendment before attempt 2 (2026-11-02, registered before any run)
+
+The user chose to fix the gap attempt 1 pointed to before spending the 12 runs.
+
+**Product change: the format is discoverable from the tool.**
+- Before a project file exists, `verify --plan` (MCP `verify_project` with `plan=true`) returns the guide to writing one, instead of an error. It exits `3`.
+- **The guide holds:**
+  - every goal, with its checks and required bindings;
+  - every binding's value type, choices and meaning, taken from the `check` command's own help with flags renamed to binding names;
+  - a template.
+- The template uses goals that are in no T2 task (`metric-values`, and `summary-value` on a vector count), so it teaches the format and not a task answer.
+- The tool description and the server instructions each say this in one clause. A missing project file's error says the plan describes the format.
+- The known risk stays as registered. The guide says nothing about STAC offsets.
+
+**Trial changes.**
+- 1800 s per run instead of 1200 s, because attempt 1's model steps took 30 to 80 s each.
+- A new agent interpreter, `agent-with-p11b`. It holds the wheel built from the commit that carries this change, built and checked as before.
+- A new, empty work root.
+- The bars, tasks, brief, labels and reading (section 4) are unchanged.
+- **Count:** attempt 2 is 12 new invocations, so 13 in all with attempt 1. Attempt 1's single run is left out of the reading, because it ran on the earlier product.
 
 ## 4. Reading, registered before the run
 

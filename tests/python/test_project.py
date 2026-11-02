@@ -148,3 +148,29 @@ def test_no_project_file_is_a_usage_error(tmp_path, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path)
     assert main(["verify"]) == 1
     assert "terraproof.toml" in capsys.readouterr().err
+
+
+def test_before_the_file_exists_the_plan_is_the_guide_to_writing_it(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    guide = project.plan()
+    assert guide["mode"] == "guide" and guide["exit_code"] == 3 and guide["deliverables"] == []
+    assert set(guide["goals"]) == set(project.profiles()) and set(guide["bindings"]) == project.BINDINGS
+    assert guide["goals"]["slope-from-dem"]["required_bindings"] == ["dem"]
+    for goal in guide["goals"].values():  # every binding a goal requires is described
+        assert set(goal["required_bindings"]) <= set(guide["bindings"])
+    assert guide["bindings"]["qa_keep_codes"]["value"] == "list of integers"
+    assert "qa_kind keep-codes" in guide["bindings"]["qa_keep_codes"]["meaning"]  # flags named as bindings
+    assert guide["bindings"]["expect"]["choices"] == ["reflectance", "index"]
+    assert project.plan(tmp_path / "later" / "terraproof.json") == guide  # a path not yet written
+    pytest.importorskip("mcp")
+    from terraproof.mcp.server import verify_project
+    assert verify_project(plan=True) == json.loads(json.dumps(guide))
+    assert main(["verify", "--plan"]) == 3 and "slope-from-dem" in capsys.readouterr().out
+
+
+@needs_toml
+def test_the_guide_template_is_a_complete_declaration(tmp_path):
+    path = tmp_path / "terraproof.toml"
+    path.write_text(project.guide()["template"], encoding="utf-8")
+    summary = project.plan(path)
+    assert summary["mode"] == "plan" and summary["exit_code"] == 0 and len(summary["deliverables"]) == 2

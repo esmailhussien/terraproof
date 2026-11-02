@@ -2,7 +2,7 @@
 """Phase 11 T2: do agents declare their pipeline in a project file, and does it catch their mistakes? Plans by default.
 
 Three multi-deliverable pipelines on spent cached sources (Q0, S0b), "with" Terraproof only, four runs each:
-12 invocations on OpenCode Go `opencode-go/mimo-v2.6-flash` (OpenCode 1.19.4), 1200 s per run. The brief is
+12 invocations on OpenCode Go `opencode-go/mimo-v2.6-flash` (OpenCode 1.19.4), 1800 s per run (1200 s in attempt 1). The brief is
 neutral and never mentions verification or a project file. The MCP server is wrapped to snapshot `outputs/`
 and the project file before each verification call (tests/phase11_snapshot_server.py), so every verdict the
 agent saw is scored against the oracle on the outputs as they were. Reported, as names and enums only:
@@ -51,7 +51,7 @@ from terraproof.evals.lift import (  # noqa: E402
     project_preflight, to_json,
 )
 
-RUNS, MODEL, HOST_VERSION, TIMEOUT = 4, p4.MODEL, p4.HOST_VERSION, 1200.0
+RUNS, MODEL, HOST_VERSION, TIMEOUT = 4, p4.MODEL, p4.HOST_VERSION, 1800.0
 WRAPPER = Path(__file__).resolve().parent / "phase11_snapshot_server.py"
 CACHE = ROOT / ".terracache"
 USABLE = [4, 5, 6, 11]

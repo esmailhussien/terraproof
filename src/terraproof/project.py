@@ -5,12 +5,15 @@ profiles (`goals`) or check ids (`checks`) they must meet, and its bindings unde
 verification contracts use. Relative paths resolve against the file's folder. `verify` runs each deliverable
 through `check` with its declaration as the contract, so each is graded on declared coverage. `plan` runs
 nothing: it reports what each declaration still lacks, so the file can be written before any output exists.
+Before the file exists, `plan` returns the guide to writing it: every goal with its checks and required
+bindings, every binding's meaning (from the `check` command's own help), and a template.
 """
 from __future__ import annotations
 
 import json
 import os
 from pathlib import Path
+import re
 
 from terraproof._common import InputError
 from terraproof.evidence.contract import (FILE_PARAMETERS, LIST_FILE_PARAMETERS, PARAMETERS, SCHEMA as CONTRACT_SCHEMA,
@@ -33,7 +36,8 @@ def find(path=None) -> Path:
     for name in FILENAMES:
         if Path(name).is_file():
             return Path(name)
-    raise InputError("no project file: give its path or create " + " or ".join(FILENAMES))
+    raise InputError("no project file: give its path or create " + " or ".join(FILENAMES)
+                     + " (the plan describes the format before the file exists)")
 
 
 def _read(path: Path) -> dict:
@@ -187,8 +191,78 @@ def _short(message: str, base: Path, paths=()) -> str:
     return message if len(message) <= MESSAGE_LENGTH else message[:MESSAGE_LENGTH - 1] + "…"
 
 
+TEMPLATE = f'''schema = "{SCHEMA}"
+
+[[deliverables]]
+name = "parcel-areas"
+outputs = ["outputs/parcels.gpkg"]
+goals = ["metric-values"]
+metric_quantity = "area"
+metric_property = "area_ha"
+metric_unit = "hectare"
+
+[[deliverables]]
+name = "report"
+outputs = ["outputs/report.json"]
+goals = ["summary-value"]
+summaries = [{{key = "parcel_count", statistic = "count", source = "outputs/parcels.gpkg"}}]
+'''
+
+
+def _value(action) -> str:
+    if action.nargs == 0:
+        return "true"
+    kind = {float: "number", int: "integer"}.get(action.type, "string")
+    return f"list of {kind}s" if type(action).__name__ == "_AppendAction" else kind
+
+
+def guide() -> dict:
+    """How to write a project file: each goal's checks and required bindings, and every binding's meaning."""
+    from terraproof.cli import build_parser
+    from terraproof.evidence.contract import SUMMARY_FIELDS
+    from terraproof.evidence.propose import flag
+
+    parser = build_parser()
+    check = next(a for a in parser._subparsers._group_actions if a.choices).choices["check"]
+    options = {s: a for a in check._actions for s in a.option_strings}
+    special = {"bands": "--band", "band_numbers": "--band-number", "summaries": "--summary"}
+    flags = {name: special.get(name, flag(name)) for name in BINDINGS if special.get(name, flag(name)) in options}
+    names = {f: name for name, f in flags.items()}
+
+    def text(help_text: str) -> str:  # the check command's help, with its flags named as project-file bindings
+        return re.sub(r"--[a-z0-9-]+", lambda m: names.get(m.group(0), m.group(0)), help_text or "")
+
+    bindings = {}
+    for name, f in sorted(flags.items()):
+        action = options[f]
+        entry = {"value": _value(action), "meaning": text(action.help)}
+        if action.choices:
+            entry["choices"] = list(action.choices)
+        bindings[name] = entry
+    bindings["bands"]["value"] = "table of role = path"
+    bindings["band_numbers"]["value"] = "table of role = band number"
+    bindings["summaries"]["value"] = "list of tables with " + ", ".join(SUMMARY_FIELDS)
+    bindings["index_bands"] = {"value": "table of role = [path, band number]",
+                               "meaning": "bands and band_numbers in one table"}
+    goals = {name: {"description": entry.get("description", ""), "checks": entry["checks"],
+                    "required_bindings": sorted({b for c in entry["checks"] for b in _missing_bindings(c, {})})}
+             for name, entry in sorted(profiles().items())}
+    return {"project": None, "mode": "guide", "deliverables": [], "exit_code": EXIT_CODES[ADVISORY],
+            "files": list(FILENAMES), "schema": SCHEMA,
+            "deliverable_keys": {"name": "unique name", "outputs": "list of output paths, relative to the file",
+                                 "goals": "goal names (below)", "checks": "check ids, instead of or with goals"},
+            "goals": goals, "bindings": bindings, "template": TEMPLATE,
+            "json": "terraproof.json holds the same keys as one JSON object (needed on Python 3.10)",
+            "next": "write the file, then plan again: it lists each declaration's still-missing bindings"}
+
+
 def plan(path=None, only=None) -> dict:
     """What each declaration requires and still lacks; no check runs and outputs need not exist yet."""
+    try:
+        if not find(path).is_file():
+            return guide()
+    except InputError:
+        return guide()
     project, deliverables = load_project(path)
     base = project.parent
     rows = [{"name": d["name"], "outputs": [_relative(p, base) for p in d["outputs"]],
@@ -241,6 +315,12 @@ def verify(path=None, only=None, reports_dir=None) -> dict:
 
 def render(summary: dict) -> str:
     """A short plain-text table for terminals and CI logs."""
+    if summary["mode"] == "guide":
+        lines = [f"terraproof verify --plan: no project file yet; write {' or '.join(summary['files'])}",
+                 "goals (required bindings):"]
+        lines += [f"  {name:<19} {', '.join(g['required_bindings'])}" for name, g in summary["goals"].items()]
+        lines += ["every binding, with its meaning: --format json", "template:", summary["template"].rstrip()]
+        return "\n".join(lines) + "\n"
     rows = summary["deliverables"]
     lines = [f"terraproof {summary['mode']}: {summary['project']} ({len(rows)} deliverable{'s' * (len(rows) != 1)})"]
     width = max(len(r["name"]) for r in rows)
