@@ -119,6 +119,22 @@ The first calibration (no host, no model) changed four things. Each one is fixed
 
 Calibration then passed on all three tasks. Every right output passed the reference, and every trap was oracle-wrong and reference-`failed`.
 
+### Preflight (2026-11-02): all 12 projects ready; no model called
+
+- **Driver.** The driver, wrapper and tests are in commit `82d8aa3`. Their 10 offline tests pass. One of them starts both servers and finds the wrapper's tools and instructions identical to the stock server's.
+- **Agent interpreter.** `C:\Users\mrsom\.venvs\agent-with-p11`, Python 3.12.10.
+  - It holds the wheel built from a clean `git archive` of `82d8aa3`: `terraproof-0.12.0-py3-none-any.whl`, SHA-256 `4a8f3eb880d52c61e03814dbe2662bd5f0716cfb5bdb885dd8be9bef14e39aed`.
+  - `terraproof.evals` is absent.
+  - Its dependencies are exactly `agent-with-p9`'s (R1-pinned).
+  - Its product fingerprint matches the checkout: `a2378a0e…f126`.
+- **Preflight.** `--preflight-only` ran on all 12 projects, with no model call. Report: `.terracache/phase11-t2-agent-preflight.json`.
+  - Calibration passed again.
+  - Every project passed every registered OpenCode check: isolation, admission, tools served, and no Terraproof in the global config.
+  - Every project also passed the four wrapper checks: identical tools and instructions, the wrapper outside the project, the snapshots outside the project, and no snapshot before the run.
+- **What the agent sees.**
+  - The installed `AGENTS.md` names only `run_checks` (`check` on the command line). Its footer shows the stock server command.
+  - The project file and `verify_project` appear only in the MCP instructions and the tool's own description. This is the nudge T2 measures.
+
 ## 4. Reading, registered before the run
 
 | Measure | Bar |
