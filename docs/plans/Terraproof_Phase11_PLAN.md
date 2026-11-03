@@ -1,6 +1,6 @@
 # Terraproof Phase 11 plan: one declaration per pipeline, tested on agents
 
-> Status: **T1 done; T2 attempt 2 ran (12 of 12): adoption 11/12, 0 false assurance, 0 saves because no agent made a mistake. Reading: inconclusive, no push (2026-11-03).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
+> Status: **T1 done; T2 attempt 2 ran (12 of 12): adoption 11/12, 0 false assurance, 0 saves because no agent made a mistake; inconclusive, no push. T3 (harder tasks) designed, not built (2026-11-03).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
 
 ## 1. Why
 
@@ -258,3 +258,77 @@ Everything else is reported, not thresholded: the faithfulness of declarations, 
 1. **T2 design.** The host and model, the 3 tasks, and 12 invocations at 1200 s.
 2. **The known risk.** Run as registered (recommended), or fix the STAC-offset cross-check first.
 3. **The run.** Approval of the exact command after preflight.
+
+## 7. T3. A harder trial: agents that make mistakes (designed 2026-11-03, not built, not run)
+
+T2 adopted well (11 of 12) but measured no value: the model made no mistake for `verify` to catch. T3 picks tasks where this model has made mistakes before, and asks one question: **when an agent writes the project file and gets an output wrong, does `verify` catch it?**
+
+### Tasks: where MiMo erred before
+
+The tasks are seven headroom tasks, each with one deliverable (`result.tif`). Each has an independent oracle and seeded wrong outputs, all already in `terraproof.evals.headroom`. The inputs are small synthetic rasters (12 × 12). They are spent tasks, so this is not a lift claim.
+
+| Task | MiMo before (no Terraproof) | Mistake seen or seeded | Reference declaration |
+| --- | --- | --- | --- |
+| `hr-flood-depth-feet` | E4: 2 of 2 wrong | feet compared with a metre level; depth in feet | `vertical-units`, `depth-below-level` |
+| `hr-modis-lst-quality` | E4: 2 of 2 wrong | kelvin delivered; one QC field read | `qa-masked` (keep codes) + `rs.scale_applied_once` (kelvin to Celsius) |
+| `hr-landcover-change-fill` | E4: 1 of 2 wrong | fill 0 compared as a class | `nodata-support` (fill 0, rule all) |
+| `hr-reanalysis-air-temperature` | E4: 1 of 2 wrong | packed integers used as kelvin; kelvin delivered | `rs.scale_applied_once` (file scale and offset, kelvin to Celsius) |
+| `hr-s2-scl-red` | E4: 1 of 2 wrong | only cloud classes removed; offset ignored | `qa-masked` (keep 4, 5, 6) + `scaled-reflectance` (offset −0.1) |
+| `hr-slope-geographic` | E4: 1 of 2 wrong | degrees as metres; latitude ignored | `slope-from-dem` |
+| `hr-elevation-change-mixed-units` | R3: 2 of 24 wrong, both certified | ft survey treated as m; change in feet | `vertical-units`, `difference` |
+
+In E4, these six tasks drew 8 wrong outputs in 12 runs. With Terraproof installed, the rate is expected to be lower (Q5.2 0 of 10, T2 0 of 11). Lower is still worth seeing.
+
+### Calibration probe (2026-11-03, no model)
+
+Each reference declaration was written and verified on the right output and on every seeded wrong output:
+- **All 7 tasks:** the right output is `verified`, and **every one of the 15 seeded wrong outputs is `failed`**.
+- So when the declaration states the task correctly, the checks catch every registered mistake.
+
+### The finding that shapes T3: a declaration can repeat the mistake
+
+The probe then declared each wrong output **with the belief that produced it** (for example `vertical_source_units = ["metre"]` for a DEM read as metres). **`verify` certified 10 of these 11.** Only the clouds-only S2 mask still failed. A check confirms the output against the declaration; when both carry the same mistake, they agree.
+
+The 11 fall into two kinds:
+- **The declaration contradicts the input's own metadata** (5 of 11). The DEM's band unit is `ft` but `metre` is declared (flood feet-as-metres, mixed units ignored). The file's scale and offset are 0.0018 and 285 but 1 and 0 are declared (packed values). The item lists offset −0.1 but 0 is declared (S2 no offset). The item marks class 0 as no data but no fill is declared (land cover).
+  - Terraproof can see these, from the same explicit metadata `propose_contract` already reads.
+- **The declaration states a wrong goal that no input contradicts** (6 of 11). Kelvin is delivered where Celsius was asked, a depth or change is given in feet, or a QA rule keeps codes the task excludes.
+  - No file says the task asked for Celsius, so no check can see it.
+  - Catching these needs the goal stated by someone other than the agent, which T3 does not test.
+
+### Labels added to T2's
+
+For every wrong snapshot:
+- **Faithful declaration:** its relevant bindings match the reference.
+- **Belief declaration:** they encode the mistake. Record whether explicit input metadata contradicts it.
+
+The reading separates three cases: a check gap (faithful declaration, not flagged), a cross-check gap (belief contradicted by metadata, not flagged), and the limit (belief with no metadata against it).
+
+### Count, host, bars
+
+- **Host and model:** as T2 (OpenCode 1.19.4, `opencode-go/mimo-v2.6-flash`), with the same neutral brief and install, the same snapshot wrapper, and 1800 s per run.
+- **Count:** 7 tasks × 2 runs = **14 invocations**.
+- **Bars,** unchanged in kind:
+
+| Measure | Bar |
+| --- | --- |
+| False assurance on a **faithful** declaration | **0**. Required. |
+| False assurance on a belief declaration that input metadata contradicts | Reported, and decides option A or B below |
+| Adoption | ≥ 7 of 14 |
+| Saves (flagged `failed`, correct at the end) | ≥ 2, in ≥ 2 runs |
+
+### Decision before building: A or B
+
+- **A. Run T3 on the product as it is.** It measures how often agents' declarations repeat their mistakes. The likely result is false assurance on belief declarations, after which a cross-check is built and T3 runs again.
+- **B. First make `verify` cross-check declarations against explicit input metadata, then run T3.** When a declared binding contradicts the input itself, report a conflict that fails the deliverable.
+  - **What it compares:** band unit labels, GDAL scale and offset, nodata, and, when the project file names a STAC item, its `raster:bands` and `classification:classes`.
+  - **What it leaves alone:** no task-specific rule; only bindings explicit metadata states, as `propose_contract` already does.
+  - **Why now:** it follows behaviour already observed: R3's two certified mixed-unit errors, and P4's offset certified decision-grade twice.
+  - **Cost:** it closes about half the belief cases before any run, and leaves the other kind as the measured limit.
+
+**Recommendation: B.** The false-assurance route is known from earlier trials, so a 14-run trial that only re-shows it buys little. With B, T3 can meet its bars or show a real check gap.
+
+Either way, the order stays the same:
+1. Build the driver.
+2. Calibrate and preflight.
+3. Ask for approval of the exact command and the count of 14.
