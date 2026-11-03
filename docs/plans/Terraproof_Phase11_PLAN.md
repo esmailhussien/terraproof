@@ -1,6 +1,6 @@
 # Terraproof Phase 11 plan: one declaration per pipeline, tested on agents
 
-> Status: **T1 done; T2 attempt 2 ran (12 of 12): adoption 11/12, 0 false assurance, 0 saves because no agent made a mistake; inconclusive, no push. T3 designed; its prerequisite B (declarations checked against their sources' metadata) built; T3 ran (14 of 14 scored, 15 invocations): adoption 14/14, 0 false assurance on faithful declarations, 1 save (by the cross-check), 1 belief certified; value bar not met, no push (2026-11-03).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
+> Status: **T1 done; T2 attempt 2 ran (12 of 12): adoption 11/12, 0 false assurance, 0 saves because no agent made a mistake; inconclusive, no push. T3 designed; its prerequisite B (declarations checked against their sources' metadata) built; T3 ran (14 of 14 scored, 15 invocations): adoption 14/14, 0 false assurance on faithful declarations, 1 save (by the cross-check), 1 belief certified; value bar not met, no push; two of its three recorded gaps then closed (2026-11-03).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
 
 ## 1. Why
 
@@ -430,3 +430,25 @@ What happened:
   - A QA rule the agent chooses itself is certified when its declaration and output share it.
   - An agent can declare less than the task needs.
 - **The value bar (≥ 2 saves) is not met,** so no push under the registered reading.
+
+### Gaps closed after T3 (2026-11-03, no model called)
+
+Two of the three gaps T3 recorded are closed. The third is the registered limit.
+
+1. **An unbound `run_checks` read as a pass.**
+   - Without a source, a check reads only the output itself. `check` / `run_checks` now return `next_step.derivation_checked = false`, both in the JSON and in the Markdown report, in English and Arabic.
+   - It says that how the output was derived was not checked, and points to the project file.
+   - It is advisory. The grade and the exit code do not change, so CI behaviour is unchanged.
+   - It appears only when no source-enabled check ran. When one did, the existing goal `next_step` stands.
+2. **An under-declared deliverable.**
+   - The plan and `verify` add a hint when a declared source's metadata states a decode that no declared check applies. A decode is a scale other than 1 or an offset other than 0, read from the file or a linked STAC Item.
+   - `rs.scale_applied_once` covers only its `reference_input`. Summary and QA sources carry their own decode, so they are left out.
+   - A hint never changes a status.
+   - **Replayed on the 26 project files T2's and T3's agents wrote,** it fires once, on T3 `hr-reanalysis-air-temperature` run 1: `t2m.tif` states scale 0.0018 and offset 285.0. That is exactly the under-declared one.
+3. **A QA rule the agent chooses itself** (MODIS keep codes `[0, 64]`). No input states the task's threshold, so no check can see it. This stays the registered limit.
+
+**Verification.**
+- 2 new tests.
+- The full Python suite passes (2018 passed, 6 skipped), and so do repository validation and the router suite.
+- T3's calibration still passes on all 7 tasks.
+- These changes come after T3's run. T3's numbers above were measured without them.

@@ -97,6 +97,7 @@ python -m terraproof verify --reports out/terraproof   # also write each full JS
 - **Compared:** a DEM's vertical unit, the reference input's decode scale and offset, each vertical source's unit, and each support source's fill.
 - **Where the metadata comes from:** the file's own band unit, scale, offset and nodata. Also any local STAC Item beside the project file or its sources whose asset `href` points at the source, through its `raster:bands` and a `classification:classes` entry marked `nodata`.
 - **On a contradiction:** the plan lists it as a conflict, and `verify` adds a `project.declaration` finding and fails the deliverable.
+- **Hints:** when a declared source's metadata states a decode (a scale other than 1 or an offset other than 0) that no declared check applies, the plan and `verify` add a hint. If the output holds the decoded values, declare `rs.scale_applied_once` with that source as `reference_input`. A hint never changes a status.
 - **What is not compared:** facts no metadata states, or metadata that disagrees with itself. Goals no file can state, such as the output's unit or which QA codes to keep, stay the declarer's responsibility.
 - **Exit code:** the worst deliverable's: `0` verified, `2` review required, `3` failed, incomplete or missing, and `1` for an invalid project file.
 

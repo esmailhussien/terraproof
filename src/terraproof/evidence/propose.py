@@ -255,6 +255,31 @@ def declaration_conflicts(values: dict, stac: dict) -> list[dict]:
     return found
 
 
+# Sources whose decode a declaration states elsewhere (in each summary), so a stated scale needs no decode check.
+_OWN_DECODE = ("summary_source", "summary_mask", "summaries", "qa_path", "qa_source")
+
+
+def undeclared_decodes(values: dict, stac: dict, checks) -> list[dict]:
+    """Declared sources whose metadata states a decode (scale other than 1, or offset other than 0) that no declared
+    check applies: `rs.scale_applied_once` covers only its `reference_input`. Advisory: an output need not carry
+    its source's decoded values, but when it does, an undeclared decode is never checked."""
+    covered = values.get("reference_input") if "rs.scale_applied_once" in set(checks) else None
+    sources = [v for k, v in values.items() if k in FILE_PARAMETERS and k not in _OWN_DECODE and isinstance(v, str)]
+    sources += [p for k in LIST_FILE_PARAMETERS for p in values.get(k) or [] if isinstance(p, str)]
+    found = []
+    for source in dict.fromkeys(sources):
+        if source == covered:
+            continue
+        stated = {}
+        for fact, default in (("scale", 1.0), ("offset", 0.0)):
+            value, problem = _agreed(_statements(source, stac, fact), _number)
+            if value is not None and not problem and value != default:
+                stated[fact] = value
+        if stated:
+            found.append({"source": source, **stated})
+    return found
+
+
 def propose_contract(paths: list[str], names: list[str], arguments: dict, stac: list[str] | None = None) -> dict:
     """A draft contract for the named goal profiles, with the evidence for every binding it filled."""
     if not names:

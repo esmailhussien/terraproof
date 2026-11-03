@@ -242,3 +242,29 @@ def test_metadata_that_disagrees_with_itself_is_not_held_against_the_declaration
     assert stac[(tmp_path / "B04.tif").resolve()][1] == "red"
     for offset in (0.0, -0.1):
         assert declaration_conflicts({"reference_input": str(tmp_path / "B04.tif"), "decode_offset": offset}, stac) == []
+
+
+def test_the_plan_names_a_source_decode_no_declared_check_applies(tmp_path):
+    # t2m.tif states scale 0.0018 and offset 285; declaring only its support leaves a kelvin output unverified
+    support = {"goals": ["nodata-support"], "support_sources": ["t2m.tif"], "support_rule": "all"}
+    hints = project.plan(_declared(tmp_path, "hr-reanalysis-air-temperature", None, **support))["deliverables"][0]
+    assert hints["hints"] == ["t2m.tif states scale 0.0018 and offset 285.0; if the output holds its decoded "
+                              "values, declare rs.scale_applied_once with it as reference_input"]
+    assert hints["ready"]  # advisory: the declaration is still complete
+    decoded = dict(support, checks=["rs.scale_applied_once"], reference_input="t2m.tif", decode_scale=0.0018,
+                   decode_offset=285.0, unit_conversion="kelvin-to-celsius", processing_full_scan=True)
+    row = project.verify(_declared(tmp_path / "decoded", "hr-reanalysis-air-temperature", None, **decoded))
+    assert row["deliverables"][0]["hints"] == [] and row["deliverables"][0]["status"] == "verified"
+
+
+def test_checks_with_no_source_say_the_derivation_was_not_checked(make_raster, tmp_path, capsys):
+    elevation = np.arange(64 * 64, dtype="float32").reshape(64, 64)
+    make_raster("dem.tif", elevation)
+    make_raster("feet.tif", elevation / 0.3048)
+    assert main(["check", str(tmp_path / "feet.tif"), "--format", "json"]) == 0
+    step = json.loads(capsys.readouterr().out)["next_step"]
+    assert step["derivation_checked"] is False and "project file" in step["why"]
+    main(["check", str(tmp_path / "feet.tif"), "--vertical-operation", "convert", "--vertical-source",
+          str(tmp_path / "dem.tif"), "--vertical-source-unit", "metre", "--vertical-unit", "foot", "--format", "json"])
+    step = json.loads(capsys.readouterr().out)["next_step"]  # a source-enabled check ran: declare its goal
+    assert "derivation_checked" not in step and step["profiles"] == ["vertical-units"]

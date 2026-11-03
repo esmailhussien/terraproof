@@ -112,6 +112,19 @@ def _conflicts(bound: dict, base: Path) -> list[str]:
     return messages
 
 
+def _hints(bound: dict, base: Path, checks) -> list[str]:
+    """Advisory notes on a declaration: each declared source whose stated decode no declared check applies."""
+    from terraproof.evidence.propose import local_stac_links, undeclared_decodes
+
+    sources = [v for k, v in bound.items() if k in FILE_PARAMETERS and isinstance(v, str)]
+    sources += [p for k in LIST_FILE_PARAMETERS for p in bound.get(k) or [] if isinstance(p, str)]
+    stac = local_stac_links([base, *(Path(p).parent for p in sources)])
+    return [f"{_relative(h['source'], base)} states "
+            + " and ".join(f"{fact} {h[fact]}" for fact in ("scale", "offset") if fact in h)
+            + "; if the output holds its decoded values, declare rs.scale_applied_once with it as reference_input"
+            for h in undeclared_decodes(bound, stac, checks)]
+
+
 def load_project(path=None) -> tuple[Path, list[dict]]:
     """The project file and its deliverables, each with its parsed arguments and verification contract."""
     from terraproof.cli import _binding_parameters
@@ -165,7 +178,7 @@ def load_project(path=None) -> tuple[Path, list[dict]]:
         deliverables.append({"name": name, "outputs": outputs, "goals": sorted(set(goals)), "checks": group["checks"],
                              "missing_bindings": sorted({b for c in group["checks"]
                                                          for b in _missing_bindings(c, group["parameters"])}),
-                             "conflicts": _conflicts(bound, base),
+                             "conflicts": _conflicts(bound, base), "hints": _hints(bound, base, group["checks"]),
                              "args": args, "contract": contract})
     return path, deliverables
 
@@ -288,7 +301,7 @@ def plan(path=None, only=None) -> dict:
     base = project.parent
     rows = [{"name": d["name"], "outputs": [_relative(p, base) for p in d["outputs"]],
              "outputs_present": [Path(p).exists() for p in d["outputs"]], "goals": d["goals"], "checks": d["checks"],
-             "missing_bindings": d["missing_bindings"], "conflicts": d["conflicts"],
+             "missing_bindings": d["missing_bindings"], "conflicts": d["conflicts"], "hints": d["hints"],
              "ready": not d["missing_bindings"] and not d["conflicts"]}
             for d in _select(deliverables, only)]
     return {"project": str(project), "mode": "plan", "deliverables": rows,
@@ -316,7 +329,7 @@ def verify(path=None, only=None, reports_dir=None) -> dict:
     rows = []
     for d in _select(deliverables, only):
         row = {"name": d["name"], "outputs": [_relative(p, base) for p in d["outputs"]], "goals": d["goals"],
-               "checks": d["checks"], "missing_bindings": d["missing_bindings"], "findings": []}
+               "checks": d["checks"], "missing_bindings": d["missing_bindings"], "hints": d["hints"], "findings": []}
         absent = [p for p in d["outputs"] if not Path(p).exists()]
         if absent:
             row.update(status="missing-output", grade=ADVISORY, exit_code=EXIT_CODES[ADVISORY],
@@ -371,6 +384,7 @@ def render(summary: dict) -> str:
             lines.append(f"              missing bindings: {', '.join(r['missing_bindings'])}")
         if summary["mode"] == "plan":
             lines += [f"              conflict: {m}" for m in r["conflicts"]]
+        lines += [f"              hint: {m}" for m in r.get("hints", [])]
     if summary["mode"] == "plan":
         ready = sum(r["ready"] for r in rows)
         lines.append(f"{ready} of {len(rows)} declarations complete")

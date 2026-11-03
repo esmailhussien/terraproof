@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `verify` and `--plan` compare declared bindings with explicit metadata: a DEM's vertical unit, the decode scale and offset, vertical source units, and support fills.
   - The metadata is read from the source file, and from local STAC Items whose asset `href` points at it.
   - A contradiction is a `project.declaration` failure. A check alone would agree with a declaration that repeats the output's mistake.
+- **Hints:** the plan and `verify` name a declared source whose metadata states a scale or offset that no declared check applies. This is advisory and never changes a status.
+- Without a source, `check` / `run_checks` returns `next_step.derivation_checked = false`. This makes clear that passing form checks did not verify how the output was derived.
 - `propose` / `propose_contract` also read a fill from a STAC asset's `classification:classes` entry marked `nodata`.
 - New MCP tool `verify_project` (eight tools), matching `verify`. The server instructions ask agents to
   write the project file before producing deliverables.
