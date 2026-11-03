@@ -25,6 +25,8 @@ The experimental [source-selection extension](../docs/SCIENTIFIC_SOURCE_RECOVERY
 
 The [source-recovery demonstration](../docs/SCIENTIFIC_SOURCE_RECOVERY_RESULT_2026-11-03.md) acquired USGS Landsat 8 product `LC08_L2SP_198024_20230708_20230718_02_T1` (2023-07-08, Netherlands AOI), native MTL TXT/ST_B10/QA_PIXEL/ST_QA, 120,640,169 bytes, from the same public distribution. Original assets/hashes remain external; no raster data are vendored. Attribution: USGS Landsat Collection 2 Level-2, EROS Center dataset [doi:10.5066/P9OGBGM6](https://doi.org/10.5066/P9OGBGM6); Microsoft Planetary Computer catalog/access service. It is a different acquisition from the earlier July 15 scene, not a correction of that observation.
 
+The reviewer-driven [acquisition/uncertainty correction](../docs/SCIENTIFIC_ACQUISITION_UNCERTAINTY.md) reuses those original assets. It distinguishes QA_PIXEL bit-0 nonfill support from raster bounds, following the [USGS QA band definitions](https://www.usgs.gov/landsat-missions/landsat-collection-2-quality-assessment-bands) and native DFCB v7 cited above (QA fill and signed ST_QA hundredths of kelvin). No new raster sources or upstream processing code are introduced. Diagnostic cutoffs are explicit caller choices, not USGS recommendations or accuracy guarantees.
+
 ### Existing source registry
 
 | Source | Area | Status |
