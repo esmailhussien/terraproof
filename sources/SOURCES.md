@@ -21,6 +21,8 @@ Real-scene engineering validation on 2026-11-03 used native USGS Landsat 9 produ
 
 The additional 2026-11-03 boundary batch used USGS Landsat 8 product `LC08_L2SP_199023_20230715_20230724_02_T1`, acquired 2023-07-15, intersecting the Netherlands AOI. The same four original asset types, USGS attribution and public Planetary Computer distribution apply; 127,455,522 bytes are retained outside the repository. Dataset citation: Earth Resources Observation and Science (EROS) Center (2020), Landsat 8-9 OLI/TIRS Level-2, Collection 2, U.S. Geological Survey, [doi:10.5066/P9OGBGM6](https://doi.org/10.5066/P9OGBGM6). The [boundary review](../docs/SCIENTIFIC_WORKFLOW_BOUNDARY_REVIEW_2026-11-03.md) also consulted [USGS Collection 2 known issues](https://www.usgs.gov/landsat-missions/landsat-collection-2-known-issues) for emissivity/blockiness limitations; no claim is made that Terraproof corrected those upstream issues.
 
+The experimental [source-selection extension](../docs/SCIENTIFIC_SOURCE_RECOVERY.md) is authored for Terraproof under MIT; it vendors no SDK processing code. Its one-provider public metadata and transient container-token access flow follows the [Planetary Computer STAC documentation](https://planetarycomputer.microsoft.com/docs/quickstarts/reading-stac/) and [official SDK SAS implementation](https://github.com/microsoft/planetary-computer-sdk-for-python/blob/main/planetary_computer/sas.py), reviewed 2026-11-03. STAC footprints/cloud percentages are proposals, not independent thermal or AOI-quality validation.
+
 ### Existing source registry
 
 | Source | Area | Status |

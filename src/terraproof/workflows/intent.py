@@ -219,15 +219,8 @@ def aoi_selector(path, grid_crs):
     return select
 
 
-def admit(spec_path):
-    spec_path = Path(spec_path).resolve()
-    document = load(spec_path)
-    keys(document, ('schema', 'id', 'intent', 'source'))
-    if document['schema'] != SCHEMA:
-        raise InputError('requires terraproof.workflow/2: migrate the intent and review again; full AOI scene coverage is now the default')
-    if not isinstance(document['id'], str) or not document['id'].strip():
-        raise InputError('invalid scientific workflow identity')
-    intent = document['intent']
+def validate_intent(intent):
+    """The same scientific requirements apply before source selection and local admission."""
     keys(intent, ('quantity', 'unit', 'aoi', 'acquired_between', 'reject_qa_bits', 'min_valid_fraction'), ('scene_coverage',))
     coverage = intent.get('scene_coverage', 'full-aoi')
     if coverage not in ('full-aoi', 'allow-partial'):
@@ -247,6 +240,19 @@ def admit(spec_path):
     start, end = map(date.fromisoformat, interval)
     if start > end:
         raise InputError('acquisition interval is reversed')
+    return start, end, coverage
+
+
+def admit(spec_path):
+    spec_path = Path(spec_path).resolve()
+    document = load(spec_path)
+    keys(document, ('schema', 'id', 'intent', 'source'))
+    if document['schema'] != SCHEMA:
+        raise InputError('requires terraproof.workflow/2: migrate the intent and review again; full AOI scene coverage is now the default')
+    if not isinstance(document['id'], str) or not document['id'].strip():
+        raise InputError('invalid scientific workflow identity')
+    intent = document['intent']
+    start, end, coverage = validate_intent(intent)
     source = document['source']
     keys(source, ('metadata', 'representation'))
     if source['representation'] != 'usgs-native-dn':

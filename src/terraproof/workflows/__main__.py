@@ -7,17 +7,28 @@ from pathlib import Path
 
 from .intent import SCHEMA, approve, plan, write
 from .lst import execute, repair, verify
+from .sources import REQUEST, BYTE_CAP, discover, acquire
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(prog='terraproof workflow')
     subs = parser.add_subparsers(dest='action', required=True)
     init = subs.add_parser('init', help='write an unapproved local ST workflow template')
-    init.add_argument('file'); init.add_argument('--metadata', required=True); init.add_argument('--aoi', required=True)
-    init.add_argument('--start', required=True); init.add_argument('--end', required=True)
-    init.add_argument('--reject-qa-bits', type=int, nargs='+', required=True)
-    init.add_argument('--min-valid-fraction', type=float, required=True)
-    init.add_argument('--allow-partial', action='store_true', help='explicitly permit an AOI partly outside this scene; requires review')
+    init.add_argument('--metadata', required=True)
+    source_init = subs.add_parser('source-init', help='write a public Landsat source-search request; no network access')
+    source_init.add_argument('--max-scene-cloud', type=float, required=True, help='catalog search limit; not AOI quality')
+    source_init.add_argument('--max-download-bytes', type=int, default=BYTE_CAP)
+    for draft in (init,source_init):
+        draft.add_argument('file'); draft.add_argument('--aoi', required=True)
+        draft.add_argument('--start', required=True); draft.add_argument('--end', required=True)
+        draft.add_argument('--reject-qa-bits', type=int, nargs='+', required=True)
+        draft.add_argument('--min-valid-fraction', type=float, required=True)
+        draft.add_argument('--allow-partial', action='store_true', help='explicitly permit partial AOI coverage; requires review')
+    search = subs.add_parser('discover', help='metadata-only source alternatives; no approval or pixel processing')
+    search.add_argument('file'); search.add_argument('--out', required=True)
+    fetch = subs.add_parser('acquire', help='download exactly one explicitly selected proposal and create an unapproved native workflow')
+    fetch.add_argument('report'); fetch.add_argument('--item', required=True); fetch.add_argument('--out', required=True)
+    fetch.add_argument('--expect-digest', required=True)
     p = subs.add_parser('plan', help='admit inputs and show scientific choices without processing')
     p.add_argument('file')
     a = subs.add_parser('approve', help='record review of exact intent and input bytes')
@@ -30,19 +41,26 @@ def main(argv=None):
     repair_parser = subs.add_parser('repair', help='one regeneration into a new directory, preserving old evidence')
     repair_parser.add_argument('approval'); repair_parser.add_argument('directory'); repair_parser.add_argument('--out', required=True)
     args = parser.parse_args(argv)
-    if args.action == 'init':
+    if args.action in ('init','source-init'):
         if Path(args.file).exists():
             raise ValueError('template output already exists')
-        document = {'schema': SCHEMA, 'id': 'local-land-surface-temperature',
+        document = {'schema': SCHEMA if args.action == 'init' else REQUEST, 'id': 'local-land-surface-temperature',
                     'intent': {'quantity': 'land-surface-temperature', 'unit': 'degree_Celsius',
                                'aoi': str(Path(args.aoi).resolve()), 'acquired_between': [args.start, args.end],
                                'reject_qa_bits': args.reject_qa_bits, 'min_valid_fraction': args.min_valid_fraction,
-                               'scene_coverage': 'allow-partial' if args.allow_partial else 'full-aoi'},
-                    'source': {'metadata': str(Path(args.metadata).resolve()), 'representation': 'usgs-native-dn'}}
+                               'scene_coverage': 'allow-partial' if args.allow_partial else 'full-aoi'}}
+        if args.action == 'init':
+            document['source'] = {'metadata': str(Path(args.metadata).resolve()), 'representation': 'usgs-native-dn'}
+        else:
+            document['search'] = {'max_scene_cloud':args.max_scene_cloud,'max_download_bytes':args.max_download_bytes}
         write(args.file, document)
         result = {'status': 'draft', 'file': str(Path(args.file).resolve()), 'approved': False}
     elif args.action == 'plan':
         result = plan(args.file)
+    elif args.action == 'discover':
+        result = discover(args.file,args.out)
+    elif args.action == 'acquire':
+        result = acquire(args.report,args.item,args.out,expected_digest=args.expect_digest)
     elif args.action == 'approve':
         result = approve(args.file, args.out, reviewer=args.reviewer, expected_digest=args.expect_digest)
     elif args.action == 'run':

@@ -119,7 +119,7 @@ review = plan("workflow.json")
 # A human reviews the scientific choices and actual digest before approve().
 ```
 
-The same functions can be used by a future MCP/QGIS/web adapter; this branch adds no GUI, server, downloader, new routing trigger or MCP tool. Approval is an explicit caller responsibility, never an inferred user decision.
+The same functions can be used by a future MCP/QGIS/web adapter. The [source-selection extension](SCIENTIFIC_SOURCE_RECOVERY.md) adds one bounded public Landsat catalog/discovery/acquisition route and an unapproved native workflow; it adds no GUI, server, new routing trigger or MCP tool. Approval is an explicit caller responsibility, never an inferred user decision.
 
 ## Validation and scientific boundaries
 
