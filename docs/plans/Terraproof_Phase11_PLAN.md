@@ -1,6 +1,6 @@
 # Terraproof Phase 11 plan: one declaration per pipeline, tested on agents
 
-> Status: **T1 done; T2 attempt 2 ran (12 of 12): adoption 11/12, 0 false assurance, 0 saves because no agent made a mistake; inconclusive, no push. T3 designed; its prerequisite B (declarations checked against their sources' metadata) built; T3 ran (14 of 14 scored, 15 invocations): adoption 14/14, 0 false assurance on faithful declarations, 1 save (by the cross-check), 1 belief certified; value bar not met, no push; two of its three recorded gaps then closed (2026-11-03).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
+> Status: **T1 done; T2 attempt 2 ran (12 of 12): adoption 11/12, 0 false assurance, 0 saves because no agent made a mistake; inconclusive, no push. T3 designed; its prerequisite B (declarations checked against their sources' metadata) built; T3 ran (14 of 14 scored, 15 invocations): adoption 14/14, 0 false assurance on faithful declarations, 1 save (by the cross-check), 1 belief certified; value bar not met, no push; two of its three recorded gaps then closed (2026-11-03). The maintainer then chose to merge the work as PR #45 without a release: the registered rule prepares 0.13.0 only when the value bar is met, and it was not.** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
 
 ## 1. Why
 
