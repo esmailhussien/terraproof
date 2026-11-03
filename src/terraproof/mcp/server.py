@@ -524,7 +524,9 @@ def verify_project(path: str | None = None, plan: bool = False, only: list[str] 
     goal with its checks and required bindings, every binding's meaning, and a template. On finished
     outputs, call it without `plan`: each deliverable gets its grade,
     its verification status and the findings of every check that did not pass, and `exit_code` is the
-    worst deliverable's. `only` names deliverables to check. Matches `python -m terraproof verify`.
+    worst deliverable's. A declared binding that its source's own metadata (unit, scale, offset, fill,
+    or a local STAC Item pointing at it) contradicts is a `project.declaration` failure, and `plan=true`
+    lists it as a conflict. `only` names deliverables to check. Matches `python -m terraproof verify`.
     """
     from terraproof import project
 

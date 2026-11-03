@@ -1,6 +1,6 @@
 # Terraproof Phase 11 plan: one declaration per pipeline, tested on agents
 
-> Status: **T1 done; T2 attempt 2 ran (12 of 12): adoption 11/12, 0 false assurance, 0 saves because no agent made a mistake; inconclusive, no push. T3 (harder tasks) designed, not built (2026-11-03).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
+> Status: **T1 done; T2 attempt 2 ran (12 of 12): adoption 11/12, 0 false assurance, 0 saves because no agent made a mistake; inconclusive, no push. T3 designed; its prerequisite B (declarations checked against their sources' metadata) built; T3 driver not built (2026-11-03).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
 
 ## 1. Why
 
@@ -332,3 +332,18 @@ Either way, the order stays the same:
 1. Build the driver.
 2. Calibrate and preflight.
 3. Ask for approval of the exact command and the count of 14.
+
+### B built (2026-11-03): a declaration its own sources contradict fails
+
+The user chose B. No model was called.
+- **What it does.** `verify` and `--plan` (MCP `verify_project`) compare declared bindings with explicit metadata about their own sources: a DEM's vertical unit, the reference input's decode scale and offset, each vertical source's unit, and each support source's fill.
+  - The metadata is read from the source file. It is also read from any local STAC Item beside the project file or a source, when an asset's `href` points at that source, through `raster:bands`, or a `classification:classes` entry marked `nodata`.
+  - A contradiction is listed by the plan as a conflict. `verify` turns it into a `project.declaration` failure.
+  - Metadata that disagrees with itself, such as Earth Search's `boa_offset_applied` beside offset −0.1, is not held against the declaration.
+- **The belief probe again.** The cross-check now **fails all 5** belief declarations that input metadata contradicts: flood feet-as-metres, mixed units ignored, packed values, S2 no offset, and land-cover fill.
+  - The 6 that no metadata contradicts are still certified, as designed. Kelvin or feet were delivered against a stated goal, or a QA rule was narrowed. Five of the six are certified and one (S2 clouds-only) still fails its mask check. These are the limit T3 measures.
+- **Tests.** 3 new tests; the full Python suite passes (2011 passed, 6 skipped), and so do repository validation and the router suite.
+- **No false alarm found.**
+  - The 7 T3 reference declarations still verify the right outputs and fail all 15 seeded wrong ones.
+  - T2's real-data calibration still passes.
+  - Replaying the 11 project files T2's agents actually wrote (33 deliverables) gives no conflict.

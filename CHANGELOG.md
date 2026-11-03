@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     each goal with its checks and required bindings, every binding's meaning, and a template.
   - **Other options:** `--only` (one deliverable), `--format json`, and `--reports DIR` (full
     reports).
+- **A declaration its own sources contradict fails.**
+  - `verify` and `--plan` compare declared bindings with explicit metadata: a DEM's vertical unit, the decode scale and offset, vertical source units, and support fills.
+  - The metadata is read from the source file, and from local STAC Items whose asset `href` points at it.
+  - A contradiction is a `project.declaration` failure. A check alone would agree with a declaration that repeats the output's mistake.
+- `propose` / `propose_contract` also read a fill from a STAC asset's `classification:classes` entry marked `nodata`.
 - New MCP tool `verify_project` (eight tools), matching `verify`. The server instructions ask agents to
   write the project file before producing deliverables.
 - See [project verification](docs/PROJECT_VERIFICATION.md).

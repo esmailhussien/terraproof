@@ -174,3 +174,71 @@ def test_the_guide_template_is_a_complete_declaration(tmp_path):
     path.write_text(project.guide()["template"], encoding="utf-8")
     summary = project.plan(path)
     assert summary["mode"] == "plan" and summary["exit_code"] == 0 and len(summary["deliverables"]) == 2
+
+
+def _declared(root, task_id, wrong, **binding):
+    """A headroom task's inputs and one of its outputs, declared with the given bindings."""
+    from terraproof.evals import lift
+
+    task = lift.lift_task(task_id)
+    lift._generate(task, root)
+    if wrong:
+        (root / "result.tif").write_bytes((root / wrong).read_bytes())
+    path = root / "terraproof.json"
+    path.write_text(json.dumps({"schema": project.SCHEMA, "deliverables": [
+        dict(name="result", outputs=["result.tif"], **binding)]}), encoding="utf-8")
+    return path
+
+
+MIXED = {"goals": ["vertical-units"], "vertical_operation": "difference",
+         "vertical_sources": ["dem_2023.tif", "dem_2015.tif"], "vertical_unit": "metre"}
+
+
+def test_a_declaration_its_source_file_contradicts_fails_before_and_after_outputs(tmp_path):
+    # the 2015 survey's band unit is ft; declaring it metre repeats the units-ignored mistake
+    path = _declared(tmp_path, "hr-elevation-change-mixed-units", "units-ignored.tif",
+                     vertical_source_units=["metre", "metre"], **MIXED)
+    planned = project.plan(path)["deliverables"][0]
+    assert not planned["ready"] and planned["missing_bindings"] == []
+    assert planned["conflicts"] == ["vertical_source_units for dem_2015.tif is declared metre, "
+                                    "but its metadata states dem_2015.tif band 1 unit = ft"]
+    row = project.verify(path)["deliverables"][0]
+    assert row["status"] == "failed" and row["grade"] == "advisory-only" and row["exit_code"] == 3
+    assert row["findings"][0]["check"] == project.DECLARATION
+    assert "CONFLICT" in project.render(project.plan(path))
+    right = _declared(tmp_path / "right", "hr-elevation-change-mixed-units", None,
+                      vertical_source_units=["metre", "foot"], **MIXED)
+    assert project.plan(right)["deliverables"][0]["conflicts"] == []
+    assert project.verify(right)["deliverables"][0]["status"] == "verified"
+
+
+def test_a_stac_item_beside_the_source_is_metadata_too(tmp_path):
+    # the Item's asset href points at B04.tif and states offset -0.1; declaring 0 repeats the no-offset mistake
+    scl = {"goals": ["qa-masked", "scaled-reflectance"], "qa_path": "SCL.tif", "qa_kind": "keep-codes",
+           "qa_keep_codes": [4, 5, 6], "reference_input": "B04.tif", "decode_scale": 0.0001, "expect": "reflectance",
+           "processing_full_scan": True}
+    row = project.verify(_declared(tmp_path, "hr-s2-scl-red", "no-offset.tif", decode_offset=0.0, **scl))
+    finding = row["deliverables"][0]["findings"][0]
+    assert finding["check"] == project.DECLARATION and "item.json assets.red.raster:bands[0].offset = -0.1" \
+        in finding["message"]
+    # a fill only the Item's classification states must be declared: the files' own masks miss it
+    fill = {"goals": ["nodata-support"], "support_sources": ["landcover_2019.tif", "landcover_2023.tif"],
+            "support_rule": "all"}
+    missed = project.plan(_declared(tmp_path / "lc", "hr-landcover-change-fill", None, **fill))
+    assert len(missed["deliverables"][0]["conflicts"]) == 2
+    assert "classification:classes = 0" in missed["deliverables"][0]["conflicts"][0]
+    declared = _declared(tmp_path / "lc2", "hr-landcover-change-fill", None, support_source_nodata=[0, 0], **fill)
+    assert project.verify(declared)["deliverables"][0]["status"] == "verified"
+
+
+def test_metadata_that_disagrees_with_itself_is_not_held_against_the_declaration(tmp_path):
+    from terraproof.evidence.propose import declaration_conflicts, local_stac_links
+
+    _declared(tmp_path, "hr-s2-scl-red", None)
+    item = json.loads((tmp_path / "item.json").read_text(encoding="utf-8"))
+    item["properties"]["earthsearch:boa_offset_applied"] = True  # beside offset -0.1: ambiguous, so not compared
+    (tmp_path / "item.json").write_text(json.dumps(item), encoding="utf-8")
+    stac = local_stac_links([tmp_path])
+    assert stac[(tmp_path / "B04.tif").resolve()][1] == "red"
+    for offset in (0.0, -0.1):
+        assert declaration_conflicts({"reference_input": str(tmp_path / "B04.tif"), "decode_offset": offset}, stac) == []

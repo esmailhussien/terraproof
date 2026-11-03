@@ -27,6 +27,7 @@ BINDINGS = PARAMETERS | {"bands", "band_numbers"}
 LABELS = {"verified": "PASS", "failed": "FAIL", "review-required": "REVIEW", "incomplete": "INCOMPLETE",
           "missing-output": "MISSING", "error": "ERROR"}
 MESSAGE_LENGTH = 240
+DECLARATION = "project.declaration"  # the finding a declaration contradicted by its sources' metadata gets
 
 
 def find(path=None) -> Path:
@@ -92,6 +93,25 @@ def _arguments(name: str, outputs: list[str], bindings: dict):
         raise InputError(f"{name}: a binding has an invalid value (see the usage above)") from None
 
 
+def _conflicts(bound: dict, base: Path) -> list[str]:
+    """Each declared binding that explicit metadata about its own source contradicts, as a message.
+
+    Metadata is the source file's band unit, scale, offset and nodata, and local STAC Items beside the project
+    file or its sources whose asset `href` points at the source."""
+    from terraproof.evidence.propose import declaration_conflicts, local_stac_links
+
+    sources = [v for k, v in bound.items() if k in FILE_PARAMETERS and isinstance(v, str)]
+    sources += [p for k in LIST_FILE_PARAMETERS for p in bound.get(k) or [] if isinstance(p, str)]
+    stac = local_stac_links([base, *(Path(p).parent for p in sources)])
+    messages = []
+    for c in declaration_conflicts(bound, stac):
+        stated = "; ".join(f"{_relative(s['file'], base)} {s['field']} = {s['value']}" for s in c["statements"])
+        declared = "no fill" if c["declared"] is None else f"{c['declared']}"
+        messages.append(f"{c['parameter']} for {_relative(c['source'], base)} is declared {declared}, "
+                        f"but its metadata states {stated}")
+    return messages
+
+
 def load_project(path=None) -> tuple[Path, list[dict]]:
     """The project file and its deliverables, each with its parsed arguments and verification contract."""
     from terraproof.cli import _binding_parameters
@@ -145,6 +165,7 @@ def load_project(path=None) -> tuple[Path, list[dict]]:
         deliverables.append({"name": name, "outputs": outputs, "goals": sorted(set(goals)), "checks": group["checks"],
                              "missing_bindings": sorted({b for c in group["checks"]
                                                          for b in _missing_bindings(c, group["parameters"])}),
+                             "conflicts": _conflicts(bound, base),
                              "args": args, "contract": contract})
     return path, deliverables
 
@@ -267,10 +288,21 @@ def plan(path=None, only=None) -> dict:
     base = project.parent
     rows = [{"name": d["name"], "outputs": [_relative(p, base) for p in d["outputs"]],
              "outputs_present": [Path(p).exists() for p in d["outputs"]], "goals": d["goals"], "checks": d["checks"],
-             "missing_bindings": d["missing_bindings"], "ready": not d["missing_bindings"]}
+             "missing_bindings": d["missing_bindings"], "conflicts": d["conflicts"],
+             "ready": not d["missing_bindings"] and not d["conflicts"]}
             for d in _select(deliverables, only)]
     return {"project": str(project), "mode": "plan", "deliverables": rows,
             "exit_code": 0 if all(r["ready"] for r in rows) else EXIT_CODES[ADVISORY]}
+
+
+def _contradicted(row: dict, deliverable: dict) -> dict:
+    """A deliverable whose declaration its own sources' metadata contradicts fails, whatever its checks found:
+    they were run against the declared values."""
+    if deliverable["conflicts"]:
+        row["findings"] = [{"check": DECLARATION, "status": "fail", "message": m} for m in deliverable["conflicts"]]             + row["findings"]
+        if row["status"] not in ("missing-output", "error"):
+            row.update(status="failed", grade=ADVISORY, exit_code=max(row["exit_code"], EXIT_CODES[ADVISORY]))
+    return row
 
 
 def verify(path=None, only=None, reports_dir=None) -> dict:
@@ -290,14 +322,14 @@ def verify(path=None, only=None, reports_dir=None) -> dict:
             row.update(status="missing-output", grade=ADVISORY, exit_code=EXIT_CODES[ADVISORY],
                        findings=[{"check": None, "status": "missing", "message": "output not found: " + _relative(p, base)}
                                  for p in absent])
-            rows.append(row)
+            rows.append(_contradicted(row, d))
             continue
         try:
             report = check_report(d["args"])
         except Exception as error:  # one unreadable deliverable is a finding, not the end of the run
             row.update(status="error", grade=ADVISORY, exit_code=EXIT_CODES[ADVISORY],
                        findings=[{"check": None, "status": "error", "message": _short(str(error), base, _paths(d))}])
-            rows.append(row)
+            rows.append(_contradicted(row, d))
             continue
         row.update(status=report["verification"]["status"], grade=report["grade"], exit_code=report_exit_code(report),
                    findings=[{"check": c["id"], "status": c["status"], "message": _short(c["message"], base, _paths(d))}
@@ -308,7 +340,7 @@ def verify(path=None, only=None, reports_dir=None) -> dict:
             out = target / ("".join(ch if ch.isalnum() or ch in "-_." else "-" for ch in d["name"]) + ".json")
             out.write_text(to_json(report), encoding="utf-8", newline="\n")
             row["report"] = str(out)
-        rows.append(row)
+        rows.append(_contradicted(row, d))
     return {"project": str(project), "mode": "verify", "deliverables": rows,
             "exit_code": max(r["exit_code"] for r in rows)}
 
@@ -326,7 +358,7 @@ def render(summary: dict) -> str:
     width = max(len(r["name"]) for r in rows)
     for r in rows:
         if summary["mode"] == "plan":
-            label = "READY" if r["ready"] else "INCOMPLETE"
+            label = "READY" if r["ready"] else "CONFLICT" if r["conflicts"] else "INCOMPLETE"
             present = sum(r["outputs_present"])
             lines.append(f"  {label:<10}  {r['name']:<{width}}  {', '.join(r['checks'])}"
                          f"  ({present}/{len(r['outputs'])} outputs present)")
@@ -337,6 +369,8 @@ def render(summary: dict) -> str:
                 lines.append(f"              {(f['check'] or '') + ' ' if f['check'] else ''}{f['status']}: {f['message']}")
         if r["missing_bindings"]:
             lines.append(f"              missing bindings: {', '.join(r['missing_bindings'])}")
+        if summary["mode"] == "plan":
+            lines += [f"              conflict: {m}" for m in r["conflicts"]]
     if summary["mode"] == "plan":
         ready = sum(r["ready"] for r in rows)
         lines.append(f"{ready} of {len(rows)} declarations complete")

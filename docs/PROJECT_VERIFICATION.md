@@ -92,6 +92,12 @@ python -m terraproof verify --reports out/terraproof   # also write each full JS
 
 **`verify`.** It prints one line per deliverable, with its status and grade, and the findings of every check that did not pass:
 - **Statuses:** verified, failed, review-required, incomplete, missing output, or error.
+
+**A declaration its own sources contradict fails.** A check compares the output with the declaration, so a declaration that repeats a mistake would agree with it. So `verify` and `--plan` also compare declared bindings with what the sources' metadata states explicitly:
+- **Compared:** a DEM's vertical unit, the reference input's decode scale and offset, each vertical source's unit, and each support source's fill.
+- **Where the metadata comes from:** the file's own band unit, scale, offset and nodata. Also any local STAC Item beside the project file or its sources whose asset `href` points at the source, through its `raster:bands` and a `classification:classes` entry marked `nodata`.
+- **On a contradiction:** the plan lists it as a conflict, and `verify` adds a `project.declaration` finding and fails the deliverable.
+- **What is not compared:** facts no metadata states, or metadata that disagrees with itself. Goals no file can state, such as the output's unit or which QA codes to keep, stay the declarer's responsibility.
 - **Exit code:** the worst deliverable's: `0` verified, `2` review required, `3` failed, incomplete or missing, and `1` for an invalid project file.
 
 **`--plan`.** It needs no outputs. It exits `0` when every declaration has the bindings its checks require, and `3` otherwise, naming them (for example `dem` or `summaries[0].unit`).
