@@ -16,6 +16,10 @@ Registered in docs/plans/Terraproof_Phase11_PLAN.md section 7 before any run. Th
     python tests/phase11_t3_agent.py ... --work-root DIR --calibrate-only                            # no host
     python tests/phase11_t3_agent.py ... --work-root DIR --preflight-only                            # no model
     python tests/phase11_t3_agent.py ... --work-root DIR --approve-model-calls 14
+    python tests/phase11_t3_agent.py ... --work-root NEW_DIR --resume REPORT --approve-model-calls N   # the rest
+
+`--resume` carries over the runs an interrupted report finished and runs only the missing ones; N must equal
+their number.
 """
 from __future__ import annotations
 
@@ -242,9 +246,17 @@ def reading(summary: dict) -> str:
 # -- run ---------------------------------------------------------------------------------------------------
 
 
-def run(adapter, work: Path, *, runs: int, mode: str, approved: int | None, checkpoint=None) -> dict:
-    """`checkpoint(report)` is called after every agent run, so a later failure keeps the runs before it."""
-    planned = len(TASKS) * runs
+def finished(report: dict) -> dict:
+    """The runs an earlier report finished, by (task, run): those the host ran and the driver scored."""
+    return {(r["task"], r["run"]): r for r in report.get("runs") or [] if r.get("host_status") is not None}
+
+
+def run(adapter, work: Path, *, runs: int, mode: str, approved: int | None, checkpoint=None,
+        done: dict | None = None) -> dict:
+    """`checkpoint(report)` is called after every agent run, so a later failure keeps the runs before it.
+    `done` (from `finished`) is carried over unchanged; only the other runs start."""
+    done = done or {}
+    planned = len(TASKS) * runs - len(done)
     if mode == "run" and approved != planned:
         raise SystemExit(f"approval {approved} does not equal the planned {planned} invocations; nothing started")
     calibration = [calibrate(entry, work / "calibration") for entry in TASKS]
@@ -253,6 +265,7 @@ def run(adapter, work: Path, *, runs: int, mode: str, approved: int | None, chec
               "design": {"tasks": [e["task_id"] for e in TASKS], "runs_per_task": runs,
                          "planned_invocations": planned, "mode": mode, "condition": WITH,
                          "per_run_timeout_seconds": TIMEOUT, "order": "every task once, then again",
+                         "carried_over": sorted(f"{task}:{index}" for task, index in done),
                          "bars": {"adoption": ADOPTION_BAR, "saves": SAVES_BAR, "save_runs": SAVE_RUNS_BAR}},
               "runs": [], "summary": None}
     if not all(item["eligible"] for item in calibration):
@@ -266,6 +279,9 @@ def run(adapter, work: Path, *, runs: int, mode: str, approved: int | None, chec
     for run_index in range(runs):
         for entry in TASKS:
             task_id = entry["task_id"]
+            if (task_id, run_index) in done:
+                rows.append(done[(task_id, run_index)])
+                continue
             task, spec = LIFT[task_id], SPECS[task_id]
             base = work / f"{task_id}-{run_index}"
             project, snapshots = base / "project", base / "snapshots"
@@ -331,12 +347,15 @@ def main(argv=None) -> int:
     parser.add_argument("--work-root", type=Path, help="empty directory outside the checkout for the projects")
     parser.add_argument("--calibrate-only", action="store_true", help="oracles and reference only; no host")
     parser.add_argument("--preflight-only", action="store_true", help="prepare and preflight every project; no agent")
-    parser.add_argument("--approve-model-calls", type=int, metavar="N", help=f"explicit approval: N must be {RUNS * len(TASKS)}")
+    parser.add_argument("--approve-model-calls", type=int, metavar="N", help=f"explicit approval: N must be {RUNS * len(TASKS)}, or the missing runs with --resume")
     parser.add_argument("--out", type=Path, default=ROOT / ".terracache" / "phase11-t3-agent.json")
+    parser.add_argument("--resume", type=Path, metavar="REPORT", help="carry over the runs this report finished")
     args = parser.parse_args(argv)
-    planned = RUNS * len(TASKS)
+    done = finished(json.loads(args.resume.read_text(encoding="utf-8"))) if args.resume else {}
+    planned = RUNS * len(TASKS) - len(done)
     base = ["python", "tests/phase11_t3_agent.py", "--opencode-executable", str(args.opencode_executable),
             "--agent-python-with", str(args.agent_python_with), "--work-root", str(args.work_root or "WORK_DIR")]
+    base += ["--resume", str(args.resume)] if args.resume else []
     modes = [args.calibrate_only, args.preflight_only, args.approve_model_calls is not None]
     if sum(modes) > 1:
         parser.error("give one of --calibrate-only, --preflight-only and --approve-model-calls")
@@ -374,7 +393,7 @@ def main(argv=None) -> int:
         out.write_text(to_json(dict(report, host=host)), encoding="utf-8", newline="\n")
 
     report = run(adapter, work, runs=RUNS, mode=mode, approved=args.approve_model_calls,
-                 checkpoint=lambda partial: write(dict(partial, status="partial")))
+                 checkpoint=lambda partial: write(dict(partial, status="partial")), done=done)
     report["host"] = host
     write(report)
     failed = [f"{r['task']}:{r['run']}" for r in report["runs"] if r.get("adapter_status") == PREFLIGHT_FAILED]

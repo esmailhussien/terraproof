@@ -1,6 +1,6 @@
 # Terraproof Phase 11 plan: one declaration per pipeline, tested on agents
 
-> Status: **T1 done; T2 attempt 2 ran (12 of 12): adoption 11/12, 0 false assurance, 0 saves because no agent made a mistake; inconclusive, no push. T3 designed; its prerequisite B (declarations checked against their sources' metadata) built; T3 driver built, calibrated and preflighted (14 of 14), not run (2026-11-03).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
+> Status: **T1 done; T2 attempt 2 ran (12 of 12): adoption 11/12, 0 false assurance, 0 saves because no agent made a mistake; inconclusive, no push. T3 designed; its prerequisite B (declarations checked against their sources' metadata) built; T3 attempt 1 stopped by a restart after 8 of 14; resume of the 6 missing runs registered (2026-11-03).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
 
 ## 1. Why
 
@@ -369,3 +369,21 @@ The user chose B. No model was called.
 - **Preflight.** `--preflight-only` ran on a new work root: 14 of 14 projects passed every OpenCode check and every wrapper check, at 1800 s per run. Report: `.terracache/phase11-t3-agent-preflight.json`.
   - The product fingerprint matches the checkout: `d411525f…7fd75`.
   - **Routed skills,** recorded as given: `hr-elevation-change-mixed-units` routes none, and `hr-modis-lst-quality` routes `geopandas` and `design-postgis-tables` among its four.
+
+### T3 attempt 1 (2026-11-03): stopped by a machine restart after 8 of 14
+
+- The approved command started at 02:50. Calibration and preflight passed again, and 8 runs finished and were scored, the last at 04:03.
+- The machine froze and was restarted during the 9th run (`hr-modis-lst-quality`, run 1). That run left no result. The other 5 runs of the second pass never started.
+- **Invocations used: 9 of the approved 14.** The report after the 8th run is kept unchanged: `.terracache/phase11-t3-agent-run1.json`.
+- No result has been read against the bars. The 8 finished runs are carried over as they are.
+
+### Resume (registered before it runs)
+
+- **The resume option.** `--resume REPORT` carries over the runs a report finished, and runs only the missing ones, in the registered order. The approval must equal their number.
+  - A carried run is never redone.
+  - The final report holds all 14 runs, and lists which ones were carried over.
+  - An offline test interrupts a fake run after 4 runs and resumes it: an approval of 7 is refused, 3 start, and the summary covers all 7.
+- **The missing runs:** 6, all second-pass runs: `modis` (interrupted, so run again from the start), `landcover`, `reanalysis`, `s2-scl-red`, `slope` and `mixed-units`.
+  - That makes **15 invocations in all**.
+  - The same interpreter (`agent-with-p11c`) is used, with the same product fingerprint (`d411525f…`) and a new work root.
+- **Preflight.** `--preflight-only --resume` created and passed exactly those 6 projects, with no model call.

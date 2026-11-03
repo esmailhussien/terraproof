@@ -6,6 +6,8 @@ from pathlib import Path
 import shutil
 import sys
 
+import pytest
+
 TESTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TESTS))
 
@@ -112,3 +114,19 @@ def test_the_whole_run_loop_scores_every_call_and_its_declaration(tmp_path, monk
     mixed = next(r for r in report["runs"] if r["task"] == MIXED["task_id"])
     assert mixed["wrong_snapshots"][0]["faithful"] is False and mixed["final_declaration_faithful"]
     assert summary["reading"].startswith("adoption and value met")
+
+
+def test_a_resumed_run_carries_finished_runs_over_and_starts_only_the_rest(tmp_path, monkeypatch):
+    monkeypatch.setattr(t3.t2, "identity_checks", lambda *a: {"wrapper_serves_stock_tools": True})
+    checkpoints = []
+    t3.run(FakeAgent(), tmp_path / "first", runs=1, mode="run", approved=7, checkpoint=checkpoints.append)
+    interrupted = dict(checkpoints[3], status="partial")  # as a crash after four runs leaves it
+    done = t3.finished(json.loads(json.dumps(interrupted, default=str)))
+    assert len(done) == 4
+    with pytest.raises(SystemExit, match="does not equal the planned 3"):
+        t3.run(FakeAgent(), tmp_path / "refused", runs=1, mode="run", approved=7, done=done)
+    report = t3.run(FakeAgent(), tmp_path / "second", runs=1, mode="run", approved=3, done=done)
+    assert report["design"]["started"] == 3 and len(report["design"]["carried_over"]) == 4
+    assert [r["task"] for r in report["runs"]] == [e["task_id"] for e in t3.TASKS]
+    assert report["summary"]["runs_started"] == 7 and report["summary"]["saves"] == 7
+    assert not (tmp_path / "second" / f"{t3.TASKS[0]['task_id']}-0").exists()  # a carried run is not redone
