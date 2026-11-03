@@ -22,7 +22,7 @@ python -m terraproof workflow acquire alternatives/report.json --item SELECTED_I
 python -m terraproof workflow plan source-bundle/workflow.json
 ```
 
-Acquisition downloads exactly that item's original MTL TXT, ST_B10, QA_PIXEL and ST_QA. It rechecks native product identity, MTL associations, sensor/date and existing admission rules. It writes an **unapproved** `/2` workflow and native-data plan. Catalog geometry can disagree with actual source coverage; an unresolved native plan stays unresolved. No alternative is silently substituted.
+Acquisition downloads exactly that item's original MTL TXT, ST_B10, QA_PIXEL and ST_QA. It rechecks identity, associations, sensor/date and native admission, including windowed QA acquisition/uncertainty preflight. It writes an **unapproved** `/3` workflow. Catalog polygons and grid rectangles cannot replace QA-declared acquisition coverage. An unresolved native plan stays unresolved; no alternative is silently substituted.
 
 Review the new plan and its actual `spec_digest` before approving/running:
 
@@ -37,7 +37,7 @@ The source report digest binds the catalog selection; the native plan digest and
 
 ```json
 {
-  "schema": "terraproof.source-request/1",
+  "schema": "terraproof.source-request/2",
   "id": "Acquisition-time surface temperature",
   "intent": {
     "quantity": "land-surface-temperature",
@@ -52,7 +52,7 @@ The source report digest binds the catalog selection; the native plan digest and
 }
 ```
 
-Intent validation is shared with local native admission. `scene_coverage` defaults to `full-aoi`; explicitly `allow-partial` or CLI `--allow-partial` permits a partial proposal but does not weaken usable QA coverage. Paths resolve against the request file. The scene-cloud limit is explicit; the download cap defaults to 512 MiB and can be lowered.
+Intent validation is shared with native `/3` admission. `scene_coverage` defaults to full QA acquisition; explicit `allow-partial` permits partial proposals without weakening post-filter valid/acquired coverage. Optional `max_uncertainty_kelvin` is omitted by default, enters the intent digest and is enforced after download, before approval. Source schema `/1` is not silently reinterpreted. Paths resolve against the request; the scene-cloud limit is explicit and download cap defaults to 512 MiB.
 
 Eligible proposals require Landsat 8/9 L2SP, an acquisition date within the inclusive UTC interval, valid cloud metadata below the declared maximum, a valid overlapping catalog polygon, the requested full footprint unless partial is explicit, and four supported unsigned native asset URLs. Bounding-box intersection alone is insufficient. Antimeridian footprints remain unsupported.
 

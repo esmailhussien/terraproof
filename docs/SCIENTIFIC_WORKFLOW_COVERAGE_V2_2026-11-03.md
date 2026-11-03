@@ -1,5 +1,7 @@
 # Schema 2: full requested-AOI coverage by default
 
+**Historical limitation:** this gate checked the raster rectangle, including fill corners. It did not prove QA-declared acquisition coverage. See the [schema-3 correction](SCIENTIFIC_ACQUISITION_UNCERTAINTY.md); preserve these original results as the `/2` experiment, not the corrected gate.
+
 Date: 2026-11-03. User decision: full requested-area scene coverage is required by default; partial-area delivery needs an explicit choice. Local implementation commit: `66e0f796b31b00f1bf053623878d0ae1bb0141d8`. No publication, model calls or active Phase 11 changes.
 
 ## Resulting behavior

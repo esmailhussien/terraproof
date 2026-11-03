@@ -1,10 +1,10 @@
 # Scientific workflows: from approved intent to corrected outputs
 
-Status: experimental local implementation on a separate branch, not a published release. Current intent schema: **`terraproof.workflow/2`**. Full requested-AOI scene coverage is the default; a partial-area result requires explicit `scene_coverage: "allow-partial"` and review. The route consumes a **native USGS Landsat 8/9 Collection 2 L2SP Surface Temperature product**, applies an explicitly reviewed quality policy and AOI, and delivers Celsius rasters, uncertainty, statistics, a map and evidence. It needs no model or GUI.
+Status: experimental local implementation, not published. Current intent schema: **`terraproof.workflow/3`**. Full QA-declared acquisition support is the default; partial support requires explicit `scene_coverage: "allow-partial"`. Native raster bounds are only the grid extent, not the acquired footprint. See the [coverage correction and uncertainty contract](SCIENTIFIC_ACQUISITION_UNCERTAINTY.md). The route consumes native USGS Landsat 8/9 Collection 2 L2SP Surface Temperature and delivers Celsius rasters, uncertainty, statistics, a map and evidence without a model or GUI.
 
 ## What the core now does
 
-1. **Plan:** admit the native product from its MTL, validate asset roles and common grids, read an AOI, and show quantity, units, policy and source identities before processing.
+1. **Plan:** validate the native product, then scan bounded windows of QA/ST/uncertainty over the AOI before approval. Expose acquired support, quality/uncertainty distributions and optional-cutoff sufficiency; create no analysis outputs.
 2. **Review:** bind a named review to the exact intent digest and input bytes, including recognized sidecars. This is an unsigned approval record, not an authentication system.
 3. **Execute:** decode source-valid temperatures once, apply reviewed QA flags, select pixel centres inside the AOI, crop on the native grid, preserve product uncertainty and compute statistics.
 4. **Verify:** re-read the originals and compare every output pixel, masks, crop transform, unit labels and statistics. Reuse the existing calibration check and explicit verification contract for the uncropped decoded intermediate.
@@ -36,14 +36,14 @@ The example excludes fill, dilated cloud, high-confidence cirrus/cloud/shadow/sn
 Review the plan. Copy its **actual** `spec_digest`, not the literal placeholder below:
 
 ```powershell
-python -m terraproof workflow approve workflow.json --reviewer "Study reviewer" --expect-digest DIGEST_FROM_PLAN --out approval.json
+python -m terraproof workflow approve workflow.json --reviewer "Engineering reviewer" --review-kind engineering-self-review --expect-digest DIGEST_FROM_PLAN --out approval.json
 python -m terraproof workflow run approval.json --out runs/scene-001
 python -m terraproof workflow verify approval.json runs/scene-001
 ```
 
 `approve` refuses a changed digest or an existing approval destination. `run` refuses an existing output directory. Changed intent, metadata, assets or known companions invalidate the approval. A reviewer must hold a trusted approval copy: an actor allowed to rewrite both intent and approval can defeat this unsigned boundary. No ACL/ownership change or signing service is introduced.
 
-If the scene footprint does not cover the AOI, the default plan is `unresolved` before approval/execution. It exposes the outside fraction and proposes a source covering the requested AOI or an explicitly reviewed partial-area intent. No source is downloaded or policy weakened automatically. For a deliberately partial draft, add `--allow-partial` to `workflow init`; it writes `scene_coverage: "allow-partial"`. This never lowers the independent `min_valid_fraction` QA requirement.
+If any requested native-grid AOI centre lacks QA-declared acquisition support, the default plan is `unresolved` before approval. Grid containment is also required. QA bit-0 fill or unavailable QA counts as unacquired/unknown, even inside the grid rectangle. Missing ST retrieval inside otherwise available QA is a separate quality issue. `--allow-partial` explicitly permits partial acquisition but never relaxes QA or the post-filter valid/acquired threshold.
 
 To repair a corrupted/wrong derived output while preserving its history:
 
@@ -59,7 +59,7 @@ If a processing step raises an exception, the `.partial-*` directory and its fai
 
 ```json
 {
-  "schema": "terraproof.workflow/2",
+  "schema": "terraproof.workflow/3",
   "id": "Summer surface temperature",
   "intent": {
     "quantity": "land-surface-temperature",
@@ -77,11 +77,11 @@ If a processing step raises an exception, the `.partial-*` directory and its fai
 }
 ```
 
-Relative paths resolve against this file. Duplicate/unknown fields and nonfinite numbers are errors. The acquisition interval uses inclusive UTC acquisition dates. `scene_coverage` is either `full-aoi` (also the default when omitted) or explicitly `allow-partial`; it is not a truthy flag. Full coverage requires containment of the AOI's densified projected geometry in the native scene footprint. No outside-area tolerance is silently applied. This is an engineering test on that representation, not a proof for arbitrary projection singularities.
+Relative paths resolve against this file. Duplicate/unknown fields and nonfinite numbers are errors. The interval selects an inclusive UTC **single-acquisition** date; it does not define a monthly/period estimate. `scene_coverage` is `full-aoi` by default or explicitly `allow-partial`. Full acquisition requires grid containment, at least one requested centre, and available nonfill QA for every requested centre. The virtual-grid AOI audit includes centres outside the file and is capped at 110 million bounding cells. Fractions count centres, not geodesic area.
 
-`min_valid_fraction` is **usable pixel centres / AOI-selected pixel centres within the scene**, not total AOI area. Full scene coverage does not promise that every pixel is valid or cloud-free. Outside-scene AOI coverage is a native-plane geometric fraction, not a geodesic usable-area estimate. An explicitly partial result remains labelled partial even if it passes the approved within-scene threshold.
+`min_valid_fraction` is **post-filter valid / QA-acquired AOI centres**. The grid-selected denominator is separately reported. Full acquisition does not promise cloud-free or valid thermal retrieval. Optional `max_uncertainty_kelvin` is omitted by default; set it explicitly (or use `--max-uncertainty-kelvin`) only with a justified requirement. Exceeding and missing-uncertainty exclusions are counted separately. If an active cutoff leaves insufficient support, the plan is unresolved before approval; no automatic threshold/QA relaxation occurs.
 
-Schema `/1` intents and approvals are refused by the new candidate rather than silently receiving a different acceptance rule. To migrate, copy the intent to a new file, set schema `/2`, review the effective coverage choice, obtain a new plan/digest and approval, and write to a new output directory. Existing experiment files and their pinned candidate wheels remain unchanged. Current plan, approval and run records also use version `/2`.
+Workflow `/1` and `/2` records are refused rather than reinterpreted. Copy the intent to a new `/3` file, review acquisition/cutoff semantics, get a fresh plan/digest/approval and use a new output directory. Plan, approval and run records use `/3`; source requests/search/package records use `/2`. Earlier frozen artifacts and candidate wheels remain unchanged.
 
 Native source fill is removed before scaling. `0 degrees Celsius` and valid QA value `0` are not fill. Missing ST remains missing; no spatial or temporal gap fill is performed.
 
@@ -95,8 +95,9 @@ AOI membership is tested by transforming each native pixel centre into the AOI's
 | `temperature_celsius.tif` | QA/AOI-masked clipped temperature, float32 with nodata |
 | `validity.tif` | 1 usable, 0 excluded; native clipped grid |
 | `aoi.tif` | 1 AOI pixel centre, 0 outside; preserves the coverage denominator |
+| `acquired.tif` | QA-declared acquired support, separate from the raster extent and post-quality validity |
 | `uncertainty_kelvin.tif` | ST_QA decoded as a difference magnitude; no subtraction of 273.15; missing uncertainty stays missing |
-| `summary.json` | Valid/selected counts, within-scene fraction, pixel mean/min/max, source/date, product uncertainty and outside-scene description |
+| `summary.json` | Requested/grid-selected/acquired/valid counts and explicit fractions; pre/post uncertainty distributions and separate exclusions; single-acquisition facts |
 | `calibration-evidence.json` | Existing Terraproof check and contract, explicitly scoped to the decoded intermediate |
 | `map.svg` | Self-contained continuous temperature display, AOI outline, legend, date and source; not heat-risk classification |
 | `report.html` | English result/method report linking evidence and artifacts |
@@ -104,11 +105,11 @@ AOI membership is tested by transforming each native pixel centre into the AOI's
 
 The map is a display thumbnail; it does not create higher-resolution thermal information. No resampling changes analytical values. The summary uses equal valid pixels, not an area-weighted mean. Product uncertainty is not uncertainty of that mean and is not divided by sqrt(n).
 
-Verification returns `verified`, `failed` or `incomplete`. `verified` / `decision-grade` means the declared route's numerical/support obligations passed; `physical_accuracy_validated` remains false. All-invalid data or an unmet usable-coverage threshold produces `incomplete`, with null mean/min/max rather than invented temperatures. A region with no scene overlap is an actionable admission error.
+Verification returns `verified`, `failed` or `incomplete`. A verified workflow is now graded `checks-passed`, not `decision-grade`; source-relative numerical obligations do not certify scientific suitability or reviewer identity. `physical_accuracy_validated` remains false. No observations or insufficient usable support yields incomplete with null temperatures when empty; acquisition/cutoff admission failures are unresolved before approval.
 
-Both HTML and SVG show the run status, full/explicitly-partial scope, requested AOI scene fraction and usable within-scene fraction directly. Incomplete/failed results are labelled as unaccepted scientific results. Display status is checked against the numerical verdict during manifest verification. These reports remain point-in-time artifacts; rerun verification before using subsequently modified data. A failure after publication writes failed machine evidence and attempts to update the visible delivery to failed.
+HTML/SVG show numerical status, grid/request and acquired/request centre fractions, valid/acquired fraction, and self-declared review kind. `engineering-self-review` is the default; `declared-scientific-review` remains an unauthenticated claim and cannot upgrade the grade. Percentiles, above-2/3/4-K proportions, missing uncertainty and minimum are shown. Finer absolute comparisons/accuracy are not established by this workflow; the minimum ST_QA is not a guaranteed accuracy floor. No uncertainty of the mean is inferred from sqrt(n). Reports remain point-in-time evidence.
 
-CLI exit codes: 0 successful command/verified run, 3 unresolved/failed/incomplete, 1 invalid/unreadable command input. Existing CLI commands and grades remain unchanged. Verification does not rewrite saved evidence. Re-run it before using modified artifacts.
+CLI exit codes: 0 successful command/verified run, 3 unresolved/failed/incomplete, 1 invalid/unreadable input. Non-workflow commands/grades are unchanged. Verification does not rewrite saved evidence.
 
 ## Python API and future interfaces
 

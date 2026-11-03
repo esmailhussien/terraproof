@@ -1,5 +1,7 @@
 # Public source recovery: Netherlands July 2023
 
+**Coverage erratum:** historical `/2` labels below describe raster-grid extent, not QA acquisition footprint. The July 15 QA-acquired coverage is 29.4857%, and valid/acquired is 3.2694%. See [schema-3 correction](SCIENTIFIC_ACQUISITION_UNCERTAINTY.md). Original candidate/artifacts remain frozen; July 8's result is unchanged.
+
 Date: 2026-11-03. Local implementation commit `241397379dde0da2ad89b89bdbd64126085e0d62`. This is an engineering demonstration on a previously studied region/period, not a blinded benchmark. The user authorized the source-selection/completion workstream and will review the result. No user or independent scientific approval is claimed yet.
 
 ## Practical outcome

@@ -20,7 +20,8 @@ def workflow(tmp_path):
     transform = from_origin(500000, 1000000, 30, 30)
     raw = np.array([[40000, 41000, 42000, 43000], [44000, 45000, 46000, 47000],
                     [48000, 49000, 0, 50000], [51000, 52000, 53000, 54000]], dtype='uint16')
-    qa = np.zeros((4, 4), dtype='uint16'); qa[0, 1] = 8; qa[1, 0] = 128; qa[2, 2] = 1
+    # Missing ST is not necessarily missing acquisition (e.g. retrieval/emissivity gaps).
+    qa = np.zeros((4, 4), dtype='uint16'); qa[0, 1] = 8; qa[1, 0] = 128; qa[2, 2] = 8
     uncertainty = np.full((4, 4), 200, dtype='int16'); uncertainty[3, 3] = -9999
     for name, data, nodata in [('ST.tif', raw, 0), ('QA.tif', qa, 1), ('UQ.tif', uncertainty, -9999)]:
         with rasterio.open(tmp_path/name, 'w', driver='GTiff', width=4, height=4, count=1,
@@ -130,7 +131,7 @@ def test_native_aoi_includes_centres_exactly_on_boundary(workflow):
     assert load(out/'summary.json')['selected_count'] == 16
 
 
-@pytest.mark.parametrize('artifact', ['temperature_celsius.tif', 'validity.tif', 'aoi.tif',
+@pytest.mark.parametrize('artifact', ['temperature_celsius.tif', 'validity.tif', 'aoi.tif', 'acquired.tif',
                                       'uncertainty_kelvin.tif', 'decoded_celsius.tif'])
 def test_changed_pixel_is_detected_even_without_manifest(workflow, artifact):
     approval, out, _ = approved_run(workflow)
@@ -396,8 +397,8 @@ def test_full_scene_coverage_is_default_and_blocks_partial_before_approval(workf
     review = plan(workflow)
     assert review['status'] == 'unresolved'
     assert review['facts']['scene_coverage_policy'] == 'full-aoi'
-    assert review['facts']['full_aoi_in_scene'] is False
-    assert review['facts']['outside_scene_fraction_native_plane'] == 0.25
+    assert review['facts']['full_aoi_acquired'] is False
+    assert review['facts']['outside_grid_extent_fraction_native_plane'] == 0.25
     assert '25.00%' in review['issues'][0]
     assert len(review['next_steps']) == 2
     with pytest.raises(InputError):
@@ -412,7 +413,8 @@ def test_consistent_approval_cannot_bypass_full_coverage_gate(workflow):
     review = plan(workflow)
     approval = workflow.parent/'manual-approval.json'
     write(approval, {'schema': APPROVAL, 'spec': str(workflow), 'spec_digest': review['spec_digest'],
-        'reviewer': 'test', 'inputs': review['inputs'], 'facts_digest': digest(review['facts'])})
+        'reviewer':'test','inputs':review['inputs'],'facts_digest':digest(review['facts']),
+        'review':{'kind':'engineering-self-review','identity_authenticated':False}})
     with pytest.raises(InputError, match='full AOI'):
         execute(approval, workflow.parent/'result')
     assert not (workflow.parent/'result').exists()
@@ -424,13 +426,13 @@ def test_explicit_partial_intent_and_visible_scientific_status(workflow, minimum
     doc = load(workflow); doc['intent'].update(scene_coverage='allow-partial', min_valid_fraction=minimum)
     write(workflow, doc)
     approval, out, result = approved_run(workflow)
-    assert result['status'] == status and result['full_aoi_in_scene'] is False
+    assert result['status'] == status and result['full_aoi_acquired'] is False
     assert result['scene_coverage_policy'] == 'allow-partial'
-    assert load(out/'summary.json')['outside_scene_fraction_native_plane'] == 0.25
+    assert load(out/'summary.json')['outside_grid_extent_fraction_native_plane'] == 0.25
     for name in ('report.html','map.svg'):
         content = (out/name).read_text(encoding='utf-8')
         assert f'data-workflow-status="{status}"' in content
-        assert 'PARTIAL AOI - explicitly allowed' in content
+        assert 'PARTIAL ACQUISITION - explicitly allowed' in content
         assert '75.00%' in content and '83.33%' in content
         assert 'not a complete map' in content
     assert verify(approval, out)['status'] == status
@@ -460,7 +462,7 @@ def test_geographic_edges_touching_native_vertices_are_not_assumed_covered(workf
     # Straight geographic edges can bow beyond the native footprint even if vertices touch it.
     review = plan(workflow)
     assert review['status'] == 'unresolved'
-    assert review['facts']['full_aoi_in_scene'] is False
+    assert review['facts']['full_aoi_acquired'] is False
     doc = load(workflow); doc['intent']['scene_coverage'] = 'allow-partial'; write(workflow,doc)
     assert plan(workflow)['status'] == 'ready-for-review'
 
@@ -488,11 +490,11 @@ def test_cli_template_writes_explicit_coverage_choice(workflow, capsys, partial)
 def test_full_footprint_does_not_imply_complete_observations(workflow):
     doc = load(workflow); doc['intent']['min_valid_fraction'] = 1; write(workflow, doc)
     _, out, result = approved_run(workflow)
-    assert result['status'] == 'incomplete' and result['full_aoi_in_scene'] is True
+    assert result['status'] == 'incomplete' and result['full_aoi_acquired'] is True
     for name in ('report.html','map.svg'):
         content = (out/name).read_text(encoding='utf-8')
         assert 'data-workflow-status="incomplete"' in content
-        assert 'FULL AOI SCENE FOOTPRINT' in content and 'Not an accepted scientific result' in content
+        assert 'FULL AOI QA ACQUISITION' in content and 'Not accepted against declared numeric requirements' in content
 
 
 def test_final_verification_failure_updates_visible_delivery(workflow, monkeypatch):
@@ -508,3 +510,159 @@ def test_final_verification_failure_updates_visible_delivery(workflow, monkeypat
     assert result['status'] == load(out/'workflow.json')['verification']['status'] == 'failed'
     for name in ('report.html','map.svg'):
         assert 'data-workflow-status="failed"' in (out/name).read_text(encoding='utf-8')
+
+
+def test_fill_inside_grid_is_unresolved_before_any_approval(workflow):
+    with rasterio.open(workflow.parent/'QA.tif','r+') as qa:
+        data=qa.read(1);data[0,1]=1;qa.write(data,1)
+    review=plan(workflow)
+    assert review['status']=='unresolved' and review['facts']['grid_extent_covers_aoi'] is True
+    assert review['facts']['support']['requested_count']==12
+    assert review['facts']['support']['selected_count']==12
+    assert review['facts']['support']['acquired_count']==11
+    assert review['facts']['support']['qa_fill_or_unknown_count']==1
+    with pytest.raises(InputError):
+        approve(workflow,workflow.parent/'never.json',reviewer='test',expected_digest=review['spec_digest'])
+    assert not (workflow.parent/'never.json').exists()
+
+
+def test_no_qa_acquisition_cannot_be_allowed_by_partial_exception(workflow):
+    with rasterio.open(workflow.parent/'QA.tif','r+') as qa:
+        qa.write(np.ones((4,4),dtype='uint16'),1)
+    doc=load(workflow);doc['intent']['scene_coverage']='allow-partial';write(workflow,doc)
+    assert plan(workflow)['status']=='unresolved'
+
+
+def test_unknown_qa_mask_is_not_acquisition_support(workflow):
+    with rasterio.open(workflow.parent/'QA.tif','r+') as qa:
+        mask=np.full((4,4),255,dtype='uint8');mask[1,1]=0;qa.write_mask(mask)
+    review=plan(workflow)
+    assert review['status']=='unresolved' and review['facts']['support']['acquired_count']==11
+
+
+def test_missing_thermal_value_is_not_misclassified_as_unacquired(workflow):
+    facts=plan(workflow)['facts']
+    assert facts['full_aoi_acquired'] is True
+    assert facts['support']['acquired_count']==12 and facts['support']['base_valid_count']==10
+
+
+def test_explicit_partial_uses_acquired_denominator_not_grid_box(workflow):
+    with rasterio.open(workflow.parent/'QA.tif','r+') as qa:
+        data=qa.read(1);data[0,1]=1;qa.write(data,1)
+    doc=load(workflow);doc['intent'].update(scene_coverage='allow-partial',min_valid_fraction=.85);write(workflow,doc)
+    _,out,result=approved_run(workflow)
+    summary=load(out/'summary.json')
+    assert result['status']=='verified'
+    assert summary['valid_fraction_of_acquired']==pytest.approx(10/11)
+    assert summary['valid_fraction_within_grid']==pytest.approx(10/12)
+    with rasterio.open(out/'acquired.tif') as ds:
+        assert ds.read(1)[0,0]==0 and ds.read(1).sum()==11
+
+
+def varied_uncertainty(workflow):
+    values=[100,200,201,300,301,400,401,500,600]
+    coordinates=[(0,2),(0,3),(1,1),(1,2),(1,3),(2,1),(2,3),(3,1),(3,2)]
+    with rasterio.open(workflow.parent/'UQ.tif','r+') as ds:
+        data=ds.read(1)
+        for position,value in zip(coordinates,values):data[position]=value
+        ds.write(data,1)
+    return np.asarray(values,dtype='float64')/100
+
+
+def test_uncertainty_report_only_default_exact_percentiles_and_tail_fractions(workflow):
+    expected=varied_uncertainty(workflow)
+    approval,out,result=approved_run(workflow)
+    summary=load(out/'summary.json');distribution=summary['uncertainty_before_filter']
+    assert summary['max_uncertainty_kelvin'] is None and summary['valid_count']==10
+    assert summary['uncertainty_exceeded_count']==summary['uncertainty_missing_excluded_count']==0
+    assert distribution['known_count']==9 and distribution['missing_count']==1
+    assert distribution['minimum_kelvin']==1 and distribution['maximum_kelvin']==6
+    for percentile in (5,25,50,75,95):
+        assert distribution['percentiles_kelvin'][f'p{percentile:02}']==pytest.approx(np.percentile(expected,percentile))
+    assert distribution['fraction_above_2_kelvin']==pytest.approx(7/9)
+    assert distribution['fraction_above_3_kelvin']==pytest.approx(5/9)
+    assert distribution['fraction_above_4_kelvin']==pytest.approx(3/9)
+    assert summary['mean_product_uncertainty_kelvin']==pytest.approx(expected.mean())
+    assert summary['uncertainty_delivered']==distribution
+    assert result['grade']=='checks-passed' and result['review']=={'kind':'engineering-self-review','identity_authenticated':False}
+    text=(out/'report.html').read_text(encoding='utf-8')
+    assert 'engineering-self-review' in text and 'not inferred or divided by sqrt(n)' in text
+    assert verify(approval,out)['status']=='verified'
+
+
+@pytest.mark.parametrize('limit,kept,exceeded',[(3.0,4,5),(2.01,3,6)])
+def test_optional_uncertainty_cutoff_is_digest_bound_and_has_separate_reasons(workflow,limit,kept,exceeded):
+    varied_uncertainty(workflow)
+    doc=load(workflow);doc['intent'].update(max_uncertainty_kelvin=limit,min_valid_fraction=.25);write(workflow,doc)
+    approval,out,result=approved_run(workflow);summary=load(out/'summary.json')
+    assert result['status']=='verified' and summary['valid_count']==kept
+    assert summary['uncertainty_exceeded_count']==exceeded and summary['uncertainty_missing_excluded_count']==1
+    assert summary['valid_fraction_of_acquired']==pytest.approx(kept/12)
+    assert summary['uncertainty_before_filter']['known_count']==9
+    assert summary['uncertainty_delivered']['known_count']==kept and summary['uncertainty_delivered']['missing_count']==0
+    assert verify(approval,out)['status']=='verified'
+    doc['intent']['max_uncertainty_kelvin']=10;write(workflow,doc)
+    with pytest.raises(InputError,match='changed'):verify(approval,out)
+
+
+def test_uncertainty_leaving_insufficient_support_is_unresolved_before_approval(workflow):
+    varied_uncertainty(workflow)
+    doc=load(workflow);doc['intent'].update(max_uncertainty_kelvin=1.99,min_valid_fraction=.25);write(workflow,doc)
+    review=plan(workflow)
+    assert review['status']=='unresolved' and review['facts']['support']['post_uncertainty_valid_count']==1
+    assert review['facts']['support']['uncertainty_exceeded_count']==8
+    assert review['facts']['support']['uncertainty_missing_excluded_count']==1
+    with pytest.raises(InputError):approve(workflow,workflow.parent/'never.json',reviewer='test',expected_digest=review['spec_digest'])
+    assert not (workflow.parent/'never.json').exists()
+
+
+def test_unknown_uncertainty_is_reported_not_fabricated_or_filtered_by_default(workflow):
+    with rasterio.open(workflow.parent/'UQ.tif','r+') as ds:ds.write(np.full((4,4),-9999,dtype='int16'),1)
+    _,out,_=approved_run(workflow);summary=load(out/'summary.json')
+    distribution=summary['uncertainty_before_filter']
+    assert summary['valid_count']==10 and distribution['missing_count']==10 and distribution['known_count']==0
+    assert distribution['minimum_kelvin'] is distribution['percentiles_kelvin'] is distribution['mean_kelvin'] is None
+    doc=load(workflow);doc['intent']['max_uncertainty_kelvin']=1000;write(workflow,doc)
+    review=plan(workflow)
+    assert review['status']=='unresolved' and review['facts']['support']['uncertainty_missing_excluded_count']==10
+
+
+@pytest.mark.parametrize('value',[None,True,-1,'2',[],{}])
+def test_uncertainty_limit_is_optional_but_strict_when_present(workflow,value):
+    doc=load(workflow);doc['intent']['max_uncertainty_kelvin']=value;write(workflow,doc)
+    assert plan(workflow)['status']=='unresolved'
+
+
+def test_declared_scientific_review_is_not_authenticated_or_grade_upgraded(workflow):
+    approval=workflow.parent/'review.json';review=plan(workflow)
+    approve(workflow,approval,reviewer='declared-reviewer',review_kind='declared-scientific-review',expected_digest=review['spec_digest'])
+    result=execute(approval,workflow.parent/'reviewed')
+    assert result['review']=={'kind':'declared-scientific-review','identity_authenticated':False}
+    assert result['grade']=='checks-passed' and result['physical_accuracy_validated'] is False
+
+
+def test_nested_uncertainty_counts_are_exact_and_legacy_v2_requires_new_review(workflow):
+    from terraproof.workflows.lst import _summary_matches
+    assert not _summary_matches({'uncertainty':{'known_count':True}},{'uncertainty':{'known_count':1}})
+    doc=load(workflow);doc['schema']='terraproof.workflow/2';write(workflow,doc)
+    assert plan(workflow)['status']=='unresolved'
+
+
+def test_cli_optional_limit_is_explicit_and_defaults_to_absent(workflow,capsys):
+    for maximum in (None,2.01):
+        path=workflow.parent/('no-cutoff.json' if maximum is None else 'cutoff.json')
+        args=['workflow','init',str(path),'--metadata',str(workflow.parent/'MTL.json'),'--aoi',str(workflow.parent/'aoi.geojson'),
+              '--start','2025-01-01','--end','2025-12-31','--reject-qa-bits','0','3','7','--min-valid-fraction','0.1']
+        assert main(args+([] if maximum is None else ['--max-uncertainty-kelvin',str(maximum)]))==0
+        capsys.readouterr();intent=load(path)['intent']
+        assert ('max_uncertainty_kelvin' in intent)==(maximum is not None)
+        if maximum is not None:assert intent['max_uncertainty_kelvin']==2.01
+
+
+def test_zero_uncertainty_is_a_value_not_a_missing_or_default_marker(workflow):
+    with rasterio.open(workflow.parent/'UQ.tif','r+') as ds:ds.write(np.zeros((4,4),dtype='int16'),1)
+    doc=load(workflow);doc['intent']['max_uncertainty_kelvin']=0;write(workflow,doc)
+    _,out,result=approved_run(workflow)
+    summary=load(out/'summary.json')
+    assert result['status']=='verified' and summary['valid_count']==10
+    assert summary['uncertainty_before_filter']['minimum_kelvin']==0

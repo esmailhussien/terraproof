@@ -1,5 +1,7 @@
 # Scientific boundaries and additional real-data cases
 
+**Coverage erratum:** native-plane source fractions in this historical record measure grid rectangles, not acquired image support. The [schema-3 correction](SCIENTIFIC_ACQUISITION_UNCERTAINTY.md) separates grid, QA acquisition and usable-pixel denominators and fixes admission before approval. Original artifacts remain unchanged.
+
 Date: 2026-11-03. This is a primary-source engineering review by the implementation agent, **not independent scientific approval**. No model calls, active Phase 11 data, production code changes or publication were used in this batch.
 
 ## Review conclusion

@@ -19,9 +19,10 @@ import rasterio
 import shapely
 
 from terraproof._common import InputError, sha256_and_size
+from .support import preflight
 
-SCHEMA = 'terraproof.workflow/2'
-APPROVAL = 'terraproof.workflow-approval/2'
+SCHEMA = 'terraproof.workflow/3'
+APPROVAL = 'terraproof.workflow-approval/3'
 SCALE = 0.00341802
 OFFSET = 149.0
 
@@ -221,7 +222,11 @@ def aoi_selector(path, grid_crs):
 
 def validate_intent(intent):
     """The same scientific requirements apply before source selection and local admission."""
-    keys(intent, ('quantity', 'unit', 'aoi', 'acquired_between', 'reject_qa_bits', 'min_valid_fraction'), ('scene_coverage',))
+    keys(intent, ('quantity', 'unit', 'aoi', 'acquired_between', 'reject_qa_bits', 'min_valid_fraction'), ('scene_coverage','max_uncertainty_kelvin'))
+    if 'max_uncertainty_kelvin' in intent:
+        limit = intent['max_uncertainty_kelvin']
+        if type(limit) not in (int,float) or not math.isfinite(limit) or limit < 0:
+            raise InputError('max_uncertainty_kelvin must be a finite nonnegative number, or omitted for no automatic exclusion')
     coverage = intent.get('scene_coverage', 'full-aoi')
     if coverage not in ('full-aoi', 'allow-partial'):
         raise InputError('scene_coverage must be full-aoi or explicitly allow-partial')
@@ -248,7 +253,7 @@ def admit(spec_path):
     document = load(spec_path)
     keys(document, ('schema', 'id', 'intent', 'source'))
     if document['schema'] != SCHEMA:
-        raise InputError('requires terraproof.workflow/2: migrate the intent and review again; full AOI scene coverage is now the default')
+        raise InputError('requires terraproof.workflow/3: migrate and review again; acquisition coverage and acquired-pixel quality denominators have changed')
     if not isinstance(document['id'], str) or not document['id'].strip():
         raise InputError('invalid scientific workflow identity')
     intent = document['intent']
@@ -287,12 +292,12 @@ def admit(spec_path):
         grid = {'width': src.width, 'height': src.height, 'transform': list(src.transform)[:6],
                 'crs': src.crs.to_wkt()}
         geometry = aoi_geometry(paths['aoi'], src.crs)
-        footprint = shapely.box(*src.bounds)
-        covered = geometry.intersection(footprint).area
+        grid_extent = shapely.box(*src.bounds)
+        covered = geometry.intersection(grid_extent).area
         if covered <= 0:
             raise InputError('AOI does not overlap this scene; select another scene')
         outside = max(0.0, min(1.0, 1-covered/geometry.area))
-        full_aoi = footprint.covers(geometry)
+        grid_covers_aoi = grid_extent.covers(geometry)
         for role in ('qa', 'uncertainty'):
             with rasterio.open(paths[role], driver='GTiff') as other:
                 dtype = ('uint16',) if role == 'qa' else ('int16',)
@@ -303,13 +308,21 @@ def admit(spec_path):
                 allowed_encoding = ((1.0, 0.0),) if role == 'qa' else ((1.0, 0.0), (0.01, 0.0))
                 if other.nodata not in allowed_nodata or (other.scales[0], other.offsets[0]) not in allowed_encoding:
                     raise InputError(role+' has conflicting fill or calibration metadata')
+    support = preflight(paths,geometry,aoi_selector(paths['aoi'],grid['crs']),intent)
+    acquired_count = support['acquired_count']
+    full_aoi = bool(grid_covers_aoi and support['requested_count'] and acquired_count == support['requested_count'])
+    enough_after_filter = ('max_uncertainty_kelvin' not in intent or bool(acquired_count and support['post_uncertainty_valid_count']
+        and support['post_uncertainty_valid_count']/acquired_count >= intent['min_valid_fraction']))
     facts = {'product_id': product['LANDSAT_PRODUCT_ID'], 'sensor': image['SPACECRAFT_ID'],
              'date': acquired.isoformat(), 'scene_time': image.get('SCENE_CENTER_TIME'),
              'scale': SCALE, 'offset_kelvin': OFFSET, 'fill': 0, 'uncertainty_scale': 0.01,
              'grid': grid, 'representation': source['representation'],
-             'outside_scene_fraction_native_plane': outside,
-             'scene_coverage_policy': coverage, 'full_aoi_in_scene': bool(full_aoi),
-             'scene_coverage_satisfied': coverage == 'allow-partial' or bool(full_aoi)}
+             'outside_grid_extent_fraction_native_plane': outside,'grid_extent_covers_aoi':bool(grid_covers_aoi),
+             'scene_coverage_policy': coverage,'full_aoi_acquired':full_aoi,
+             'scene_coverage_satisfied':bool(acquired_count and (coverage == 'allow-partial' or full_aoi)),
+             'uncertainty_requirement_satisfied':enough_after_filter,'support':support,
+             'max_uncertainty_kelvin':intent.get('max_uncertainty_kelvin'),
+             'temporal_support':'single-acquisition; not a period estimate'}
     return document, paths, facts, geometry
 
 
@@ -317,7 +330,7 @@ def plan(spec_path):
     """Read-only admission and actionable unresolved inputs; no outputs are created."""
     try:
         spec, paths, facts, _ = admit(spec_path)
-        result = {'schema': 'terraproof.workflow-plan/2', 'status': 'ready-for-review',
+        result = {'schema': 'terraproof.workflow-plan/3', 'status': 'ready-for-review',
                 'spec_digest': digest(spec), 'intent': spec['intent'], 'facts': facts,
                 'inputs': records(paths.values()), 'stages': ['admit', 'decode', 'policy-mask', 'clip',
                                                             'summarize', 'render', 'verify'],
@@ -325,38 +338,51 @@ def plan(spec_path):
                                 'Native grid, one scene, pixel-centre AOI, no temporal aggregation.']}
         if not facts['scene_coverage_satisfied']:
             result.update({'status': 'unresolved', 'issues': [
-                f"Full AOI scene coverage required; {facts['outside_scene_fraction_native_plane']:.2%} of native-plane AOI geometry is outside this scene."],
+                f"QA-declared acquisition coverage required: {facts['support']['acquired_count']} acquired of {facts['support']['requested_count']} requested centres; {facts['support']['qa_fill_or_unknown_count']} fill/unknown inside grid. Grid extent outside-area fraction: {facts['outside_grid_extent_fraction_native_plane']:.2%}."],
                 'next_steps': ['Choose a scene covering the requested AOI within the scientific acquisition requirements, then review its new input identity.',
                                'If a partial-area result is scientifically acceptable, explicitly set scene_coverage to allow-partial and review the changed intent.']})
+        if not facts['uncertainty_requirement_satisfied']:
+            result['status'] = 'unresolved'
+            result.setdefault('issues',[]).append('Optional max_uncertainty_kelvin leaves insufficient usable acquired pixels after filtering; no approval or threshold relaxation.')
+            result.setdefault('next_steps',[]).append('Choose another source or explicitly review a scientifically justified changed uncertainty requirement; no automatic cutoff is chosen.')
         return result
     except (ValueError, KeyError, TypeError, OSError, ET.ParseError, zipfile.BadZipFile,
             pyogrio.errors.DataSourceError, rasterio.errors.RasterioError) as error:
-        return {'schema': 'terraproof.workflow-plan/2', 'status': 'unresolved',
+        return {'schema': 'terraproof.workflow-plan/3', 'status': 'unresolved',
                 'issues': [str(error)]}
 
 
-def approve(spec_path, approval_path, *, reviewer, expected_digest):
+def approve(spec_path, approval_path, *, reviewer, expected_digest, review_kind='engineering-self-review'):
     """Record explicit review of this exact plan and its input bytes; never auto-approve."""
     result = plan(spec_path)
     if result['status'] != 'ready-for-review' or result['spec_digest'] != expected_digest:
         raise InputError('plan is unresolved or changed since review')
     if not isinstance(reviewer, str) or not reviewer.strip() or Path(approval_path).exists():
         raise InputError('reviewer required; approval output must not already exist')
+    if review_kind not in ('engineering-self-review','declared-scientific-review'):
+        raise InputError('review_kind must explicitly describe engineering-self-review or declared-scientific-review')
     document = {'schema': APPROVAL, 'spec': str(Path(spec_path).resolve()),
                 'spec_digest': expected_digest, 'reviewer': reviewer, 'inputs': result['inputs'],
-                'facts_digest': digest(result['facts'])}
+                'facts_digest': digest(result['facts']),
+                'review':{'kind':review_kind,'identity_authenticated':False}}
     write(approval_path, document)
     return document
 
 
 def approved(approval_path):
     approval = load(approval_path)
-    keys(approval, ('schema', 'spec', 'spec_digest', 'reviewer', 'inputs', 'facts_digest'))
+    keys(approval, ('schema', 'spec', 'spec_digest', 'reviewer', 'inputs', 'facts_digest','review'))
     if approval['schema'] != APPROVAL or not approval['reviewer']:
         raise InputError('invalid workflow approval')
+    review = approval['review']
+    keys(review,('kind','identity_authenticated'))
+    if review['kind'] not in ('engineering-self-review','declared-scientific-review') or review['identity_authenticated'] is not False:
+        raise InputError('review declaration is invalid; this product does not authenticate reviewer identity')
     spec, paths, facts, geometry = admit(approval['spec'])
     if not facts['scene_coverage_satisfied']:
-        raise InputError('full AOI scene coverage required; choose another scene or explicitly review an allow-partial intent')
+        raise InputError('full AOI acquisition coverage required; choose another scene or explicitly review an allow-partial intent')
+    if not facts['uncertainty_requirement_satisfied']:
+        raise InputError('uncertainty filter leaves insufficient acquired-pixel support; new scientific review required')
     if (digest(spec) != approval['spec_digest'] or records(paths.values()) != approval['inputs']
             or digest(facts) != approval['facts_digest']):
         raise InputError('approved intent, source bytes, sidecars or product facts changed; review again')

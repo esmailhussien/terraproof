@@ -24,16 +24,19 @@ def main(argv=None):
         draft.add_argument('--reject-qa-bits', type=int, nargs='+', required=True)
         draft.add_argument('--min-valid-fraction', type=float, required=True)
         draft.add_argument('--allow-partial', action='store_true', help='explicitly permit partial AOI coverage; requires review')
+        draft.add_argument('--max-uncertainty-kelvin',type=float,help='optional scientific cutoff; omitted means no automatic uncertainty exclusion')
     search = subs.add_parser('discover', help='metadata-only source alternatives; no approval or pixel processing')
     search.add_argument('file'); search.add_argument('--out', required=True)
     fetch = subs.add_parser('acquire', help='download exactly one explicitly selected proposal and create an unapproved native workflow')
     fetch.add_argument('report'); fetch.add_argument('--item', required=True); fetch.add_argument('--out', required=True)
     fetch.add_argument('--expect-digest', required=True)
-    p = subs.add_parser('plan', help='admit inputs and show scientific choices without processing')
+    p = subs.add_parser('plan',help='windowed QA/uncertainty preflight and scientific choices; no analysis outputs')
     p.add_argument('file')
     a = subs.add_parser('approve', help='record review of exact intent and input bytes')
     a.add_argument('file'); a.add_argument('--out', required=True); a.add_argument('--reviewer', required=True)
     a.add_argument('--expect-digest', required=True)
+    a.add_argument('--review-kind',choices=['engineering-self-review','declared-scientific-review'],default='engineering-self-review',
+                   help='self-declared provenance only; reviewer identity is not authenticated')
     r = subs.add_parser('run', help='execute, verify and publish a new run directory')
     r.add_argument('approval'); r.add_argument('--out', required=True)
     v = subs.add_parser('verify', help='recheck every pixel against original approved inputs')
@@ -49,6 +52,8 @@ def main(argv=None):
                                'aoi': str(Path(args.aoi).resolve()), 'acquired_between': [args.start, args.end],
                                'reject_qa_bits': args.reject_qa_bits, 'min_valid_fraction': args.min_valid_fraction,
                                'scene_coverage': 'allow-partial' if args.allow_partial else 'full-aoi'}}
+        if args.max_uncertainty_kelvin is not None:
+            document['intent']['max_uncertainty_kelvin'] = args.max_uncertainty_kelvin
         if args.action == 'init':
             document['source'] = {'metadata': str(Path(args.metadata).resolve()), 'representation': 'usgs-native-dn'}
         else:
@@ -62,7 +67,7 @@ def main(argv=None):
     elif args.action == 'acquire':
         result = acquire(args.report,args.item,args.out,expected_digest=args.expect_digest)
     elif args.action == 'approve':
-        result = approve(args.file, args.out, reviewer=args.reviewer, expected_digest=args.expect_digest)
+        result = approve(args.file,args.out,reviewer=args.reviewer,expected_digest=args.expect_digest,review_kind=args.review_kind)
     elif args.action == 'run':
         result = execute(args.approval, args.out)
     elif args.action == 'repair':

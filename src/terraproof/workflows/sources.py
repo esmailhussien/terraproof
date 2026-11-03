@@ -22,8 +22,8 @@ from shapely.geometry import shape
 from terraproof._common import InputError
 from .intent import SCHEMA, aoi_geometry, digest, keys, load, local, plan, product_metadata, records, validate_intent, write
 
-REQUEST = 'terraproof.source-request/1'
-REPORT = 'terraproof.source-search/1'
+REQUEST = 'terraproof.source-request/2'
+REPORT = 'terraproof.source-search/2'
 API = 'https://planetarycomputer.microsoft.com/api/stac/v1'
 TOKEN = 'https://planetarycomputer.microsoft.com/api/sas/v1/token/landsateuwest/landsat-c2'
 BLOB = 'landsateuwest.blob.core.windows.net'
@@ -74,7 +74,7 @@ def _request(path):
     document = load(path)
     keys(document, ('schema', 'id', 'intent', 'search'))
     if document['schema'] != REQUEST or not isinstance(document['id'], str) or not document['id'].strip():
-        raise InputError('expected a named terraproof.source-request/1')
+        raise InputError('expected a named terraproof.source-request/2; acquisition/uncertainty requirements need fresh review')
     start, end, coverage = validate_intent(document['intent'])
     search = document['search']; keys(search, ('max_scene_cloud',), ('max_download_bytes',))
     cloud = search['max_scene_cloud']
@@ -203,7 +203,7 @@ def _html(report):
 <p>Quantity: acquisition-time land surface temperature in degrees Celsius.
 Acquisition interval: {escape(' through '.join(report['request']['intent']['acquired_between']))}.</p>
 <p>Reject QA_PIXEL bits: {escape(str(report['request']['intent']['reject_qa_bits']))}.
-Minimum usable within-scene fraction: {report['request']['intent']['min_valid_fraction']:.2%}.
+Minimum post-filter valid/acquired fraction: {report['request']['intent']['min_valid_fraction']:.2%}.
 Native download cap: {report['max_download_bytes']/1024/1024:.2f} MiB.</p>
 <p>Order: eligible coverage, lowest reported scene cloud, latest acquisition, item ID.</p>
 <p>{escape('; '.join(report['issues']))}</p></section>
@@ -343,7 +343,7 @@ def acquire(report_path, item_id, output, *, expected_digest):
         if records([path,aoi]) != report['inputs']:
             raise InputError('request or AOI changed during acquisition; new review required')
         write(output/'plan.json',review)
-        result = {'schema':'terraproof.source-package/1','status':review['status'],'item':item_id,
+        result = {'schema':'terraproof.source-package/2','status':review['status'],'item':item_id,
             'selected_report_digest':recorded,'request':document,'source_report':str(report_path),
             'source_request_inputs':report['inputs'],'selected_candidate':candidate,'catalog_pages':report['catalog_pages'],
             'records':downloaded,'workflow':str(output/'workflow.json'),'approved':False,'processed':False,
