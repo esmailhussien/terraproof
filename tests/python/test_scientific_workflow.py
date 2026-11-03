@@ -194,12 +194,12 @@ def test_unresolved_product_or_intent_never_becomes_ready(workflow, mutation):
 def test_no_usable_pixels_are_explicit_not_false_success(workflow):
     with rasterio.open(workflow.parent/'QA.tif', 'r+') as ds:
         ds.write(np.full((4, 4), 8, dtype='uint16'), 1)
-    approval, out, result = approved_run(workflow)
-    assert result['status'] == 'incomplete' and result['grade'] != 'decision-grade'
-    summary = load(out/'summary.json')
-    assert summary['mean_celsius'] is None and summary['valid_count'] == 0
-    with pytest.raises(InputError, match='coverage'):
-        repair(approval, out, out.parent/'repeat')
+    review = plan(workflow)
+    assert review['status'] == 'unresolved'
+    assert review['facts']['support']['base_valid_count'] == 0
+    with pytest.raises(InputError):
+        approve(workflow,workflow.parent/'approval.json',reviewer='test',expected_digest=review['spec_digest'])
+    assert not (workflow.parent/'approval.json').exists()
 
 
 def test_summary_and_layout_tampering_are_detected(workflow):
@@ -330,9 +330,10 @@ def test_full_scan_catches_a_pixel_beyond_first_window(workflow):
 
 def test_minimum_coverage_is_honoured_without_removing_clouds(workflow):
     doc = load(workflow); doc['intent']['min_valid_fraction'] = 1; write(workflow, doc)
-    approval, out, result = approved_run(workflow)
-    assert result['status'] == 'incomplete'
-    assert load(out/'summary.json')['valid_count'] == 10
+    before=(workflow.parent/'QA.tif').read_bytes()
+    review=plan(workflow)
+    assert review['status']=='unresolved' and review['facts']['support']['base_valid_count']==10
+    assert (workflow.parent/'QA.tif').read_bytes()==before
 
 
 def test_no_overlap_is_unresolved_before_approval(workflow):
@@ -420,11 +421,18 @@ def test_consistent_approval_cannot_bypass_full_coverage_gate(workflow):
     assert not (workflow.parent/'result').exists()
 
 
-@pytest.mark.parametrize('minimum,status', [(0.1,'verified'),(1.0,'incomplete')])
+@pytest.mark.parametrize('minimum,status', [(0.1,'verified'),(1.0,'unresolved')])
 def test_explicit_partial_intent_and_visible_scientific_status(workflow, minimum, status):
     partial_aoi(workflow)
     doc = load(workflow); doc['intent'].update(scene_coverage='allow-partial', min_valid_fraction=minimum)
     write(workflow, doc)
+    if status=='unresolved':
+        review=plan(workflow)
+        assert review['status']=='unresolved' and review['facts']['support']['base_valid_count']==10
+        with pytest.raises(InputError):
+            approve(workflow,workflow.parent/'approval.json',reviewer='test',expected_digest=review['spec_digest'])
+        assert not (workflow.parent/'approval.json').exists() and not (workflow.parent/'result').exists()
+        return
     approval, out, result = approved_run(workflow)
     assert result['status'] == status and result['full_aoi_acquired'] is False
     assert result['scene_coverage_policy'] == 'allow-partial'
@@ -436,9 +444,6 @@ def test_explicit_partial_intent_and_visible_scientific_status(workflow, minimum
         assert '75.00%' in content and '83.33%' in content
         assert 'not a complete map' in content
     assert verify(approval, out)['status'] == status
-    if status == 'incomplete':
-        with pytest.raises(InputError, match='coverage'):
-            repair(approval, out, workflow.parent/'weaker-result')
 
 
 @pytest.mark.parametrize('value', [True, None, 1, 'partial', [], {}])
@@ -489,12 +494,9 @@ def test_cli_template_writes_explicit_coverage_choice(workflow, capsys, partial)
 
 def test_full_footprint_does_not_imply_complete_observations(workflow):
     doc = load(workflow); doc['intent']['min_valid_fraction'] = 1; write(workflow, doc)
-    _, out, result = approved_run(workflow)
-    assert result['status'] == 'incomplete' and result['full_aoi_acquired'] is True
-    for name in ('report.html','map.svg'):
-        content = (out/name).read_text(encoding='utf-8')
-        assert 'data-workflow-status="incomplete"' in content
-        assert 'FULL AOI QA ACQUISITION' in content and 'Not accepted against declared numeric requirements' in content
+    review=plan(workflow)
+    assert review['status']=='unresolved' and review['facts']['full_aoi_acquired'] is True
+    assert review['facts']['support']['acquired_count']==12 and review['facts']['support']['base_valid_count']==10
 
 
 def test_final_verification_failure_updates_visible_delivery(workflow, monkeypatch):
@@ -666,3 +668,36 @@ def test_zero_uncertainty_is_a_value_not_a_missing_or_default_marker(workflow):
     summary=load(out/'summary.json')
     assert result['status']=='verified' and summary['valid_count']==10
     assert summary['uncertainty_before_filter']['minimum_kelvin']==0
+
+
+@pytest.mark.parametrize('limit',[None,1000])
+@pytest.mark.parametrize('minimum,status',[(.6,'ready-for-review'),(1.0,'unresolved')])
+def test_base_quality_admission_matches_nonbinding_uncertainty_limit(workflow,limit,minimum,status):
+    # All uncertainty is known, so the explicit high bound truly changes no support.
+    with rasterio.open(workflow.parent/'UQ.tif','r+') as ds:
+        ds.write(np.full((4,4),200,dtype='int16'),1)
+    doc=load(workflow);doc['intent']['min_valid_fraction']=minimum
+    if limit is not None:doc['intent']['max_uncertainty_kelvin']=limit
+    write(workflow,doc)
+    review=plan(workflow);support=review['facts']['support']
+    assert support['base_valid_count']==support['post_uncertainty_valid_count']==10
+    assert support['acquired_count']==12
+    assert support['uncertainty_exceeded_count']==support['uncertainty_missing_excluded_count']==0
+    assert review['status']==status
+    assert review['facts']['uncertainty_requirement_satisfied']==(status=='ready-for-review')
+    approval=workflow.parent/'approval.json'
+    if status=='ready-for-review':
+        approve(workflow,approval,reviewer='test',expected_digest=review['spec_digest'])
+        assert approval.is_file()
+    else:
+        with pytest.raises(InputError):
+            approve(workflow,approval,reviewer='test',expected_digest=review['spec_digest'])
+        assert not approval.exists() and not (workflow.parent/'result').exists()
+        # A structurally consistent unsigned record must not bypass the admission gate.
+        from terraproof.workflows.intent import APPROVAL,digest
+        write(approval,{'schema':APPROVAL,'spec':str(workflow),'spec_digest':review['spec_digest'],
+            'reviewer':'test','inputs':review['inputs'],'facts_digest':digest(review['facts']),
+            'review':{'kind':'engineering-self-review','identity_authenticated':False}})
+        with pytest.raises(InputError,match='coverage'):execute(approval,workflow.parent/'result')
+        with pytest.raises(InputError,match='coverage'):repair(approval,workflow.parent/'previous',workflow.parent/'result')
+        assert not (workflow.parent/'result').exists()

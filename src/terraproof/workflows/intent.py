@@ -311,8 +311,10 @@ def admit(spec_path):
     support = preflight(paths,geometry,aoi_selector(paths['aoi'],grid['crs']),intent)
     acquired_count = support['acquired_count']
     full_aoi = bool(grid_covers_aoi and support['requested_count'] and acquired_count == support['requested_count'])
-    enough_after_filter = ('max_uncertainty_kelvin' not in intent or bool(acquired_count and support['post_uncertainty_valid_count']
-        and support['post_uncertainty_valid_count']/acquired_count >= intent['min_valid_fraction']))
+    usable_count = (support['post_uncertainty_valid_count'] if 'max_uncertainty_kelvin' in intent
+                    else support['base_valid_count'])
+    enough_after_filter = bool(acquired_count and usable_count
+        and usable_count/acquired_count >= intent['min_valid_fraction'])
     facts = {'product_id': product['LANDSAT_PRODUCT_ID'], 'sensor': image['SPACECRAFT_ID'],
              'date': acquired.isoformat(), 'scene_time': image.get('SCENE_CENTER_TIME'),
              'scale': SCALE, 'offset_kelvin': OFFSET, 'fill': 0, 'uncertainty_scale': 0.01,
@@ -343,8 +345,8 @@ def plan(spec_path):
                                'If a partial-area result is scientifically acceptable, explicitly set scene_coverage to allow-partial and review the changed intent.']})
         if not facts['uncertainty_requirement_satisfied']:
             result['status'] = 'unresolved'
-            result.setdefault('issues',[]).append('Optional max_uncertainty_kelvin leaves insufficient usable acquired pixels after filtering; no approval or threshold relaxation.')
-            result.setdefault('next_steps',[]).append('Choose another source or explicitly review a scientifically justified changed uncertainty requirement; no automatic cutoff is chosen.')
+            result.setdefault('issues',[]).append('Insufficient usable/acquired coverage for min_valid_fraction, or no usable observations, after base QA and any optional uncertainty filter; no approval or threshold relaxation.')
+            result.setdefault('next_steps',[]).append('Choose another source or explicitly review a scientifically justified changed quality requirement; no automatic threshold is chosen.')
         return result
     except (ValueError, KeyError, TypeError, OSError, ET.ParseError, zipfile.BadZipFile,
             pyogrio.errors.DataSourceError, rasterio.errors.RasterioError) as error:
@@ -382,7 +384,7 @@ def approved(approval_path):
     if not facts['scene_coverage_satisfied']:
         raise InputError('full AOI acquisition coverage required; choose another scene or explicitly review an allow-partial intent')
     if not facts['uncertainty_requirement_satisfied']:
-        raise InputError('uncertainty filter leaves insufficient acquired-pixel support; new scientific review required')
+        raise InputError('insufficient usable/acquired coverage after base QA and any optional uncertainty filter; new scientific review required')
     if (digest(spec) != approval['spec_digest'] or records(paths.values()) != approval['inputs']
             or digest(facts) != approval['facts_digest']):
         raise InputError('approved intent, source bytes, sidecars or product facts changed; review again')
