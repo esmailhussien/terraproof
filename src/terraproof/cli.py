@@ -226,6 +226,9 @@ def build_parser() -> argparse.ArgumentParser:
     evidence_parser = subparsers.add_parser('evidence', help='write or verify an unsigned evidence bundle')
     evidence_parser.add_argument('args', nargs=argparse.REMAINDER)
 
+    workflow_parser = subparsers.add_parser('workflow', help='plan, run and verify a scientific workflow')
+    workflow_parser.add_argument('args', nargs=argparse.REMAINDER)
+
     return parser
 
 
@@ -584,6 +587,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "inspect":
             return _cmd_inspect(args)
+        if args.command == 'workflow':
+            from terraproof.workflows.__main__ import main as workflow_main
+            return workflow_main(args.args)
         if args.command == "route":
             return _cmd_route(args)
         if args.command == "preflight":

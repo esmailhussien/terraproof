@@ -14,6 +14,11 @@ Everything runs locally and offline. No model API key is needed.
 
 **Status:** experimental (v0.12.0). See [Evaluation status](#evaluation-status) for what has and has not been measured.
 
+**Unreleased workflow core on this branch:** [scientific workflows](docs/SCIENTIFIC_WORKFLOWS.md)
+adds a local Landsat surface-temperature route from reviewed intent through processing,
+verification, repair and map/report outputs. Engineering fixtures are separate from real-scene
+scientific validation, which remains pending. This is not part of the published v0.12.0.
+
 ---
 
 ## Quick start

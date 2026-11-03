@@ -6,6 +6,19 @@ This file tracks upstream repositories, specifications, and references evaluated
 
 ## Sources
 
+### Scientific workflow core: native Landsat surface temperature
+
+New implementation authored for Terraproof under MIT; no upstream processing code is vendored. The experimental local workflow uses the existing checks and evidence formats. Product interpretation references:
+
+- [USGS Landsat Collection 2 Surface Temperature](https://www.usgs.gov/landsat-missions/landsat-collection-2-surface-temperature): existing retrieval and temperature conversion, not a new atmospheric-correction method.
+- [USGS Landsat Collection 2 Quality Assessment Bands](https://www.usgs.gov/landsat-missions/landsat-collection-2-quality-assessment-bands): QA_PIXEL flag meanings and ST_QA interpretation. Quality exclusions remain an explicitly reviewed user policy.
+- [USGS Landsat 8–9 Collection 2 Level-2 Data Format Control Book, version 7](https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/files/LSDS-1328_Landsat8-9_OLI-TIRS-C2-L2_DFCB-v7.pdf): MTL asset field names, native data types, fill and ST_QA scaling.
+- [USGS missing Surface Temperature data](https://www.usgs.gov/faqs/why-does-my-landsat-collection-2-surface-temperature-product-have-missing-data): missing upstream emissivity can leave missing ST; the route does not fill it invisibly.
+
+Reviewed 2026-11-03. These references support the adapter's product semantics, not a guarantee of absolute physical accuracy. See [Scientific workflows](../docs/SCIENTIFIC_WORKFLOWS.md).
+
+### Existing source registry
+
 | Source | Area | Status |
 |---|---|---|
 | Agent Skills specification | Skill format | Research |
