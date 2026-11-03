@@ -1,6 +1,6 @@
 # Terraproof Phase 11 plan: one declaration per pipeline, tested on agents
 
-> Status: **T1 done; T2 attempt 2 ran (12 of 12): adoption 11/12, 0 false assurance, 0 saves because no agent made a mistake; inconclusive, no push. T3 designed; its prerequisite B (declarations checked against their sources' metadata) built; T3 driver not built (2026-11-03).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
+> Status: **T1 done; T2 attempt 2 ran (12 of 12): adoption 11/12, 0 false assurance, 0 saves because no agent made a mistake; inconclusive, no push. T3 designed; its prerequisite B (declarations checked against their sources' metadata) built; T3 driver built, calibrated and preflighted (14 of 14), not run (2026-11-03).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
 
 ## 1. Why
 
@@ -347,3 +347,25 @@ The user chose B. No model was called.
   - The 7 T3 reference declarations still verify the right outputs and fail all 15 seeded wrong ones.
   - T2's real-data calibration still passes.
   - Replaying the 11 project files T2's agents actually wrote (33 deliverables) gives no conflict.
+
+### T3 driver and preflight (2026-11-03): all 14 projects ready; no model called
+
+- **Driver.** [`tests/phase11_t3_agent.py`](../../tests/phase11_t3_agent.py), in commit `8aee446`.
+  - It reuses T2's wrapper, adapter, preflight and labels. T2's snapshot reader now takes the oracle as a parameter.
+  - The oracle is each task's own: `score_outputs`'s `oracle_ok`. The format contract is reported apart.
+  - The reading is applied as registered above. A belief certification is reported, not thresholded.
+- **What each wrong snapshot records:** what the call showed; whether a `project.declaration` conflict flagged it; and whether the project file's declaration at that moment was faithful.
+  - **Faithful** means the checks cover the reference's, and every key binding the reference sets matches.
+  - Paths are compared by file name and in order, because order is the operation. Units are compared by meaning: `ft` is `foot`.
+- **Tests.** 4 offline tests:
+  - declarations;
+  - wrong-snapshot labels;
+  - the reading's bars;
+  - the whole loop, with a fake agent that writes a seeded wrong output, verifies, fixes it and verifies again. On the mixed-units task its first declaration repeats the mistake. It shows 7 saves (6 by checks, 1 by the cross-check) and no false assurance.
+- **Calibration.** It passed on all 7 tasks. Every right output is `verified`, every seeded wrong output is oracle-wrong and `failed`, and every reference plan is complete with no conflict.
+- **Agent interpreter.** `C:\Users\mrsom\.venvs\agent-with-p11c`, Python 3.12.10.
+  - It holds the wheel built from a clean `git archive` of `8aee446`, which carries the cross-check: SHA-256 `151efbe4c27872c7875911dab55a68c074739a1561f79ed3bdd84af120e9c07c`.
+  - `terraproof.evals` is absent, and its dependencies are exactly `agent-with-p11`'s.
+- **Preflight.** `--preflight-only` ran on a new work root: 14 of 14 projects passed every OpenCode check and every wrapper check, at 1800 s per run. Report: `.terracache/phase11-t3-agent-preflight.json`.
+  - The product fingerprint matches the checkout: `d411525f…7fd75`.
+  - **Routed skills,** recorded as given: `hr-elevation-change-mixed-units` routes none, and `hr-modis-lst-quality` routes `geopandas` and `design-postgis-tables` among its four.
