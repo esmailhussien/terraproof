@@ -16,18 +16,18 @@ It is based on published v0.12.0 commit `0467d4491fb3a7059b3e81f8e1097934a5d7b56
 
 | Gate | Required evidence | State |
 | --- | --- | --- |
-| Engineering correctness | End-to-end generated inputs, independent hand values, invalid policies, source/intent drift, mask/window errors, missing observations, corrupted artifacts and one-pass repair | Implemented; local verification recorded in the external handoff |
+| Engineering correctness | End-to-end generated inputs, independent hand values, invalid policies, source/intent drift, mask/window errors, missing observations, corrupted artifacts and one-pass repair | 38 workflow tests passed; original-coordinate AOI correction independently validated |
 | Product packaging | Candidate wheel contains workflow modules and excludes evaluators; isolated installed interpreter runs and repairs a synthetic example | Demonstrated; internal candidate retains 0.12.0 label and is not the published release |
-| Regression safety | Existing Python suite, repository validation and router; shared interpreter issues isolated from the active trial | Results recorded in the handoff; no existing tests weakened |
-| Real-scene route | Trusted native USGS scene, explicit reviewer-approved intent/QA policy, independently checked product conversion, support and summaries | **Pending; must not be implied by synthetic test results** |
+| Regression safety | Existing Python suite, repository validation and router; shared interpreter issues isolated from the active trial | 2016 passed, 13 skipped at correction commit 753dc42; router 87/87; repository validation passed; no existing tests weakened |
+| Real-scene route | Native USGS scene, disclosed reviewer/intent/QA policy, independently implemented product conversion, support and summary check | One real scene demonstrated after correcting a false-assurance AOI bug; [experiment record](../SCIENTIFIC_WORKFLOW_REAL_SCENE_2026-11-03.md); engineering review only |
 | Scientific review | Independent review of measurement meaning, product identity/representation, quality policy, coverage and uncertainty limits | **Pending** |
 | Release | Agreed scope and compatibility, fresh install and real-scene evidence; integrate with Phase 11 only after its frozen trial is closed | **Not requested or performed** |
 
 ## Next work, in order
 
-1. Review the route's source/intent boundaries and the complete generated-data demonstration.
-2. Select one real native scene and AOI with a scientist. Review its metadata and requested result before processing; do not manufacture approval from a model's own output.
-3. Measure correctness/coverage and correction behavior on this route. This is separate from T3 and does not reuse its partial output as tuning data.
+1. Obtain independent scientific review of the route and the recorded Luxor real-scene protocol, QA choice, product identity, quantity and uncertainty meaning. The implementation agent's disclosed engineering approval is not that review.
+2. Review the original false-assurance finding and corrected/repair evidence. Define additional scenes and projection/coverage boundary cases before running them; do not select based on passing results.
+3. Measure correctness/coverage and correction behavior beyond this one scene. This remains separate from T3 and does not reuse its partial output as tuning data.
 4. Resolve demonstrated shortcomings before adding more products or retrieval methods.
 5. Add a second concrete scientific route, then extract genuinely shared requirements if needed. Multi-date thermal analysis, spectral-index preparation and sensor-specific corrections are candidates, not claimed capabilities.
 6. Connect a UI when the core has shown practical value. Scene acquisition, remote catalogs, costs/quotas, map classification, PDF export and deployment need their own reviewed scope.

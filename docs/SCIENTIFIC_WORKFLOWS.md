@@ -116,6 +116,6 @@ The same functions can be used by a future MCP/QGIS/web adapter; this branch add
 
 Development fixtures and hand-computed expectations cover the complete route, changed pixels/masks/units, summaries/layout identities, source/sidecar drift, invalid policies, native metadata formats, AOI formats, no usable observations and bounded repair. These are engineering checks, not a new held-out measurement. No live model or active T3 artifacts are used.
 
-Real native-scene validation and independent scientific review remain release gates before describing this as production-ready. Additional products need dedicated admission rules; additional analyses need their own scientific requirements. Reuse current contracts/checks rather than adding a generic workflow framework before a second concrete route exists.
+One [real native-scene experiment](SCIENTIFIC_WORKFLOW_REAL_SCENE_2026-11-03.md) exposed and corrected an AOI false-assurance bug, then passed independent arithmetic/support validation and an explicitly injected repair. Independent scientific review and broader predeclared scene coverage remain release gates before describing this as production-ready. Additional products need dedicated admission rules; additional analyses need their own scientific requirements. Reuse current contracts/checks rather than adding a generic workflow framework before a second concrete route exists.
 
 Primary scientific references are recorded in [sources/SOURCES.md](../sources/SOURCES.md#scientific-workflow-core-native-landsat-surface-temperature).

@@ -17,6 +17,8 @@ New implementation authored for Terraproof under MIT; no upstream processing cod
 
 Reviewed 2026-11-03. These references support the adapter's product semantics, not a guarantee of absolute physical accuracy. See [Scientific workflows](../docs/SCIENTIFIC_WORKFLOWS.md).
 
+Real-scene engineering validation on 2026-11-03 used native USGS Landsat 9 product `LC09_L2SP_175042_20230731_20230802_02_T1` (MTL TXT, ST_B10, QA_PIXEL, ST_QA), acquired 2023-07-31 near Luxor, Egypt. Attribution: USGS Landsat Collection 2 Level-2 Surface Temperature; Microsoft Planetary Computer provided the catalog and public distribution. Original metadata, bytes and source URLs are retained externally; no raster data are vendored in this repository. The derived map is attributed to that USGS product. See the [experiment record](../docs/SCIENTIFIC_WORKFLOW_REAL_SCENE_2026-11-03.md), [catalog item](https://planetarycomputer.microsoft.com/api/stac/v1/collections/landsat-c2-l2/items/LC09_L2SP_175042_20230731_02_T1), [Planetary Computer documentation](https://planetarycomputer.microsoft.com/docs/) and [official SDK access implementation](https://github.com/microsoft/planetary-computer-sdk-for-python). Anonymous access tokens are transient and not part of retained evidence.
+
 ### Existing source registry
 
 | Source | Area | Status |
