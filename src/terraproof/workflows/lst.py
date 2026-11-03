@@ -68,6 +68,23 @@ def _statistics(total, count, minimum, maximum, selected, uncertain, uncertainty
             'uncertainty_meaning': 'product uncertainty magnitude; not uncertainty of the mean'}
 
 
+def _summary_matches(actual, expected):
+    if not isinstance(actual, dict) or set(actual) != set(expected):
+        return False
+    for key, wanted in expected.items():
+        got = actual[key]
+        if type(wanted) is int:
+            if type(got) is not int or got != wanted:
+                return False
+        elif isinstance(wanted, float):
+            if (type(got) not in (int, float) or not math.isfinite(got)
+                    or not math.isclose(got, wanted, abs_tol=1e-8, rel_tol=1e-8)):
+                return False
+        elif got != wanted:
+            return False
+    return True
+
+
 def _produce(approval_path, directory):
     _, spec, paths, facts, geometry, region, transform, uncovered = context(approval_path)
     mask_bits = sum(1 << b for b in spec['intent']['reject_qa_bits'])
@@ -203,15 +220,13 @@ def _verify(approval_path, directory, *, check_manifest=True):
     expected_summary.update({'quantity': spec['intent']['quantity'], 'unit': spec['intent']['unit'],
                              'product_id': facts['product_id'], 'date': facts['date']})
     actual = load(directory/'summary.json')
-    summary_ok = set(actual) == set(expected_summary)
-    for k, v in expected_summary.items():
-        value = actual.get(k)
-        summary_ok &= (isinstance(value, (int, float)) and not isinstance(value, bool)
-                       and math.isfinite(value) and math.isclose(value, v, abs_tol=1e-8, rel_tol=1e-8)
-                       if isinstance(v, (int, float)) else value == v)
-    finding('summary', bool(summary_ok), 'statistics and identities recomputed from approved sources and support')
+    finding('summary', _summary_matches(actual, expected_summary),
+            'exact integer counts; floating statistics and identities recomputed from approved sources and support')
     if check_manifest:
         manifest = load(directory/'workflow.json')
+        finding('run-completion', not (directory/'failure.json').exists()
+                and manifest.get('verification', {}).get('status') != 'failed',
+                'execution completed without an unresolved publication failure; otherwise regenerate a new run')
         current = records(directory/f for f in FILES)
         actual_files = [{**r, 'path': Path(r['path']).name} for r in current]
         finding('artifact-identity', manifest.get('outputs') == actual_files,
@@ -254,6 +269,7 @@ def execute(approval_path, output):
         raise InputError('output already exists; use verify or repair into a new directory')
     output.parent.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix=output.name+'.partial-', dir=output.parent))
+    published = False
     try:
         _produce(approval_path, staging)
         result = verify(approval_path, staging, check_manifest=False)
@@ -264,15 +280,25 @@ def execute(approval_path, output):
                     'verification': result, 'outputs': listed}
         write(staging/'workflow.json', manifest)
         staging.rename(output)
+        published = True
         # Paths in a core evidence report refer to the published directory, not its temporary name.
         calibration_evidence(output, context(approval_path)[2])
         manifest['outputs'] = [{**r, 'path': Path(r['path']).name} for r in records(output/f for f in FILES)]
         write(output/'workflow.json', manifest)
-        return verify(approval_path, output)
+        result = verify(approval_path, output)
+        manifest['verification'] = result
+        write(output/'workflow.json', manifest)
+        return result
     except Exception as error:
         # Keep failed staging as inspectable evidence, rather than deleting user data.
         if staging.exists():
             write(staging/'failure.json', {'status': 'failed', 'error': str(error), 'published': False})
+        elif published:
+            failure = {'status': 'failed', 'grade': 'advisory-only', 'findings': [
+                {'requirement': 'run-completion', 'status': 'fail', 'detail': str(error)}]}
+            manifest['verification'] = failure
+            write(output/'workflow.json', manifest)
+            write(output/'failure.json', {'status': 'failed', 'error': str(error), 'published': True})
         raise
 
 

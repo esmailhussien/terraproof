@@ -296,3 +296,37 @@ def test_no_overlap_is_unresolved_before_approval(workflow):
 def test_missing_geometry_is_an_unresolved_plan(workflow):
     (workflow.parent/'aoi.geojson').write_text('{}')
     assert plan(workflow)['status'] == 'unresolved'
+
+
+def test_count_verification_is_exact_even_for_large_scenes():
+    from terraproof.workflows.lst import _summary_matches
+    expected = {'valid_count': 100_000_000, 'mean_celsius': 20.0}
+    assert _summary_matches(dict(expected), expected)
+    assert not _summary_matches(dict(expected, valid_count=99_999_999), expected)
+    assert not _summary_matches(dict(expected, valid_count=100_000_000.0), expected)
+    assert not _summary_matches(dict(expected, valid_count=True), expected)
+    assert not _summary_matches(dict(expected, mean_celsius=float('nan')), expected)
+
+
+def test_saved_manifest_has_the_final_verification(workflow):
+    approval, out, result = approved_run(workflow)
+    assert load(out/'workflow.json')['verification'] == result
+    assert any(f['requirement'] == 'artifact-identity' for f in result['findings'])
+
+
+def test_failure_after_directory_publication_never_leaves_a_verified_report(workflow, monkeypatch):
+    import terraproof.workflows.lst as lst
+    approval = workflow.parent/'approval.json'
+    approve(workflow, approval, reviewer='test', expected_digest=plan(workflow)['spec_digest'])
+    original = lst.calibration_evidence
+    def fail_on_final(directory, paths):
+        if directory.name == 'result':
+            raise OSError('simulated evidence write failure')
+        return original(directory, paths)
+    monkeypatch.setattr(lst, 'calibration_evidence', fail_on_final)
+    out = workflow.parent/'result'
+    with pytest.raises(OSError, match='simulated'):
+        execute(approval, out)
+    assert load(out/'workflow.json')['verification']['status'] == 'failed'
+    assert load(out/'failure.json')['published'] is True
+    assert verify(approval, out)['status'] == 'failed'
