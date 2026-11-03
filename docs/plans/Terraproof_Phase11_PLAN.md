@@ -1,6 +1,6 @@
 # Terraproof Phase 11 plan: one declaration per pipeline, tested on agents
 
-> Status: **T1 done; T2 attempt 2 ran (12 of 12): adoption 11/12, 0 false assurance, 0 saves because no agent made a mistake; inconclusive, no push. T3 designed; its prerequisite B (declarations checked against their sources' metadata) built; T3 attempt 1 stopped by a restart after 8 of 14; resume of the 6 missing runs registered (2026-11-03).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
+> Status: **T1 done; T2 attempt 2 ran (12 of 12): adoption 11/12, 0 false assurance, 0 saves because no agent made a mistake; inconclusive, no push. T3 designed; its prerequisite B (declarations checked against their sources' metadata) built; T3 ran (14 of 14 scored, 15 invocations): adoption 14/14, 0 false assurance on faithful declarations, 1 save (by the cross-check), 1 belief certified; value bar not met, no push (2026-11-03).** It follows [Phase 10](Terraproof_Phase10_PLAN.md) and release 0.12.0.
 
 ## 1. Why
 
@@ -387,3 +387,46 @@ The user chose B. No model was called.
   - That makes **15 invocations in all**.
   - The same interpreter (`agent-with-p11c`) is used, with the same product fingerprint (`d411525f…`) and a new work root.
 - **Preflight.** `--preflight-only --resume` created and passed exactly those 6 projects, with no model call.
+
+### T3 result (2026-11-03): high adoption, one cross-check save, one belief certified; the value bar not met
+
+The resume ran the 6 missing runs and exited `0`. That makes 15 invocations in all, and 14 scored runs. Report: `.terracache/phase11-t3-agent-run2.json`. Its first 8 runs are carried over from `-run1.json`.
+
+| Measure | Result | Bar |
+| --- | --- | --- |
+| False assurance on a faithful declaration | **0** | 0, required: met |
+| Adoption | **14 of 14**, all valid project files | ≥ 7: met |
+| Saves | **1**, in 1 run | ≥ 2 in ≥ 2 runs: not met |
+| Wrong snapshots | 8, in 3 runs | — |
+| Wrong calls certified on a belief declaration | **1** | reported |
+
+**Reading (section 7): "adoption met, wrong snapshots not flagged or not fixed: record the gap"; no push.** One belief certification is reported.
+
+What happened:
+- **13 of 14 final outputs are correct.** 13 runs completed. All 14 met the format contract. The reference agreed with the oracle on all 14. There was no false alarm.
+- **The save came from the cross-check** (`hr-flood-depth-feet`, run 0).
+  - Before writing the project file, the agent called `run_checks` three times on a feet-as-metres output, with no bindings. The grade was `checks-passed`, so nothing was flagged.
+  - It then declared the DEM's source unit as metre. `verify_project` failed the output on `project.declaration`, because the band unit says `ft`.
+  - The agent fixed both the output and the declaration and finished `verified`.
+- **The belief certification: `hr-modis-lst-quality`, run 0.**
+  - The agent declared `qa_keep_codes = [0, 64]` and masked the output to match. Code 64 is an LST error of 1–2 K, which the task excludes. The other kept codes were missing too.
+  - Its first `verify_project` failed on `raster.nodata_support`. After a fix, the second call `verified` the output, with decision-grade evidence. The QA rule was the agent's own, consistently declared.
+  - The run timed out with that output. No file states the task's QA threshold, so this is the registered limit, not a check gap.
+  - The run is also labelled `outside-project`: it read a file outside its project.
+- **The other wrong snapshots:**
+  - **`hr-flood-depth-feet`, run 1:** two `run_checks` calls before any project file was written (`checks-passed`, then `incomplete`). The agent fixed the output unprompted.
+  - **`hr-modis-lst-quality`, run 0:** the `nodata_support` failure above. It counts as flagged, not as a save, because the final output stayed wrong.
+- **Declarations, final.** 7 of 14 are faithful by the registered comparison. The other 7, all correct at the end, fall into three groups:
+  - **Equivalent in substance (4):** land cover declared `support_source_nodata = ["0", "0"]` as strings, and S2 used `qa_kind = "s2-scl"` in place of keep codes 4, 5 and 6.
+  - **A narrower QA rule (2):** MODIS keep codes `[0, 64]` and `[0]`.
+  - **Under-declared (1):** `hr-reanalysis-air-temperature`, run 1, declared only `nodata-support` and never declared the scale or the kelvin conversion, so its verification could not have caught a kelvin output.
+
+**What T3 shows.**
+- **Adoption is solid:** 14 of 14 valid project files, and every run verified.
+- **On a faithful declaration nothing wrong was certified.** On these tasks, though, the declarations were faithful mainly when the outputs were already right.
+- **The cross-check made the one save,** on a mistake the checks alone would have certified against the agent's own declaration.
+- **The gaps it records:**
+  - `run_checks` without bindings gives an ungrounded `checks-passed` before a project file exists.
+  - A QA rule the agent chooses itself is certified when its declaration and output share it.
+  - An agent can declare less than the task needs.
+- **The value bar (≥ 2 saves) is not met,** so no push under the registered reading.
