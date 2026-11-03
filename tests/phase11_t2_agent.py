@@ -426,7 +426,8 @@ def faithfulness(entry: dict, declared: list[dict]) -> dict:
 # -- snapshots: every verdict the agent saw, scored on the outputs as they were -------------------------------
 
 
-def read_snapshots(task_id: str, inputs: Path, snapshots: Path, deliverables: tuple[str, ...]) -> list[dict]:
+def read_snapshots(task_id: str, inputs: Path, snapshots: Path, deliverables: tuple[str, ...], scorer=None) -> list[dict]:
+    scorer = scorer or score
     calls = []
     for folder in sorted(snapshots.iterdir()) if snapshots.is_dir() else []:
         record_path = folder / "call.json"
@@ -444,7 +445,7 @@ def read_snapshots(task_id: str, inputs: Path, snapshots: Path, deliverables: tu
                 name = str(path).replace("\\", "/").rsplit("/", 1)[-1]
                 if name in deliverables:
                     shown[name] = {"status": record.get("verification_status"), "grade": record.get("grade")}
-        oracle = score(task_id, inputs, folder / "outputs") if shown else {}
+        oracle = scorer(task_id, inputs, folder / "outputs") if shown else {}
         arguments = record.get("arguments") or {}
         calls.append({"tool": record.get("tool"), "outcome": record.get("outcome"), "error": record.get("error"),
                       "declared": bool(arguments.get("profiles") or arguments.get("contract")),
