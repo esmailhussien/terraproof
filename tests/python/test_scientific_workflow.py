@@ -80,6 +80,56 @@ def test_complete_run_independent_values_summary_layout_and_evidence(workflow):
     assert verify(approval, out)['status'] == 'verified'
 
 
+def test_geographic_aoi_membership_uses_original_edges_on_utm_grid(workflow):
+    """A four-corner UTM approximation silently changes this WGS84 rectangle."""
+    from pyproj import Transformer
+    to_utm = Transformer.from_crs(4326, 32636, always_xy=True)
+    corners = [(32.55, 25.65), (32.75, 25.65), (32.75, 25.85), (32.55, 25.85)]
+    projected = [to_utm.transform(*p) for p in corners]
+    west = min(p[0] for p in projected)-60
+    north = max(p[1] for p in projected)+60
+    transform = from_origin(west, north, 30, 30)
+    width = int(np.ceil((max(p[0] for p in projected)-west+60)/30))
+    height = int(np.ceil((north-min(p[1] for p in projected)+60)/30))
+    for name, value, dtype, nodata in [('ST.tif', 40000, 'uint16', 0),
+                                       ('QA.tif', 0, 'uint16', 1),
+                                       ('UQ.tif', 200, 'int16', -9999)]:
+        with rasterio.open(workflow.parent/name, 'w', driver='GTiff', width=width, height=height,
+                           count=1, crs='EPSG:32636', transform=transform, dtype=dtype, nodata=nodata) as ds:
+            ds.write(np.full((height, width), value, dtype=dtype), 1)
+    write(workflow.parent/'aoi.geojson', {'type': 'Polygon', 'coordinates': [corners+[corners[0]]]})
+    approval, out, result = approved_run(workflow)
+    assert result['status'] == 'verified', result
+    # Compute support over the ENTIRE source, independently of workflow crop/mask helpers.
+    rows, cols = np.indices((height, width), dtype='float64')
+    x = transform.c+(cols+0.5)*30
+    y = transform.f-(rows+0.5)*30
+    lon, lat = Transformer.from_crs(32636, 4326, always_xy=True).transform(x, y)
+    expected = (lon >= 32.55) & (lon <= 32.75) & (lat >= 25.65) & (lat <= 25.85)
+    with rasterio.open(out/'aoi.tif') as ds:
+        col0, row0 = ~transform*(ds.transform.c, ds.transform.f)
+        row0, col0 = round(row0), round(col0)
+        delivered = np.zeros_like(expected)
+        delivered[row0:row0+ds.height, col0:col0+ds.width] = ds.read(1).astype(bool)
+    np.testing.assert_array_equal(delivered, expected)
+    assert load(out/'summary.json')['selected_count'] == int(expected.sum())
+    assert load(out/'summary.json')['valid_count'] == int(expected.sum())
+    assert verify(approval, out)['status'] == 'verified'
+
+
+def test_native_aoi_includes_centres_exactly_on_boundary(workflow):
+    write(workflow.parent/'aoi.geojson', {'type': 'FeatureCollection',
+        'crs': {'type': 'name', 'properties': {'name': 'EPSG:32632'}},
+        'features': [{'type': 'Feature', 'properties': {}, 'geometry': {'type': 'Polygon',
+            'coordinates': [[[500015, 999985], [500105, 999985], [500105, 999895],
+                             [500015, 999895], [500015, 999985]]]}}]})
+    _, out, result = approved_run(workflow)
+    assert result['status'] == 'verified'
+    with rasterio.open(out/'aoi.tif') as ds:
+        np.testing.assert_array_equal(ds.read(1), np.ones((4, 4), dtype='uint8'))
+    assert load(out/'summary.json')['selected_count'] == 16
+
+
 @pytest.mark.parametrize('artifact', ['temperature_celsius.tif', 'validity.tif', 'aoi.tif',
                                       'uncertainty_kelvin.tif', 'decoded_celsius.tif'])
 def test_changed_pixel_is_detected_even_without_manifest(workflow, artifact):

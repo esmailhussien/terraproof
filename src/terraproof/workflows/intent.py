@@ -157,8 +157,8 @@ def records(paths):
             for p in sorted(expanded)]
 
 
-def aoi_geometry(path, target_crs):
-    """Polygon union; explicit CRS. GeoJSON/Shapefile/GeoPackage via installed GDAL."""
+def aoi_definition(path):
+    """Return the original polygon union and its CRS, without replacing its edge semantics."""
     if path.suffix.lower() not in ('.geojson', '.json', '.shp', '.gpkg', '.kml', '.kmz'):
         raise InputError('AOI must be local GeoJSON, Shapefile, GeoPackage, KML or KMZ; no VRT sources')
     if path.suffix.lower() in ('.kml', '.kmz'):
@@ -180,16 +180,43 @@ def aoi_geometry(path, target_crs):
         raise InputError('AOI must contain valid, nonempty polygons; no automatic geometry repair')
     crs = pyproj.CRS(source_crs)
     geometry = shapely.force_2d(shapely.union_all(objects))
+    return geometry, crs
+
+
+def aoi_geometry(path, target_crs):
+    """Densified projected boundary for conservative crop bounds and display, not membership."""
+    geometry, crs = aoi_definition(path)
     def reproject(target):
         transformer = pyproj.Transformer.from_crs(crs, target, always_xy=True)
         return shapely.transform(geometry, lambda coords: np.column_stack(transformer.transform(coords[:, 0], coords[:, 1])))
     geographic = reproject(4326)
     if geographic.bounds[2]-geographic.bounds[0] > 180:
         raise InputError('antimeridian-spanning AOI is not supported by the native-grid route')
+    if crs != pyproj.CRS(target_crs):
+        bounds = geometry.bounds
+        spacing = max(bounds[2]-bounds[0], bounds[3]-bounds[1])/1024
+        geometry = shapely.segmentize(geometry, spacing)
     projected = reproject(target_crs)
     if not projected.is_valid or not all(math.isfinite(v) for v in projected.bounds):
         raise InputError('AOI cannot be transformed into the source CRS')
     return projected
+
+
+def aoi_selector(path, grid_crs):
+    """Test native pixel centres in the AOI's own CRS; inclusive polygon boundaries.
+
+    Transforming only polygon vertices changes curved edges after reprojection.
+    The authoritative inclusion test must retain the original coordinate-space polygon.
+    """
+    geometry, crs = aoi_definition(path)
+    transformer = pyproj.Transformer.from_crs(grid_crs, crs, always_xy=True)
+    def select(affine, shape):
+        rows, cols = np.indices(shape, dtype='float64')
+        x = affine.c+(cols+0.5)*affine.a+(rows+0.5)*affine.b
+        y = affine.f+(cols+0.5)*affine.d+(rows+0.5)*affine.e
+        x, y = transformer.transform(x, y)
+        return shapely.intersects_xy(geometry, x, y)
+    return select
 
 
 def admit(spec_path):

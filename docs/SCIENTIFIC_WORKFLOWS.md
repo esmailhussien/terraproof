@@ -78,6 +78,8 @@ Relative paths resolve against this file. Duplicate/unknown fields and nonfinite
 
 Native source fill is removed before scaling. `0 degrees Celsius` and valid QA value `0` are not fill. Missing ST remains missing; no spatial or temporal gap fill is performed.
 
+AOI membership is tested by transforming each native pixel centre into the AOI's original CRS and testing the original polygon, including boundary centres. Reprojecting only polygon vertices changes edge semantics and is not used for membership. A densified projected outline supplies crop/display bounds; cross-CRS crops include a one-pixel margin, so an outer row or column can be entirely excluded. Holes remain excluded. No analytical raster is reprojected.
+
 ## Outputs and meaning
 
 | File | Meaning |

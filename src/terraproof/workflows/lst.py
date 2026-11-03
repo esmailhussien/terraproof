@@ -12,7 +12,7 @@ import tempfile
 
 import numpy as np
 import rasterio
-from rasterio.features import geometry_mask, geometry_window
+from rasterio.features import geometry_window
 from rasterio.windows import Window, transform as window_transform
 from shapely.geometry import mapping, box
 
@@ -20,7 +20,7 @@ from terraproof._common import InputError
 from terraproof.checks import run_checks
 from terraproof.evidence import build_report, input_record
 from terraproof.inspect import inspect_dataset
-from .intent import approved, digest, load, records, write, SCALE, OFFSET
+from .intent import approved, aoi_definition, aoi_selector, digest, load, records, write, SCALE, OFFSET
 from .render import render
 
 FILES = ('decoded_celsius.tif', 'temperature_celsius.tif', 'validity.tif', 'aoi.tif',
@@ -38,7 +38,8 @@ def context(approval_path):
     approval, spec, paths, facts, geometry = approved(approval_path)
     with rasterio.open(paths['temperature']) as src:
         try:
-            region = geometry_window(src, [mapping(geometry)])
+            changed_crs = aoi_definition(paths['aoi'])[1] != src.crs
+            region = geometry_window(src, [mapping(geometry)], pad_x=int(changed_crs), pad_y=int(changed_crs))
         except rasterio.errors.WindowError as error:
             raise InputError('AOI does not overlap this scene; select another scene') from error
         transform = window_transform(region, src.transform)
@@ -87,6 +88,7 @@ def _summary_matches(actual, expected):
 
 def _produce(approval_path, directory):
     _, spec, paths, facts, geometry, region, transform, uncovered = context(approval_path)
+    select_aoi = aoi_selector(paths['aoi'], facts['grid']['crs'])
     mask_bits = sum(1 << b for b in spec['intent']['reject_qa_bits'])
     with ExitStack() as stack:
         src, qa, uncertainty = [stack.enter_context(rasterio.open(paths[k]))
@@ -111,8 +113,7 @@ def _produce(approval_path, directory):
         for win in windows(int(region.width), int(region.height)):
             source_window = Window(win.col_off+region.col_off, win.row_off+region.row_off, win.width, win.height)
             raw, flags, uq = [dataset.read(1, window=source_window) for dataset in (src, qa, uncertainty)]
-            aoi = ~geometry_mask([mapping(geometry)], out_shape=raw.shape,
-                                  transform=window_transform(win, transform), all_touched=False)
+            aoi = select_aoi(window_transform(win, transform), raw.shape)
             valid = (aoi & (raw != 0) & (src.read_masks(1, window=source_window) > 0)
                      & (qa.read_masks(1, window=source_window) > 0) & ((flags & mask_bits) == 0))
             values = raw.astype('float64')*SCALE+OFFSET-273.15
@@ -154,6 +155,7 @@ def _verify(approval_path, directory, *, check_manifest=True):
     """Recompute expected relations from approved originals, using every delivered pixel."""
     directory = Path(directory).resolve()
     approval, spec, paths, facts, geometry, region, transform, uncovered = context(approval_path)
+    select_aoi = aoi_selector(paths['aoi'], facts['grid']['crs'])
     findings = []
     def finding(requirement, passed, detail):
         findings.append({'requirement': requirement, 'status': 'pass' if passed else 'fail', 'detail': detail})
@@ -191,8 +193,7 @@ def _verify(approval_path, directory, *, check_manifest=True):
         for win in windows(int(region.width), int(region.height)):
             sw = Window(region.col_off+win.col_off, region.row_off+win.row_off, win.width, win.height)
             raw, flags, un = [ds.read(1, window=sw) for ds in (src, qa, uq)]
-            inside = geometry_mask([mapping(geometry)], out_shape=raw.shape,
-                                   transform=window_transform(win, transform), invert=True, all_touched=False)
+            inside = select_aoi(window_transform(win, transform), raw.shape)
             expected_support = inside & (raw > 0) & (src.read_masks(1, window=sw) != 0) & (qa.read_masks(1, window=sw) != 0)
             # Deliberately decode each approved bit independently of the producer's combined mask.
             for bit in spec['intent']['reject_qa_bits']:
