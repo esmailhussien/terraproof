@@ -1,0 +1,16 @@
+{
+  "source_commit": "77ce7aea9798f3622cec46d019a8267b52fb558a",
+  "source_frozen_before_reviewer_selection": true,
+  "wheel_sha256": "c8e9fe9e5791c2becc6501f94aed88b98d733709e8d35bb6eb0a582c31e195d1",
+  "installed_package": "D:\\AgentLayer-acl-recovery\\scientific-workflow-independent-acceptance-2026-11-03\\installed\\Lib\\site-packages\\terraproof\\__init__.py",
+  "module_bytes_match_source": true,
+  "evaluator_payload_absent": true,
+  "internal_package_label_not_published_artifact": true,
+  "public_cases_sha256": "ae6a5051d5c56ad964cc254f10ea1094a10dbd2455a2d89c1ffc8319706b6621",
+  "separate_ai_reviewer_context": true,
+  "criteria_read_by_implementer_before_outcomes": false,
+  "cryptographic_blinding": false,
+  "human_scientific_review": false,
+  "external_model_host_calls": 0,
+  "published": false
+}

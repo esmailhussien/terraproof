@@ -1,0 +1,363 @@
+{
+  "format": "independent-acceptance-assessment/1",
+  "assessed_utc": "2026-11-03T21:56:14.472134+00:00",
+  "source_commit": "77ce7aea9798f3622cec46d019a8267b52fb558a",
+  "outcome_freeze_sha256": "779cc90c9aaf816cf5e5c41e4fc79202cae36d8656fa82a934604241ad6b67ea",
+  "criteria_sha256": "1b5111cdafdaf194b9f7399eff0d86945383c6ffffc6bcb7507fc35677f0b980",
+  "overall": "success",
+  "scope": "All three preregistered main targets were independently exercised and pass; this is bounded numerical/engineering acceptance of these five fixed variants.",
+  "integrity": {
+    "frozen_records_verified": 119,
+    "preregistered_manifest_members_verified": 10,
+    "criteria_and_tolerances_changed": false,
+    "product_or_frozen_outputs_edited": false,
+    "new_native_bytes": 323321401,
+    "maximum_new_native_bytes": 536870912,
+    "retained_retry_count": 0,
+    "hashes_match": true
+  },
+  "independence": {
+    "separate_ai_reviewer_context": true,
+    "criteria_written_before_native_access": true,
+    "executable_oracle_written_after_outcome_freeze": true,
+    "implementation_or_history_inspected": false,
+    "product_imports_in_oracle": false,
+    "implementer_raw_evidence_used_as_oracle": false,
+    "independent_human_review": false,
+    "cryptographic_blinding": false,
+    "field_accuracy_validated": false,
+    "qualification": "Reviewer saw retained outcome formats and statuses after freeze while implementing the independent oracle. Criteria were prior written; the executable oracle was not a blinded prewritten program."
+  },
+  "independent_checks": {
+    "final_check_count": 346,
+    "failed_final_checks": [],
+    "method": "Original native MTL, ST_B10, QA_PIXEL and signed ST_QA; independently projected/densified AOI centre membership cross-checked by Shapely and rasterio; direct counts, decoded Celsius, descriptive uncertainty and artifact provenance comparisons. Whole native decoded rasters were checked in blocks, not only delivered AOI pixels.",
+    "temperature_tolerance_C": 0.0001,
+    "uncertainty_summary_tolerance_K": 1e-08,
+    "fraction_tolerance": 1e-12,
+    "integer_count_tolerance": 0
+  },
+  "cases": {
+    "R1": {
+      "status": "success",
+      "target_exercised": true,
+      "item": "LC08_L2SP_037037_20240616_02_T1",
+      "native_baseline_counts": {
+        "requested_count": 18318,
+        "selected_count": 18318,
+        "acquired_count": 18318,
+        "base_valid_count": 18309,
+        "post_uncertainty_valid_count": 18309,
+        "uncertainty_exceeded_count": 0,
+        "uncertainty_missing_excluded_count": 0,
+        "outside_grid_count": 0,
+        "qa_fill_or_unknown_count": 0,
+        "acquired_fraction_of_requested": 1.0,
+        "grid_fraction_of_requested": 1.0,
+        "post_uncertainty_valid_fraction_of_acquired": 0.9995086799868982
+      },
+      "baseline_uncertainty_K": {
+        "known_count": 18309,
+        "missing_count": 0,
+        "minimum_kelvin": 1.58,
+        "maximum_kelvin": 3.24,
+        "mean_kelvin": 1.660028401332678,
+        "percentiles_kelvin": {
+          "p05": 1.61,
+          "p25": 1.6300000000000001,
+          "p50": 1.6500000000000001,
+          "p75": 1.67,
+          "p95": 1.74
+        },
+        "fraction_above_2_kelvin": 0.002785515320334262,
+        "fraction_above_3_kelvin": 0.0011469768966082255,
+        "fraction_above_4_kelvin": 0.0
+      },
+      "variants": {
+        "R1-full": {
+          "counts": {
+            "requested_count": 18318,
+            "selected_count": 18318,
+            "acquired_count": 18318,
+            "base_valid_count": 18309,
+            "post_uncertainty_valid_count": 18309,
+            "uncertainty_exceeded_count": 0,
+            "uncertainty_missing_excluded_count": 0,
+            "outside_grid_count": 0,
+            "qa_fill_or_unknown_count": 0,
+            "acquired_fraction_of_requested": 1.0,
+            "grid_fraction_of_requested": 1.0,
+            "post_uncertainty_valid_fraction_of_acquired": 0.9995086799868982
+          },
+          "expected_admissible": true,
+          "actual_admission": "ready-for-review",
+          "issues": [],
+          "temperature_statistics": {
+            "min_celsius": 49.67682511999999,
+            "max_celsius": 63.23611046000002,
+            "mean_celsius": 57.920363527799466
+          },
+          "uncertainty_statistics": {
+            "known_count": 18309,
+            "missing_count": 0,
+            "minimum_kelvin": 1.58,
+            "maximum_kelvin": 3.24,
+            "mean_kelvin": 1.660028401332678,
+            "percentiles_kelvin": {
+              "p05": 1.61,
+              "p25": 1.6300000000000001,
+              "p50": 1.6500000000000001,
+              "p75": 1.67,
+              "p95": 1.74
+            },
+            "fraction_above_2_kelvin": 0.002785515320334262,
+            "fraction_above_3_kelvin": 0.0011469768966082255,
+            "fraction_above_4_kelvin": 0.0
+          },
+          "maximum_delivered_temperature_error_C": 1.9067578023168608e-06,
+          "decoded_full_native_pixels_checked": 40563785
+        }
+      },
+      "finding": "Complete acquisition;18309/18318 usable (99.9508679987%) exceeds0.90. No-cutoff admission and delivered checks-passed output correct. Mean57.920363527799466C; min49.67682512C; max63.23611046C."
+    },
+    "R2": {
+      "status": "success",
+      "target_exercised": true,
+      "item": "LC09_L2SP_175083_20240208_02_T1",
+      "native_baseline_counts": {
+        "requested_count": 100,
+        "selected_count": 100,
+        "acquired_count": 0,
+        "base_valid_count": 0,
+        "post_uncertainty_valid_count": 0,
+        "uncertainty_exceeded_count": 0,
+        "uncertainty_missing_excluded_count": 0,
+        "outside_grid_count": 0,
+        "qa_fill_or_unknown_count": 100,
+        "acquired_fraction_of_requested": 0.0,
+        "grid_fraction_of_requested": 1.0,
+        "post_uncertainty_valid_fraction_of_acquired": null
+      },
+      "baseline_uncertainty_K": {
+        "known_count": 0,
+        "missing_count": 0,
+        "minimum_kelvin": null,
+        "maximum_kelvin": null,
+        "mean_kelvin": null,
+        "percentiles_kelvin": null,
+        "fraction_above_2_kelvin": null,
+        "fraction_above_3_kelvin": null,
+        "fraction_above_4_kelvin": null
+      },
+      "variants": {
+        "R2-corner-default": {
+          "counts": {
+            "requested_count": 100,
+            "selected_count": 100,
+            "acquired_count": 0,
+            "base_valid_count": 0,
+            "post_uncertainty_valid_count": 0,
+            "uncertainty_exceeded_count": 0,
+            "uncertainty_missing_excluded_count": 0,
+            "outside_grid_count": 0,
+            "qa_fill_or_unknown_count": 100,
+            "acquired_fraction_of_requested": 0.0,
+            "grid_fraction_of_requested": 1.0,
+            "post_uncertainty_valid_fraction_of_acquired": null
+          },
+          "expected_admissible": false,
+          "actual_admission": "unresolved",
+          "issues": [
+            "QA-declared acquisition coverage required: 0 acquired of 100 requested centres; 100 fill/unknown inside grid. Grid extent outside-area fraction: 0.00%.",
+            "Insufficient usable/acquired coverage for min_valid_fraction, or no usable observations, after base QA and any optional uncertainty filter; no approval or threshold relaxation."
+          ]
+        },
+        "R2-corner-cutoff": {
+          "counts": {
+            "requested_count": 100,
+            "selected_count": 100,
+            "acquired_count": 0,
+            "base_valid_count": 0,
+            "post_uncertainty_valid_count": 0,
+            "uncertainty_exceeded_count": 0,
+            "uncertainty_missing_excluded_count": 0,
+            "outside_grid_count": 0,
+            "qa_fill_or_unknown_count": 100,
+            "acquired_fraction_of_requested": 0.0,
+            "grid_fraction_of_requested": 1.0,
+            "post_uncertainty_valid_fraction_of_acquired": null
+          },
+          "expected_admissible": false,
+          "actual_admission": "unresolved",
+          "issues": [
+            "QA-declared acquisition coverage required: 0 acquired of 100 requested centres; 100 fill/unknown inside grid. Grid extent outside-area fraction: 0.00%.",
+            "Insufficient usable/acquired coverage for min_valid_fraction, or no usable observations, after base QA and any optional uncertainty filter; no approval or threshold relaxation."
+          ]
+        }
+      },
+      "finding": "Native header-derived rows0..9/cols0..9 contain100 in-grid centres. QA_PIXEL raw1 at all100, ST_B10 raw0 and ST_QA signed-9999 at all100. Acquired0, usable0; both no-cutoff and2K-cutoff plans correctly unresolved before any approval/output. Defined uncertainty population is empty, so missing uncertainty exclusion count0 is correct."
+    },
+    "R3": {
+      "status": "success",
+      "target_exercised": true,
+      "item": "LC08_L2SP_089079_20240831_02_T1",
+      "native_baseline_counts": {
+        "requested_count": 19416,
+        "selected_count": 19416,
+        "acquired_count": 19416,
+        "base_valid_count": 17105,
+        "post_uncertainty_valid_count": 17105,
+        "uncertainty_exceeded_count": 0,
+        "uncertainty_missing_excluded_count": 0,
+        "outside_grid_count": 0,
+        "qa_fill_or_unknown_count": 0,
+        "acquired_fraction_of_requested": 1.0,
+        "grid_fraction_of_requested": 1.0,
+        "post_uncertainty_valid_fraction_of_acquired": 0.8809744540585085
+      },
+      "baseline_uncertainty_K": {
+        "known_count": 17105,
+        "missing_count": 0,
+        "minimum_kelvin": 2.5300000000000002,
+        "maximum_kelvin": 6.04,
+        "mean_kelvin": 3.907287927506577,
+        "percentiles_kelvin": {
+          "p05": 2.91,
+          "p25": 3.41,
+          "p50": 3.63,
+          "p75": 4.47,
+          "p95": 5.28
+        },
+        "fraction_above_2_kelvin": 1.0,
+        "fraction_above_3_kelvin": 0.9272727272727272,
+        "fraction_above_4_kelvin": 0.3710610932475884
+      },
+      "variants": {
+        "R3-baseline": {
+          "counts": {
+            "requested_count": 19416,
+            "selected_count": 19416,
+            "acquired_count": 19416,
+            "base_valid_count": 17105,
+            "post_uncertainty_valid_count": 17105,
+            "uncertainty_exceeded_count": 0,
+            "uncertainty_missing_excluded_count": 0,
+            "outside_grid_count": 0,
+            "qa_fill_or_unknown_count": 0,
+            "acquired_fraction_of_requested": 1.0,
+            "grid_fraction_of_requested": 1.0,
+            "post_uncertainty_valid_fraction_of_acquired": 0.8809744540585085
+          },
+          "expected_admissible": true,
+          "actual_admission": "ready-for-review",
+          "issues": [],
+          "temperature_statistics": {
+            "min_celsius": 24.161305820000052,
+            "max_celsius": 37.43347748000002,
+            "mean_celsius": 32.033100197769095
+          },
+          "uncertainty_statistics": {
+            "known_count": 17105,
+            "missing_count": 0,
+            "minimum_kelvin": 2.5300000000000002,
+            "maximum_kelvin": 6.04,
+            "mean_kelvin": 3.907287927506577,
+            "percentiles_kelvin": {
+              "p05": 2.91,
+              "p25": 3.41,
+              "p50": 3.63,
+              "p75": 4.47,
+              "p95": 5.28
+            },
+            "fraction_above_2_kelvin": 1.0,
+            "fraction_above_3_kelvin": 0.9272727272727272,
+            "fraction_above_4_kelvin": 0.3710610932475884
+          },
+          "maximum_delivered_temperature_error_C": 1.9061230318584421e-06,
+          "decoded_full_native_pixels_checked": 39872406
+        },
+        "R3-strict": {
+          "counts": {
+            "requested_count": 19416,
+            "selected_count": 19416,
+            "acquired_count": 19416,
+            "base_valid_count": 17105,
+            "post_uncertainty_valid_count": 0,
+            "uncertainty_exceeded_count": 17105,
+            "uncertainty_missing_excluded_count": 0,
+            "outside_grid_count": 0,
+            "qa_fill_or_unknown_count": 0,
+            "acquired_fraction_of_requested": 1.0,
+            "grid_fraction_of_requested": 1.0,
+            "post_uncertainty_valid_fraction_of_acquired": 0.0
+          },
+          "expected_admissible": false,
+          "actual_admission": "unresolved",
+          "issues": [
+            "Insufficient usable/acquired coverage for min_valid_fraction, or no usable observations, after base QA and any optional uncertainty filter; no approval or threshold relaxation."
+          ]
+        }
+      },
+      "finding": "Complete acquisition;17105/19416 baseline usable (88.0974454059%) exceeds0.75. Baseline admitted/output correct. All17105 base-usable ST_QA known2.53..6.04K exceed0.005K; strict usable0/acquired19416 and unknown0. Strict plan correctly unresolved before approval."
+    }
+  },
+  "unexercised": [
+    {
+      "condition": "Unknown-uncertainty exclusion among otherwise base-usable acquired candidates",
+      "reason": "R1 and R3 each have0 unknown base-usable ST_QA candidates; R2 has no base-usable candidates. Raw signed-9999 occurs in the empty-acquisition corner but does not exercise this exclusion branch."
+    },
+    {
+      "condition": "Admission with continuous extent Boolean true and missing acquisition, as an isolated single cause",
+      "reason": "R2 has exactly100 in-grid centres, but the polygon projection boundary produces a false continuous-extent Boolean. Both explicit missing-acquisition diagnostics and correct refusal are present; exclusive causal isolation from the extent predicate is not claimed."
+    },
+    {
+      "condition": "Uncertainty equality boundary, mixed retained/excluded cutoff population, explicit allow-partial, out-of-grid centre support, source-selection tie breaking, authenticated approval or bypass resistance",
+      "reason": "These fixed public cases do not contain those conditions; no additional scientific requirements or sources were introduced."
+    }
+  ],
+  "failed_conditions": [],
+  "infrastructure_limitations": [],
+  "diagnostic_observations": [
+    {
+      "ideal_native_window_area_square_m": 90000.0,
+      "inverse_projected_polygon_area_square_m": 90000.00000000808,
+      "inverse_projected_area_outside_native_grid_square_m": 9.76530524591108e-08,
+      "max_edge_roundtrip_error_pixels": 4.656612873077393e-11,
+      "product_reported_outside_area_fraction": 1.7500469962072884e-09,
+      "product_grid_extent_covers_aoi": false,
+      "meaning": "Continuous-boundary numerical artifact; requested centre coverage is tested separately. Does not isolate an admission path with extent Boolean true."
+    }
+  ],
+  "oracle_revision_history": {
+    "retained_initial_failed_checks": 10,
+    "classification": "Checker interpretation defects; not product numerical failures. Original executable and evidence retained.",
+    "corrections": [
+      "Parse MTL groups instead of flattening repeated keys: PRODUCT_CONTENTS PROCESSING_LEVEL=L2SP is distinct from inherited LEVEL1_PROCESSING_RECORD PROCESSING_LEVEL=L1TP. Native scale, dates and DN calculations were unchanged.",
+      "Read actual QA_PIXEL nodata metadata (None) and bit0 as acquisition fill; do not require a TIFF nodata tag equal1. Native bit/mask calculation was unchanged.",
+      "Presentation status accepts observed VERIFIED (numerical)/VERIFIED (NUMERICAL), declared engineering-self-review and non-certification wording, rather than requiring the machine grade literal checks-passed in HTML/SVG. Machine JSON still must equal grade checks-passed."
+    ],
+    "criteria_or_tolerances_changed": false
+  },
+  "artifacts": {
+    "independent_checker.v1.py": {
+      "sha256": "90d1f56e5a41faab9f108088a9bacfbc97fe149674e0bfaf83fd4a42aacdb26a",
+      "bytes": 22909
+    },
+    "independent-evidence.v1.json": {
+      "sha256": "8d35a387b750f3d05a0c6164730d3dc53835bd42ef46ed6ef4625efa22c0e5e2",
+      "bytes": 202747
+    },
+    "independent_checker.py": {
+      "sha256": "ca8a7bce1d65b1d3110139b624d044700e512a34f1bed682f07bbcd6b6bcd1f7",
+      "bytes": 26586
+    },
+    "independent-evidence.json": {
+      "sha256": "1fdb6385eadd956d11760bcd6ad11e2142da806ba4363508f38484ec92d38a71",
+      "bytes": 208111
+    },
+    "independent-checker-run.log": {
+      "sha256": "39cd3da4e98ffe72e42228f9014967294876c7b61aa794944516c4eeaa20558f",
+      "bytes": 3881
+    }
+  }
+}

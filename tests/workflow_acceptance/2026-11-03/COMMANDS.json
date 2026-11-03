@@ -1,0 +1,19 @@
+{
+  "working_directory": "D:/AgentLayer-acl-recovery/scientific-workflow-independent-acceptance-2026-11-03",
+  "interpreter": "installed/Scripts/python.exe",
+  "candidate_source": "77ce7aea9798f3622cec46d019a8267b52fb558a",
+  "commands": [
+    {"arguments": ["-I", "-m", "py_compile", "execute_acceptance.py"], "exit_code": 0},
+    {"arguments": ["-I", "execute_acceptance.py", "head"], "exit_code": 0, "combined_output": "head-command.log"},
+    {"arguments": ["-I", "execute_acceptance.py", "execute"], "exit_code": 0, "combined_output": "execution-command.log"},
+    {"arguments": ["-I", "-m", "pip", "list", "--format=json"], "exit_code": 0, "combined_output": "dependencies.json"}
+  ],
+  "api_execution": "The retained script calls installed discover/acquire/plan/approve/execute/verify; saved JSON records preserve every returned status. Engineering self-approval only on ready-for-review plans.",
+  "full_regression": {"passed": 2083, "skipped": 13, "seconds": 495.22, "log": "full-suite.log"},
+  "repository_validation": {"command": "D:/AgentLayer-acl-recovery/scientific-workflow-validation/driver/Scripts/python.exe tests/validate_repo.py", "exit_code": 0, "log": "repository-validation.log"},
+  "rendering": "Isolated headless Edge profiles; local map.svg inputs; stdout/stderr retained in edge-r1.log, edge-r1-full.log and edge-r3.log. The first Phoenix screenshot was short; map-preview-full.png preserves its full footer. No numerical artifact was changed.",
+  "native_transfers": {"bytes": 323321401, "retries": 0, "substitutions": 0},
+  "runner_corrections": 0,
+  "product_edits_during_acceptance": 0,
+  "sealed_criteria_read_before_outcome_freeze": false
+}

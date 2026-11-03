@@ -1,0 +1,381 @@
+{
+  "format": "independent-acceptance-public/1",
+  "selection_frozen_source_commit": "77ce7aea9798f3622cec46d019a8267b52fb558a",
+  "selection_date_utc": "2026-11-03",
+  "scope": "Single acquisitions; no mosaics, no period inference, no product-code changes. Metadata-only source selection; no pixel or native-header access before this freeze.",
+  "schema_note": "This file is an execution specification, not a terraproof request payload. Translate its semantic fields into supported terraproof.source-request/2 and terraproof.workflow/3 fields using the installed public interface. Preserve values and save exact emitted payloads.",
+  "selection_rule": [
+    "Use the saved complete public catalog response for the search region and dates (limit=100; all three responses have no next link).",
+    "Eligible only: landsat-8 or landsat-9; landsat:correction L2SP; scene cloud <= case limit; full search polygon covered by catalog geometry; all four listed native assets exist with supported unsigned Azure URLs.",
+    "Sort eligible ascending eo:cloud_cover, descending datetime, ascending item ID. The frozen selected_item_id is authoritative if catalog results later drift.",
+    "No pixel-driven source, date, AOI, minimum, QA-bit, or cutoff changes; unavailable source is an execution limitation."
+  ],
+  "download_budget": {
+    "maximum_new_native_bytes_aggregate": 536870912,
+    "maximum_mib": 512,
+    "unique_scenes": 3,
+    "asset_keys_per_scene": [
+      "mtl.txt",
+      "lwir11",
+      "qa_pixel",
+      "qa"
+    ],
+    "catalog_has_file_sizes": false,
+    "procedure": "No HEAD/range/pixel requests were made during selection. At execution, preflight actual byte lengths if available, reuse immutable existing exact files with hashes, and track all new transfer bytes including retries. Do not exceed aggregate ceiling; if remaining budget cannot cover next whole asset, stop and retain budget limitation. No previews, overviews, other bands, or additional scenes."
+  },
+  "cases": [
+    {
+      "id": "R1",
+      "region": "Phoenix, Arizona, USA",
+      "selected_item_id": "LC08_L2SP_037037_20240616_02_T1",
+      "metadata_datetime": "2024-06-16T18:03:09.774456Z",
+      "metadata_scene_cloud_percent": 0.0,
+      "source_search": {
+        "provider": "planetarycomputer",
+        "collection": "landsat-c2-l2",
+        "bbox_wgs84": [
+          -112.09,
+          33.43,
+          -112.05,
+          33.47
+        ],
+        "datetime_inclusive_utc_dates": [
+          "2024-06-01",
+          "2024-06-30"
+        ],
+        "max_cloud_percent": 10,
+        "scene_coverage": "full-aoi",
+        "intent": {
+          "quantity": "land-surface-temperature",
+          "unit": "degree_Celsius",
+          "aoi": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  -112.09,
+                  33.43
+                ],
+                [
+                  -112.05,
+                  33.43
+                ],
+                [
+                  -112.05,
+                  33.47
+                ],
+                [
+                  -112.09,
+                  33.47
+                ],
+                [
+                  -112.09,
+                  33.43
+                ]
+              ]
+            ]
+          },
+          "acquired_between": [
+            "2024-06-01",
+            "2024-06-30"
+          ],
+          "reject_qa_bits": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            7
+          ],
+          "min_valid_fraction": 0.9
+        }
+      },
+      "fixed_native_assets": {
+        "mtl.txt": "https://landsateuwest.blob.core.windows.net/landsat-c2/level-2/standard/oli-tirs/2024/037/037/LC08_L2SP_037037_20240616_20240705_02_T1/LC08_L2SP_037037_20240616_20240705_02_T1_MTL.txt",
+        "lwir11": "https://landsateuwest.blob.core.windows.net/landsat-c2/level-2/standard/oli-tirs/2024/037/037/LC08_L2SP_037037_20240616_20240705_02_T1/LC08_L2SP_037037_20240616_20240705_02_T1_ST_B10.TIF",
+        "qa_pixel": "https://landsateuwest.blob.core.windows.net/landsat-c2/level-2/standard/oli-tirs/2024/037/037/LC08_L2SP_037037_20240616_20240705_02_T1/LC08_L2SP_037037_20240616_20240705_02_T1_QA_PIXEL.TIF",
+        "qa": "https://landsateuwest.blob.core.windows.net/landsat-c2/level-2/standard/oli-tirs/2024/037/037/LC08_L2SP_037037_20240616_20240705_02_T1/LC08_L2SP_037037_20240616_20240705_02_T1_ST_QA.TIF"
+      },
+      "metadata_projection": {
+        "proj:epsg": 32612,
+        "proj:shape": [
+          7891,
+          7751
+        ],
+        "proj:transform": [
+          30.0,
+          0.0,
+          241785.0,
+          0.0,
+          -30.0,
+          3789915.0
+        ]
+      },
+      "catalog_polygon_covers_search_aoi": true,
+      "metadata_file_size_bytes": null,
+      "workflow_variants": [
+        {
+          "id": "R1-full",
+          "aoi": "source_search.intent.aoi",
+          "scene_coverage": "omit (default full-aoi)",
+          "max_uncertainty_kelvin": "omit",
+          "min_valid_fraction": 0.9
+        }
+      ],
+      "purpose": "Useful single-acquisition full-AOI Celsius output with native QA support; no uncertainty requirement."
+    },
+    {
+      "id": "R2",
+      "region": "Cape Town scene / northwest native grid corner, South Africa",
+      "selected_item_id": "LC09_L2SP_175083_20240208_02_T1",
+      "metadata_datetime": "2024-02-08T08:35:32.166590Z",
+      "metadata_scene_cloud_percent": 12.11,
+      "source_search": {
+        "provider": "planetarycomputer",
+        "collection": "landsat-c2-l2",
+        "bbox_wgs84": [
+          18.4,
+          -33.95,
+          18.44,
+          -33.91
+        ],
+        "datetime_inclusive_utc_dates": [
+          "2024-02-01",
+          "2024-02-29"
+        ],
+        "max_cloud_percent": 20,
+        "scene_coverage": "full-aoi",
+        "intent": {
+          "quantity": "land-surface-temperature",
+          "unit": "degree_Celsius",
+          "aoi": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  18.4,
+                  -33.95
+                ],
+                [
+                  18.44,
+                  -33.95
+                ],
+                [
+                  18.44,
+                  -33.91
+                ],
+                [
+                  18.4,
+                  -33.91
+                ],
+                [
+                  18.4,
+                  -33.95
+                ]
+              ]
+            ]
+          },
+          "acquired_between": [
+            "2024-02-01",
+            "2024-02-29"
+          ],
+          "reject_qa_bits": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            7
+          ],
+          "min_valid_fraction": 0.9
+        }
+      },
+      "fixed_native_assets": {
+        "mtl.txt": "https://landsateuwest.blob.core.windows.net/landsat-c2/level-2/standard/oli-tirs/2024/175/083/LC09_L2SP_175083_20240208_20240213_02_T1/LC09_L2SP_175083_20240208_20240213_02_T1_MTL.txt",
+        "lwir11": "https://landsateuwest.blob.core.windows.net/landsat-c2/level-2/standard/oli-tirs/2024/175/083/LC09_L2SP_175083_20240208_20240213_02_T1/LC09_L2SP_175083_20240208_20240213_02_T1_ST_B10.TIF",
+        "qa_pixel": "https://landsateuwest.blob.core.windows.net/landsat-c2/level-2/standard/oli-tirs/2024/175/083/LC09_L2SP_175083_20240208_20240213_02_T1/LC09_L2SP_175083_20240208_20240213_02_T1_QA_PIXEL.TIF",
+        "qa": "https://landsateuwest.blob.core.windows.net/landsat-c2/level-2/standard/oli-tirs/2024/175/083/LC09_L2SP_175083_20240208_20240213_02_T1/LC09_L2SP_175083_20240208_20240213_02_T1_ST_QA.TIF"
+      },
+      "metadata_projection": {
+        "proj:epsg": 32634,
+        "proj:shape": [
+          7701,
+          7661
+        ],
+        "proj:transform": [
+          30.0,
+          0.0,
+          186585.0,
+          0.0,
+          -30.0,
+          -3557685.0
+        ]
+      },
+      "catalog_polygon_covers_search_aoi": true,
+      "metadata_file_size_bytes": null,
+      "native_diagnostic": {
+        "kind": "top_left_10_by_10_pixel_centres",
+        "window_col_off": 0,
+        "window_row_off": 0,
+        "width": 10,
+        "height": 10,
+        "derivation": "After acquire, use native ST_B10 header affine and CRS (authoritative) to map native pixel outer corners (0,0),(10,0),(10,10),(0,10),(0,0) to WGS84 with always_xy=True. Densify each native straight edge at 0.25-pixel intervals before transforming to WGS84. Close the polygon. Freeze this polygon before any diagnostic-corner pixel inspection. Automatic native preflight reads confined to the source-search AOI during unchanged acquire are allowed after the item selection freeze; they must not influence the scene, corner window, thresholds, or diagnostic polygon. Do not use a WGS84 axis-aligned bounding box. Its inverse projection must include exactly the 100 native centres rows/cols 0..9. Verify matching QA headers. If different, retain discrepancy and stop this case; do not select a different scene/window.",
+        "metadata_only_approximate_four_corner_polygon": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                17.67864064164163,
+                -32.112023536932874
+              ],
+              [
+                17.681815264675446,
+                -32.11210685107526
+              ],
+              [
+                17.681717415373335,
+                -32.11480879341982
+              ],
+              [
+                17.678542699143303,
+                -32.114725470598614
+              ],
+              [
+                17.67864064164163,
+                -32.112023536932874
+              ]
+            ]
+          ]
+        },
+        "search_aoi_is_not_diagnostic_aoi": true
+      },
+      "workflow_variants": [
+        {
+          "id": "R2-corner-default",
+          "aoi": "native_diagnostic derived polygon",
+          "scene_coverage": "omit (default full-aoi)",
+          "max_uncertainty_kelvin": "omit",
+          "min_valid_fraction": 0.9
+        },
+        {
+          "id": "R2-corner-cutoff",
+          "aoi": "same frozen native_diagnostic polygon",
+          "scene_coverage": "omit (default full-aoi)",
+          "max_uncertainty_kelvin": 2.0,
+          "min_valid_fraction": 0.9
+        }
+      ],
+      "purpose": "Test acquisition support inside grid bounds; source search uses a separate sensible urban AOI, then the fixed scene supplies a native grid-corner diagnostic."
+    },
+    {
+      "id": "R3",
+      "region": "Brisbane, Queensland, Australia",
+      "selected_item_id": "LC08_L2SP_089079_20240831_02_T1",
+      "metadata_datetime": "2024-08-31T23:41:56.767538Z",
+      "metadata_scene_cloud_percent": 1.8,
+      "source_search": {
+        "provider": "planetarycomputer",
+        "collection": "landsat-c2-l2",
+        "bbox_wgs84": [
+          153.01,
+          -27.49,
+          153.05,
+          -27.45
+        ],
+        "datetime_inclusive_utc_dates": [
+          "2024-08-01",
+          "2024-08-31"
+        ],
+        "max_cloud_percent": 10,
+        "scene_coverage": "full-aoi",
+        "intent": {
+          "quantity": "land-surface-temperature",
+          "unit": "degree_Celsius",
+          "aoi": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  153.01,
+                  -27.49
+                ],
+                [
+                  153.05,
+                  -27.49
+                ],
+                [
+                  153.05,
+                  -27.45
+                ],
+                [
+                  153.01,
+                  -27.45
+                ],
+                [
+                  153.01,
+                  -27.49
+                ]
+              ]
+            ]
+          },
+          "acquired_between": [
+            "2024-08-01",
+            "2024-08-31"
+          ],
+          "reject_qa_bits": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            7
+          ],
+          "min_valid_fraction": 0.75
+        }
+      },
+      "fixed_native_assets": {
+        "mtl.txt": "https://landsateuwest.blob.core.windows.net/landsat-c2/level-2/standard/oli-tirs/2024/089/079/LC08_L2SP_089079_20240831_20240906_02_T1/LC08_L2SP_089079_20240831_20240906_02_T1_MTL.txt",
+        "lwir11": "https://landsateuwest.blob.core.windows.net/landsat-c2/level-2/standard/oli-tirs/2024/089/079/LC08_L2SP_089079_20240831_20240906_02_T1/LC08_L2SP_089079_20240831_20240906_02_T1_ST_B10.TIF",
+        "qa_pixel": "https://landsateuwest.blob.core.windows.net/landsat-c2/level-2/standard/oli-tirs/2024/089/079/LC08_L2SP_089079_20240831_20240906_02_T1/LC08_L2SP_089079_20240831_20240906_02_T1_QA_PIXEL.TIF",
+        "qa": "https://landsateuwest.blob.core.windows.net/landsat-c2/level-2/standard/oli-tirs/2024/089/079/LC08_L2SP_089079_20240831_20240906_02_T1/LC08_L2SP_089079_20240831_20240906_02_T1_ST_QA.TIF"
+      },
+      "metadata_projection": {
+        "proj:epsg": 32656,
+        "proj:shape": [
+          7791,
+          7711
+        ],
+        "proj:transform": [
+          30.0,
+          0.0,
+          410985.0,
+          0.0,
+          -30.0,
+          -2917785.0
+        ]
+      },
+      "catalog_polygon_covers_search_aoi": true,
+      "metadata_file_size_bytes": null,
+      "workflow_variants": [
+        {
+          "id": "R3-baseline",
+          "aoi": "source_search.intent.aoi",
+          "scene_coverage": "omit (default full-aoi)",
+          "max_uncertainty_kelvin": "omit",
+          "min_valid_fraction": 0.75
+        },
+        {
+          "id": "R3-strict",
+          "aoi": "same source_search.intent.aoi",
+          "scene_coverage": "omit (default full-aoi)",
+          "max_uncertainty_kelvin": 0.005,
+          "min_valid_fraction": 0.75
+        }
+      ],
+      "purpose": "Paired no-cutoff control and explicitly imposed sub-quantization diagnostic uncertainty requirement; 0.005 K is an admission stress requirement, not an application recommendation."
+    }
+  ]
+}

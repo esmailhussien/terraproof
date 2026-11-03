@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Native Landsat scientific workflow core
+
+- Add `terraproof workflow` and an importable core for native Landsat 8/9 Collection 2 Level-2 surface temperature: intent, native QA/uncertainty preflight, explicit approval, windowed processing, source-relative verification, map/report output and one bounded regeneration preserving prior evidence.
+- Require full AOI acquisition by default, using QA nonfill support rather than raster bounds. Apply minimum usable/acquired coverage before approval with or without an optional uncertainty cutoff; partial delivery requires an explicit intent choice.
+- Report uncertainty by default without automatic exclusion. An explicit maximum enters the reviewed digest and separates known-above-limit and missing-uncertainty exclusions.
+- Add optional bounded Planetary Computer discovery and explicit native acquisition. It produces an unapproved local workflow, with no automatic source fallback, QA relaxation or model API.
+- Record separate AI-context acceptance on three new scenes/five variants, with two numerically verified outputs and three correct preapproval refusals. Archive the criteria, checkers, evidence and correction history outside product distributions. This is bounded engineering evidence; field accuracy and human scientific suitability are not established. See [the acceptance report](docs/SCIENTIFIC_WORKFLOW_INDEPENDENT_ACCEPTANCE_2026-11-03.md).
+
 ## [0.12.0] — 2026-11-02
 
 Phase 10: QA masks, reprojected slopes and multi-value reports.

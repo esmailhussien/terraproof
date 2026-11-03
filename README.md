@@ -17,8 +17,9 @@ Routing, local inspection and checks run offline. No model API key is needed.
 **Unreleased workflow core on this branch:** [scientific workflows](docs/SCIENTIFIC_WORKFLOWS.md)
 adds a Landsat surface-temperature route from reviewed intent through local processing,
 verification, repair and map/report outputs, plus optional [public source discovery/acquisition](docs/SCIENTIFIC_SOURCE_RECOVERY.md)
-that accesses the network only when invoked. Real-scene numerical/coverage demonstrations are recorded;
-independent scientific review remains pending. This is not part of the published v0.12.0.
+that accesses the network only when invoked. [Separate-context acceptance](docs/SCIENTIFIC_WORKFLOW_INDEPENDENT_ACCEPTANCE_2026-11-03.md)
+passed three prior targets across five fixed variants; human scientific suitability and absolute accuracy
+remain unestablished. This is not part of the published v0.12.0.
 
 ---
 

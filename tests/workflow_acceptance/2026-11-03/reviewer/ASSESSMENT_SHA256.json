@@ -1,0 +1,40 @@
+{
+  "format": "reviewer-assessment-manifest/1",
+  "files": [
+    {
+      "path": "ASSESSMENT.json",
+      "bytes": 16801,
+      "sha256": "0ae30468a91b41ca0af56634087c46f99212a91d8161d60f672ef133a25e0c4e"
+    },
+    {
+      "path": "ASSESSMENT.md",
+      "bytes": 10421,
+      "sha256": "bc2635a036595da185d2736ee0fb1ffb3c0def066a867fdcb51afa31636e3d60"
+    },
+    {
+      "path": "independent_checker.v1.py",
+      "bytes": 22909,
+      "sha256": "90d1f56e5a41faab9f108088a9bacfbc97fe149674e0bfaf83fd4a42aacdb26a"
+    },
+    {
+      "path": "independent-evidence.v1.json",
+      "bytes": 202747,
+      "sha256": "8d35a387b750f3d05a0c6164730d3dc53835bd42ef46ed6ef4625efa22c0e5e2"
+    },
+    {
+      "path": "independent_checker.py",
+      "bytes": 26586,
+      "sha256": "ca8a7bce1d65b1d3110139b624d044700e512a34f1bed682f07bbcd6b6bcd1f7"
+    },
+    {
+      "path": "independent-evidence.json",
+      "bytes": 208111,
+      "sha256": "1fdb6385eadd956d11760bcd6ad11e2142da806ba4363508f38484ec92d38a71"
+    },
+    {
+      "path": "independent-checker-run.log",
+      "bytes": 3881,
+      "sha256": "39cd3da4e98ffe72e42228f9014967294876c7b61aa794944516c4eeaa20558f"
+    }
+  ]
+}

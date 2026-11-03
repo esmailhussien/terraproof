@@ -1,0 +1,78 @@
+{
+  "format": "independent-acceptance-sealed/1",
+  "frozen_source_commit": "77ce7aea9798f3622cec46d019a8267b52fb558a",
+  "pre_observation_statement": "Authored before any reviewer access to image pixels, native headers, execution outcomes, product implementation, old experiments, or repository history. Public item choice uses catalog metadata only. This is separation of reviewer roles and a prior written criterion, not cryptographic blinding or independent human scientific review.",
+  "decision_categories": {
+    "success": "Target condition independently established; all applicable engineering behavior and numerical checks pass.",
+    "failed": "Valid execution and independent source oracle establish an applicable requirement, and a retained product result contradicts that requirement.",
+    "unexercised": "Native source does not establish the intended challenge, baseline support is insufficient for isolation, required independent evidence is missing, or environmental/interface/download limitations prevent a valid test. Record specific reason; never count as success.",
+    "mixed": "Report each variant and each condition separately; overall three-case acceptance is success only if all three targets are exercised and pass. A correct rejection without the intended source condition is compatible behavior but not an exercised target."
+  },
+  "independent_oracle": {
+    "implementation_separation": "Use a small standalone script with rasterio/numpy/pyproj/shapely and standard library; no terraproof imports, mask helper calls, manifest-derived pixel values, or product-generated statistics as oracle inputs. Source inputs are original immutable four native files, raw MTL and retained reviewer AOI/intents.",
+    "integrity": [
+      "Verify exact item ID, asset URLs, unsigned supported Azure path, original file SHA256, byte lengths, MTL spacecraft Landsat8/9, PROCESSING_LEVEL L2SP, acquisition date/time, native ST_B10/QA_PIXEL/ST_QA names and grid alignment. Compare catalog projection with native headers; never silently repair sources.",
+      "ST_QA must be opened signed int16 with native fill -9999. ST_B10 is uint16 with fill0; QA_PIXEL is uint16 and bit0 means fill. Retain dtypes, nodata, CRS, affine, shape and unique raw values/counts within each AOI. No source rewriting, clipping/reencoding before verification, uncertainty fabrication, or substitute scene.",
+      "Retain public search responses and selected item metadata; independently confirm catalog polygon contains source-search polygon and metadata ordering. Cloud percentage is metadata eligibility only, not pixel truth."
+    ],
+    "aoi": [
+      "Map each frozen WGS84 polygon to native CRS using pyproj always_xy. Compute native row/column centre membership with rasterio.features.geometry_mask(all_touched=False) or independent point-in-polygon; no resampling or all_touched inclusion. For ordinary geographic rectangles, densely sample edges (at most 0.0001 degree step) before transforming; establish counts are unchanged at 0.00005 degree. If boundary-centre ambiguity changes counts, retain both and label boundary comparison unexercised until resolved geometrically.",
+      "Include requested native-grid centres outside grid extent when assessing full-AOI coverage. They are missing acquisition, not silently dropped denominator. All chosen ordinary AOIs are expected to lie inside the grid; independently verify this.",
+      "R2 is the native window rows0..9,cols0..9, exactly100 centres. Derive its polygon from native affine/CRS before diagnostic-corner pixel reads according to public instructions. Automatic search-AOI preflight within unchanged acquisition is permitted after selection freeze and cannot alter the scene, native window, threshold, or diagnostic AOI. Verify reverse transform yields only those100 centres and all lie inside grid bounds. Source-search AOI is separate and must not substitute for diagnostic AOI."
+    ],
+    "definitions": {
+      "requested": "Native-grid centres in the frozen requested AOI, including any outside the native grid footprint.",
+      "acquired": "Requested centres inside native grid where QA_PIXEL mask is available and ((qa_pixel & 1)==0). Raster mask availability is read independently with read_masks; use raw values for QA bits.",
+      "base_usable": "acquired AND ST_B10 mask available AND raw ST_B10>0 AND finite decoded temperature AND (qa_pixel & sum(1<<b for b in reject_qa_bits))==0. No ST_QA condition is applied when max_uncertainty_kelvin is absent.",
+      "known_uncertainty": "Base-usable centres where ST_QA raster mask is available, signed raw ST_QA is in [0,32767], and is not -9999. u_kelvin=raw_ST_QA*0.01.",
+      "unknown_uncertainty_excluded": "With explicit cutoff only: base_usable AND NOT known_uncertainty. Count independently from above-limit exclusions.",
+      "above_limit_excluded": "With explicit cutoff only: base_usable AND known_uncertainty AND u_kelvin>cutoff. Equality passes.",
+      "usable": "No cutoff: base_usable. Explicit cutoff: base_usable AND known_uncertainty AND u_kelvin<=cutoff.",
+      "valid_fraction": "usable_count/acquired_count if acquired_count>0. Zero acquired implies insufficient support; never manufacture a fraction that permits output.",
+      "full_aoi_support": "Every requested centre inside grid and acquired, with requested_count>0. Grid containment alone is insufficient.",
+      "admissible": "full_aoi_support AND acquired_count>0 AND usable_count>0 AND valid_fraction>=min_valid_fraction. Requested variants use default full-aoi only.",
+      "temperature": "Use MTL TEMPERATURE_MULT_BAND_ST_B10 and TEMPERATURE_ADD_BAND_ST_B10 after validating they are native scale0.00341802 and offset149; Celsius=DN*mult+add-273.15. AOI mean is equal-weight arithmetic mean of usable native centres from this single acquisition.",
+      "uncertainty_summary": "When exposed, compare stated pixel-uncertainty min/max/mean/median with signed raw ST_QA*0.01 on its documented sample population. A descriptive pixel-uncertainty mean is not uncertainty of AOI mean. No sqrt(n) reduction, independence assumption, confidence level, or science-certification claim is justified by these files."
+    },
+    "tolerances": {
+      "counts": "Exact integers, no relative tolerance.",
+      "grid": "Native shapes/CRS exact equivalence and affine coefficients within1e-9 native units; test polygon inverse projection error <=1e-5 pixel; centre membership exact after resolving any boundaries.",
+      "fraction": "Absolute1e-12 for full-precision JSON; for rounded human text allow half the last displayed decimal unit plus1e-12. Admission threshold uses exact counts, never rounded text.",
+      "temperature_celsius": "Absolute1e-4 C for full-precision machine outputs and native float output values; rounded text tolerance half last decimal unit plus1e-4. Compare independently computed min/max/mean wherever exposed and exact usable mask/sample count.",
+      "uncertainty_kelvin": "Absolute1e-8 K for full-precision summaries from scaled int16; rounded text half last displayed decimal unit plus1e-8. Cutoff classification performed on exact scaled integer values, without tolerance that changes membership.",
+      "unavailable_fields": "Do not require new output features beyond the stated contract. If a necessary admission fact cannot be reconstructed from retained output plus raw evidence, mark that check unexercised instead of assuming it passed. Clearly labeled product counters on a broader population may be reconciled by independently computing that population; exclusion counts must still be distinct and correct."
+    }
+  },
+  "case_criteria": {
+    "R1-full": {
+      "target": "Useful end-to-end full-AOI single-acquisition output without uncertainty cutoff.",
+      "exercise_condition": "Independent oracle confirms full acquisition and base_usable/acquired >=0.90 with nonzero usable.",
+      "success": "Discovery uses fixed eligible item, acquisition retains all four native originals, no-cutoff native admission resolves before approval, engineering approval records its self-declared status, execution completes and numerical grade checks-passed agrees with independent Celsius mask/count/statistics. Report actual acquisition timestamp and scope as one scene, not monthly/period mean.",
+      "failed": "If exercise condition holds, incorrect unresolved admission, wrong scene/data, wrong QA/count/mean, spurious requirement for uncertainty cutoff, or completed workflow lacking numerical agreement is failure. Approval/science certification overclaims fail the semantic check.",
+      "unexercised": "Native base support below0.90 or missing acquisition means this useful-output target is unexercised; correct preapproval rejection can still pass conditional admission behavior. No changing region or minimum to rescue it."
+    },
+    "R2-pair": {
+      "target": "Native missing acquisition despite exact grid containment; compare no cutoff and explicit2K cutoff.",
+      "exercise_condition": "R2 polygon has exactly100 requested centres in grid and at least1 centre with QA_PIXEL bit0 set or unavailable QA mask. Hypothesis is top-left grid padding, not assumed from Cape Town location. Record acquired, missing, raw QA counts, ST fill and ST_QA fill independently. Strongest expected configuration is acquired0, but any missing acquisition exercises full-aoi rejection.",
+      "success": "Both R2-corner-default and R2-corner-cutoff are unresolved/insufficient before any approval because requested acquisition support is incomplete. Product cannot treat a contained raster window or a usable/acquired fraction over remaining centres as full coverage. No approval or completed output may be emitted as valid. Clearly record native support reason; additional ST/uncertainty problems do not erase it.",
+      "failed": "With missing native acquisition established, either variant is offered as ready for approval, approved by an action that bypasses admission, or completes as checks-passed/full-AOI output. Incorrect acquired counts or describing fill as a zero-temperature valid sample also fail.",
+      "unexercised": "If all100 centres are acquired, the intended padding challenge is unexercised; assess admission against actual masks without calling this a rejection success. Do not shift corner/window/scene based on observed pixels."
+    },
+    "R3-pair": {
+      "target": "Explicitly requested uncertainty threshold prevents approval while baseline native support is sufficient.",
+      "exercise_condition": "Independent full-aoi acquisition holds, baseline base_usable/acquired>=0.75 and nonzero, but strict usable/acquired<0.75 after cutoff0.005K; at least1 base-usable centre is excluded for known u>0.005K or unknown uncertainty. Separate counts known-above, unknown, and retained. Quantization means only valid raw0 could meet0.005K; positive raw values cannot.",
+      "success": "R3-baseline resolves and can complete correctly without requiring an uncertainty cutoff. R3-strict is unresolved before approval with scientifically correct denominator usable/acquired and distinct unknown/above-limit exclusions. Any reported ST_QA summary treats signed native fill correctly. Strict rejection cannot be bypassed through engineering self-approval.",
+      "failed": "When exercise condition holds, strict becomes approvable or checks-passed, usable/acquired is miscomputed, raw-9999 is treated as known/zero uncertainty, positive uncertainty is reduced by sqrt(n) to meet cutoff, or baseline is blocked solely because no cutoff was provided. Count/statistical mismatches beyond tolerance fail applicable numerical checks.",
+      "unexercised": "If baseline fails acquisition/base quality, strict rejection does not isolate uncertainty and target is unexercised. If strict still meets0.75, intended insufficiency unexercised even if product admits correctly. Unknown-uncertainty accounting is independently called exercised only if unknown base-usable count>0; absence is not a successful test of unknown handling."
+    }
+  },
+  "confounders": [
+    "Stop on original asset identity or grid mismatch; do not silently edit metadata/pixels or repair files. Distinguish native source defect from product defect.",
+    "Network/SAS expiry, byte budget, unavailable frozen item, platform environment, or unsupported request serialization are execution limitations; retain logs and label affected checks unexercised unless valid supported input is demonstrably mishandled.",
+    "Scene cloud percentage does not guarantee local cloud, QA, ST availability, or uncertainty. A scene may have ASTER emissivity gaps or other ST fill even where acquired; count these as base quality, not missing acquisition.",
+    "Do not infer a cloud-adjacency mechanism from high uncertainty alone; only ST_QA threshold condition is tested. No claim of regional climatology, monthly mean, air temperature, field accuracy, epidemiology, or calibrated uncertainty of AOI mean.",
+    "Approval is an unauthenticated engineering attestation. A correct approval record is not scientific validation. Report checks-passed solely as numerical/engineering status.",
+    "Do not infer security/tamper resistance from an unsuccessful bypass that was never attempted. Test workflow admission through the supported public path only.",
+    "Numerical oracle and results are reviewed only after parent freezes all outcome files/hashes. Any later rerun must be identified separately and cannot replace the original retained attempt."
+  ]
+}

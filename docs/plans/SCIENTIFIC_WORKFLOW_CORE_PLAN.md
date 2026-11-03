@@ -21,7 +21,7 @@ It is based on published v0.12.0 commit `0467d4491fb3a7059b3e81f8e1097934a5d7b56
 | Regression safety | Existing Python suite, repository validation and router; shared interpreter issues isolated from the active trial | 2083 passed, 13 skipped at frozen candidate 77ce7ae; prior unchanged router 87/87; repository validation passed |
 | Real-scene route | Native USGS scenes, disclosed reviewer/intent/QA policy, independently implemented product conversion, support and summary check | Luxor Landsat 9 plus Netherlands Landsat 8; [first experiment](../SCIENTIFIC_WORKFLOW_REAL_SCENE_2026-11-03.md) and [six-case boundary review](../SCIENTIFIC_WORKFLOW_BOUNDARY_REVIEW_2026-11-03.md), including disclosed oracle correction; engineering review only |
 | Scientific review | Independent review of measurement meaning, product identity/representation, quality policy, coverage and uncertainty limits | Separate AI-context acceptance passed three prior targets/five variants; [method and qualifications](../SCIENTIFIC_WORKFLOW_INDEPENDENT_ACCEPTANCE_2026-11-03.md). Human scientific suitability/field validation not established |
-| Release | Agreed scope and compatibility, fresh install and real-scene evidence; integrate with Phase 11 only after its frozen trial is closed | **Not requested or performed** |
+| Integration/release | Agreed scope and compatibility, fresh install and real-scene evidence; integrate with Phase 11 only after its frozen trial is closed | One review PR authorized 2026-11-04; no merge or publication performed. Keep the frozen trial isolated; reassess compatibility after parallel work lands |
 
 ## Next work, in order
 
@@ -40,6 +40,7 @@ User review found `/2` conflated raster extent with acquisition support. The [sc
 ## Fixed boundaries
 
 - No model calls, edits to active-trial sources or interpreter dependencies, ACL changes, push, merge or publication are needed for this engineering batch.
+- PR preparation was authorized separately on 2026-11-04: one branch push/review PR may package the existing core and byte-preserved evidence. This does not authorize altering the trial, merging into its frozen configuration, publishing packages or creating a release tag.
 - Unauthenticated approval/digests are a consistency boundary, not protection against an actor allowed to rewrite both approval and data.
 - A correct product decode does not validate upstream retrieval accuracy or the study's causal interpretation.
 - Unsupported coverage and all-invalid data must remain visible; they cannot be repaired by lowering the accepted scientific requirement.
