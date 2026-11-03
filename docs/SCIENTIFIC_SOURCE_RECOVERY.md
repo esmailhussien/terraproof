@@ -74,3 +74,5 @@ Different candidate dates inside the requested interval are **different observat
 If no eligible single scene exists, or the downloaded scene has insufficient usable observations, retain unresolved/incomplete. New source selection remains explicit. Do not widen dates, relax QA, allow partial delivery, invent missing values or mix dates as repair. Native numeric correctness still does not validate atmosphere, emissivity, QA truth or study interpretation. Independent scientific review remains a release gate.
 
 Catalog/access and scientific references are recorded in [sources/SOURCES.md](../sources/SOURCES.md#scientific-workflow-core-native-landsat-surface-temperature). Live development evidence is recorded separately from frozen agent experiments.
+
+The [first live recovery record](SCIENTIFIC_SOURCE_RECOVERY_RESULT_2026-11-03.md) retains all 15 alternatives, explicit rank-1 selection, new native source identity, unchanged scientific requirements and independently checked full-AOI output. It is an engineering demonstration awaiting the user's scientific review.

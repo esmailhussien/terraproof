@@ -8,17 +8,17 @@ Build a scientific execution core usable by a researcher, a deterministic pipeli
 
 ## Delivered engineering scope
 
-The first end-to-end route is local native Landsat 8/9 Collection 2 Level-2 Surface Temperature. It includes input admission from MTL, polygon AOI support, explicit quality choices, intent approval tied to data identity, windowed processing, source-relative verification, statistics, uncertainty, SVG cartography, HTML evidence and a bounded regenerate/recheck operation preserving old outputs.
+The first end-to-end route is native Landsat 8/9 Collection 2 Level-2 Surface Temperature. It includes one bounded public catalog/discovery/acquisition route, local input admission from MTL, polygon AOI support, explicit quality choices, intent approval tied to data identity, windowed processing, source-relative verification, statistics, uncertainty, SVG cartography, HTML evidence and a bounded regenerate/recheck operation preserving old outputs. Source proposals remain separate from native scientific approval.
 
-It is based on published v0.12.0 commit `0467d4491fb3a7059b3e81f8e1097934a5d7b566`, not the running Phase 11 branch. Existing checks/contracts are reused and their narrow scope is retained. No generic plugin framework, new router rules, model dependency, cloud service or user-facing GUI is introduced. See [Scientific workflows](../SCIENTIFIC_WORKFLOWS.md).
+It is based on published v0.12.0 commit `0467d4491fb3a7059b3e81f8e1097934a5d7b566`, not the running Phase 11 branch. Existing checks/contracts are reused and their narrow scope is retained. No generic plugin framework, new router rules, model dependency, hosted backend or user-facing GUI is introduced. See [Scientific workflows](../SCIENTIFIC_WORKFLOWS.md).
 
 ## Gates
 
 | Gate | Required evidence | State |
 | --- | --- | --- |
-| Engineering correctness | End-to-end generated inputs, independent hand values, invalid policies, source/intent drift, mask/window errors, missing observations, corrupted artifacts and one-pass repair | 55 workflow tests passed; original-coordinate AOI and schema-2 full-coverage gate validated |
+| Engineering correctness | End-to-end generated inputs, independent hand values, invalid policies, source/intent drift, mask/window errors, missing observations, corrupted artifacts and one-pass repair | 55 workflow plus 25 source-route tests passed; native full-coverage recovery demonstrated |
 | Product packaging | Candidate wheel contains workflow modules and excludes evaluators; isolated installed interpreter runs and repairs a synthetic example | Demonstrated; internal candidate retains 0.12.0 label and is not the published release |
-| Regression safety | Existing Python suite, repository validation and router; shared interpreter issues isolated from the active trial | 2033 passed, 13 skipped at implementation commit 66e0f79; prior unchanged router 87/87; repository validation passed |
+| Regression safety | Existing Python suite, repository validation and router; shared interpreter issues isolated from the active trial | 2058 passed, 13 skipped at implementation commit 2413973; prior unchanged router 87/87; repository validation passed |
 | Real-scene route | Native USGS scenes, disclosed reviewer/intent/QA policy, independently implemented product conversion, support and summary check | Luxor Landsat 9 plus Netherlands Landsat 8; [first experiment](../SCIENTIFIC_WORKFLOW_REAL_SCENE_2026-11-03.md) and [six-case boundary review](../SCIENTIFIC_WORKFLOW_BOUNDARY_REVIEW_2026-11-03.md), including disclosed oracle correction; engineering review only |
 | Scientific review | Independent review of measurement meaning, product identity/representation, quality policy, coverage and uncertainty limits | **Pending** |
 | Release | Agreed scope and compatibility, fresh install and real-scene evidence; integrate with Phase 11 only after its frozen trial is closed | **Not requested or performed** |
@@ -29,10 +29,11 @@ Coverage decision recorded 2026-11-03: the user requires full requested-area sce
 
 1. Obtain independent scientific review of the route and the recorded Luxor real-scene protocol, QA choice, product identity, quantity and uncertainty meaning. The implementation agent's disclosed engineering approval is not that review.
 2. Review the [completed schema-2 validation](../SCIENTIFIC_WORKFLOW_COVERAGE_V2_2026-11-03.md): full default and explicit partial acceptance, prominent status/coverage, six installed real-data behaviors, unchanged analytical pixels and preserved prior configurations.
+   Review the [source-recovery packet](../SCIENTIFIC_SOURCE_RECOVERY_RESULT_2026-11-03.md): unchanged Netherlands AOI/month/QA, explicit new July 8 observation, full footprint and 97.6694% usable within scene. The user will review scientific suitability; engineering approval is not that review.
 3. Expand predeclared scene/coverage cases after those requirements, retaining original failures and oracle amendments. This remains separate from T3 and does not reuse its partial output as tuning data.
 4. Resolve demonstrated shortcomings before adding more products or retrieval methods.
 5. Add a second concrete scientific route, then extract genuinely shared requirements if needed. Multi-date thermal analysis, spectral-index preparation and sensor-specific corrections are candidates, not claimed capabilities.
-6. Connect a UI when the core has shown practical value. Scene acquisition, remote catalogs, costs/quotas, map classification, PDF export and deployment need their own reviewed scope.
+6. Connect a UI after scientific review of practical value. The single public Landsat catalog/acquisition route is implemented; multi-provider acquisition, costs/quotas, mosaics, map classification, PDF export and deployment need separate reviewed scopes.
 
 ## Fixed boundaries
 

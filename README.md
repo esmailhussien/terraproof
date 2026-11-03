@@ -10,14 +10,15 @@ Terraproof helps AI coding agents do geospatial work they can prove. It gives an
 - **A router.** It picks the smallest useful set of skills for a task, in English or Arabic, and explains why.
 - **Checks with an evidence grade.** They inspect the real datasets an agent produced (CRS, nodata, value ranges, geometry, COG layout, provenance) and grade the result as decision-grade (only against a declared verification contract), checks passed, review required, or advisory only. Every report lists the applicable checks that did not run.
 
-Everything runs locally and offline. No model API key is needed.
+Routing, local inspection and checks run offline. No model API key is needed.
 
 **Status:** experimental (v0.12.0). See [Evaluation status](#evaluation-status) for what has and has not been measured.
 
 **Unreleased workflow core on this branch:** [scientific workflows](docs/SCIENTIFIC_WORKFLOWS.md)
-adds a local Landsat surface-temperature route from reviewed intent through processing,
-verification, repair and map/report outputs. Engineering fixtures are separate from real-scene
-scientific validation, which remains pending. This is not part of the published v0.12.0.
+adds a Landsat surface-temperature route from reviewed intent through local processing,
+verification, repair and map/report outputs, plus optional [public source discovery/acquisition](docs/SCIENTIFIC_SOURCE_RECOVERY.md)
+that accesses the network only when invoked. Real-scene numerical/coverage demonstrations are recorded;
+independent scientific review remains pending. This is not part of the published v0.12.0.
 
 ---
 

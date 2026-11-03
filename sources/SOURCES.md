@@ -23,6 +23,8 @@ The additional 2026-11-03 boundary batch used USGS Landsat 8 product `LC08_L2SP_
 
 The experimental [source-selection extension](../docs/SCIENTIFIC_SOURCE_RECOVERY.md) is authored for Terraproof under MIT; it vendors no SDK processing code. Its one-provider public metadata and transient container-token access flow follows the [Planetary Computer STAC documentation](https://planetarycomputer.microsoft.com/docs/quickstarts/reading-stac/) and [official SDK SAS implementation](https://github.com/microsoft/planetary-computer-sdk-for-python/blob/main/planetary_computer/sas.py), reviewed 2026-11-03. STAC footprints/cloud percentages are proposals, not independent thermal or AOI-quality validation.
 
+The [source-recovery demonstration](../docs/SCIENTIFIC_SOURCE_RECOVERY_RESULT_2026-11-03.md) acquired USGS Landsat 8 product `LC08_L2SP_198024_20230708_20230718_02_T1` (2023-07-08, Netherlands AOI), native MTL TXT/ST_B10/QA_PIXEL/ST_QA, 120,640,169 bytes, from the same public distribution. Original assets/hashes remain external; no raster data are vendored. Attribution: USGS Landsat Collection 2 Level-2, EROS Center dataset [doi:10.5066/P9OGBGM6](https://doi.org/10.5066/P9OGBGM6); Microsoft Planetary Computer catalog/access service. It is a different acquisition from the earlier July 15 scene, not a correction of that observation.
+
 ### Existing source registry
 
 | Source | Area | Status |
