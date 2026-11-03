@@ -1,6 +1,6 @@
 # Scientific workflows: from approved intent to corrected outputs
 
-Status: experimental local implementation on a separate branch, not a published release. The first supported route consumes a **native USGS Landsat 8/9 Collection 2 L2SP Surface Temperature product**, applies an explicitly reviewed quality policy and AOI, and delivers Celsius rasters, uncertainty, statistics, a map and evidence. It needs no model or GUI.
+Status: experimental local implementation on a separate branch, not a published release. Current intent schema: **`terraproof.workflow/2`**. Full requested-AOI scene coverage is the default; a partial-area result requires explicit `scene_coverage: "allow-partial"` and review. The route consumes a **native USGS Landsat 8/9 Collection 2 L2SP Surface Temperature product**, applies an explicitly reviewed quality policy and AOI, and delivers Celsius rasters, uncertainty, statistics, a map and evidence. It needs no model or GUI.
 
 ## What the core now does
 
@@ -43,6 +43,8 @@ python -m terraproof workflow verify approval.json runs/scene-001
 
 `approve` refuses a changed digest or an existing approval destination. `run` refuses an existing output directory. Changed intent, metadata, assets or known companions invalidate the approval. A reviewer must hold a trusted approval copy: an actor allowed to rewrite both intent and approval can defeat this unsigned boundary. No ACL/ownership change or signing service is introduced.
 
+If the scene footprint does not cover the AOI, the default plan is `unresolved` before approval/execution. It exposes the outside fraction and proposes a source covering the requested AOI or an explicitly reviewed partial-area intent. No source is downloaded or policy weakened automatically. For a deliberately partial draft, add `--allow-partial` to `workflow init`; it writes `scene_coverage: "allow-partial"`. This never lowers the independent `min_valid_fraction` QA requirement.
+
 To repair a corrupted/wrong derived output while preserving its history:
 
 ```powershell
@@ -57,7 +59,7 @@ If a processing step raises an exception, the `.partial-*` directory and its fai
 
 ```json
 {
-  "schema": "terraproof.workflow/1",
+  "schema": "terraproof.workflow/2",
   "id": "Summer surface temperature",
   "intent": {
     "quantity": "land-surface-temperature",
@@ -65,7 +67,8 @@ If a processing step raises an exception, the `.partial-*` directory and its fai
     "aoi": "study_area.geojson",
     "acquired_between": ["2025-06-01", "2025-08-31"],
     "reject_qa_bits": [0, 1, 2, 3, 4, 5, 7],
-    "min_valid_fraction": 0.6
+    "min_valid_fraction": 0.6,
+    "scene_coverage": "full-aoi"
   },
   "source": {
     "metadata": "data/scene_MTL.json",
@@ -74,7 +77,11 @@ If a processing step raises an exception, the `.partial-*` directory and its fai
 }
 ```
 
-Relative paths resolve against this file. Duplicate/unknown fields and nonfinite numbers are errors. The acquisition interval uses inclusive UTC acquisition dates. `min_valid_fraction` is **usable pixel centres / AOI-selected pixel centres within the scene**, not total AOI area. Outside-scene AOI coverage is separately reported as a native-plane geometric fraction, not a geodesic area estimate. A study requiring full AOI coverage must inspect that value; v1 does not invent a coverage decision from it.
+Relative paths resolve against this file. Duplicate/unknown fields and nonfinite numbers are errors. The acquisition interval uses inclusive UTC acquisition dates. `scene_coverage` is either `full-aoi` (also the default when omitted) or explicitly `allow-partial`; it is not a truthy flag. Full coverage requires containment of the AOI's densified projected geometry in the native scene footprint. No outside-area tolerance is silently applied. This is an engineering test on that representation, not a proof for arbitrary projection singularities.
+
+`min_valid_fraction` is **usable pixel centres / AOI-selected pixel centres within the scene**, not total AOI area. Full scene coverage does not promise that every pixel is valid or cloud-free. Outside-scene AOI coverage is a native-plane geometric fraction, not a geodesic usable-area estimate. An explicitly partial result remains labelled partial even if it passes the approved within-scene threshold.
+
+Schema `/1` intents and approvals are refused by the new candidate rather than silently receiving a different acceptance rule. To migrate, copy the intent to a new file, set schema `/2`, review the effective coverage choice, obtain a new plan/digest and approval, and write to a new output directory. Existing experiment files and their pinned candidate wheels remain unchanged. Current plan, approval and run records also use version `/2`.
 
 Native source fill is removed before scaling. `0 degrees Celsius` and valid QA value `0` are not fill. Missing ST remains missing; no spatial or temporal gap fill is performed.
 
@@ -98,6 +105,8 @@ AOI membership is tested by transforming each native pixel centre into the AOI's
 The map is a display thumbnail; it does not create higher-resolution thermal information. No resampling changes analytical values. The summary uses equal valid pixels, not an area-weighted mean. Product uncertainty is not uncertainty of that mean and is not divided by sqrt(n).
 
 Verification returns `verified`, `failed` or `incomplete`. `verified` / `decision-grade` means the declared route's numerical/support obligations passed; `physical_accuracy_validated` remains false. All-invalid data or an unmet usable-coverage threshold produces `incomplete`, with null mean/min/max rather than invented temperatures. A region with no scene overlap is an actionable admission error.
+
+Both HTML and SVG show the run status, full/explicitly-partial scope, requested AOI scene fraction and usable within-scene fraction directly. Incomplete/failed results are labelled as unaccepted scientific results. Display status is checked against the numerical verdict during manifest verification. These reports remain point-in-time artifacts; rerun verification before using subsequently modified data. A failure after publication writes failed machine evidence and attempts to update the visible delivery to failed.
 
 CLI exit codes: 0 successful command/verified run, 3 unresolved/failed/incomplete, 1 invalid/unreadable command input. Existing CLI commands and grades remain unchanged. Verification does not rewrite saved evidence. Re-run it before using modified artifacts.
 

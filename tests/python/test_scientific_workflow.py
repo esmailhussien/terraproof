@@ -12,7 +12,7 @@ from rasterio.transform import from_origin
 from terraproof._common import InputError
 from terraproof.cli import main
 from terraproof.workflows import approve, execute, plan, repair, verify
-from terraproof.workflows.intent import write, load
+from terraproof.workflows.intent import SCHEMA, write, load
 
 
 @pytest.fixture
@@ -38,7 +38,7 @@ def workflow(tmp_path):
         'LEVEL2_SURFACE_TEMPERATURE_PARAMETERS': {'TEMPERATURE_MULT_BAND_ST_B10': 0.00341802,
                                                 'TEMPERATURE_ADD_BAND_ST_B10': 149.0}}}
     write(tmp_path/'MTL.json', metadata)
-    document = {'schema': 'terraproof.workflow/1', 'id': 'Development: <temperature> & QA',
+    document = {'schema': SCHEMA, 'id': 'Development: <temperature> & QA',
         'source': {'metadata': 'MTL.json', 'representation': 'usgs-native-dn'},
         'intent': {'quantity': 'land-surface-temperature', 'unit': 'degree_Celsius', 'aoi': 'aoi.geojson',
                    'acquired_between': ['2025-01-01', '2025-12-31'], 'reject_qa_bits': [0, 3, 7],
@@ -250,7 +250,7 @@ def test_kml_and_kmz_boundaries(workflow, extension):
     from pyproj import Transformer
     transformer = Transformer.from_crs(32632, 4326, always_xy=True)
     coords = [transformer.transform(x, y) for x, y in
-              [(500030, 1000000), (500120, 1000000), (500120, 999880), (500030, 999880), (500030, 1000000)]]
+              [(500035, 999995), (500115, 999995), (500115, 999885), (500035, 999885), (500035, 999995)]]
     kml = ('<kml xmlns="http://www.opengis.net/kml/2.2"><Placemark><Polygon><outerBoundaryIs>'
            '<LinearRing><coordinates>'+ ' '.join(f'{x},{y},0' for x,y in coords)+
            '</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark></kml>')
@@ -380,3 +380,131 @@ def test_failure_after_directory_publication_never_leaves_a_verified_report(work
     assert load(out/'workflow.json')['verification']['status'] == 'failed'
     assert load(out/'failure.json')['published'] is True
     assert verify(approval, out)['status'] == 'failed'
+    for name in ('report.html', 'map.svg'):
+        assert 'data-workflow-status="failed"' in (out/name).read_text(encoding='utf-8')
+
+
+def partial_aoi(workflow):
+    document = load(workflow.parent/'aoi.geojson')
+    document['features'][0]['geometry']['coordinates'] = [
+        [[500030,1000000],[500150,1000000],[500150,999880],[500030,999880],[500030,1000000]]]
+    write(workflow.parent/'aoi.geojson', document)
+
+
+def test_full_scene_coverage_is_default_and_blocks_partial_before_approval(workflow):
+    partial_aoi(workflow)
+    review = plan(workflow)
+    assert review['status'] == 'unresolved'
+    assert review['facts']['scene_coverage_policy'] == 'full-aoi'
+    assert review['facts']['full_aoi_in_scene'] is False
+    assert review['facts']['outside_scene_fraction_native_plane'] == 0.25
+    assert '25.00%' in review['issues'][0]
+    assert len(review['next_steps']) == 2
+    with pytest.raises(InputError):
+        approve(workflow, workflow.parent/'approval.json', reviewer='test', expected_digest=review['spec_digest'])
+    assert not (workflow.parent/'approval.json').exists()
+    assert not (workflow.parent/'result').exists()
+
+
+def test_consistent_approval_cannot_bypass_full_coverage_gate(workflow):
+    from terraproof.workflows.intent import APPROVAL, digest
+    partial_aoi(workflow)
+    review = plan(workflow)
+    approval = workflow.parent/'manual-approval.json'
+    write(approval, {'schema': APPROVAL, 'spec': str(workflow), 'spec_digest': review['spec_digest'],
+        'reviewer': 'test', 'inputs': review['inputs'], 'facts_digest': digest(review['facts'])})
+    with pytest.raises(InputError, match='full AOI'):
+        execute(approval, workflow.parent/'result')
+    assert not (workflow.parent/'result').exists()
+
+
+@pytest.mark.parametrize('minimum,status', [(0.1,'verified'),(1.0,'incomplete')])
+def test_explicit_partial_intent_and_visible_scientific_status(workflow, minimum, status):
+    partial_aoi(workflow)
+    doc = load(workflow); doc['intent'].update(scene_coverage='allow-partial', min_valid_fraction=minimum)
+    write(workflow, doc)
+    approval, out, result = approved_run(workflow)
+    assert result['status'] == status and result['full_aoi_in_scene'] is False
+    assert result['scene_coverage_policy'] == 'allow-partial'
+    assert load(out/'summary.json')['outside_scene_fraction_native_plane'] == 0.25
+    for name in ('report.html','map.svg'):
+        content = (out/name).read_text(encoding='utf-8')
+        assert f'data-workflow-status="{status}"' in content
+        assert 'PARTIAL AOI - explicitly allowed' in content
+        assert '75.00%' in content and '83.33%' in content
+        assert 'not a complete map' in content
+    assert verify(approval, out)['status'] == status
+    if status == 'incomplete':
+        with pytest.raises(InputError, match='coverage'):
+            repair(approval, out, workflow.parent/'weaker-result')
+
+
+@pytest.mark.parametrize('value', [True, None, 1, 'partial', [], {}])
+def test_coverage_policy_is_strict_not_truthy(workflow, value):
+    doc = load(workflow); doc['intent']['scene_coverage'] = value; write(workflow, doc)
+    assert plan(workflow)['status'] == 'unresolved'
+
+
+def test_legacy_intent_is_not_silently_reinterpreted(workflow):
+    doc = load(workflow); doc['schema'] = 'terraproof.workflow/1'; write(workflow, doc)
+    review = plan(workflow)
+    assert review['status'] == 'unresolved' and 'migrate' in review['issues'][0]
+
+
+def test_geographic_edges_touching_native_vertices_are_not_assumed_covered(workflow):
+    from pyproj import Transformer
+    transformer = Transformer.from_crs(32632, 4326, always_xy=True)
+    coords = [transformer.transform(x,y) for x,y in
+              [(500030,1000000),(500120,1000000),(500120,999880),(500030,999880),(500030,1000000)]]
+    write(workflow.parent/'aoi.geojson', {'type':'Polygon','coordinates':[coords]})
+    # Straight geographic edges can bow beyond the native footprint even if vertices touch it.
+    review = plan(workflow)
+    assert review['status'] == 'unresolved'
+    assert review['facts']['full_aoi_in_scene'] is False
+    doc = load(workflow); doc['intent']['scene_coverage'] = 'allow-partial'; write(workflow,doc)
+    assert plan(workflow)['status'] == 'ready-for-review'
+
+
+def test_changed_coverage_policy_invalidates_approval(workflow):
+    approval, out, _ = approved_run(workflow)
+    doc = load(workflow); doc['intent']['scene_coverage'] = 'allow-partial'; write(workflow, doc)
+    with pytest.raises(InputError, match='changed'):
+        verify(approval, out)
+
+
+@pytest.mark.parametrize('partial', [False, True])
+def test_cli_template_writes_explicit_coverage_choice(workflow, capsys, partial):
+    template = workflow.parent/'draft.json'
+    args = ['workflow','init',str(template),'--metadata',str(workflow.parent/'MTL.json'),
+        '--aoi',str(workflow.parent/'aoi.geojson'),'--start','2025-01-01','--end','2025-12-31',
+        '--reject-qa-bits','0','3','7','--min-valid-fraction','0.1']
+    assert main(args+(['--allow-partial'] if partial else [])) == 0
+    capsys.readouterr()
+    doc = load(template)
+    assert doc['schema'] == SCHEMA
+    assert doc['intent']['scene_coverage'] == ('allow-partial' if partial else 'full-aoi')
+
+
+def test_full_footprint_does_not_imply_complete_observations(workflow):
+    doc = load(workflow); doc['intent']['min_valid_fraction'] = 1; write(workflow, doc)
+    _, out, result = approved_run(workflow)
+    assert result['status'] == 'incomplete' and result['full_aoi_in_scene'] is True
+    for name in ('report.html','map.svg'):
+        content = (out/name).read_text(encoding='utf-8')
+        assert 'data-workflow-status="incomplete"' in content
+        assert 'FULL AOI SCENE FOOTPRINT' in content and 'Not an accepted scientific result' in content
+
+
+def test_final_verification_failure_updates_visible_delivery(workflow, monkeypatch):
+    import terraproof.workflows.lst as lst
+    original = lst.verify
+    def fail_final(approval, directory, **kwargs):
+        result = original(approval, directory, **kwargs)
+        if Path(directory).name == 'result':
+            result.update(status='failed', grade='advisory-only')
+        return result
+    monkeypatch.setattr(lst, 'verify', fail_final)
+    _, out, result = approved_run(workflow)
+    assert result['status'] == load(out/'workflow.json')['verification']['status'] == 'failed'
+    for name in ('report.html','map.svg'):
+        assert 'data-workflow-status="failed"' in (out/name).read_text(encoding='utf-8')

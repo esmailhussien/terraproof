@@ -25,8 +25,10 @@ It is based on published v0.12.0 commit `0467d4491fb3a7059b3e81f8e1097934a5d7b56
 
 ## Next work, in order
 
+Coverage decision recorded 2026-11-03: the user requires full requested-area scene coverage by default, partial delivery only through an explicit choice. This is implemented in intent/approval/run schema `/2`, a new configuration; prior `/1` experiments are retained under their original pinned wheels, not regraded. The API distinguishes this scene-footprint requirement from valid-observation coverage after QA.
+
 1. Obtain independent scientific review of the route and the recorded Luxor real-scene protocol, QA choice, product identity, quantity and uncertainty meaning. The implementation agent's disclosed engineering approval is not that review.
-2. Implement a separately identified batch for explicit whole-AOI coverage requirements and prominent scientific result/coverage status in reports. The boundary review proposes the scope; record user preference/default/compatibility before changing the API.
+2. Validate the schema `/2` full-AOI admission gate, explicitly partial route and prominent result/coverage status on the recorded real scenes; retain separate candidate identities and original experiments.
 3. Expand predeclared scene/coverage cases after those requirements, retaining original failures and oracle amendments. This remains separate from T3 and does not reuse its partial output as tuning data.
 4. Resolve demonstrated shortcomings before adding more products or retrieval methods.
 5. Add a second concrete scientific route, then extract genuinely shared requirements if needed. Multi-date thermal analysis, spectral-index preparation and sensor-specific corrections are candidates, not claimed capabilities.

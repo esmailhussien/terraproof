@@ -128,7 +128,8 @@ def _produce(approval_path, directory):
                 minimum, maximum = min(minimum, float(values[valid].min())), max(maximum, float(values[valid].max()))
     summary = _statistics(total, count, minimum, maximum, selected, uncertain, uncertainty_total, uncovered)
     summary.update({'quantity': spec['intent']['quantity'], 'unit': spec['intent']['unit'],
-                    'product_id': facts['product_id'], 'date': facts['date']})
+                    'product_id': facts['product_id'], 'date': facts['date'],
+                    'scene_coverage_policy': facts['scene_coverage_policy']})
     write(directory/'summary.json', summary)
     calibration_evidence(directory, paths)
     render(directory, spec, facts, summary, geometry=geometry)
@@ -219,7 +220,8 @@ def _verify(approval_path, directory, *, check_manifest=True):
         finding(key, value == 0, f'{value} mismatched cells')
     expected_summary = _statistics(total, count, minimum, maximum, selected, uncertain, uncertainty_total, uncovered)
     expected_summary.update({'quantity': spec['intent']['quantity'], 'unit': spec['intent']['unit'],
-                             'product_id': facts['product_id'], 'date': facts['date']})
+                             'product_id': facts['product_id'], 'date': facts['date'],
+                             'scene_coverage_policy': facts['scene_coverage_policy']})
     actual = load(directory/'summary.json')
     finding('summary', _summary_matches(actual, expected_summary),
             'exact integer counts; floating statistics and identities recomputed from approved sources and support')
@@ -243,10 +245,19 @@ def _verify(approval_path, directory, *, check_manifest=True):
         findings.append({'requirement': 'usable-coverage', 'status': 'not-run',
                          'detail': 'No usable observations or within-scene pixel coverage below the approved minimum.'})
     status = 'failed' if failed else ('incomplete' if insufficient else 'verified')
+    if check_manifest:
+        marker = f'data-workflow-status="{status}"'
+        finding('presentation-status', all(marker in (directory/name).read_text(encoding='utf-8')
+                for name in ('report.html', 'map.svg')), 'HTML and SVG display the verified run status')
+        if findings[-1]['status'] == 'fail':
+            status = 'failed'
     return {'status': status, 'grade': 'decision-grade' if status == 'verified' else 'advisory-only',
             'scope': 'approved product decode, support, native-grid crop, statistics and artifact identity',
             'physical_accuracy_validated': False, 'usable_cells': count, 'selected_cells': selected,
             'coverage_sufficient': not insufficient, 'findings': findings,
+            'scene_coverage_policy': facts['scene_coverage_policy'],
+            'full_aoi_in_scene': facts['full_aoi_in_scene'],
+            'outside_scene_fraction_native_plane': uncovered,
             'limitations': ['Not a field validation of temperature or the upstream retrieval.',
                             'Approval and manifests are unsigned; their trusted copies must be held by the reviewer.',
                             'Outside-scene coverage is native-plane geometry, not geodesic area.']}
@@ -274,9 +285,10 @@ def execute(approval_path, output):
     try:
         _produce(approval_path, staging)
         result = verify(approval_path, staging, check_manifest=False)
-        approval, spec, _, facts, _ = approved(approval_path)
+        approval, spec, _, facts, geometry = approved(approval_path)
+        render(staging, spec, facts, load(staging/'summary.json'), geometry=geometry, status=result['status'])
         listed = [{**r, 'path': Path(r['path']).name} for r in records(staging/f for f in FILES)]
-        manifest = {'schema': 'terraproof.workflow-run/1', 'spec_digest': approval['spec_digest'],
+        manifest = {'schema': 'terraproof.workflow-run/2', 'spec_digest': approval['spec_digest'],
                     'approval': approval, 'intent_document': spec, 'product_facts': facts,
                     'verification': result, 'outputs': listed}
         write(staging/'workflow.json', manifest)
@@ -287,6 +299,9 @@ def execute(approval_path, output):
         manifest['outputs'] = [{**r, 'path': Path(r['path']).name} for r in records(output/f for f in FILES)]
         write(output/'workflow.json', manifest)
         result = verify(approval_path, output)
+        if result['status'] != manifest['verification']['status']:
+            render(output, spec, facts, load(output/'summary.json'), geometry=geometry, status=result['status'])
+            manifest['outputs'] = [{**r, 'path': Path(r['path']).name} for r in records(output/f for f in FILES)]
         manifest['verification'] = result
         write(output/'workflow.json', manifest)
         return result
@@ -300,6 +315,7 @@ def execute(approval_path, output):
             manifest['verification'] = failure
             write(output/'workflow.json', manifest)
             write(output/'failure.json', {'status': 'failed', 'error': str(error), 'published': True})
+            render(output, spec, facts, load(output/'summary.json'), geometry=geometry, status='failed')
         raise
 
 

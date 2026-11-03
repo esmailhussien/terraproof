@@ -20,8 +20,8 @@ import shapely
 
 from terraproof._common import InputError, sha256_and_size
 
-SCHEMA = 'terraproof.workflow/1'
-APPROVAL = 'terraproof.workflow-approval/1'
+SCHEMA = 'terraproof.workflow/2'
+APPROVAL = 'terraproof.workflow-approval/2'
 SCALE = 0.00341802
 OFFSET = 149.0
 
@@ -223,10 +223,15 @@ def admit(spec_path):
     spec_path = Path(spec_path).resolve()
     document = load(spec_path)
     keys(document, ('schema', 'id', 'intent', 'source'))
-    if document['schema'] != SCHEMA or not isinstance(document['id'], str) or not document['id'].strip():
+    if document['schema'] != SCHEMA:
+        raise InputError('requires terraproof.workflow/2: migrate the intent and review again; full AOI scene coverage is now the default')
+    if not isinstance(document['id'], str) or not document['id'].strip():
         raise InputError('invalid scientific workflow identity')
     intent = document['intent']
-    keys(intent, ('quantity', 'unit', 'aoi', 'acquired_between', 'reject_qa_bits', 'min_valid_fraction'))
+    keys(intent, ('quantity', 'unit', 'aoi', 'acquired_between', 'reject_qa_bits', 'min_valid_fraction'), ('scene_coverage',))
+    coverage = intent.get('scene_coverage', 'full-aoi')
+    if coverage not in ('full-aoi', 'allow-partial'):
+        raise InputError('scene_coverage must be full-aoi or explicitly allow-partial')
     if intent['quantity'] != 'land-surface-temperature' or intent['unit'] != 'degree_Celsius':
         raise InputError('this route supports acquisition-time surface temperature in Celsius only')
     bits = intent['reject_qa_bits']
@@ -276,10 +281,12 @@ def admit(spec_path):
         grid = {'width': src.width, 'height': src.height, 'transform': list(src.transform)[:6],
                 'crs': src.crs.to_wkt()}
         geometry = aoi_geometry(paths['aoi'], src.crs)
-        covered = geometry.intersection(shapely.box(*src.bounds)).area
+        footprint = shapely.box(*src.bounds)
+        covered = geometry.intersection(footprint).area
         if covered <= 0:
             raise InputError('AOI does not overlap this scene; select another scene')
-        outside = max(0.0, 1-covered/geometry.area)
+        outside = max(0.0, min(1.0, 1-covered/geometry.area))
+        full_aoi = footprint.covers(geometry)
         for role in ('qa', 'uncertainty'):
             with rasterio.open(paths[role], driver='GTiff') as other:
                 dtype = ('uint16',) if role == 'qa' else ('int16',)
@@ -294,7 +301,9 @@ def admit(spec_path):
              'date': acquired.isoformat(), 'scene_time': image.get('SCENE_CENTER_TIME'),
              'scale': SCALE, 'offset_kelvin': OFFSET, 'fill': 0, 'uncertainty_scale': 0.01,
              'grid': grid, 'representation': source['representation'],
-             'outside_scene_fraction_native_plane': outside}
+             'outside_scene_fraction_native_plane': outside,
+             'scene_coverage_policy': coverage, 'full_aoi_in_scene': bool(full_aoi),
+             'scene_coverage_satisfied': coverage == 'allow-partial' or bool(full_aoi)}
     return document, paths, facts, geometry
 
 
@@ -302,15 +311,21 @@ def plan(spec_path):
     """Read-only admission and actionable unresolved inputs; no outputs are created."""
     try:
         spec, paths, facts, _ = admit(spec_path)
-        return {'schema': 'terraproof.workflow-plan/1', 'status': 'ready-for-review',
+        result = {'schema': 'terraproof.workflow-plan/2', 'status': 'ready-for-review',
                 'spec_digest': digest(spec), 'intent': spec['intent'], 'facts': facts,
                 'inputs': records(paths.values()), 'stages': ['admit', 'decode', 'policy-mask', 'clip',
                                                             'summarize', 'render', 'verify'],
                 'limitations': ['Product decode/support verification, not absolute physical accuracy.',
                                 'Native grid, one scene, pixel-centre AOI, no temporal aggregation.']}
+        if not facts['scene_coverage_satisfied']:
+            result.update({'status': 'unresolved', 'issues': [
+                f"Full AOI scene coverage required; {facts['outside_scene_fraction_native_plane']:.2%} of native-plane AOI geometry is outside this scene."],
+                'next_steps': ['Choose a scene covering the requested AOI within the scientific acquisition requirements, then review its new input identity.',
+                               'If a partial-area result is scientifically acceptable, explicitly set scene_coverage to allow-partial and review the changed intent.']})
+        return result
     except (ValueError, KeyError, TypeError, OSError, ET.ParseError, zipfile.BadZipFile,
             pyogrio.errors.DataSourceError, rasterio.errors.RasterioError) as error:
-        return {'schema': 'terraproof.workflow-plan/1', 'status': 'unresolved',
+        return {'schema': 'terraproof.workflow-plan/2', 'status': 'unresolved',
                 'issues': [str(error)]}
 
 
@@ -334,6 +349,8 @@ def approved(approval_path):
     if approval['schema'] != APPROVAL or not approval['reviewer']:
         raise InputError('invalid workflow approval')
     spec, paths, facts, geometry = admit(approval['spec'])
+    if not facts['scene_coverage_satisfied']:
+        raise InputError('full AOI scene coverage required; choose another scene or explicitly review an allow-partial intent')
     if (digest(spec) != approval['spec_digest'] or records(paths.values()) != approval['inputs']
             or digest(facts) != approval['facts_digest']):
         raise InputError('approved intent, source bytes, sidecars or product facts changed; review again')

@@ -17,6 +17,7 @@ def main(argv=None):
     init.add_argument('--start', required=True); init.add_argument('--end', required=True)
     init.add_argument('--reject-qa-bits', type=int, nargs='+', required=True)
     init.add_argument('--min-valid-fraction', type=float, required=True)
+    init.add_argument('--allow-partial', action='store_true', help='explicitly permit an AOI partly outside this scene; requires review')
     p = subs.add_parser('plan', help='admit inputs and show scientific choices without processing')
     p.add_argument('file')
     a = subs.add_parser('approve', help='record review of exact intent and input bytes')
@@ -35,7 +36,8 @@ def main(argv=None):
         document = {'schema': SCHEMA, 'id': 'local-land-surface-temperature',
                     'intent': {'quantity': 'land-surface-temperature', 'unit': 'degree_Celsius',
                                'aoi': str(Path(args.aoi).resolve()), 'acquired_between': [args.start, args.end],
-                               'reject_qa_bits': args.reject_qa_bits, 'min_valid_fraction': args.min_valid_fraction},
+                               'reject_qa_bits': args.reject_qa_bits, 'min_valid_fraction': args.min_valid_fraction,
+                               'scene_coverage': 'allow-partial' if args.allow_partial else 'full-aoi'},
                     'source': {'metadata': str(Path(args.metadata).resolve()), 'representation': 'usgs-native-dn'}}
         write(args.file, document)
         result = {'status': 'draft', 'file': str(Path(args.file).resolve()), 'approved': False}
