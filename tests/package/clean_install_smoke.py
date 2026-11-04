@@ -18,7 +18,8 @@ import tempfile
 import time
 import venv
 
-TOOLS = ["find_guidance", "inspect_dataset", "list_skills", "load_section", "preflight", "propose_contract", "run_checks"]
+TOOLS = ["find_guidance", "inspect_dataset", "list_skills", "load_section", "preflight", "propose_contract", "run_checks",
+         "verify_project"]
 
 PROBE = r'''
 import asyncio, importlib.util, json, subprocess, sys

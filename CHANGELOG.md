@@ -9,7 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Native Landsat scientific workflow core
+
+- Add `terraproof workflow` and an importable core for native Landsat 8/9 Collection 2 Level-2 surface temperature: intent, native QA/uncertainty preflight, explicit approval, windowed processing, source-relative verification, map/report output and one bounded regeneration preserving prior evidence.
+- Require full AOI acquisition by default, using QA nonfill support rather than raster bounds. Apply minimum usable/acquired coverage before approval with or without an optional uncertainty cutoff; partial delivery requires an explicit intent choice.
+- Report uncertainty by default without automatic exclusion. An explicit maximum enters the reviewed digest and separates known-above-limit and missing-uncertainty exclusions.
+- Add optional bounded Planetary Computer discovery and explicit native acquisition. It produces an unapproved local workflow, with no automatic source fallback, QA relaxation or model API.
+- Record separate AI-context acceptance on three new scenes/five variants, with two numerically verified outputs and three correct preapproval refusals. Archive the criteria, checkers, evidence and correction history outside product distributions. This is bounded engineering evidence; field accuracy and human scientific suitability are not established. See [the acceptance report](docs/SCIENTIFIC_WORKFLOW_INDEPENDENT_ACCEPTANCE_2026-11-03.md).
+
+### Project verification
+
+- `terraproof verify` checks every deliverable a project file (`terraproof.toml`, or
+  `terraproof.json`) declares, in one run.
+  - **Each deliverable** names its outputs, its goal profiles or check ids, and its bindings, under
+    the names `run_checks` uses. Paths are relative to the file.
+  - **The result** is graded on that declaration as its contract, with one exit code for CI: the
+    worst deliverable's.
+  - **`--plan`** runs nothing and lists what each declaration still lacks, so the file can be
+    written before outputs exist. Before the file exists, it returns the guide to writing one:
+    each goal with its checks and required bindings, every binding's meaning, and a template.
+  - **Other options:** `--only` (one deliverable), `--format json`, and `--reports DIR` (full
+    reports).
+- **A declaration its own sources contradict fails.**
+  - `verify` and `--plan` compare declared bindings with explicit metadata: a DEM's vertical unit, the decode scale and offset, vertical source units, and support fills.
+  - The metadata is read from the source file, and from local STAC Items whose asset `href` points at it.
+  - A contradiction is a `project.declaration` failure. A check alone would agree with a declaration that repeats the output's mistake.
+- **Hints:** the plan and `verify` name a declared source whose metadata states a scale or offset that no declared check applies. This is advisory and never changes a status.
+- Without a source, `check` / `run_checks` returns `next_step.derivation_checked = false`. This makes clear that passing form checks did not verify how the output was derived.
+- `propose` / `propose_contract` also read a fill from a STAC asset's `classification:classes` entry marked `nodata`.
+- New MCP tool `verify_project` (eight tools), matching `verify`. The server instructions ask agents to
+  write the project file before producing deliverables.
+- See [project verification](docs/PROJECT_VERIFICATION.md).
+
 ## [0.12.0] — 2026-11-02
+
+Released 2026-11-02: merge `0467d44` (#44), tag `v0.12.0`, PyPI through `publish-python.yml`,
+npm `terraproof@0.12.0` (shasum `3375dc18…`), and GitHub release *Terraproof v0.12.0*.
 
 Phase 10: QA masks, reprojected slopes and multi-value reports.
 

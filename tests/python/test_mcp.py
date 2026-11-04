@@ -18,7 +18,8 @@ from mcp import Client  # noqa: E402
 from terraproof.cli import main  # noqa: E402
 from terraproof.mcp.server import mcp  # noqa: E402
 
-TOOL_NAMES = ["find_guidance", "inspect_dataset", "list_skills", "load_section", "preflight", "propose_contract", "run_checks"]
+TOOL_NAMES = ["find_guidance", "inspect_dataset", "list_skills", "load_section", "preflight", "propose_contract", "run_checks",
+              "verify_project"]
 
 
 def test_full_processing_cli_mcp_parity_for_an_off_stride_error(make_raster, capsys):

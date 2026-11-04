@@ -3,4 +3,5 @@ graft routing
 graft instructions
 graft sources
 graft third_party
+prune tests/workflow_acceptance
 global-exclude __pycache__ *.py[cod]

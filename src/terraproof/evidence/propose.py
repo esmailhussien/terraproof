@@ -56,8 +56,10 @@ def parse_stac_binding(value: str) -> tuple[str, str, str]:
     return path, item, asset
 
 
-def _stac_band(item_path: str, asset_key: str) -> tuple[dict, str, dict] | None:
-    """The single band an asset describes, from STAC 1.0 `raster:bands` or STAC 1.1 `bands`, and the item's properties."""
+def _stac_band(item_path: str, asset_key: str) -> tuple[dict, dict, dict] | None:
+    """The single band an asset describes, from STAC 1.0 `raster:bands` or STAC 1.1 `bands`, with the field each
+    fact came from, and the item's properties. A fill the band does not state may come from the one
+    `classification:classes` entry marked `nodata`."""
     try:
         data = json.loads(Path(item_path).read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
@@ -67,14 +69,23 @@ def _stac_band(item_path: str, asset_key: str) -> tuple[dict, str, dict] | None:
     asset = (data.get("assets") or {}).get(asset_key)
     if not isinstance(asset, dict):
         raise InputError(f"STAC Item {item_path} has no asset {asset_key!r}")
+    facts, fields = {"scale": None, "offset": None, "nodata": None, "unit": None}, {}
     for key, prefix in (("raster:bands", ""), ("bands", "raster:")):
         bands = asset.get(key)
         if isinstance(bands, list) and len(bands) == 1 and isinstance(bands[0], dict):
             band = bands[0]
-            return ({"scale": band.get(prefix + "scale"), "offset": band.get(prefix + "offset"),
-                     "nodata": band.get("nodata"), "unit": band.get("unit")},
-                    f"assets.{asset_key}.{key}[0]", data.get("properties") or {})
-    return None
+            facts = {"scale": band.get(prefix + "scale"), "offset": band.get(prefix + "offset"),
+                     "nodata": band.get("nodata"), "unit": band.get("unit")}
+            fields = dict.fromkeys(facts, f"assets.{asset_key}.{key}[0]")
+            break
+    classes = asset.get("classification:classes")
+    fills = [c.get("value") for c in classes if isinstance(c, dict) and c.get("nodata") is True] \
+        if isinstance(classes, list) else []
+    if facts["nodata"] is None and len(fills) == 1:
+        facts["nodata"], fields["nodata"] = fills[0], f"assets.{asset_key}.classification:classes"
+    if not fields:
+        return None
+    return facts, fields, data.get("properties") or {}
 
 
 def _statements(path: str, stac: dict, fact: str) -> list[dict]:
@@ -100,7 +111,8 @@ def _statements(path: str, stac: dict, fact: str) -> list[dict]:
         item, asset = stac[key]
         band = _stac_band(item, asset)
         if band is not None and band[0][fact] is not None:
-            found.append({"file": str(Path(item).resolve()), "field": f"{band[1]}.{fact}", "value": band[0][fact]})
+            field = band[1][fact] + ("" if band[1][fact].endswith("classification:classes") else f".{fact}")
+            found.append({"file": str(Path(item).resolve()), "field": field, "value": band[0][fact]})
             if fact == "offset" and band[0][fact] != 0:
                 # An item that also says the offset is already applied leaves no offset to decode with.
                 found += [{"file": str(Path(item).resolve()), "field": f"properties.{flag}", "value": True,
@@ -170,6 +182,102 @@ def check_command(arguments: dict, contract: str = "CONTRACT.json") -> list[str]
     """The `check` command line for run_checks-style arguments and a saved contract."""
     return ["python", "-m", "terraproof", "check", *arguments["paths"], "--contract", contract,
             *command_flags(arguments)]
+
+
+ITEM_SIZE_LIMIT = 5_000_000  # bytes; a larger JSON file is not read as a candidate STAC Item
+
+
+def local_stac_links(folders) -> dict:
+    """Local files tied to the STAC Item assets that point at them: every Item among the `.json` files directly in
+    `folders` whose asset `href` resolves to an existing local file. The href is the Item's own explicit link."""
+    links = {}
+    for folder in sorted({Path(f).resolve() for f in folders}):
+        for item in sorted(folder.glob("*.json")) if folder.is_dir() else []:
+            try:
+                if item.stat().st_size > ITEM_SIZE_LIMIT:
+                    continue
+                data = json.loads(item.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if not isinstance(data, dict) or data.get("type") != "Feature" or "stac_version" not in data:
+                continue
+            for key, asset in sorted((data.get("assets") or {}).items()):
+                href = asset.get("href") if isinstance(asset, dict) else None
+                if isinstance(href, str) and href and "://" not in href:
+                    target = (item.parent / href).resolve()
+                    if target.is_file():
+                        links.setdefault(target, (str(item), key))
+    return links
+
+
+def _same_number(declared, stated) -> bool:
+    return declared is not None and math.isclose(declared, stated, rel_tol=1e-9, abs_tol=1e-12)
+
+
+def declaration_conflicts(values: dict, stac: dict) -> list[dict]:
+    """Declared bindings that explicit metadata about their own sources contradicts.
+
+    Compared: a DEM's vertical unit, the decode scale and offset of the reference input, each vertical source's
+    unit, and each support source's fill. A fact no metadata states, or that metadata states in disagreeing
+    ways, is not compared. A support source with no declared fill conflicts with a fill only its STAC Item states,
+    since the file's own mask would then miss it."""
+    found = []
+
+    def compare(parameter, declared, source, fact, normalise, same):
+        if not isinstance(source, str):
+            return
+        statements = _statements(source, stac, fact)
+        value, problem = _agreed(statements, normalise)
+        if value is not None and not problem and not same(normalise(declared), value):
+            found.append({"parameter": parameter, "declared": declared, "source": source, "statements": statements})
+
+    equal = lambda a, b: a == b  # noqa: E731
+    if values.get("dem_vertical_unit") is not None:
+        compare("dem_vertical_unit", values["dem_vertical_unit"], values.get("dem"), "unit", _dem_unit, equal)
+    for parameter, fact in (("decode_scale", "scale"), ("decode_offset", "offset")):
+        if values.get(parameter) is not None:
+            compare(parameter, values[parameter], values.get("reference_input"), fact, _number, _same_number)
+    sources = values.get("vertical_sources") or []
+    for source, unit in zip(sources, values.get("vertical_source_units") or []):
+        compare("vertical_source_units", unit, source, "unit", unit_name, equal)
+    fills = values.get("support_source_nodata") or []
+    for index, source in enumerate(values.get("support_sources") or []):
+        declared = fills[index] if index < len(fills) else None
+        if declared is not None:
+            compare("support_source_nodata", declared, source, "nodata", _number, _same_number)
+            continue
+        statements = _statements(source, stac, "nodata")
+        if statements and not any(s["file"] == source for s in statements):  # the file's own mask lacks this fill
+            value, problem = _agreed(statements, _number)
+            if value is not None and not problem:
+                found.append({"parameter": "support_source_nodata", "declared": None, "source": source,
+                              "statements": statements})
+    return found
+
+
+# Sources whose decode a declaration states elsewhere (in each summary), so a stated scale needs no decode check.
+_OWN_DECODE = ("summary_source", "summary_mask", "summaries", "qa_path", "qa_source")
+
+
+def undeclared_decodes(values: dict, stac: dict, checks) -> list[dict]:
+    """Declared sources whose metadata states a decode (scale other than 1, or offset other than 0) that no declared
+    check applies: `rs.scale_applied_once` covers only its `reference_input`. Advisory: an output need not carry
+    its source's decoded values, but when it does, an undeclared decode is never checked."""
+    covered = values.get("reference_input") if "rs.scale_applied_once" in set(checks) else None
+    sources = [v for k, v in values.items() if k in FILE_PARAMETERS and k not in _OWN_DECODE and isinstance(v, str)]
+    sources += [p for k in LIST_FILE_PARAMETERS for p in values.get(k) or [] if isinstance(p, str)]
+    found = []
+    for source in dict.fromkeys(sources):
+        if source == covered:
+            continue
+        stated = {}
+        for fact, default in (("scale", 1.0), ("offset", 0.0)):
+            value, problem = _agreed(_statements(source, stac, fact), _number)
+            if value is not None and not problem and value != default:
+                stated[fact] = value
+        if stated:
+            found.append({"source": source, **stated})
+    return found
 
 
 def propose_contract(paths: list[str], names: list[str], arguments: dict, stac: list[str] | None = None) -> dict:

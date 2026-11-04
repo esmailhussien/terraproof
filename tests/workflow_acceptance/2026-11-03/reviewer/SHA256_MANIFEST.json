@@ -1,0 +1,56 @@
+{
+  "format": "reviewer-file-manifest/1",
+  "hash_algorithm": "sha256",
+  "files": [
+    {
+      "path": "brisbane-catalog.json",
+      "bytes": 163839,
+      "sha256": "a522f55957c77f1971a1d13e9468cbc9f573fa77779d0abed2295f2688709b81"
+    },
+    {
+      "path": "brisbane-selected-item.json",
+      "bytes": 36323,
+      "sha256": "e62e5aa0665ca4ff525b267d1546cb243c71aea3a8996a9971993843441b1971"
+    },
+    {
+      "path": "cape-town-catalog.json",
+      "bytes": 245525,
+      "sha256": "e8aa8ac9088b70fe3dfe956e3c97f6e5b3bb1b7f0664c66871450fca0ebbe621"
+    },
+    {
+      "path": "cape-town-selected-item.json",
+      "bytes": 36323,
+      "sha256": "04c9fc3999984419768397867ee639468496b2685c2198843976a87241fa241a"
+    },
+    {
+      "path": "phoenix-catalog.json",
+      "bytes": 122977,
+      "sha256": "5d850463603b3393be7e9a78ec4edcfb96f1cf38e1c40ad61f5119a43fea6fdb"
+    },
+    {
+      "path": "phoenix-selected-item.json",
+      "bytes": 36325,
+      "sha256": "e74a1256a61a635c98af8377e96558d9eb2903249cb714e787b1d12ca41526c5"
+    },
+    {
+      "path": "PUBLIC_BRIEF.md",
+      "bytes": 8067,
+      "sha256": "f84a2588a0519b26c669f530d145ec19db39e01d76003b3e76b5fd394f114493"
+    },
+    {
+      "path": "PUBLIC_CASES.json",
+      "bytes": 14476,
+      "sha256": "ae6a5051d5c56ad964cc254f10ea1094a10dbd2455a2d89c1ffc8319706b6621"
+    },
+    {
+      "path": "SEALED_CRITERIA.json",
+      "bytes": 13640,
+      "sha256": "1b5111cdafdaf194b9f7399eff0d86945383c6ffffc6bcb7507fc35677f0b980"
+    },
+    {
+      "path": "SEALED_CRITERIA.md",
+      "bytes": 3741,
+      "sha256": "d0b98a5fb931832c7c8ad81837e81ba6c99ee855cd166bd1f147ba6ad661a278"
+    }
+  ]
+}

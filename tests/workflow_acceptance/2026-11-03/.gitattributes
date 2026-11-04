@@ -1,0 +1,8 @@
+# Preserve original archived SHA256 values on every platform.
+* -text whitespace=cr-at-eol
+
+# Keep generated catalog/histogram snapshots collapsed in the PR; originals remain accessible.
+reviewer/*-catalog.json linguist-generated=true
+reviewer/*-selected-item.json linguist-generated=true
+reviewer/independent-evidence*.json linguist-generated=true
+OUTCOMES_FROZEN.json linguist-generated=true

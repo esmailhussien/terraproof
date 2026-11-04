@@ -1,0 +1,136 @@
+{
+  "utc": "2026-11-03T21:46:56.585460+00:00",
+  "source_commit": "77ce7aea9798f3622cec46d019a8267b52fb558a",
+  "public_cases_sha256": "ae6a5051d5c56ad964cc254f10ea1094a10dbd2455a2d89c1ffc8319706b6621",
+  "outcomes": [
+    {
+      "case": "R1",
+      "status": "executed",
+      "native_bytes": 104133509,
+      "variants": [
+        {
+          "variant": "R1-full",
+          "admission": "ready-for-review",
+          "approved": true,
+          "processed": true,
+          "run_status": "verified",
+          "verification_status": "verified",
+          "grade": "checks-passed"
+        }
+      ],
+      "duration_seconds": 213.73399999999674
+    },
+    {
+      "case": "R2",
+      "status": "executed",
+      "native_bytes": 123921420,
+      "variants": [
+        {
+          "variant": "R2-corner-default",
+          "admission": "unresolved",
+          "approved": false,
+          "processed": false
+        },
+        {
+          "variant": "R2-corner-cutoff",
+          "admission": "unresolved",
+          "approved": false,
+          "processed": false
+        }
+      ],
+      "duration_seconds": 92.375
+    },
+    {
+      "case": "R3",
+      "status": "executed",
+      "native_bytes": 95266472,
+      "variants": [
+        {
+          "variant": "R3-baseline",
+          "admission": "ready-for-review",
+          "approved": true,
+          "processed": true,
+          "run_status": "verified",
+          "verification_status": "verified",
+          "grade": "checks-passed"
+        },
+        {
+          "variant": "R3-strict",
+          "admission": "unresolved",
+          "approved": false,
+          "processed": false
+        }
+      ],
+      "duration_seconds": 203.2039999999979
+    }
+  ],
+  "transfer_ledger": {
+    "new_native_bytes": 323321401,
+    "aggregate_cap": 536870912,
+    "retries": 0,
+    "files": [
+      {
+        "path": "R1\\package\\inputs\\LC08_L2SP_037037_20240616_20240705_02_T1_MTL.txt",
+        "bytes": 15413,
+        "sha256": "6be54c5fd161587580447465f19c0937f28a643ca8f9c41c9db2b5f60c2ce0e1"
+      },
+      {
+        "path": "R1\\package\\inputs\\LC08_L2SP_037037_20240616_20240705_02_T1_QA_PIXEL.TIF",
+        "bytes": 392091,
+        "sha256": "d40441d5d67dc54d770380c782159b4dfe352d128bfa7c8e5ec58179d81c5300"
+      },
+      {
+        "path": "R1\\package\\inputs\\LC08_L2SP_037037_20240616_20240705_02_T1_ST_B10.TIF",
+        "bytes": 83829432,
+        "sha256": "abe15d3604916ecd2d06a6a6b327f55effe9c7dfaf131b3aeb8fd5fd8034f8ff"
+      },
+      {
+        "path": "R1\\package\\inputs\\LC08_L2SP_037037_20240616_20240705_02_T1_ST_QA.TIF",
+        "bytes": 19896573,
+        "sha256": "388be1c80bfffa309d431d675909b53de42417840d5399de62672dd34b5c6939"
+      },
+      {
+        "path": "R2\\package\\inputs\\LC09_L2SP_175083_20240208_20240213_02_T1_MTL.txt",
+        "bytes": 15262,
+        "sha256": "083b13b43b7855b373979e94a47e06113614205f15f373372b0c82f8b0ce1187"
+      },
+      {
+        "path": "R2\\package\\inputs\\LC09_L2SP_175083_20240208_20240213_02_T1_QA_PIXEL.TIF",
+        "bytes": 3199482,
+        "sha256": "483fb0beb8418bfcec2828bbc1df49168db55d85b3472c1b28563d67fa5fb5e8"
+      },
+      {
+        "path": "R2\\package\\inputs\\LC09_L2SP_175083_20240208_20240213_02_T1_ST_B10.TIF",
+        "bytes": 87758427,
+        "sha256": "bb590b3f2d5dee4e8cb0e3e20b885761ca137770b381ae3f33d67a801db47de8"
+      },
+      {
+        "path": "R2\\package\\inputs\\LC09_L2SP_175083_20240208_20240213_02_T1_ST_QA.TIF",
+        "bytes": 32948249,
+        "sha256": "5cbdb2aa224d612748cbdf3adabf1f08032ef2e03fd14283b25f91d2fee443d6"
+      },
+      {
+        "path": "R3\\package\\inputs\\LC08_L2SP_089079_20240831_20240906_02_T1_MTL.txt",
+        "bytes": 15416,
+        "sha256": "51fe2c3e02680f8e8cccc07f03aaf7dd700972a9c79a3ec49254f5f26d3de39c"
+      },
+      {
+        "path": "R3\\package\\inputs\\LC08_L2SP_089079_20240831_20240906_02_T1_QA_PIXEL.TIF",
+        "bytes": 1564826,
+        "sha256": "97c2ebaf61004e0dc6c7a9415d44bd1137e020849433b3c618b7e2ee7f7b135e"
+      },
+      {
+        "path": "R3\\package\\inputs\\LC08_L2SP_089079_20240831_20240906_02_T1_ST_B10.TIF",
+        "bytes": 72100376,
+        "sha256": "c6e66c2fe0003ef3c54ed37b6d75a9684b18128321d42b2f9ee638cab3a96676"
+      },
+      {
+        "path": "R3\\package\\inputs\\LC08_L2SP_089079_20240831_20240906_02_T1_ST_QA.TIF",
+        "bytes": 21585854,
+        "sha256": "8d64cee8b9ed65f9f2a4028a637b62d28fb57046955e7ea85e34f13c7416f374"
+      }
+    ]
+  },
+  "product_modified": false,
+  "sealed_criteria_read": false
+}

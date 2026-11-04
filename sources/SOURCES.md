@@ -6,6 +6,29 @@ This file tracks upstream repositories, specifications, and references evaluated
 
 ## Sources
 
+### Scientific workflow core: native Landsat surface temperature
+
+New implementation authored for Terraproof under MIT; no upstream processing code is vendored. The experimental local workflow uses the existing checks and evidence formats. Product interpretation references:
+
+- [USGS Landsat Collection 2 Surface Temperature](https://www.usgs.gov/landsat-missions/landsat-collection-2-surface-temperature): existing retrieval and temperature conversion, not a new atmospheric-correction method.
+- [USGS Landsat Collection 2 Quality Assessment Bands](https://www.usgs.gov/landsat-missions/landsat-collection-2-quality-assessment-bands): QA_PIXEL flag meanings and ST_QA interpretation. Quality exclusions remain an explicitly reviewed user policy.
+- [USGS Landsat 8–9 Collection 2 Level-2 Data Format Control Book, version 7](https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/files/LSDS-1328_Landsat8-9_OLI-TIRS-C2-L2_DFCB-v7.pdf): MTL asset field names, native data types, fill and ST_QA scaling.
+- [USGS missing Surface Temperature data](https://www.usgs.gov/faqs/why-does-my-landsat-collection-2-surface-temperature-product-have-missing-data): missing upstream emissivity can leave missing ST; the route does not fill it invisibly.
+
+Reviewed 2026-11-03. These references support the adapter's product semantics, not a guarantee of absolute physical accuracy. See [Scientific workflows](../docs/SCIENTIFIC_WORKFLOWS.md).
+
+Real-scene engineering validation on 2026-11-03 used native USGS Landsat 9 product `LC09_L2SP_175042_20230731_20230802_02_T1` (MTL TXT, ST_B10, QA_PIXEL, ST_QA), acquired 2023-07-31 near Luxor, Egypt. Attribution: USGS Landsat Collection 2 Level-2 Surface Temperature; Microsoft Planetary Computer provided the catalog and public distribution. Original metadata, bytes and source URLs are retained externally; no raster data are vendored in this repository. The derived map is attributed to that USGS product. See the [experiment record](../docs/SCIENTIFIC_WORKFLOW_REAL_SCENE_2026-11-03.md), [catalog item](https://planetarycomputer.microsoft.com/api/stac/v1/collections/landsat-c2-l2/items/LC09_L2SP_175042_20230731_02_T1), [Planetary Computer documentation](https://planetarycomputer.microsoft.com/docs/) and [official SDK access implementation](https://github.com/microsoft/planetary-computer-sdk-for-python). Anonymous access tokens are transient and not part of retained evidence.
+
+The additional 2026-11-03 boundary batch used USGS Landsat 8 product `LC08_L2SP_199023_20230715_20230724_02_T1`, acquired 2023-07-15, intersecting the Netherlands AOI. The same four original asset types, USGS attribution and public Planetary Computer distribution apply; 127,455,522 bytes are retained outside the repository. Dataset citation: Earth Resources Observation and Science (EROS) Center (2020), Landsat 8-9 OLI/TIRS Level-2, Collection 2, U.S. Geological Survey, [doi:10.5066/P9OGBGM6](https://doi.org/10.5066/P9OGBGM6). The [boundary review](../docs/SCIENTIFIC_WORKFLOW_BOUNDARY_REVIEW_2026-11-03.md) also consulted [USGS Collection 2 known issues](https://www.usgs.gov/landsat-missions/landsat-collection-2-known-issues) for emissivity/blockiness limitations; no claim is made that Terraproof corrected those upstream issues.
+
+The experimental [source-selection extension](../docs/SCIENTIFIC_SOURCE_RECOVERY.md) is authored for Terraproof under MIT; it vendors no SDK processing code. Its one-provider public metadata and transient container-token access flow follows the [Planetary Computer STAC documentation](https://planetarycomputer.microsoft.com/docs/quickstarts/reading-stac/) and [official SDK SAS implementation](https://github.com/microsoft/planetary-computer-sdk-for-python/blob/main/planetary_computer/sas.py), reviewed 2026-11-03. STAC footprints/cloud percentages are proposals, not independent thermal or AOI-quality validation.
+
+The [source-recovery demonstration](../docs/SCIENTIFIC_SOURCE_RECOVERY_RESULT_2026-11-03.md) acquired USGS Landsat 8 product `LC08_L2SP_198024_20230708_20230718_02_T1` (2023-07-08, Netherlands AOI), native MTL TXT/ST_B10/QA_PIXEL/ST_QA, 120,640,169 bytes, from the same public distribution. Original assets/hashes remain external; no raster data are vendored. Attribution: USGS Landsat Collection 2 Level-2, EROS Center dataset [doi:10.5066/P9OGBGM6](https://doi.org/10.5066/P9OGBGM6); Microsoft Planetary Computer catalog/access service. It is a different acquisition from the earlier July 15 scene, not a correction of that observation.
+
+The reviewer-driven [acquisition/uncertainty correction](../docs/SCIENTIFIC_ACQUISITION_UNCERTAINTY.md) reuses those original assets. It distinguishes QA_PIXEL bit-0 nonfill support from raster bounds, following the [USGS QA band definitions](https://www.usgs.gov/landsat-missions/landsat-collection-2-quality-assessment-bands) and native DFCB v7 cited above (QA fill and signed ST_QA hundredths of kelvin). No new raster sources or upstream processing code are introduced. Diagnostic cutoffs are explicit caller choices, not USGS recommendations or accuracy guarantees.
+
+### Existing source registry
+
 | Source | Area | Status |
 |---|---|---|
 | Agent Skills specification | Skill format | Research |
