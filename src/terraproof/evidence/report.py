@@ -44,6 +44,9 @@ LABELS = {
                       "(MCP: `propose_contract`), then check with the contract to make them required."),
         "next_step_mask": ("Next step: a validity mask was declared with nothing to verify it against. Supply its "
                            "QA layer (`qa_path`, `qa_kind`) or its sources (`support_sources`, `support_rule`)."),
+        "next_step_underived": ("Next step: no source was given, so these checks read only the output itself; how it "
+                                "was derived from its inputs was not checked. Declare it in the project file "
+                                "(`verify_project` with `plan=true` describes it), or pass its sources and goal."),
         "unchecked_numbers": "Numbers in {0} that no declared summary checks: {1}.",
         "cols_checks": ("Check", "Status", "Input", "Message"),
         "cols_inputs": ("Role", "Path", "Kind", "SHA-256", "Bytes"),
@@ -96,6 +99,9 @@ LABELS = {
                       "(في MCP: `propose_contract`)، ثم افحص بالعقد لتصبح هذه الفحوصات مطلوبة."),
         "next_step_mask": ("الخطوة التالية: أُعلن قناع صلاحية بلا ما يُتحقق منه به. قدّم طبقة ضبط الجودة "
                            "(`qa_path`، `qa_kind`) أو مصادره (`support_sources`، `support_rule`)."),
+        "next_step_underived": ("الخطوة التالية: لم يُقدَّم أي مصدر، فقرأت الفحوصات المُخرَج وحده ولم تتحقق من "
+                                "اشتقاقه من مدخلاته. أعلِنه في ملف المشروع (`verify_project` مع `plan=true` يصف "
+                                "شكله)، أو قدّم مصادره وهدفه."),
         "unchecked_numbers": "أرقام في {0} لا يفحصها أي ملخص مُعلَن: {1}.",
         "cols_checks": ("الفحص", "الحالة", "المدخل", "الرسالة"),
         "cols_inputs": ("الدور", "المسار", "النوع", "SHA-256", "الحجم (بايت)"),
@@ -207,7 +213,15 @@ def next_step(report: dict) -> dict | None:
         # A declared mask with nothing to verify it against: name what each mask goal needs, never which file.
         missing = {"qa-masked": ["qa_path", "qa_kind"], "nodata-support": ["support_sources", "support_rule"]}
     if not enabled and not missing:
-        return None
+        # Nothing a source enables ran: say so, so that passing form checks are not read as a verified derivation.
+        from terraproof._common import assets_root
+        catalog = json.loads((assets_root() / "routing" / "checks.json").read_text(encoding="utf-8"))["checks"]
+        if any(catalog.get(check, {}).get("enabled_by") for check in ran):
+            return None
+        return {"profiles": [], "derivation_checked": False,
+                "why": "No source was given, so these checks read only the output itself; how it was derived "
+                       "was not checked. Declare it in the project file (verify_project with plan=true "
+                       "describes it), or pass its sources and goal."}
     outputs = [record["path"] for record in report["inputs"] if record["role"] == "input"]
     given = {key: value for key, value in report["parameters"].items() if value not in (None, False, [], {}, ())}
     arguments = {key: value for key, value in recheck_arguments({"paths": outputs, "parameters": given}).items()
@@ -307,6 +321,8 @@ def render_markdown(report: dict, lang: str = "en") -> str:
             section += [labels["next_step"].format(", ".join(_code(n) for n in report["next_step"]["profiles"])), ""]
         if report.get("next_step", {}).get("missing"):
             section += [labels["next_step_mask"], ""]
+        if report.get("next_step", {}).get("derivation_checked") is False:
+            section += [labels["next_step_underived"], ""]
         for item in coverage.get("unchecked_numbers", []):
             section += [labels["unchecked_numbers"].format(_code(item["path"]),
                                                            ", ".join(_code(key) for key in item["keys"])), ""]

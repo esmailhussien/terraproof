@@ -568,6 +568,9 @@ def test_agent_receives_source_check_results_without_automatic_repair(tmp_path, 
     from terraproof.evals.fixtures import write_raster_grid
 
     monkeypatch.setenv("OPENAI_API_KEY", FAKE_KEY)
+    # Two reports repeat every absolute path; under a long temp root they pass READ_LIMIT and the
+    # reply is cut mid-JSON. The cap is not what this test is about.
+    monkeypatch.setattr(api_agent, "READ_LIMIT", 200_000)
     project = _project(tmp_path, WITH)
     (project / "verification").mkdir()
     out, nir, red, values = _case(project / "verification")

@@ -5,7 +5,7 @@ Section 1 records the **v0.4.0 (Phase 4)** release evidence, the post-0.4.0 v5 r
 ---
 
 
-## v0.12.0 release — prepared 2026-11-02
+## v0.12.0 release — 2026-11-02
 
 Phase 10: declared validity masks verified against the QA layer's no-data, `terrain.slope_consistent`
 on another grid than the DEM (`comparison: resampled`, ground metres where the projection's scale
@@ -14,15 +14,15 @@ keys, `fraction`, `codes`, `mask_codes`, `scale` and `offset`, and `coverage.unc
 Measured: S4.1 on 42 sealed cases (one false assurance, fixed) and S5 on 45 fresh sealed cases (S1 and
 S2 met, S3 not met, zero false assurance). No agent run.
 
-- [ ] PR CI green on the release head, then merged with a regular merge commit.
-- [ ] Tag the merge commit `v0.12.0` and push the tag (annotated); `publish-python.yml` runs.
-- [ ] Publish the npm tarball (`npm whoami` first; `npm publish --access public`; browser/2FA).
-- [ ] Approve the `pypi` deployment only after the TestPyPI install jobs pass.
-- [ ] GitHub release *Terraproof v0.12.0* with the npm tarball, wheel and sdist, verified against
-  both registries.
-- [ ] Post-release: `npx terraproof@0.12.0 --version` and `route` from a blank directory, and
+- [x] PR CI green on the release head, then merged with a regular merge commit. 2026-11-02: #44, 20/20 on `6a1f8da`, merge `0467d44`.
+- [x] Tag the merge commit `v0.12.0` and push the tag (annotated); `publish-python.yml` runs.
+- [x] Publish the npm tarball (`npm whoami` first; `npm publish --access public`; browser/2FA). Shasum `3375dc18…`, `latest`; 183 files: 175 match the tag apart from CRLF in 167 text files, and the 8 built `dist/router/*.js` match a rebuild of the same tree; `bin/terraproof.js` has no CR.
+- [x] Approve the `pypi` deployment only after the TestPyPI install jobs pass. Publish run succeeded (6 clean and 6 TestPyPI installs); PyPI wheel SHA-256 `0613df78…`, sdist `c3b35c1b…`.
+- [x] GitHub release *Terraproof v0.12.0* with the npm tarball, wheel and sdist, verified against
+  both registries. Marked Latest.
+- [x] Post-release: `npx terraproof@0.12.0 --version` and `route` from a blank directory, and
   `pip install "terraproof[mcp]==0.12.0"` in a fresh venv runs `inspect`, `check` (including a
-  JSON report with two `--summary` entries), `propose`, and lists seven MCP tools.
+  JSON report with two `--summary` entries), `propose`, and lists seven MCP tools. 2026-11-02, Windows: `terraproof v0.12.0`, route exit 0; pip 0.12.0; `inspect` exit 0; a clean COG `checks-passed` with schema `terraproof.evidence/0.2`; both `--summary` entries (`stats.0.mean_m`, `max_m`) `pass`; `propose` left only `summary_key` and `summary_statistic` undeclared; seven tools. A venv under a long path failed to load rasterio's DLL (Windows path length), so the smoke ran from a short temp path.
 
 ## v0.11.0 release — 2026-11-02
 

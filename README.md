@@ -62,6 +62,7 @@ The exit code is the grade: `0` decision-grade or checks passed, `2` review requ
 |---|---|
 | `inspect PATH` | Profile one dataset: CRS and units, schema or bands, dtype, nodata, extent, counts. |
 | `check PATHS` | Run the applicable checks and write a JSON or Markdown evidence report (English or Arabic). |
+| `verify [terraproof.toml]` | Check every deliverable a project file declares, in one run with one exit code (`--plan` checks the declarations only). |
 | `preflight PATHS --plan plan.json` | Check a declared processing plan against the real inputs before running it. |
 | `manifest write` / `manifest verify` | Record and verify a deterministic run manifest (inputs, outputs, parameters). |
 | `route "TASK" [--data PATH]` | Retrieve the skill sections worth reading, using the task text and inspected datasets. |
@@ -84,6 +85,41 @@ parameters, and any other failure or warning still counts. `propose --profile NA
 (MCP: `propose_contract`) drafts such a contract, filling bindings only from explicit
 file or STAC metadata and listing what you still need to declare. See
 [verification contracts, diagnostics and unsigned evidence bundles](docs/VERIFICATION_CONTRACTS.md).
+
+### Verify a whole pipeline from one project file
+
+Declare what each deliverable is meant to be once, in `terraproof.toml` next to your pipeline, and check
+them all with one command, locally or in CI:
+
+```toml
+schema = "terraproof.project/1"
+
+[[deliverables]]
+name = "usable-pixel mask"
+outputs = ["out/mask.tif"]
+goals = ["qa-masked"]
+qa_path = "data/SCL_20m.tif"
+qa_kind = "keep-codes"
+qa_keep_codes = [4, 5, 6, 7, 11]
+output_form = "validity-mask"
+
+[[deliverables]]
+name = "slope"
+outputs = ["out/slope_utm.tif"]
+goals = ["slope-from-dem"]
+dem = "data/dem.tif"
+dem_vertical_unit = "metre"
+slope_unit = "percent"
+```
+
+```bash
+python -m terraproof verify            # every deliverable; exit 0, 2 or 3 as for check
+python -m terraproof verify --plan     # before outputs exist: what each declaration still lacks
+```
+
+Each deliverable is graded on its declaration, so a correct one is decision-grade and a wrong one fails
+with its finding. Bindings use the same names as `run_checks`, and paths are relative to the file. See
+[project verification](docs/PROJECT_VERIFICATION.md) for every field and a GitHub Actions example.
 
 ### Verify a spectral index against its source bands
 
@@ -146,7 +182,7 @@ band and pixel in bounded windows; see [scope, examples and measured controls](d
 python -m terraproof.mcp      # stdio server; needs the `mcp` extra
 ```
 
-It is read-only and offline, with seven tools: `preflight`, `inspect_dataset`, `run_checks`, `propose_contract`, `list_skills`, `load_section`, and `find_guidance`. CLI and MCP return the same reports.
+It is read-only and offline, with eight tools: `preflight`, `inspect_dataset`, `run_checks`, `propose_contract`, `verify_project`, `list_skills`, `load_section`, and `find_guidance`. CLI and MCP return the same reports.
 
 ### Install into a project
 

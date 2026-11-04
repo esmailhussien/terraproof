@@ -229,6 +229,20 @@ def build_parser() -> argparse.ArgumentParser:
     workflow_parser = subparsers.add_parser('workflow', help='plan, run and verify a scientific workflow')
     workflow_parser.add_argument('args', nargs=argparse.REMAINDER)
 
+    verify_parser = subparsers.add_parser(
+        "verify",
+        help=("check every deliverable a project file (terraproof.toml or terraproof.json) declares; exit is the "
+              "worst deliverable's (0 verified or checks passed, 2 review, 3 advisory)"),
+    )
+    verify_parser.add_argument("project", nargs="?", metavar="FILE",
+                               help="project file (default: terraproof.toml, then terraproof.json, in this folder)")
+    verify_parser.add_argument("--plan", action="store_true",
+                               help="run no check: list each declaration's required checks and missing bindings")
+    verify_parser.add_argument("--only", action="append", default=[], metavar="NAME",
+                               help="verify only the named deliverable; repeatable")
+    verify_parser.add_argument("--format", choices=["text", "json"], default="text", help="summary format")
+    verify_parser.add_argument("--reports", metavar="DIR", help="also write each deliverable's full JSON report to DIR")
+
     return parser
 
 
@@ -371,7 +385,8 @@ def _binding_parameters(args: argparse.Namespace) -> dict:
     }
 
 
-def _cmd_check(args: argparse.Namespace) -> int:
+def check_report(args: argparse.Namespace) -> dict:
+    """The evidence report for parsed `check` arguments; `args.contract` may be a path or a contract object."""
     inspections = [inspect_dataset(path) for path in args.paths]
     compare = _inspect_if_exists(args.compare_to)
     reference_input = _inspect_if_exists(args.reference_input)
@@ -521,7 +536,11 @@ def _cmd_check(args: argparse.Namespace) -> int:
     if args.profile and args.contract:
         raise SystemExit("terraproof check: give --profile or --contract, not both")
     contract = profile_contract(args.paths, args.profile, parameters) if args.profile else args.contract
-    report = build_report(inputs=inputs, results=results, parameters=parameters, contract=contract)
+    return build_report(inputs=inputs, results=results, parameters=parameters, contract=contract)
+
+
+def _cmd_check(args: argparse.Namespace) -> int:
+    report = check_report(args)
     text = to_json(report) if args.format == "json" else render_markdown(report, lang=args.lang)
 
     if args.out:
@@ -529,6 +548,16 @@ def _cmd_check(args: argparse.Namespace) -> int:
     else:
         sys.stdout.write(text)
     return report_exit_code(report)
+
+
+def _cmd_verify(args: argparse.Namespace) -> int:
+    from terraproof import project
+
+    summary = (project.plan(args.project, args.only) if args.plan
+               else project.verify(args.project, args.only, args.reports))
+    sys.stdout.write(json.dumps(jsonable(summary), sort_keys=True, indent=2, ensure_ascii=False) + "\n"
+                     if args.format == "json" else project.render(summary))
+    return summary["exit_code"]
 
 
 def _cmd_propose(args: argparse.Namespace) -> int:
@@ -602,6 +631,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "evidence":
             from terraproof.evidence.bundle import main as evidence_main
             return evidence_main(args.args)
+        if args.command == "verify":
+            return _cmd_verify(args)
         return _cmd_check(args)
     except Exception as exc:  # CLI boundary: unreadable or unsupported input is a usage-level failure
         print(f"terraproof: error: {exc}", file=sys.stderr)

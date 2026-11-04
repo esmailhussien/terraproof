@@ -20,7 +20,8 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-TOOLS = ["find_guidance", "inspect_dataset", "list_skills", "load_section", "preflight", "propose_contract", "run_checks"]
+TOOLS = ["find_guidance", "inspect_dataset", "list_skills", "load_section", "preflight", "propose_contract", "run_checks",
+         "verify_project"]
 REQUIRED = {
     "cli.help", "mcp.tools", "mcp.list_skills", "mcp.load_section", "parity.guidance",
     "parity.inspect", "parity.preflight", "evidence.0", "evidence.2", "evidence.3",
